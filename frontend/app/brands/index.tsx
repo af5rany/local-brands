@@ -11,14 +11,16 @@ import {
   Pressable,
 } from "react-native";
 import { NavigationProp, useNavigation } from "@react-navigation/native";
-import { RootStackParamList } from "@/app/_layout";
+// import { RootStackParamList } from "@/app/_layout";
 import getApiUrl from "@/helpers/getApiUrl";
+import { useRouter } from "expo-router";
 
 const BrandsListScreen = () => {
   const [brands, setBrands] = useState<any[]>([]); // Adjusted the type to accept any kind of brand data
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>("");
-  const navigation = useNavigation<NavigationProp<RootStackParamList>>();
+  //   const router = useRouter()
+  const router = useRouter();
 
   useEffect(() => {
     const fetchBrands = async () => {
@@ -46,9 +48,7 @@ const BrandsListScreen = () => {
   const renderBrand = ({ item }: { item: any }) => (
     <TouchableOpacity
       style={styles.brandContainer}
-      onPress={() =>
-        navigation.navigate("BrandDetail", { brandId: String(item.id) })
-      }
+      onPress={() => router.push(`/brands/${item.id}`)}
     >
       {/* <Text style={styles.brandName}>{}</Text> */}
       {item.logo ? (
@@ -67,11 +67,11 @@ const BrandsListScreen = () => {
       <Text style={styles.header}>Brands List</Text>
       <Button
         title="Create New Brand"
-        onPress={() => navigation.navigate("CreateBrand")}
+        onPress={() => router.push("/brands/create")}
       />
       {/* <Pressable
         style={styles.button}
-        onPress={() => navigation.navigate("CreateBrand")}
+        onPress={() => router.push("CreateBrand")}
       >
         <Text style={styles.buttonText}>Create New Brand</Text>
       </Pressable> */}

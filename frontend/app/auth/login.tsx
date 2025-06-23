@@ -14,14 +14,15 @@ import {
   ActivityIndicator,
   Keyboard,
 } from "react-native"; // Added Keyboard import
-import { NavigationProp, useNavigation } from "@react-navigation/native";
-import { RootStackParamList } from "@/app/_layout";
+// import { NavigationProp, useNavigation } from "@react-navigation/native";
+
 import { useAuth } from "@/context/AuthContext";
 import getApiUrl from "@/helpers/getApiUrl";
+import { useRouter } from "expo-router";
 
 const LoginScreen = () => {
+  const router = useRouter();
   const { login } = useAuth();
-  const navigation = useNavigation<NavigationProp<RootStackParamList>>();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -53,11 +54,12 @@ const LoginScreen = () => {
       const responseData = await res.json();
       const { token } = responseData;
       login(token);
+      router.replace("/(tabs)");
 
-      navigation.reset({
-        index: 0,
-        routes: [{ name: "Home" }],
-      });
+      // navigation.reset({
+      //   index: 0,
+      //   routes: [{ name: "Home" }],
+      // });
     } catch (err: any) {
       console.error("Login failed:", err);
       Alert.alert("Login Error", err.message || "Something went wrong");
@@ -122,21 +124,21 @@ const LoginScreen = () => {
 
           <View style={styles.footer}>
             <Pressable
-              onPress={() => !loading && navigation.navigate("Register")}
+              onPress={() => !loading && router.push("/auth/register")}
               disabled={loading}
             >
               <Text style={[styles.link, loading && styles.linkDisabled]}>
                 Register
               </Text>
             </Pressable>
-            <Pressable
-              onPress={() => !loading && navigation.navigate("ForgotPassword")}
+            {/* <Pressable
+              onPress={() => !loading && router.push("ForgotPassword")}
               disabled={loading}
             >
               <Text style={[styles.link, loading && styles.linkDisabled]}>
                 Forgot Password?
               </Text>
-            </Pressable>
+            </Pressable> */}
           </View>
         </ScrollView>
       </KeyboardAvoidingView>

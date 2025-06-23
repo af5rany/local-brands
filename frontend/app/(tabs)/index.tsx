@@ -1,29 +1,42 @@
-import React, { useState } from "react";
+import React, { useEffect } from "react";
 import {
   SafeAreaView,
   View,
   Text,
   StyleSheet,
   Pressable,
-  Button,
+  ActivityIndicator,
 } from "react-native";
-import { NavigationProp, useNavigation } from "@react-navigation/native";
-import { RootStackParamList } from "../_layout";
+import { useRouter } from "expo-router";
+import { useAuth } from "@/context/AuthContext";
 
 const HomeScreen = () => {
-  const navigation = useNavigation<NavigationProp<RootStackParamList>>();
+  const router = useRouter();
+  const { token, loading } = useAuth();
 
-  // Navigate to BrandsListScreen when button is clicked
+  // Check auth state and redirect if no token
+  useEffect(() => {
+    if (!loading && !token) {
+      router.replace("/auth/login");
+    }
+  }, [token, loading]);
+
+  if (loading || !token) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" />
+      </View>
+    );
+  }
+
   const navigateToBrandsList = () => {
-    navigation.navigate("BrandsList");
+    router.push("/brands");
   };
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
         <Text style={styles.title}>Welcome to Home Screen</Text>
-
-        {/* Button that navigates to Brands List Screen */}
         <Pressable style={styles.button} onPress={navigateToBrandsList}>
           <Text style={styles.buttonText}>View Brands</Text>
         </Pressable>
@@ -35,6 +48,11 @@ const HomeScreen = () => {
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: "#f5f5f5" },
   container: { flex: 1, justifyContent: "center", alignItems: "center" },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
   title: { fontSize: 24, fontWeight: "bold", marginBottom: 20 },
   button: {
     backgroundColor: "#346beb",

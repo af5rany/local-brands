@@ -15,6 +15,7 @@ import { NavigationProp, useRoute } from "@react-navigation/native";
 import getApiUrl from "@/helpers/getApiUrl";
 import { Dropdown } from "react-native-element-dropdown";
 import { useNavigation } from "@react-navigation/native";
+import { useRouter } from "expo-router";
 
 const productTypeOptions = [
   { label: "Shoes", value: "Shoes" },
@@ -28,7 +29,7 @@ type RootStackParamList = {
 };
 
 const CreateProductScreen = () => {
-  const navigation = useNavigation<NavigationProp<RootStackParamList>>();
+  const router = useRouter();
   const route = useRoute<any>();
   const { brandId } = route.params;
 
@@ -133,7 +134,7 @@ const CreateProductScreen = () => {
 
       if (response.status === 201) {
         Alert.alert("Success", "Product created successfully!");
-        navigation.navigate("BrandDetail", { brandId: brandId });
+        // router.push("/brands", { brandId: brandId });
       }
     } catch (error) {
       console.error("Error creating product:", error);

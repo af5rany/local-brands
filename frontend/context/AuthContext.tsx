@@ -11,7 +11,8 @@ import { jwtDecode } from "jwt-decode";
 // Create context
 interface AuthContextType {
   token: string | null;
-  user: any; // We will store decoded token here if necessary
+  user: any;
+  loading: boolean;
   login: (token: string) => void;
   logout: () => void;
 }
@@ -25,14 +26,21 @@ interface AuthProviderProps {
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [token, setToken] = useState<string | null>(null);
   const [user, setUser] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const loadToken = async () => {
-      const savedToken = await AsyncStorage.getItem("token");
-      if (savedToken) {
-        setToken(savedToken);
-        const decodedUser = jwtDecode(savedToken); // Decode JWT token
-        setUser(decodedUser);
+      try {
+        const savedToken = await AsyncStorage.getItem("token");
+        if (savedToken) {
+          setToken(savedToken);
+          const decodedUser = jwtDecode(savedToken);
+          setUser(decodedUser);
+        }
+      } catch (error) {
+        console.error("Failed to load token", error);
+      } finally {
+        setLoading(false);
       }
     };
 
@@ -41,7 +49,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const login = (newToken: string) => {
     setToken(newToken);
-    const decodedUser = jwtDecode(newToken); // Decoding token if needed
+    const decodedUser = jwtDecode(newToken);
     setUser(decodedUser);
     AsyncStorage.setItem("token", newToken);
   };
@@ -53,7 +61,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ token, user, login, logout }}>
+    <AuthContext.Provider value={{ token, user, loading, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

@@ -24,11 +24,6 @@ export class ProductsController {
     return this.productsService.findOne(id);
   }
 
-  // @Get('brand/:brandId')
-  // async getProductsByBrand(@Param('brandId') brandId: string) {
-  //   return this.productsService.findByBrand(brandId);
-  // }
-
   @Post()
   create(@Body() productData: Partial<Product>): Promise<Product> {
     return this.productsService.create(productData);

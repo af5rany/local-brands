@@ -24,7 +24,7 @@ type User = {
 };
 
 const CreateBrandScreen = () => {
-  // const navigation = useNavigation<NavigationProp<RootStackParamList>>();
+  //   const router = useRouter()
   const router = useRouter();
   const [name, setName] = useState<string>("");
   const [description, setDescription] = useState<string>("");
@@ -138,11 +138,8 @@ const CreateBrandScreen = () => {
       const data = await response.json();
 
       if (response.status === 201) {
-        // Navigate to BrandsListScreen with the new brand data
-        // navigation.navigate("BrandsList");
-        // router.navigate("/BrandsListt");
-        router.push("/BrandsListt");
-        console.log("Brand created successfully:", data);
+        router.replace("/brands");
+        // console.log("Brand created successfully:", data);
       } else {
         throw new Error(data.message || "Failed to create brand");
       }

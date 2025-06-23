@@ -22,10 +22,6 @@ export class ProductsService {
     return product;
   }
 
-  // async findByBrand(brandId: string) {
-  //   return this.productsRepository.find({ where: { brand: { id: brandId } } });
-  // }
-
   async create(productData: Partial<Product>): Promise<Product> {
     const product = this.productsRepository.create(productData);
     return this.productsRepository.save(product);

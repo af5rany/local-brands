@@ -15,11 +15,12 @@ import {
   Keyboard,
 } from "react-native";
 import { NavigationProp, useNavigation } from "@react-navigation/native";
-import { RootStackParamList } from "../../app/_layout";
+
 import getApiUrl from "@/helpers/getApiUrl";
+import { useRouter } from "expo-router";
 
 const RegisterScreen = () => {
-  const navigation = useNavigation<NavigationProp<RootStackParamList>>();
+  const router = useRouter();
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -106,7 +107,7 @@ const RegisterScreen = () => {
         [
           {
             text: "OK",
-            onPress: () => navigation.navigate("Login"),
+            onPress: () => router.push("/auth/login"),
           },
         ]
       );
@@ -220,7 +221,7 @@ const RegisterScreen = () => {
           <View style={styles.loginContainer}>
             <Text style={styles.loginText}>Already have an account?</Text>
             <Pressable
-              onPress={() => navigation.navigate("Login")}
+              onPress={() => router.push("/auth/login")}
               disabled={loading}
             >
               <Text style={[styles.loginLink, loading && styles.linkDisabled]}>

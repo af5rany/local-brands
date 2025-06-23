@@ -1,4 +1,3 @@
-// screens/brands/BrandDetailScreen.tsx
 import React, { useEffect, useState } from "react";
 import {
   View,
@@ -9,55 +8,70 @@ import {
   ActivityIndicator,
   Button,
 } from "react-native";
-import {
-  useRoute,
-  RouteProp,
-  useNavigation,
-  NavigationProp,
-} from "@react-navigation/native";
-import axios from "axios";
 import getApiUrl from "@/helpers/getApiUrl";
+import { useRouter, useLocalSearchParams } from "expo-router";
+import ProductCard from "@/components/ProductCard"; // Import the ProductCard component
 
-type RootStackParamList = {
-  BrandDetail: { brandId: string };
-  CreateProduct: { brandId: string };
-};
-
-type BrandDetailRouteProp = RouteProp<RootStackParamList, "BrandDetail">;
-
-interface BrandDetail {
+type BrandDetail = {
   id: number;
   name: string;
   logo: string | null;
   description: string;
-  // Add a products array if products are available
-  products: { id: string; name: string; imageUrl: string; price: number }[];
-}
+  products: { id: string; name: string; imageUrls: string[]; price: number }[];
+};
 
 const BrandDetailScreen = () => {
-  const { params } = useRoute<BrandDetailRouteProp>();
-  const navigation = useNavigation<NavigationProp<RootStackParamList>>();
+  const router = useRouter();
+  const { brandId } = useLocalSearchParams();
   const [brand, setBrand] = useState<BrandDetail | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    axios
-      .get<BrandDetail>(`${getApiUrl()}/brands/${params.brandId}`)
-      .then((res) => setBrand(res.data))
-      .catch((e) => console.error(e))
-      .finally(() => setLoading(false));
-  }, [params.brandId]);
+    const fetchBrandDetails = async () => {
+      setLoading(true);
+      setError(null);
 
-  if (loading)
+      try {
+        const response = await fetch(`${getApiUrl()}/brands/${brandId}`);
+        if (!response.ok) {
+          throw new Error("Failed to fetch brand details");
+        }
+        const data = await response.json();
+        setBrand(data);
+      } catch (err: any) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (brandId) {
+      fetchBrandDetails();
+    }
+  }, [brandId]);
+
+  if (loading) {
     return (
       <ActivityIndicator style={{ flex: 1 }} size="large" color="#346beb" />
     );
-  if (!brand)
+  }
+
+  if (error) {
+    return (
+      <View style={styles.center}>
+        <Text>{error}</Text>
+      </View>
+    );
+  }
+
+  if (!brand) {
     return (
       <View style={styles.center}>
         <Text>Brand not found.</Text>
       </View>
     );
+  }
 
   return (
     <View style={styles.container}>
@@ -71,9 +85,7 @@ const BrandDetailScreen = () => {
 
       <Button
         title="Create New Product"
-        onPress={() =>
-          navigation.navigate("CreateProduct", { brandId: String(brand.id) })
-        }
+        onPress={() => router.push(`/brands/${brand.id}/create`)} // Navigate to create product screen
       />
 
       <Text style={styles.productsTitle}>Products</Text>
@@ -81,14 +93,11 @@ const BrandDetailScreen = () => {
         data={brand.products}
         keyExtractor={(p) => String(p.id)}
         renderItem={({ item }) => (
-          <View style={styles.productContainer}>
-            <Image
-              source={{ uri: item.imageUrl }}
-              style={styles.productImage}
-            />
-            <Text style={styles.productName}>{item.name}</Text>
-            <Text style={styles.productPrice}>${item.price.toFixed(2)}</Text>
-          </View>
+          <ProductCard
+            name={item.name}
+            imageUrls={item.imageUrls}
+            price={item.price}
+          />
         )}
       />
     </View>
@@ -103,14 +112,6 @@ const styles = StyleSheet.create({
   brandName: { fontSize: 24, fontWeight: "bold" },
   brandDescription: { fontSize: 16, color: "#666", textAlign: "center" },
   productsTitle: { fontSize: 20, fontWeight: "bold", marginBottom: 10 },
-  productContainer: {
-    flexDirection: "row",
-    marginBottom: 12,
-    alignItems: "center",
-  },
-  productImage: { width: 60, height: 60, borderRadius: 8, marginRight: 12 },
-  productName: { fontSize: 16, flex: 1 },
-  productPrice: { fontSize: 16, fontWeight: "600" },
 });
 
 export default BrandDetailScreen;
