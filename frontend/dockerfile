@@ -1,0 +1,31 @@
+# ─── BUILD STAGE ─────────────────────────────────────────────
+FROM node:18-alpine AS builder
+WORKDIR /usr/src/app
+
+# Copy package.json and install dependencies
+COPY package*.json ./
+RUN npm install
+
+# Copy the rest of the application code
+COPY . .
+
+# ─── FINAL STAGE ─────────────────────────────────────────────
+FROM node:18-alpine
+
+WORKDIR /usr/src/app
+
+# Install Expo CLI globally
+RUN npm install -g expo-cli @expo/ngrok
+
+RUN npm install -g serve
+
+# Copy the node_modules and app code from the builder stage
+COPY --from=builder /usr/src/app /usr/src/app
+
+# Expose ports (if needed)
+EXPOSE 19000 19001 8081  
+# Expo development server ports
+
+# Start the Expo app with tunnel mode
+# CMD ["expo", "start", "--tunnel"]  # Tunnel mode allows the app to be accessible externally, useful for mobile testing
+CMD ["expo", "start", "--host", "lan"]
