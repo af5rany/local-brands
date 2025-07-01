@@ -50,7 +50,7 @@ function RootLayoutNav() {
             options={{ title: "Brand Details" }}
           />
           <Stack.Screen
-            name="products/create"
+            name="products/create/[brandId]"
             options={{ title: "Create Product" }}
           />
           <Stack.Screen

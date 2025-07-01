@@ -25,8 +25,16 @@ export class ProductsController {
   }
 
   @Post()
-  create(@Body() productData: Partial<Product>): Promise<Product> {
-    return this.productsService.create(productData);
+  async create(@Body() productData: Partial<Product>): Promise<Product> {
+    const startTime = Date.now();
+    // console.log('Creating product with data:', productData);
+
+    const result = await this.productsService.create(productData);
+
+    const endTime = Date.now();
+    console.log('Product creation took:', endTime - startTime, 'ms');
+
+    return result;
   }
 
   @Put(':id')

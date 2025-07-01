@@ -20,6 +20,7 @@ import { AppService } from './app.service';
       database: process.env.DB_DATABASE || 'local_brands_db',
       autoLoadEntities: true,
       synchronize: true,
+      // logging: true,
     }),
     AuthModule,
     UsersModule,
