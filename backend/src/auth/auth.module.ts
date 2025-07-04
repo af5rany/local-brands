@@ -8,6 +8,9 @@ import { PassportModule } from '@nestjs/passport';
 import { JwtStrategy } from './jwt.strategy';
 import { LocalStrategy } from './local.strategy';
 import { RolesGuard } from './roles.guard';
+import { JwtAuthGuard } from './jwt-auth.guard';
+import { GuestAuthGuard } from './guest-auth.guard';
+import { RegisteredUsersOnlyGuard } from './registered-users-only.guard';
 
 @Module({
   imports: [
@@ -23,13 +26,17 @@ import { RolesGuard } from './roles.guard';
     LocalStrategy,
     JwtStrategy,
     RolesGuard,
-    // Optional: Make RolesGuard available globally
-    // {
-    //   provide: APP_GUARD,
-    //   useClass: RolesGuard,
-    // },
+    JwtAuthGuard,
+    GuestAuthGuard,
+    RegisteredUsersOnlyGuard,
   ],
   controllers: [AuthController],
-  exports: [AuthService, RolesGuard],
+  exports: [
+    AuthService,
+    RolesGuard,
+    JwtAuthGuard,
+    GuestAuthGuard,
+    RegisteredUsersOnlyGuard,
+  ],
 })
 export class AuthModule {}
