@@ -1,6 +1,6 @@
 // src/auth/dto/create-user.dto.ts
 import { IsString, IsEmail, IsEnum, IsOptional } from 'class-validator';
-import { UserRole, UserStatus } from 'src/users/user.entity';
+import { UserRole, UserStatus } from 'src/common/enums/user.enum';
 
 export class CreateUserDto {
   @IsString()

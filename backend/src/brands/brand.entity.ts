@@ -1,14 +1,16 @@
+// src/brands/brand.entity.ts
 import {
   Entity,
   PrimaryGeneratedColumn,
   Column,
   ManyToOne,
+  OneToMany,
+  JoinColumn,
   CreateDateColumn,
   UpdateDateColumn,
-  OneToMany,
 } from 'typeorm';
 import { User } from '../users/user.entity';
-import { Product } from 'src/products/product.entity';
+import { Product } from '../products/product.entity';
 
 @Entity()
 export class Brand {
@@ -27,15 +29,16 @@ export class Brand {
   @Column({ nullable: true })
   location: string;
 
-  @ManyToOne(() => User, { nullable: true })
+  @ManyToOne(() => User, (user) => user.ownedBrands, { nullable: true })
+  @JoinColumn()
   owner: User;
+
+  @OneToMany(() => Product, (product) => product.brand)
+  products: Product[];
 
   @CreateDateColumn()
   createdAt: Date;
 
   @UpdateDateColumn()
   updatedAt: Date;
-
-  @OneToMany(() => Product, (product) => product.brand)
-  products: Product[];
 }

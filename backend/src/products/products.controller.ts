@@ -6,21 +6,27 @@ import {
   Param,
   Put,
   Delete,
+  Query,
+  ParseIntPipe,
 } from '@nestjs/common';
 import { ProductsService } from './products.service';
 import { Product } from './product.entity';
+import { GetProductsDto } from './dto/get-products.dto';
+import { PaginatedResult } from '../common/types/pagination.type';
 
 @Controller('products')
 export class ProductsController {
   constructor(private productsService: ProductsService) {}
 
   @Get()
-  findAll(): Promise<Product[]> {
-    return this.productsService.findAll();
+  async findAll(
+    @Query() query: GetProductsDto,
+  ): Promise<PaginatedResult<Product>> {
+    return this.productsService.findAll(query);
   }
 
   @Get(':id')
-  findOne(@Param('id') id: number): Promise<Product> {
+  findOne(@Param('id', ParseIntPipe) id: number): Promise<Product> {
     return this.productsService.findOne(id);
   }
 

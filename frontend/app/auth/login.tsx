@@ -13,8 +13,7 @@ import {
   Image,
   ActivityIndicator,
   Keyboard,
-} from "react-native"; // Added Keyboard import
-// import { NavigationProp, useNavigation } from "@react-navigation/native";
+} from "react-native";
 
 import { useAuth } from "@/context/AuthContext";
 import getApiUrl from "@/helpers/getApiUrl";
@@ -26,6 +25,7 @@ const LoginScreen = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [guestLoading, setGuestLoading] = useState(false);
 
   const handleLogin = async () => {
     // Dismiss the keyboard first
@@ -55,11 +55,6 @@ const LoginScreen = () => {
       const { token } = responseData;
       login(token);
       router.replace("/(tabs)");
-
-      // navigation.reset({
-      //   index: 0,
-      //   routes: [{ name: "Home" }],
-      // });
     } catch (err: any) {
       console.error("Login failed:", err);
       Alert.alert("Login Error", err.message || "Something went wrong");
@@ -67,6 +62,49 @@ const LoginScreen = () => {
       setLoading(false);
     }
   };
+
+  const handleGuestLogin = async () => {
+    // Dismiss the keyboard first
+    Keyboard.dismiss();
+
+    setGuestLoading(true);
+    const url = `${getApiUrl()}/auth/guest-login`;
+
+    try {
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => null);
+        throw new Error(err?.message || "Guest login failed");
+      }
+
+      const responseData = await res.json();
+      const { token } = responseData;
+
+      // Store guest token and navigate
+      login(token);
+      router.replace("/(tabs)");
+
+      // Optional: Show a welcome message for guests
+      setTimeout(() => {
+        Alert.alert(
+          "Welcome Guest!",
+          "You're browsing as a guest. Some features may be limited. You can create an account anytime to unlock full access.",
+          [{ text: "Got it", style: "default" }]
+        );
+      }, 1000);
+    } catch (err: any) {
+      console.error("Guest login failed:", err);
+      Alert.alert("Guest Login Error", err.message || "Something went wrong");
+    } finally {
+      setGuestLoading(false);
+    }
+  };
+
+  const isAnyLoading = loading || guestLoading;
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -76,7 +114,7 @@ const LoginScreen = () => {
       >
         <ScrollView
           contentContainerStyle={styles.scroll}
-          keyboardShouldPersistTaps="handled" // Add this prop
+          keyboardShouldPersistTaps="handled"
         >
           <Image
             source={require("@/assets/images/icon.png")}
@@ -94,7 +132,7 @@ const LoginScreen = () => {
               onChangeText={setEmail}
               keyboardType="email-address"
               autoCapitalize="none"
-              editable={!loading}
+              editable={!isAnyLoading}
             />
           </View>
 
@@ -106,14 +144,14 @@ const LoginScreen = () => {
               secureTextEntry
               value={password}
               onChangeText={setPassword}
-              editable={!loading}
+              editable={!isAnyLoading}
             />
           </View>
 
           <Pressable
             style={[styles.button, loading && styles.buttonDisabled]}
             onPress={handleLogin}
-            disabled={loading}
+            disabled={isAnyLoading}
           >
             {loading ? (
               <ActivityIndicator color="#fff" />
@@ -122,23 +160,35 @@ const LoginScreen = () => {
             )}
           </Pressable>
 
+          {/* Divider */}
+          <View style={styles.divider}>
+            <View style={styles.dividerLine} />
+            <Text style={styles.dividerText}>or</Text>
+            <View style={styles.dividerLine} />
+          </View>
+
+          {/* Guest Login Button */}
+          <Pressable
+            style={[styles.guestButton, guestLoading && styles.buttonDisabled]}
+            onPress={handleGuestLogin}
+            disabled={isAnyLoading}
+          >
+            {guestLoading ? (
+              <ActivityIndicator color="#346beb" />
+            ) : (
+              <Text style={styles.guestButtonText}>Continue as Guest</Text>
+            )}
+          </Pressable>
+
           <View style={styles.footer}>
             <Pressable
-              onPress={() => !loading && router.push("/auth/register")}
-              disabled={loading}
+              onPress={() => !isAnyLoading && router.push("/auth/register")}
+              disabled={isAnyLoading}
             >
-              <Text style={[styles.link, loading && styles.linkDisabled]}>
+              <Text style={[styles.link, isAnyLoading && styles.linkDisabled]}>
                 Register
               </Text>
             </Pressable>
-            {/* <Pressable
-              onPress={() => !loading && router.push("ForgotPassword")}
-              disabled={loading}
-            >
-              <Text style={[styles.link, loading && styles.linkDisabled]}>
-                Forgot Password?
-              </Text>
-            </Pressable> */}
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -176,9 +226,48 @@ const styles = StyleSheet.create({
     backgroundColor: "#a0a0a0",
   },
   buttonText: { color: "#fff", fontSize: 16, fontWeight: "500" },
+
+  // Divider styles
+  divider: {
+    flexDirection: "row",
+    alignItems: "center",
+    width: "100%",
+    marginVertical: 20,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: "#ddd",
+  },
+  dividerText: {
+    marginHorizontal: 15,
+    color: "#666",
+    fontSize: 14,
+  },
+
+  // Guest button styles
+  guestButton: {
+    backgroundColor: "#fff",
+    paddingVertical: 15,
+    paddingHorizontal: 80,
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: "#346beb",
+    elevation: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    minWidth: 200,
+    marginBottom: 10,
+  },
+  guestButtonText: {
+    color: "#346beb",
+    fontSize: 16,
+    fontWeight: "500",
+  },
+
   footer: {
     flexDirection: "row",
-    justifyContent: "space-between",
+    justifyContent: "center",
     width: "100%",
     marginTop: 20,
   },

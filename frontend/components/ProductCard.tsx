@@ -10,47 +10,10 @@ import {
 import { useRouter } from "expo-router";
 import { useThemeColor } from "@/hooks/useThemeColor";
 import { Ionicons } from "@expo/vector-icons";
-import { Gender, ProductType, Season } from "@/types/enums";
-import { Brand } from "@/types/brand";
+import { Product } from "@/types/product";
 
 // Full width for the card
 const { width } = Dimensions.get("window");
-
-interface ProductVariant {
-  color: string;
-  colorHex?: string;
-  variantImages: string[];
-  createdAt?: string;
-  updatedAt?: string;
-}
-
-interface Product {
-  id: number;
-  name: string;
-  description?: string;
-  price: number;
-  salePrice?: number;
-  productType?: ProductType;
-  subcategory?: string;
-  gender?: Gender;
-  season?: Season;
-  tags?: string[];
-  material?: string;
-  careInstructions?: string;
-  origin?: string;
-  weight?: number;
-  length?: number;
-  width?: number;
-  height?: number;
-  totalStock: number;
-  isActive: boolean;
-  isFeatured: boolean;
-  brandId: number;
-  brand: Brand;
-  variants: ProductVariant[];
-  createdAt: string;
-  updatedAt: string;
-}
 
 interface ProductCardProps {
   product: Product;
@@ -58,7 +21,7 @@ interface ProductCardProps {
 
 const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   const router = useRouter();
-
+  // console.log("ProductCard rendered with product:", JSON.stringify(product));
   // Theme colors
   const backgroundColor = useThemeColor({}, "background");
   const textColor = useThemeColor({}, "text");
@@ -397,7 +360,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
       {/* Product Details */}
       <View style={styles.productDetails}>
         {/* Brand Name */}
-        <Text style={styles.brandName}>{product.brand.name}</Text>
+        <Text style={styles.brandName}>{product.brandName}</Text>
 
         {/* Product Name */}
         <Text style={styles.productName} numberOfLines={2}>

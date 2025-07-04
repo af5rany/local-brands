@@ -9,7 +9,8 @@ import {
   IsUrl,
 } from 'class-validator';
 import { Type, Transform } from 'class-transformer';
-import { Gender, ProductType, Season } from '../product.entity';
+import { ProductType, Season } from 'src/common/enums/product.enum';
+import { Gender } from 'src/common/enums/user.enum';
 
 export class CreateProductVariantDto {
   @IsString()

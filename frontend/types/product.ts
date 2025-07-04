@@ -36,4 +36,5 @@ export interface Product {
   variants: ProductVariant[];
   createdAt: string;
   updatedAt: string;
+  brandName?: string;
 }
