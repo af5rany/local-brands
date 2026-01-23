@@ -8,12 +8,12 @@ import {
   ActivityIndicator,
   TouchableOpacity,
   ScrollView,
-  SafeAreaView,
   TextInput,
   Modal,
   Dimensions,
   RefreshControl,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import getApiUrl from "@/helpers/getApiUrl";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import ProductCard from "@/components/ProductCard";
@@ -22,47 +22,48 @@ import { Ionicons } from "@expo/vector-icons";
 import { Brand } from "@/types/brand";
 import { Product } from "@/types/product";
 import { Gender, ProductType, Season } from "@/types/enums";
+import { useAuth } from "@/context/AuthContext";
 
 // Filter interface
-interface ProductFilters {
-  search: string;
-  productType?: ProductType;
-  gender?: Gender;
-  season?: Season;
-  minPrice?: number;
-  maxPrice?: number;
-  tags?: string[];
-  material?: string;
-  inStock?: boolean;
-  onSale?: boolean;
-  featured?: boolean;
-}
+// interface ProductFilters {
+//   search: string;
+//   productType?: ProductType;
+//   gender?: Gender;
+//   season?: Season;
+//   minPrice?: number;
+//   maxPrice?: number;
+//   tags?: string[];
+//   material?: string;
+//   inStock?: boolean;
+//   onSale?: boolean;
+//   featured?: boolean;
+// }
 
-// Pagination interface
-interface PaginationInfo {
-  page: number;
-  limit: number;
-  total: number;
-  totalPages: number;
-  hasNext: boolean;
-  hasPrev: boolean;
-}
+// // Pagination interface
+// interface PaginationInfo {
+//   page: number;
+//   limit: number;
+//   total: number;
+//   totalPages: number;
+//   hasNext: boolean;
+//   hasPrev: boolean;
+// }
 
-// Sort options
-enum SortBy {
-  NAME_ASC = "name_asc",
-  NAME_DESC = "name_desc",
-  PRICE_ASC = "price_asc",
-  PRICE_DESC = "price_desc",
-  CREATED_DESC = "created_desc",
-  CREATED_ASC = "created_asc",
-  FEATURED = "featured",
-}
+// // Sort options
+// enum SortBy {
+//   NAME_ASC = "name_asc",
+//   NAME_DESC = "name_desc",
+//   PRICE_ASC = "price_asc",
+//   PRICE_DESC = "price_desc",
+//   CREATED_DESC = "created_desc",
+//   CREATED_ASC = "created_asc",
+//   FEATURED = "featured",
+// }
 
 const BrandDetailScreen = () => {
   const router = useRouter();
   const { brandId, refresh } = useLocalSearchParams();
-
+  const { token } = useAuth();
   // Theme colors
   const backgroundColor = useThemeColor({}, "background");
   const textColor = useThemeColor({}, "text");
@@ -126,7 +127,12 @@ const BrandDetailScreen = () => {
     setError(null);
 
     try {
-      const response = await fetch(`${getApiUrl()}/brands/${brandId}`);
+      const response = await fetch(`${getApiUrl()}/brands/${brandId}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
       if (!response.ok) {
         throw new Error("Failed to fetch brand details");
       }
@@ -174,7 +180,13 @@ const BrandDetailScreen = () => {
         }
 
         const response = await fetch(
-          `${getApiUrl()}/brands/${brandId}?${queryParams.toString()}`
+          `${getApiUrl()}/brands/${brandId}?${queryParams.toString()}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+          }
         );
 
         if (!response.ok) {

@@ -8,6 +8,7 @@ import {
   OneToMany,
   OneToOne,
   JoinColumn,
+  Index,
 } from 'typeorm';
 import { Brand } from '../brands/brand.entity';
 import { Cart } from '../cart/cart.entity';
@@ -25,7 +26,18 @@ export class User {
   name: string;
 
   @Column({ unique: true })
+  @Index()
   email: string;
+
+  // ✅ Add username field
+  @Column({ unique: true, nullable: true })
+  @Index()
+  username: string;
+
+  // ✅ Add phone number with unique constraint
+  @Column({ unique: true, nullable: true })
+  @Index()
+  phoneNumber: string;
 
   @Column({ nullable: true })
   password: string;
@@ -38,6 +50,63 @@ export class User {
 
   @Column({ default: false })
   isGuest: boolean;
+
+  // ✅ Email/Phone verification
+  @Column({ default: false })
+  isEmailVerified: boolean;
+
+  @Column({ default: false })
+  isPhoneVerified: boolean;
+
+  @Column({ nullable: true })
+  emailVerificationToken: string;
+
+  @Column({ nullable: true })
+  phoneVerificationToken: string;
+
+  // ✅ Password reset
+  @Column({ nullable: true })
+  resetPasswordToken: string;
+
+  @Column({ nullable: true })
+  resetPasswordExpires: Date;
+
+  // ✅ Profile fields
+  @Column({ nullable: true })
+  avatar: string;
+
+  @Column({ type: 'date', nullable: true })
+  dateOfBirth: Date;
+
+  // ✅ Preferences
+  @Column({ default: 'en' })
+  preferredLanguage: string;
+
+  @Column({ type: 'json', nullable: true })
+  notificationPreferences: {
+    email: boolean;
+    push: boolean;
+    sms: boolean;
+    orderUpdates: boolean;
+    promotions: boolean;
+  };
+
+  // ✅ Security
+  @Column({ nullable: true })
+  lastLoginAt: Date;
+
+  @Column({ nullable: true })
+  lastLoginIp: string;
+
+  @Column({ default: 0 })
+  failedLoginAttempts: number;
+
+  @Column({ nullable: true })
+  lockedUntil: Date;
+
+  // ✅ Soft delete
+  @Column({ nullable: true })
+  deletedAt: Date;
 
   // Relationships
   @OneToMany(() => Order, (order) => order.user)

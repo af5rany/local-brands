@@ -1,6 +1,6 @@
 import React, { useState } from "react";
+import { SafeAreaView } from "react-native-safe-area-context";
 import {
-  SafeAreaView,
   View,
   Text,
   TextInput,
@@ -52,6 +52,7 @@ const LoginScreen = () => {
       }
 
       const responseData = await res.json();
+      // console.log("Login response:", JSON.stringify(responseData, null, 2));
       const { token } = responseData;
       login(token);
       router.replace("/(tabs)");

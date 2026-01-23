@@ -87,7 +87,7 @@ export class CreateProductDto {
   height?: number;
 
   @IsNumber()
-  totalStock: number;
+  stock: number;
 
   @IsBoolean()
   isActive: boolean;

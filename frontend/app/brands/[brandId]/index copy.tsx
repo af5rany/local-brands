@@ -8,19 +8,20 @@ import {
   ActivityIndicator,
   TouchableOpacity,
   ScrollView,
-  SafeAreaView,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import getApiUrl from "@/helpers/getApiUrl";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import ProductCard from "@/components/ProductCard";
 import { useThemeColor } from "@/hooks/useThemeColor";
 import { Ionicons } from "@expo/vector-icons";
 import { Brand } from "@/types/brand";
+import { useAuth } from "@/context/AuthContext";
 
 const BrandDetailScreen = () => {
   const router = useRouter();
   const { brandId, refresh } = useLocalSearchParams();
-
+  const { token } = useAuth();
   // Theme colors
   const backgroundColor = useThemeColor({}, "background");
   const textColor = useThemeColor({}, "text");
@@ -50,7 +51,12 @@ const BrandDetailScreen = () => {
     setError(null);
 
     try {
-      const response = await fetch(`${getApiUrl()}/brands/${brandId}`);
+      const response = await fetch(`${getApiUrl()}/brands/${brandId}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
       if (!response.ok) {
         throw new Error("Failed to fetch brand details");
       }

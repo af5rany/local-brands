@@ -9,9 +9,9 @@ import {
   ActivityIndicator,
   Image,
   ScrollView,
-  SafeAreaView,
   Switch,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import getApiUrl from "@/helpers/getApiUrl";
@@ -19,6 +19,7 @@ import { Dropdown } from "react-native-element-dropdown";
 import { useThemeColor } from "@/hooks/useThemeColor";
 import { Ionicons } from "@expo/vector-icons";
 import { ProductVariant } from "@/types/product";
+import { useAuth } from "@/context/AuthContext";
 
 const productTypeOptions = [
   { label: "Shoes", value: "Shoes" },
@@ -60,6 +61,7 @@ const subcategoryOptions = {
 
 const CreateProductScreen = () => {
   const router = useRouter();
+  const { token } = useAuth();
   const { brandId } = useLocalSearchParams();
   const backgroundColor = useThemeColor({}, "background");
   const textColor = useThemeColor({}, "text");
@@ -324,7 +326,7 @@ const CreateProductScreen = () => {
         height: parseFloat(height),
         isActive,
         isFeatured,
-        totalStock: stock,
+        stock: stock,
         brandId,
         variants,
       };
@@ -334,6 +336,7 @@ const CreateProductScreen = () => {
       const response = await fetch(`${getApiUrl()}/products`, {
         method: "POST",
         headers: {
+          Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify(productData),

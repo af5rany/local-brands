@@ -3,6 +3,7 @@ import {
   Injectable,
   ConflictException,
   InternalServerErrorException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { User } from '../users/user.entity';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -17,7 +18,7 @@ export class AuthService {
   constructor(
     private usersService: UsersService,
     private jwtService: JwtService,
-  ) {}
+  ) { }
 
   async validateUser(email: string, pass: string): Promise<User | null> {
     const user = await this.usersService.findByEmail(email);
@@ -29,7 +30,7 @@ export class AuthService {
   }
 
   async login(user: User): Promise<{ token: string }> {
-    const payload = { sub: user.id, role: user.role };
+    const payload = { userId: user.id, role: user.role };
     const token = await this.jwtService.signAsync(payload);
     return { token };
   }
@@ -50,7 +51,7 @@ export class AuthService {
     guestUser.password = '';
 
     // Generate token with shorter expiration for guests
-    const payload = { sub: guestUser.id, role: guestUser.role };
+    const payload = { userId: guestUser.id, role: guestUser.role };
     const token = await this.jwtService.signAsync(payload, {
       expiresIn: '30m',
     }); // Shorter session for guests
@@ -59,6 +60,23 @@ export class AuthService {
   }
 
   async register(dto: CreateUserDto): Promise<{ user: User; token: string }> {
+    // Restrict public registration roles to CUSTOMER ONLY
+    // NOTE: In production, this should be guarded or handled via a different internal endpoint.
+    // For seeding purposes, we allow it if the email is our seed admin email.
+    if (dto.role !== UserRole.CUSTOMER && dto.email !== 'admin@example.com') {
+      if (dto.role === UserRole.ADMIN) {
+        throw new ForbiddenException('Admin registration is not allowed');
+      }
+      if (dto.role === UserRole.BRAND_OWNER) {
+        throw new ForbiddenException(
+          'Brand Owner accounts must be created by an administrator',
+        );
+      }
+      throw new ForbiddenException(
+        `Registration as ${dto.role} is not allowed through this endpoint`,
+      );
+    }
+
     const hashed = await bcrypt.hash(dto.password, 10);
     let newUser: User;
     try {
@@ -68,18 +86,19 @@ export class AuthService {
         isGuest: false, // Explicitly set as non-guest
       });
     } catch (err: any) {
+      console.error('Registration error details:', err);
       // Postgres unique‐violation code
       if (err.code === '23505') {
         // email already exists
-        throw new ConflictException('Email is already registered');
+        throw new ConflictException('Email or username is already registered');
       }
       // something else went wrong
-      throw new InternalServerErrorException();
+      throw new InternalServerErrorException(err.message || 'Internal server error during registration');
     }
     newUser.password = '';
 
     // generate a token right away
-    const payload = { sub: newUser.id, role: newUser.role };
+    const payload = { userId: newUser.id, role: newUser.role };
     const token = await this.jwtService.signAsync(payload);
 
     return { user: newUser, token };
@@ -110,7 +129,7 @@ export class AuthService {
     updatedUser.password = '';
 
     // Generate new token
-    const payload = { sub: updatedUser.id, role: updatedUser.role };
+    const payload = { userId: updatedUser.id, role: updatedUser.role };
     const token = await this.jwtService.signAsync(payload);
 
     return { user: updatedUser, token };

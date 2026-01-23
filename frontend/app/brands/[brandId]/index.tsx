@@ -1,5 +1,3 @@
-// Fixed version of your React Native component with proper sorting
-
 import React, { useEffect, useState, useCallback } from "react";
 import {
   View,
@@ -10,12 +8,12 @@ import {
   ActivityIndicator,
   TouchableOpacity,
   ScrollView,
-  SafeAreaView,
   TextInput,
   Modal,
   Dimensions,
   RefreshControl,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import getApiUrl from "@/helpers/getApiUrl";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import ProductCard from "@/components/ProductCard";
@@ -24,6 +22,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { Brand } from "@/types/brand";
 import { Product } from "@/types/product";
 import { Gender, ProductType, Season } from "@/types/enums";
+import { useAuth } from "@/context/AuthContext";
 
 // Filter interface - simplified to match backend
 interface ProductFilters {
@@ -69,7 +68,8 @@ interface SortOption {
 const BrandDetailScreen = () => {
   const router = useRouter();
   const { brandId, refresh } = useLocalSearchParams();
-
+  const { token, user } = useAuth();
+  const userRole = user?.role || user?.userRole;
   // Theme colors
   const backgroundColor = useThemeColor({}, "background");
   const textColor = useThemeColor({}, "text");
@@ -92,6 +92,7 @@ const BrandDetailScreen = () => {
 
   // State management
   const [brand, setBrand] = useState<Brand | null>(null);
+  const isOwnerOrAdmin = userRole === "admin" || (user?.id && brand?.owner?.id && user.id === brand.owner.id);
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [productsLoading, setProductsLoading] = useState(false);
@@ -181,7 +182,12 @@ const BrandDetailScreen = () => {
     setError(null);
 
     try {
-      const response = await fetch(`${getApiUrl()}/brands/${brandId}`);
+      const response = await fetch(`${getApiUrl()}/brands/${brandId}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
       if (!response.ok) {
         throw new Error("Failed to fetch brand details");
       }
@@ -224,7 +230,13 @@ const BrandDetailScreen = () => {
         console.log("Fetching with params:", queryParams.toString()); // Debug log
 
         const response = await fetch(
-          `${getApiUrl()}/products?${queryParams.toString()}`
+          `${getApiUrl()}/products?${queryParams.toString()}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+          }
         );
 
         if (!response.ok) {
@@ -715,13 +727,15 @@ const BrandDetailScreen = () => {
         </View>
 
         {/* Create Product Button */}
-        <TouchableOpacity
-          style={styles.createButton}
-          onPress={() => router.push(`/products/create/${brand.id}`)}
-        >
-          <Ionicons name="add" size={20} color="#ffffff" />
-          <Text style={styles.createButtonText}>Create New Product</Text>
-        </TouchableOpacity>
+        {isOwnerOrAdmin && (
+          <TouchableOpacity
+            style={styles.createButton}
+            onPress={() => router.push(`/products/create/${brand.id}`)}
+          >
+            <Ionicons name="add" size={20} color="#ffffff" />
+            <Text style={styles.createButtonText}>Create New Product</Text>
+          </TouchableOpacity>
+        )}
 
         {/* Search and Filter */}
         <View style={styles.searchAndFilterContainer}>
@@ -769,7 +783,7 @@ const BrandDetailScreen = () => {
               style={[
                 styles.sortButton,
                 selectedSortOption.key === option.key &&
-                  styles.sortButtonActive,
+                styles.sortButtonActive,
               ]}
               onPress={() => handleSortChange(option)}
             >
@@ -777,7 +791,7 @@ const BrandDetailScreen = () => {
                 style={[
                   styles.sortButtonText,
                   selectedSortOption.key === option.key &&
-                    styles.sortButtonTextActive,
+                  styles.sortButtonTextActive,
                 ]}
               >
                 {option.label}
@@ -872,7 +886,7 @@ const BrandDetailScreen = () => {
                       style={[
                         styles.filterOption,
                         filters.productType === type &&
-                          styles.filterOptionActive,
+                        styles.filterOptionActive,
                       ]}
                       onPress={() =>
                         handleFilterChange(
@@ -885,7 +899,7 @@ const BrandDetailScreen = () => {
                         style={[
                           styles.filterOptionText,
                           filters.productType === type &&
-                            styles.filterOptionTextActive,
+                          styles.filterOptionTextActive,
                         ]}
                       >
                         {type}
@@ -917,7 +931,7 @@ const BrandDetailScreen = () => {
                         style={[
                           styles.filterOptionText,
                           filters.gender === gender &&
-                            styles.filterOptionTextActive,
+                          styles.filterOptionTextActive,
                         ]}
                       >
                         {gender}
@@ -949,7 +963,7 @@ const BrandDetailScreen = () => {
                         style={[
                           styles.filterOptionText,
                           filters.season === season &&
-                            styles.filterOptionTextActive,
+                          styles.filterOptionTextActive,
                         ]}
                       >
                         {season}

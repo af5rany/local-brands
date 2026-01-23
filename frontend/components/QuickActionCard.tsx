@@ -1,6 +1,7 @@
 import React from "react";
-import { View, Text, StyleSheet, Pressable } from "react-native";
+import { View, Text, StyleSheet, Pressable, Animated } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { Swipeable, RectButton } from "react-native-gesture-handler";
 
 type QuickActionCardProps = {
   title: string;
@@ -16,18 +17,46 @@ const QuickActionCard: React.FC<QuickActionCardProps> = ({
   icon,
   color,
   onPress,
-}) => (
-  <Pressable style={styles.actionCard} onPress={onPress}>
-    <View style={[styles.actionIcon, { backgroundColor: color + "20" }]}>
-      <Ionicons name={icon} size={28} color={color} />
-    </View>
-    <View style={styles.actionContent}>
-      <Text style={styles.actionTitle}>{title}</Text>
-      <Text style={styles.actionDescription}>{description}</Text>
-    </View>
-    <Ionicons name="chevron-forward" size={20} color="#666" />
-  </Pressable>
-);
+}) => {
+  const renderRightActions = (
+    progress: Animated.AnimatedInterpolation<number>,
+    dragX: Animated.AnimatedInterpolation<number>
+  ) => {
+    const trans = dragX.interpolate({
+      inputRange: [-100, 0],
+      outputRange: [1, 0],
+      extrapolate: "clamp",
+    });
+
+    return (
+      <RectButton style={[styles.rightAction, { backgroundColor: color }]} onPress={onPress}>
+        <Animated.View style={{ transform: [{ scale: trans }] }}>
+          <Ionicons name="arrow-forward" size={30} color="#fff" />
+          <Text style={styles.actionText}>Go</Text>
+        </Animated.View>
+      </RectButton>
+    );
+  };
+
+  return (
+    <Swipeable
+      renderRightActions={renderRightActions}
+      friction={2}
+      rightThreshold={40}
+    >
+      <Pressable style={styles.actionCard} onPress={onPress}>
+        <View style={[styles.actionIcon, { backgroundColor: color + "20" }]}>
+          <Ionicons name={icon} size={28} color={color} />
+        </View>
+        <View style={styles.actionContent}>
+          <Text style={styles.actionTitle}>{title}</Text>
+          <Text style={styles.actionDescription}>{description}</Text>
+        </View>
+        <Ionicons name="chevron-forward" size={20} color="#666" />
+      </Pressable>
+    </Swipeable>
+  );
+};
 
 const styles = StyleSheet.create({
   actionCard: {
@@ -62,6 +91,21 @@ const styles = StyleSheet.create({
   actionDescription: {
     fontSize: 14,
     color: "#64748b",
+  },
+  rightAction: {
+    alignItems: "center",
+    flex: 1,
+    justifyContent: "center",
+    borderRadius: 12,
+    width: 80,
+    marginVertical: 4,
+    marginRight: 4,
+  },
+  actionText: {
+    color: "white",
+    fontSize: 12,
+    fontWeight: "600",
+    marginTop: 4,
   },
 });
 

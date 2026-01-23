@@ -26,7 +26,7 @@ export class RegisteredUsersOnlyGuard implements CanActivate {
         secret: process.env.JWT_SECRET || 'local-brands',
       });
 
-      const user = await this.usersService.findById(Number(payload.sub));
+      const user = await this.usersService.findById(Number(payload.userId));
 
       if (!user || user.role === UserRole.GUEST) {
         return false; // Block guest users

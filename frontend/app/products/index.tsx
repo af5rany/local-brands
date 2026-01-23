@@ -14,6 +14,7 @@ import {
   Modal,
   ScrollView,
   RefreshControl,
+  Alert,
 } from "react-native";
 import { useRouter } from "expo-router";
 import getApiUrl from "@/helpers/getApiUrl";
@@ -23,7 +24,10 @@ import { LinearGradient } from "expo-linear-gradient";
 import { debounce } from "lodash";
 import { useColorScheme } from "react-native";
 import { Filters, PaginatedResult, SortOptions } from "@/types/filters";
+import { Product } from "@/types/product";
+import { useAuth } from "@/context/AuthContext";
 import { Brand } from "@/types/brand";
+import { Gender, ProductType } from "@/types/enums";
 
 const { width } = Dimensions.get("window");
 
@@ -63,18 +67,25 @@ const { width } = Dimensions.get("window");
 //   sortOrder: "ASC" | "DESC";
 // }
 
-const BrandsListScreen = () => {
-  const [brandsData, setBrandsData] = useState<PaginatedResult | null>(null);
+const ProductsListScreen = () => {
+  const { token, user } = useAuth();
+  const userRole = user?.role || user?.userRole;
+  const [productsData, setProductsData] = useState<PaginatedResult<Product> | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [refreshing, setRefreshing] = useState<boolean>(false);
   const [loadingMore, setLoadingMore] = useState<boolean>(false);
   const [error, setError] = useState<string>("");
+  const [allBrands, setAllBrands] = useState<Brand[]>([]);
+  const [loadingBrands, setLoadingBrands] = useState<boolean>(false);
 
   // Search and Filter States
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [filters, setFilters] = useState<Filters>({
     location: "",
     ownerId: "",
+    brandId: "",
+    gender: "",
+    productType: "",
   });
   const [sortOptions, setSortOptions] = useState<SortOptions>({
     sortBy: "createdAt",
@@ -84,6 +95,7 @@ const BrandsListScreen = () => {
   // UI States
   const [showFilters, setShowFilters] = useState<boolean>(false);
   const [showSort, setShowSort] = useState<boolean>(false);
+  const [brandSearchQuery, setBrandSearchQuery] = useState<string>("");
 
   const router = useRouter();
 
@@ -114,17 +126,20 @@ const BrandsListScreen = () => {
         ...(searchQuery && { search: searchQuery }),
         ...(filters.location && { location: filters.location }),
         ...(filters.ownerId && { ownerId: filters.ownerId }),
+        ...(filters.brandId && { brandId: filters.brandId.toString() }),
+        ...(filters.gender && { gender: filters.gender }),
+        ...(filters.productType && { productType: filters.productType }),
         sortBy: sortOptions.sortBy,
         sortOrder: sortOptions.sortOrder,
       });
 
-      return `${getApiUrl()}/brands?${params.toString()}`;
+      return `${getApiUrl()}/products?${params.toString()}`;
     },
     [searchQuery, filters, sortOptions]
   );
 
-  // Fetch brands with pagination
-  const fetchBrands = useCallback(
+  // Fetch products with pagination
+  const fetchProducts = useCallback(
     async (page: number = 1, append: boolean = false) => {
       try {
         if (!append) {
@@ -133,24 +148,28 @@ const BrandsListScreen = () => {
           setLoadingMore(true);
         }
 
-        const response = await fetch(buildApiUrl(page));
+        const response = await fetch(buildApiUrl(page), {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
         if (!response.ok) {
-          throw new Error("Failed to fetch brands");
+          throw new Error("Failed to fetch products");
         }
 
-        const data: PaginatedResult = await response.json();
+        const data: PaginatedResult<Product> = await response.json();
 
-        if (append && brandsData) {
-          setBrandsData((prev) =>
+        if (append && productsData) {
+          setProductsData((prev) =>
             prev
               ? {
-                  ...data,
-                  items: [...prev.items, ...data.items],
-                }
+                ...data,
+                items: [...prev.items, ...data.items],
+              }
               : data
           );
         } else {
-          setBrandsData(data);
+          setProductsData(data);
         }
 
         setError("");
@@ -166,16 +185,40 @@ const BrandsListScreen = () => {
         setRefreshing(false);
       }
     },
-    [buildApiUrl, brandsData]
+    [buildApiUrl, productsData]
   );
+
+  // Fetch all brands for filter
+  const fetchBrands = useCallback(async () => {
+    try {
+      setLoadingBrands(true);
+      const response = await fetch(`${getApiUrl()}/brands?limit=100`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      if (response.ok) {
+        const data: PaginatedResult<Brand> = await response.json();
+        setAllBrands(data.items);
+      }
+    } catch (err) {
+      console.error("Error fetching brands:", err);
+    } finally {
+      setLoadingBrands(false);
+    }
+  }, [token]);
 
   // Debounced search
   const debouncedFetch = useMemo(
-    () => debounce((page: number = 1) => fetchBrands(page, false), 300),
-    [fetchBrands]
+    () => debounce((page: number = 1) => fetchProducts(page, false), 300),
+    [fetchProducts]
   );
 
   // Initial fetch and search/filter changes
+  useEffect(() => {
+    fetchBrands();
+  }, [fetchBrands]);
+
   useEffect(() => {
     debouncedFetch(1);
     return () => {
@@ -205,74 +248,76 @@ const BrandsListScreen = () => {
   // Clear all filters
   const clearFilters = () => {
     setSearchQuery("");
-    setFilters({ location: "", ownerId: "" });
+    setFilters({
+      location: "",
+      ownerId: "",
+      brandId: "",
+      gender: "",
+      productType: "",
+    });
     setSortOptions({ sortBy: "createdAt", sortOrder: "DESC" });
+    setBrandSearchQuery("");
   };
 
   // Refresh data
   const onRefresh = () => {
     setRefreshing(true);
-    fetchBrands(1, false);
+    fetchProducts(1, false);
   };
 
   // Load more data
   const loadMore = () => {
-    if (brandsData && brandsData.hasNextPage && !loadingMore) {
-      fetchBrands(brandsData.page + 1, true);
+    if (productsData && productsData.hasNextPage && !loadingMore) {
+      fetchProducts(productsData.page + 1, true);
     }
   };
 
-  // Render brand item
-  const renderBrand = ({ item, index }: { item: Brand; index: number }) => (
+  // Render product item
+  const renderProduct = ({ item, index }: { item: Product; index: number }) => (
     <TouchableOpacity
-      style={[styles.brandContainer, { backgroundColor: cardBackground }]}
-      onPress={() => router.push(`/brands/${item.id}`)}
+      style={[styles.productContainer, { backgroundColor: cardBackground }]}
+      onPress={() => router.push(`/products/${item.id}`)}
       activeOpacity={0.8}
     >
-      <View style={styles.brandContent}>
-        <View style={styles.brandHeader}>
-          <View style={styles.logoContainer}>
-            {item.logo ? (
+      <View style={styles.productContent}>
+        <View style={styles.productHeader}>
+          <View style={styles.imageContainer}>
+            {item.variants?.[0]?.variantImages?.[0] ? (
               <Image
-                style={styles.brandLogo}
-                source={{ uri: item.logo }}
+                style={styles.productImage}
+                source={{ uri: item.variants[0].variantImages[0] }}
                 defaultSource={require("@/assets/images/placeholder-logo.png")}
               />
             ) : (
               <View
                 style={[
-                  styles.logoPlaceholder,
+                  styles.imagePlaceholder,
                   { backgroundColor: buttonColor },
                 ]}
               >
-                <Ionicons name="business" size={24} color="white" />
+                <Ionicons name="cube" size={24} color="white" />
               </View>
             )}
           </View>
-          <View style={styles.brandInfo}>
+          <View style={styles.productInfo}>
             <Text
-              style={[styles.brandName, { color: textColor }]}
+              style={[styles.productName, { color: textColor }]}
               numberOfLines={1}
             >
               {item.name}
             </Text>
             <Text
-              style={[styles.brandDescription, { color: secondaryTextColor }]}
+              style={[styles.productDescription, { color: secondaryTextColor }]}
               numberOfLines={2}
             >
               {item.description || "No description available"}
             </Text>
-            {item.location && (
-              <View style={styles.locationContainer}>
-                <Ionicons
-                  name="location-outline"
-                  size={12}
-                  color={secondaryTextColor}
-                />
+            {item.price && (
+              <View style={styles.priceContainer}>
                 <Text
-                  style={[styles.locationText, { color: secondaryTextColor }]}
+                  style={[styles.priceText, { color: buttonColor }]}
                 >
-                  {item.location}
+                  ${item.price}
                 </Text>
               </View>
             )}
@@ -286,15 +331,15 @@ const BrandsListScreen = () => {
           </View>
         </View>
 
-        <View style={[styles.brandStats, { borderTopColor: borderColor }]}>
+        <View style={[styles.productStats, { borderTopColor: borderColor }]}>
           <View style={styles.statItem}>
             <Ionicons
-              name="cube-outline"
+              name="pricetag-outline"
               size={16}
               color={secondaryTextColor}
             />
             <Text style={[styles.statText, { color: secondaryTextColor }]}>
-              {item.products.length || 0} products
+              {item.brandName || item.brand?.name || "No Brand"}
             </Text>
           </View>
           <View style={styles.statItem}>
@@ -328,7 +373,7 @@ const BrandsListScreen = () => {
       />
       <TextInput
         style={[styles.searchInput, { color: textColor }]}
-        placeholder="Search brands..."
+        placeholder="Search products..."
         placeholderTextColor={secondaryTextColor}
         value={searchQuery}
         onChangeText={handleSearch}
@@ -356,11 +401,15 @@ const BrandsListScreen = () => {
         <Text style={[styles.controlButtonText, { color: buttonColor }]}>
           Filter
         </Text>
-        {(filters.location || filters.ownerId) && (
-          <View
-            style={[styles.filterBadge, { backgroundColor: buttonColor }]}
-          />
-        )}
+        {(filters.location ||
+          filters.ownerId ||
+          filters.brandId ||
+          filters.gender ||
+          filters.productType) && (
+            <View
+              style={[styles.filterBadge, { backgroundColor: buttonColor }]}
+            />
+          )}
       </TouchableOpacity>
 
       <TouchableOpacity
@@ -376,17 +425,22 @@ const BrandsListScreen = () => {
         </Text>
       </TouchableOpacity>
 
-      {(searchQuery || filters.location || filters.ownerId) && (
-        <TouchableOpacity
-          style={[styles.controlButton, { backgroundColor: "#FF3B30" }]}
-          onPress={clearFilters}
-        >
-          <Ionicons name="refresh" size={16} color="white" />
-          <Text style={[styles.controlButtonText, { color: "white" }]}>
-            Clear
-          </Text>
-        </TouchableOpacity>
-      )}
+      {(searchQuery ||
+        filters.location ||
+        filters.ownerId ||
+        filters.brandId ||
+        filters.gender ||
+        filters.productType) && (
+          <TouchableOpacity
+            style={[styles.controlButton, { backgroundColor: "#FF3B30" }]}
+            onPress={clearFilters}
+          >
+            <Ionicons name="refresh" size={16} color="white" />
+            <Text style={[styles.controlButtonText, { color: "white" }]}>
+              Clear
+            </Text>
+          </TouchableOpacity>
+        )}
     </View>
   );
 
@@ -413,7 +467,126 @@ const BrandsListScreen = () => {
           </TouchableOpacity>
         </View>
 
-        <ScrollView style={styles.modalContent}>
+        <ScrollView style={styles.modalContent} keyboardShouldPersistTaps="handled">
+          <View style={styles.filterSection}>
+            <View style={styles.filterHeaderWithSearch}>
+              <Text style={[styles.filterLabel, { color: textColor }]}>
+                Brand
+              </Text>
+              <View style={[styles.miniSearchContainer, { borderColor, backgroundColor: backgroundColor }]}>
+                <Ionicons name="search" size={14} color={secondaryTextColor} />
+                <TextInput
+                  style={[styles.miniSearchInput, { color: textColor }]}
+                  placeholder="Search brands..."
+                  placeholderTextColor={secondaryTextColor}
+                  value={brandSearchQuery}
+                  onChangeText={setBrandSearchQuery}
+                  autoCapitalize="none"
+                />
+                {brandSearchQuery.length > 0 && (
+                  <TouchableOpacity onPress={() => setBrandSearchQuery("")}>
+                    <Ionicons name="close-circle" size={14} color={secondaryTextColor} />
+                  </TouchableOpacity>
+                )}
+              </View>
+            </View>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterChips}>
+              <TouchableOpacity
+                style={[
+                  styles.filterChip,
+                  !filters.brandId && styles.activeFilterChip,
+                  { borderColor },
+                ]}
+                onPress={() => handleFilterChange("brandId", "")}
+              >
+                <Text style={[styles.filterChipText, !filters.brandId && styles.activeFilterChipText]}>All</Text>
+              </TouchableOpacity>
+              {allBrands
+                .filter(brand => brand.name.toLowerCase().includes(brandSearchQuery.toLowerCase()))
+                .map((brand) => (
+                  <TouchableOpacity
+                    key={brand.id}
+                    style={[
+                      styles.filterChip,
+                      filters.brandId === brand.id && styles.activeFilterChip,
+                      { borderColor },
+                    ]}
+                    onPress={() => handleFilterChange("brandId", brand.id as any)}
+                  >
+                    <Text style={[styles.filterChipText, filters.brandId === brand.id && styles.activeFilterChipText]}>
+                      {brand.name}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+            </ScrollView>
+          </View>
+
+          <View style={styles.filterSection}>
+            <Text style={[styles.filterLabel, { color: textColor }]}>
+              Gender
+            </Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterChips}>
+              <TouchableOpacity
+                style={[
+                  styles.filterChip,
+                  !filters.gender && styles.activeFilterChip,
+                  { borderColor },
+                ]}
+                onPress={() => handleFilterChange("gender", "")}
+              >
+                <Text style={[styles.filterChipText, !filters.gender && styles.activeFilterChipText]}>All</Text>
+              </TouchableOpacity>
+              {Object.values(Gender).map((gender) => (
+                <TouchableOpacity
+                  key={gender}
+                  style={[
+                    styles.filterChip,
+                    filters.gender === gender && styles.activeFilterChip,
+                    { borderColor },
+                  ]}
+                  onPress={() => handleFilterChange("gender", gender)}
+                >
+                  <Text style={[styles.filterChipText, filters.gender === gender && styles.activeFilterChipText]}>
+                    {gender}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+
+          <View style={styles.filterSection}>
+            <Text style={[styles.filterLabel, { color: textColor }]}>
+              Product Type
+            </Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterChips}>
+              <TouchableOpacity
+                style={[
+                  styles.filterChip,
+                  !filters.productType && styles.activeFilterChip,
+                  { borderColor },
+                ]}
+                onPress={() => handleFilterChange("productType", "")}
+              >
+                <Text style={[styles.filterChipText, !filters.productType && styles.activeFilterChipText]}>All</Text>
+              </TouchableOpacity>
+              {Object.values(ProductType).map((type) => (
+                <TouchableOpacity
+                  key={type}
+                  style={[
+                    styles.filterChip,
+                    filters.productType === type && styles.activeFilterChip,
+                    { borderColor },
+                  ]}
+                  onPress={() => handleFilterChange("productType", type)}
+                >
+                  <Text style={[styles.filterChipText, filters.productType === type && styles.activeFilterChipText]}>
+                    {type}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+
           <View style={styles.filterSection}>
             <Text style={[styles.filterLabel, { color: textColor }]}>
               Location
@@ -434,7 +607,7 @@ const BrandsListScreen = () => {
             />
           </View>
 
-          <View style={styles.filterSection}>
+          {/* <View style={styles.filterSection}>
             <Text style={[styles.filterLabel, { color: textColor }]}>
               Owner ID
             </Text>
@@ -453,7 +626,7 @@ const BrandsListScreen = () => {
               onChangeText={(text) => handleFilterChange("ownerId", text)}
               keyboardType="numeric"
             />
-          </View>
+          </View> */}
         </ScrollView>
       </View>
     </Modal>
@@ -481,9 +654,10 @@ const BrandsListScreen = () => {
         <ScrollView style={styles.modalContent}>
           {[
             { key: "name", label: "Name" },
+            { key: "price", label: "Price" },
             { key: "createdAt", label: "Created Date" },
             { key: "updatedAt", label: "Updated Date" },
-            { key: "location", label: "Location" },
+            { key: "brandName", label: "Brand Name" },
           ].map((option) => (
             <View key={option.key}>
               <TouchableOpacity
@@ -524,15 +698,15 @@ const BrandsListScreen = () => {
 
   // Render pagination info
   const renderPaginationInfo = () => {
-    if (!brandsData) return null;
+    if (!productsData) return null;
 
     return (
       <View style={styles.paginationInfo}>
         <Text style={[styles.paginationText, { color: secondaryTextColor }]}>
-          Showing {brandsData.items.length} of {brandsData.total} brands
+          Showing {productsData.items.length} of {productsData.total} products
         </Text>
         <Text style={[styles.paginationText, { color: secondaryTextColor }]}>
-          Page {brandsData.page} of {brandsData.totalPages}
+          Page {productsData.page} of {productsData.totalPages}
         </Text>
       </View>
     );
@@ -540,7 +714,7 @@ const BrandsListScreen = () => {
 
   // Render load more button
   const renderLoadMore = () => {
-    if (!brandsData?.hasNextPage) return null;
+    if (!productsData?.hasNextPage) return null;
 
     return (
       <TouchableOpacity
@@ -568,47 +742,60 @@ const BrandsListScreen = () => {
   // Render header
   const renderHeader = () => (
     <View style={styles.headerContainer}>
-      <Text style={[styles.header, { color: textColor }]}>Brands</Text>
+      <Text style={[styles.header, { color: textColor }]}>Products</Text>
       <Text style={[styles.subtitle, { color: secondaryTextColor }]}>
-        Discover and manage your favorite brands
+        Discover and manage all products
       </Text>
     </View>
   );
 
   // Render create button
-  const renderCreateButton = () => (
-    <TouchableOpacity
-      style={[styles.createButton, { backgroundColor: buttonColor }]}
-      onPress={() => router.push("/brands/create")}
-      activeOpacity={0.8}
-    >
-      <LinearGradient
-        colors={[buttonColor, `${buttonColor}CC`]}
-        style={styles.gradientButton}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 0 }}
+  const renderCreateButton = () => {
+    if (userRole !== "admin" && userRole !== "brandOwner") return null;
+
+    return (
+      <TouchableOpacity
+        style={[styles.createButton, { backgroundColor: buttonColor }]}
+        onPress={() => {
+          Alert.alert(
+            "Select Brand",
+            "To add a new product, please navigate to the specific brand's page first.",
+            [
+              { text: "Go to Brands", onPress: () => router.push("/brands") },
+              { text: "Cancel", style: "cancel" },
+            ]
+          );
+        }}
+        activeOpacity={0.8}
       >
-        <Ionicons name="add" size={20} color="white" />
-        <Text style={styles.createButtonText}>Create New Brand</Text>
-      </LinearGradient>
-    </TouchableOpacity>
-  );
+        <LinearGradient
+          colors={[buttonColor, `${buttonColor}CC`]}
+          style={styles.gradientButton}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+        >
+          <Ionicons name="add" size={20} color="white" />
+          <Text style={styles.createButtonText}>Add New Product</Text>
+        </LinearGradient>
+      </TouchableOpacity>
+    );
+  };
 
   // Render empty state
   const renderEmptyState = () => (
     <View style={styles.emptyState}>
-      <Ionicons name="business-outline" size={64} color={secondaryTextColor} />
+      <Ionicons name="cube-outline" size={64} color={secondaryTextColor} />
       <Text style={[styles.emptyStateTitle, { color: textColor }]}>
-        {searchQuery || filters.location || filters.ownerId
-          ? "No brands found"
-          : "No Brands Yet"}
+        {searchQuery || filters.location || filters.ownerId || filters.brandId || filters.gender || filters.productType
+          ? "No products found"
+          : "No Products Yet"}
       </Text>
       <Text style={[styles.emptyStateText, { color: secondaryTextColor }]}>
-        {searchQuery || filters.location || filters.ownerId
+        {searchQuery || filters.location || filters.ownerId || filters.brandId || filters.gender || filters.productType
           ? "Try adjusting your search or filters"
-          : "Create your first brand to get started"}
+          : "Add your first product to get started"}
       </Text>
-      {(searchQuery || filters.location || filters.ownerId) && (
+      {(searchQuery || filters.location || filters.ownerId || filters.brandId || filters.gender || filters.productType) && (
         <TouchableOpacity
           style={[styles.clearFiltersButton, { backgroundColor: buttonColor }]}
           onPress={clearFilters}
@@ -619,18 +806,18 @@ const BrandsListScreen = () => {
     </View>
   );
 
-  if (loading && !brandsData) {
+  if (loading && !productsData) {
     return (
       <View style={[styles.loadingContainer, { backgroundColor }]}>
         <ActivityIndicator size="large" color={buttonColor} />
         <Text style={[styles.loadingText, { color: secondaryTextColor }]}>
-          Loading brands...
+          Loading products...
         </Text>
       </View>
     );
   }
 
-  if (error && !brandsData) {
+  if (error && !productsData) {
     return (
       <View style={[styles.errorContainer, { backgroundColor }]}>
         <Ionicons name="alert-circle" size={48} color="#FF3B30" />
@@ -640,7 +827,7 @@ const BrandsListScreen = () => {
         <Text style={styles.errorText}>{error}</Text>
         <TouchableOpacity
           style={[styles.retryButton, { backgroundColor: buttonColor }]}
-          onPress={() => fetchBrands(1, false)}
+          onPress={() => fetchProducts(1, false)}
         >
           <Text style={styles.retryButtonText}>Try Again</Text>
         </TouchableOpacity>
@@ -653,9 +840,9 @@ const BrandsListScreen = () => {
       <StatusBar barStyle="dark-content" backgroundColor={backgroundColor} />
 
       <FlatList
-        data={brandsData?.items || []}
+        data={productsData?.items || []}
         keyExtractor={(item) => item.id.toString()}
-        renderItem={renderBrand}
+        renderItem={renderProduct}
         ListHeaderComponent={
           <>
             {renderHeader()}
@@ -755,7 +942,7 @@ const styles = StyleSheet.create({
     height: 8,
     borderRadius: 4,
   },
-  brandContainer: {
+  productContainer: {
     borderRadius: 16,
     marginBottom: 8,
     shadowColor: "#000",
@@ -764,59 +951,58 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 3,
   },
-  brandContent: {
+  productContent: {
     padding: 16,
   },
-  brandHeader: {
+  productHeader: {
     flexDirection: "row",
     alignItems: "flex-start",
     marginBottom: 12,
   },
-  logoContainer: {
+  imageContainer: {
     marginRight: 12,
   },
-  brandLogo: {
+  productImage: {
     width: 48,
     height: 48,
     borderRadius: 12,
     backgroundColor: "#f0f0f0",
   },
-  logoPlaceholder: {
+  imagePlaceholder: {
     width: 48,
     height: 48,
     borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
   },
-  brandInfo: {
+  productInfo: {
     flex: 1,
     marginRight: 12,
   },
-  brandName: {
+  productName: {
     fontSize: 18,
     fontWeight: "600",
     marginBottom: 4,
   },
-  brandDescription: {
+  productDescription: {
     fontSize: 14,
     lineHeight: 20,
     opacity: 0.8,
     marginBottom: 4,
   },
-  locationContainer: {
+  priceContainer: {
     flexDirection: "row",
     alignItems: "center",
   },
-  locationText: {
-    fontSize: 12,
-    marginLeft: 4,
-    opacity: 0.8,
+  priceText: {
+    fontSize: 14,
+    fontWeight: "700",
   },
   chevronContainer: {
     alignItems: "center",
     justifyContent: "center",
   },
-  brandStats: {
+  productStats: {
     flexDirection: "row",
     justifyContent: "space-between",
     paddingTop: 12,
@@ -907,7 +1093,52 @@ const styles = StyleSheet.create({
   filterLabel: {
     fontSize: 16,
     fontWeight: "500",
+    marginBottom: 12,
+  },
+  filterHeaderWithSearch: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 8,
+  },
+  miniSearchContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+    width: "60%",
+  },
+  miniSearchInput: {
+    flex: 1,
+    fontSize: 13,
+    marginLeft: 6,
+    paddingVertical: 0,
+  },
+  filterChips: {
+    flexDirection: "row",
+    marginBottom: 8,
+  },
+  filterChip: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    marginRight: 8,
+    backgroundColor: "transparent",
+  },
+  activeFilterChip: {
+    backgroundColor: "#007AFF",
+    borderColor: "#007AFF",
+  },
+  filterChipText: {
+    fontSize: 14,
+    color: "#666",
+  },
+  activeFilterChipText: {
+    color: "#ffffff",
+    fontWeight: "600",
   },
   filterInput: {
     paddingHorizontal: 16,
@@ -990,4 +1221,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default BrandsListScreen;
+export default ProductsListScreen;

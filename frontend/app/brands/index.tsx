@@ -14,6 +14,7 @@ import {
   Modal,
   ScrollView,
   RefreshControl,
+  Alert,
 } from "react-native";
 import { useRouter } from "expo-router";
 import getApiUrl from "@/helpers/getApiUrl";
@@ -24,11 +25,14 @@ import { debounce } from "lodash";
 import { useColorScheme } from "react-native";
 import { Filters, PaginatedResult, SortOptions } from "@/types/filters";
 import { Brand } from "@/types/brand";
+import { useAuth } from "@/context/AuthContext";
 
 const { width } = Dimensions.get("window");
 
 const BrandsListScreen = () => {
-  const [brandsData, setBrandsData] = useState<PaginatedResult | null>(null);
+  const { token, user } = useAuth();
+  const userRole = user?.role || user?.userRole;
+  const [brandsData, setBrandsData] = useState<PaginatedResult<Brand> | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [refreshing, setRefreshing] = useState<boolean>(false);
   const [loadingMore, setLoadingMore] = useState<boolean>(false);
@@ -97,20 +101,24 @@ const BrandsListScreen = () => {
           setLoadingMore(true);
         }
 
-        const response = await fetch(buildApiUrl(page));
+        const response = await fetch(buildApiUrl(page), {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
         if (!response.ok) {
           throw new Error("Failed to fetch brands");
         }
 
-        const data: PaginatedResult = await response.json();
+        const data: PaginatedResult<Brand> = await response.json();
 
         if (append && brandsData) {
           setBrandsData((prev) =>
             prev
               ? {
-                  ...data,
-                  items: [...prev.items, ...data.items],
-                }
+                ...data,
+                items: [...prev.items, ...data.items],
+              }
               : data
           );
         } else {
@@ -186,6 +194,41 @@ const BrandsListScreen = () => {
     }
   };
 
+  // Handle brand deletion
+  const handleDeleteBrand = (id: number, name: string) => {
+    Alert.alert(
+      "Delete Brand",
+      `Are you sure you want to delete "${name}"? This will also delete all associated products.`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              const response = await fetch(`${getApiUrl()}/brands/${id}`, {
+                method: "DELETE",
+                headers: {
+                  Authorization: `Bearer ${token}`,
+                },
+              });
+
+              if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.message || "Failed to delete brand");
+              }
+
+              Alert.alert("Success", "Brand deleted successfully");
+              onRefresh(); // Refresh the list
+            } catch (err: any) {
+              Alert.alert("Error", err.message);
+            }
+          },
+        },
+      ]
+    );
+  };
+
   // Render brand item
   const renderBrand = ({ item, index }: { item: Brand; index: number }) => (
     <TouchableOpacity
@@ -248,6 +291,17 @@ const BrandsListScreen = () => {
               color={secondaryTextColor}
             />
           </View>
+          {(userRole === "admin" || item.owner?.id === user?.id) && (
+            <TouchableOpacity
+              style={styles.trashContainer}
+              onPress={(e) => {
+                e.stopPropagation();
+                handleDeleteBrand(item.id, item.name);
+              }}
+            >
+              <Ionicons name="trash-outline" size={20} color="#FF3B30" />
+            </TouchableOpacity>
+          )}
         </View>
 
         <View style={[styles.brandStats, { borderTopColor: borderColor }]}>
@@ -540,23 +594,27 @@ const BrandsListScreen = () => {
   );
 
   // Render create button
-  const renderCreateButton = () => (
-    <TouchableOpacity
-      style={[styles.createButton, { backgroundColor: buttonColor }]}
-      onPress={() => router.push("/brands/create")}
-      activeOpacity={0.8}
-    >
-      <LinearGradient
-        colors={[buttonColor, `${buttonColor}CC`]}
-        style={styles.gradientButton}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 0 }}
+  const renderCreateButton = () => {
+    if (userRole !== "admin") return null;
+
+    return (
+      <TouchableOpacity
+        style={[styles.createButton, { backgroundColor: buttonColor }]}
+        onPress={() => router.push("/brands/create")}
+        activeOpacity={0.8}
       >
-        <Ionicons name="add" size={20} color="white" />
-        <Text style={styles.createButtonText}>Create New Brand</Text>
-      </LinearGradient>
-    </TouchableOpacity>
-  );
+        <LinearGradient
+          colors={[buttonColor, `${buttonColor}CC`]}
+          style={styles.gradientButton}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+        >
+          <Ionicons name="add" size={20} color="white" />
+          <Text style={styles.createButtonText}>Create New Brand</Text>
+        </LinearGradient>
+      </TouchableOpacity>
+    );
+  };
 
   // Render empty state
   const renderEmptyState = () => (
@@ -779,6 +837,12 @@ const styles = StyleSheet.create({
   chevronContainer: {
     alignItems: "center",
     justifyContent: "center",
+  },
+  trashContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+    marginLeft: 12,
+    padding: 4,
   },
   brandStats: {
     flexDirection: "row",

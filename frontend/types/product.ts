@@ -28,7 +28,7 @@ export interface Product {
   length?: number;
   width?: number;
   height?: number;
-  totalStock: number;
+  stock: number;
   isActive: boolean;
   isFeatured: boolean;
   brandId: number;

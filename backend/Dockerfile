@@ -1,4 +1,4 @@
-# Use Node.js official image
+# Development Dockerfile
 FROM node:18-alpine
 
 # Set working directory
@@ -11,11 +11,8 @@ RUN npm install
 # Copy the rest of the application code
 COPY . .
 
-# Build the application (if using a build step)
-RUN npm run build
-
 # Expose the application port
 EXPOSE 5000
 
-# Start the application
-CMD ["node", "dist/main.js"]
+# Start the application in development mode with hot reload
+CMD ["npm", "run", "start:dev"]

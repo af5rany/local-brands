@@ -23,7 +23,7 @@ export class GuestAuthGuard implements CanActivate {
         secret: process.env.JWT_SECRET || 'local-brands',
       });
 
-      const user = await this.usersService.findById(Number(payload.sub));
+      const user = await this.usersService.findById(Number(payload.userId));
 
       if (!user) {
         return false;

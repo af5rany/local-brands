@@ -1,7 +1,12 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Brackets } from 'typeorm';
 import { Product } from './product.entity';
+import { Brand } from '../brands/brand.entity'; // Import Brand entity
 import { GetProductsDto } from './dto/get-products.dto';
 import { PaginatedResult } from '../common/types/pagination.type';
 import { SortBy, SortOrder } from 'src/common/enums/product.enum';
@@ -11,7 +16,9 @@ export class ProductsService {
   constructor(
     @InjectRepository(Product)
     private productsRepository: Repository<Product>,
-  ) {}
+    @InjectRepository(Brand) // Inject Brand repository
+    private brandsRepository: Repository<Brand>,
+  ) { }
 
   async findAll(dto: GetProductsDto): Promise<PaginatedResult<Product>> {
     const {
@@ -30,10 +37,8 @@ export class ProductsService {
 
     const qb = this.productsRepository.createQueryBuilder('product');
 
-    // Join with brand table if needed for sorting by brand name
-    if (sortBy === SortBy.BRAND_NAME) {
-      qb.leftJoinAndSelect('product.brand', 'brand');
-    }
+    // Always join with brand table to ensure brand name is available
+    qb.leftJoinAndSelect('product.brand', 'brand');
 
     // Search functionality
     if (search) {
@@ -138,7 +143,10 @@ export class ProductsService {
   }
 
   async findOne(id: number): Promise<Product> {
-    const product = await this.productsRepository.findOneBy({ id });
+    const product = await this.productsRepository.findOne({
+      where: { id },
+      relations: ['brand', 'brand.owner'],
+    });
     if (!product) {
       throw new NotFoundException(`Product #${id} not found`);
     }
@@ -147,6 +155,29 @@ export class ProductsService {
 
   async create(productData: Partial<Product>): Promise<Product> {
     const startTime = Date.now();
+
+    // Validate brand exists if brandId is provided
+    if (productData.brandId) {
+      const brand = await this.brandsRepository.findOne({
+        where: { id: productData.brandId },
+        select: ['id', 'name'],
+      });
+
+      if (!brand) {
+        throw new BadRequestException(
+          `Brand with id ${productData.brandId} does not exist`,
+        );
+      }
+    }
+
+    // Process variants if provided
+    if (productData.variants && Array.isArray(productData.variants)) {
+      productData.variants = productData.variants.map((variant) => ({
+        ...variant,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }));
+    }
 
     const product = this.productsRepository.create(productData);
     const savedProduct = await this.productsRepository.save(product);
@@ -158,11 +189,39 @@ export class ProductsService {
   }
 
   async update(id: number, updateData: Partial<Product>): Promise<Product> {
+    // Validate brand exists if brandId is being updated
+    if (updateData.brandId) {
+      const brand = await this.brandsRepository.findOne({
+        where: { id: updateData.brandId },
+        select: ['id', 'name'],
+      });
+
+      if (!brand) {
+        throw new BadRequestException(
+          `Brand with id ${updateData.brandId} does not exist`,
+        );
+      }
+    }
+
+    // Process variants if provided
+    if (updateData.variants && Array.isArray(updateData.variants)) {
+      updateData.variants = updateData.variants.map((variant) => ({
+        ...variant,
+        updatedAt: new Date(),
+        // Keep existing createdAt or add new one
+        createdAt: variant.createdAt || new Date(),
+      }));
+    }
+
     await this.productsRepository.update(id, updateData);
     return this.findOne(id);
   }
 
   async remove(id: number): Promise<void> {
     await this.productsRepository.delete(id);
+  }
+
+  async deleteAll(): Promise<void> {
+    await this.productsRepository.delete({});
   }
 }

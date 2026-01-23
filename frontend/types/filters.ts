@@ -1,7 +1,5 @@
-import { Brand } from "./brand";
-
-export interface PaginatedResult {
-  items: Brand[];
+export interface PaginatedResult<T> {
+  items: T[];
   total: number;
   page: number;
   limit: number;
@@ -11,11 +9,14 @@ export interface PaginatedResult {
 }
 
 export interface Filters {
-  location: string;
-  ownerId: string;
+  location?: string;
+  ownerId?: string;
+  brandId?: number | string;
+  gender?: string;
+  productType?: string;
 }
 
 export interface SortOptions {
-  sortBy: "name" | "createdAt" | "updatedAt" | "location";
+  sortBy: "name" | "createdAt" | "updatedAt" | "location" | "price" | "brandName";
   sortOrder: "ASC" | "DESC";
 }

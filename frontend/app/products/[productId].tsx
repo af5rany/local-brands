@@ -8,17 +8,23 @@ import {
   FlatList,
   TouchableOpacity,
   Dimensions,
+  ActivityIndicator,
+  Alert,
 } from "react-native";
 import { useLocalSearchParams } from "expo-router";
 import getApiUrl from "@/helpers/getApiUrl";
 import { useThemeColor } from "@/hooks/useThemeColor";
 import { Brand } from "@/types/brand";
 import { Product } from "@/types/product";
+import { useAuth } from "@/context/AuthContext";
+import { Ionicons } from "@expo/vector-icons";
 
 const { width: screenWidth } = Dimensions.get("window");
 
 const ProductDetailScreen = () => {
   const { productId } = useLocalSearchParams();
+  const { token, user } = useAuth();
+  const userRole = user?.role || user?.userRole;
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedVariantIndex, setSelectedVariantIndex] = useState(0);
@@ -33,10 +39,21 @@ const ProductDetailScreen = () => {
 
   useEffect(() => {
     const fetchProductDetails = async () => {
+      if (!token || !productId || isNaN(Number(productId))) {
+        setLoading(false);
+        return;
+      }
+
       try {
-        const response = await fetch(`${getApiUrl()}/products/${productId}`);
+        const response = await fetch(`${getApiUrl()}/products/${productId}`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        });
         if (!response.ok) {
-          throw new Error("Failed to fetch product details");
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.message || "Failed to fetch product details");
         }
         const data = await response.json();
         setProduct(data);
@@ -48,32 +65,71 @@ const ProductDetailScreen = () => {
     };
 
     fetchProductDetails();
-  }, [productId]);
+
+    // Reset selection when product changes
+    setSelectedVariantIndex(0);
+    setSelectedImageIndex(0);
+  }, [productId, token]);
 
   if (loading) {
     return (
-      <View style={styles.center}>
-        <Text style={{ color: textColor }}>Loading product details...</Text>
+      <View style={[styles.center, { backgroundColor }]}>
+        <ActivityIndicator size="large" color="#346beb" />
+        <Text style={{ color: textColor, marginTop: 10 }}>Loading product details...</Text>
       </View>
     );
   }
 
   if (!product) {
     return (
-      <View style={styles.center}>
-        <Text style={{ color: textColor }}>Product not found.</Text>
+      <View style={[styles.center, { backgroundColor }]}>
+        <Ionicons name="alert-circle-outline" size={48} color="#dc3545" />
+        <Text style={{ color: textColor, fontSize: 18, marginTop: 10 }}>Product not found.</Text>
       </View>
     );
   }
 
   const currentVariant = product.variants[selectedVariantIndex];
-  const hasDiscount = (product.salePrice ?? 0) < (product.price ?? 0);
+  const hasDiscount = product.salePrice !== undefined && product.salePrice < product.price;
+  const isOwnerOrAdmin = userRole === "admin" || (user?.id && product?.brand?.owner?.id && user.id === product.brand.owner.id);
+
+  const handleDelete = async () => {
+    Alert.alert(
+      "Delete Product",
+      "Are you sure you want to delete this product?",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              const response = await fetch(`${getApiUrl()}/products/${productId}`, {
+                method: "DELETE",
+                headers: {
+                  Authorization: `Bearer ${token}`,
+                },
+              });
+              if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.message || "Failed to delete product");
+              }
+              Alert.alert("Success", "Product deleted successfully");
+              router.back();
+            } catch (error: any) {
+              Alert.alert("Error", error.message);
+            }
+          },
+        },
+      ]
+    );
+  };
 
   const renderColorSelector = () => (
     <View style={styles.colorContainer}>
       <Text style={[styles.sectionTitle, { color: textColor }]}>Colors</Text>
       <View style={styles.colorOptions}>
-        {product.variants.map((variant, index) => (
+        {product.variants?.map((variant, index) => (
           <TouchableOpacity
             key={index}
             style={[
@@ -112,7 +168,7 @@ const ProductDetailScreen = () => {
 
       {/* Image indicators */}
       <View style={styles.imageIndicators}>
-        {currentVariant?.variantImages.map((_, index) => (
+        {currentVariant?.variantImages?.map((_, index) => (
           <View
             key={index}
             style={[
@@ -152,18 +208,17 @@ const ProductDetailScreen = () => {
 
       {/* Price Section */}
       <View style={styles.priceContainer}>
-        <Text style={styles.salePrice}>${product.salePrice ?? 0}</Text>
+        <Text style={styles.salePrice}>
+          ${hasDiscount ? product.salePrice ?? product.price : product.price}
+        </Text>
         {hasDiscount && (
-          <Text style={styles.originalPrice}>${product.price ?? 0}</Text>
+          <Text style={styles.originalPrice}>${product.price}</Text>
         )}
         {hasDiscount && (
           <View style={styles.discountBadge}>
             <Text style={styles.discountText}>
               {Math.round(
-                ((parseFloat(String(product.price ?? "0")) -
-                  parseFloat(String(product.salePrice ?? "0"))) /
-                  parseFloat(String(product.price ?? "0"))) *
-                  100
+                ((product.price - (product.salePrice ?? 0)) / product.price) * 100
               )}
               % OFF
             </Text>
@@ -176,12 +231,10 @@ const ProductDetailScreen = () => {
         <Text
           style={[
             styles.stockText,
-            { color: product.totalStock > 0 ? "#28a745" : "#dc3545" },
+            { color: product.stock > 0 ? "#28a745" : "#dc3545" },
           ]}
         >
-          {product.totalStock > 0
-            ? `${product.totalStock} in stock`
-            : "Out of stock"}
+          {product.stock > 0 ? `${product.stock} in stock` : "Out of stock"}
         </Text>
       </View>
 
@@ -260,6 +313,26 @@ const ProductDetailScreen = () => {
               </View>
             ))}
           </View>
+        </View>
+      )}
+
+      {/* Admin/Owner Actions */}
+      {isOwnerOrAdmin && (
+        <View style={styles.actionContainer}>
+          <TouchableOpacity
+            style={[styles.actionButton, styles.editButton]}
+            onPress={() => Alert.alert("Coming Soon", "Edit functionality is not available yet.")}
+          >
+            <Ionicons name="create-outline" size={20} color="white" />
+            <Text style={styles.actionButtonText}>Edit Product</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.actionButton, styles.deleteButton]}
+            onPress={handleDelete}
+          >
+            <Ionicons name="trash-outline" size={20} color="white" />
+            <Text style={styles.actionButtonText}>Delete Product</Text>
+          </TouchableOpacity>
         </View>
       )}
     </View>
@@ -463,6 +536,32 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "600",
     marginBottom: 8,
+  },
+  actionContainer: {
+    flexDirection: "row",
+    gap: 12,
+    marginTop: 24,
+    marginBottom: 10,
+  },
+  actionButton: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 14,
+    borderRadius: 12,
+    gap: 8,
+  },
+  actionButtonText: {
+    color: "white",
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  editButton: {
+    backgroundColor: "#007AFF",
+  },
+  deleteButton: {
+    backgroundColor: "#FF3B30",
   },
 });
 

@@ -22,6 +22,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import getApiUrl from "@/helpers/getApiUrl";
 import { useRouter } from "expo-router";
 import { useThemeColor } from "@/hooks/useThemeColor";
+import { useAuth } from "@/context/AuthContext";
 
 type User = {
   id: string;
@@ -30,6 +31,7 @@ type User = {
 };
 
 const CreateBrandScreen = () => {
+  const { token } = useAuth();
   const router = useRouter();
   const [name, setName] = useState<string>("");
   const [description, setDescription] = useState<string>("");
@@ -62,7 +64,12 @@ const CreateBrandScreen = () => {
   // Fetch users from backend
   const fetchUsers = async () => {
     try {
-      const response = await fetch(`${getApiUrl()}/users`);
+      const response = await fetch(`${getApiUrl()}/users`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
       const data = await response.json();
       const formattedUsers = data.map((user: User) => ({
         label: user.name || user.email,
@@ -176,6 +183,7 @@ const CreateBrandScreen = () => {
       const response = await fetch(`${getApiUrl()}/brands`, {
         method: "POST",
         headers: {
+          Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify(newBrand),

@@ -19,14 +19,13 @@ import { User } from 'src/users/user.entity';
 export class AuthController {
   constructor(private authService: AuthService) {}
 
-  // Register new user
+  // Register new user (no authentication required)
   @Post('register')
   @UsePipes(new ValidationPipe({ whitelist: true }))
   async register(@Body() userDto: CreateUserDto) {
     return this.authService.register(userDto);
   }
 
-  // Login and return a JWT token
   @UseGuards(LocalAuthGuard)
   @Post('login')
   async login(
@@ -44,7 +43,6 @@ export class AuthController {
     return this.authService.loginAsGuest();
   }
 
-  // Convert guest user to regular user
   @UseGuards(JwtAuthGuard)
   @Post('convert-guest/:id')
   @UsePipes(new ValidationPipe({ whitelist: true }))
@@ -60,7 +58,6 @@ export class AuthController {
     return this.authService.convertGuestToUser(id, userDto);
   }
 
-  // Protected route example
   @UseGuards(JwtAuthGuard)
   @Post('protected')
   getProtected(

@@ -8,15 +8,18 @@ import {
   Delete,
   Query,
   ParseIntPipe,
+  UseGuards,
 } from '@nestjs/common';
 import { ProductsService } from './products.service';
 import { Product } from './product.entity';
 import { GetProductsDto } from './dto/get-products.dto';
 import { PaginatedResult } from '../common/types/pagination.type';
+import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
 
+@UseGuards(JwtAuthGuard)
 @Controller('products')
 export class ProductsController {
-  constructor(private productsService: ProductsService) {}
+  constructor(private productsService: ProductsService) { }
 
   @Get()
   async findAll(
@@ -54,5 +57,10 @@ export class ProductsController {
   @Delete(':id')
   remove(@Param('id') id: number): Promise<void> {
     return this.productsService.remove(id);
+  }
+
+  @Delete()
+  deleteAll(): Promise<void> {
+    return this.productsService.deleteAll();
   }
 }

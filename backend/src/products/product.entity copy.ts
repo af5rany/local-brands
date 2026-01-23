@@ -1,4 +1,3 @@
-// src/products/product.entity.ts - Enhanced Version
 import {
   Entity,
   PrimaryGeneratedColumn,
@@ -8,7 +7,6 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   OneToMany,
-  Index,
 } from 'typeorm';
 import { Brand } from '../brands/brand.entity';
 import {
@@ -22,26 +20,14 @@ import { CartItem } from 'src/cart/cart-item.entity';
 import { OrderItem } from 'src/orders/order-item.entity';
 
 @Entity()
-@Index(['name', 'productType', 'gender']) // Composite index for filtering
-@Index(['price']) // For price range filtering
-@Index(['createdAt']) // For sorting by date
-@Index(['isFeatured']) // For featured products
-@Index(['isActive']) // For active products
 export class Product {
   @PrimaryGeneratedColumn()
   id: number;
 
-  // ✅ Add SKU for inventory management
-  @Column({ unique: true, nullable: true })
-  @Index()
-  sku: string;
-
   @Column()
-  @Index({ fulltext: true }) // For text search
   name: string;
 
-  @Column({ nullable: true, type: 'text' })
-  @Index({ fulltext: true }) // For text search
+  @Column({ nullable: true })
   description: string;
 
   @Column('decimal', { precision: 10, scale: 2 })
@@ -49,10 +35,6 @@ export class Product {
 
   @Column('decimal', { precision: 10, scale: 2, nullable: true })
   salePrice: number;
-
-  // ✅ Add discount percentage for easy display
-  @Column('decimal', { precision: 5, scale: 2, nullable: true })
-  discountPercentage: number;
 
   @Column({
     type: 'enum',
@@ -62,7 +44,6 @@ export class Product {
   productType: ProductType;
 
   @Column({ nullable: true })
-  @Index()
   subcategory: string;
 
   @Column({
@@ -107,10 +88,6 @@ export class Product {
   @Column({ default: 0 })
   stock: number;
 
-  // ✅ Add low stock threshold
-  @Column({ default: 10 })
-  lowStockThreshold: number;
-
   @Column('simple-array', { nullable: true })
   images: string[];
 
@@ -120,35 +97,12 @@ export class Product {
   @Column('boolean', { default: false })
   isFeatured: boolean;
 
-  // ✅ Add more product flags
-  @Column('boolean', { default: false })
-  isNewArrival: boolean;
-
-  @Column('boolean', { default: false })
-  isBestseller: boolean;
-
-  @Column('boolean', { default: false })
-  isOnSale: boolean;
-
-  // ✅ Add rating and review counts
-  @Column('decimal', { precision: 3, scale: 2, default: 0 })
-  averageRating: number;
-
-  @Column({ default: 0 })
-  reviewCount: number;
-
-  @Column({ default: 0 })
-  viewCount: number;
-
-  @Column({ default: 0 })
-  salesCount: number;
-
   // Store brand ID as foreign key
-  @Column({ name: 'brandId', nullable: false })
+  @Column({ name: 'brandId' })
   brandId: number;
 
   // Relation to Brand entity
-  @ManyToOne(() => Brand, { eager: true, nullable: false })
+  @ManyToOne(() => Brand, { eager: true })
   @JoinColumn({ name: 'brandId' })
   brand: Brand;
 
@@ -169,35 +123,11 @@ export class Product {
   })
   variants: ProductVariantData[];
 
-  // ✅ Add available colors and sizes for quick filtering
-  @Column('simple-array', { nullable: true })
-  availableColors: string[];
-
-  @Column('simple-array', { nullable: true })
-  availableSizes: string[];
-
-  // ✅ SEO fields
-  @Column({ nullable: true })
-  metaTitle: string;
-
-  @Column({ nullable: true, type: 'text' })
-  metaDescription: string;
-
-  @Column('simple-array', { nullable: true })
-  metaKeywords: string[];
-
-  @Column({ nullable: true })
-  slug: string;
-
   @CreateDateColumn()
   createdAt: Date;
 
   @UpdateDateColumn()
   updatedAt: Date;
-
-  // ✅ Soft delete
-  @Column({ nullable: true })
-  deletedAt: Date;
 
   // Helper methods for working with variants
   addVariant(color: string, variantImages: string[]): void {
@@ -213,7 +143,6 @@ export class Product {
     };
 
     this.variants.push(newVariant);
-    this.updateAvailableColors();
   }
 
   removeVariant(color: string): void {
@@ -221,7 +150,6 @@ export class Product {
       this.variants = this.variants.filter(
         (variant) => variant.color !== color,
       );
-      this.updateAvailableColors();
     }
   }
 
@@ -244,6 +172,7 @@ export class Product {
     return this.variants?.find((variant) => variant.color === color);
   }
 
+  // Method to process variants from payload (adds timestamps)
   setVariantsFromPayload(
     variants: Omit<ProductVariantData, 'createdAt' | 'updatedAt'>[],
   ): void {
@@ -252,26 +181,5 @@ export class Product {
       createdAt: new Date(),
       updatedAt: new Date(),
     }));
-    this.updateAvailableColors();
-  }
-
-  // ✅ Helper to update available colors
-  private updateAvailableColors(): void {
-    this.availableColors = this.variants?.map((v) => v.color) || [];
-  }
-
-  // ✅ Check if product is in stock
-  isInStock(): boolean {
-    return this.stock > 0;
-  }
-
-  // ✅ Check if product is low stock
-  isLowStock(): boolean {
-    return this.stock > 0 && this.stock <= this.lowStockThreshold;
-  }
-
-  // ✅ Calculate final price
-  getFinalPrice(): number {
-    return this.salePrice || this.price;
   }
 }

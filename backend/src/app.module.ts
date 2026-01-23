@@ -10,6 +10,7 @@ import { AppService } from './app.service';
 import { CartModule } from './cart/cart.module';
 import { WishlistModule } from './wishlist/wishlist.module';
 import { OrdersModule } from './orders/orders.module';
+import { StatisticsModule } from './statistics/statistics.module';
 
 @Module({
   imports: [
@@ -32,8 +33,9 @@ import { OrdersModule } from './orders/orders.module';
     CartModule,
     WishlistModule,
     OrdersModule,
+    StatisticsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule {}
+export class AppModule { }

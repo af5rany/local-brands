@@ -17,10 +17,10 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   }
 
   async validate(payload: JwtPayload) {
-    console.log('JWT Payload:', payload);
+    // console.log('JWT Payload:', payload);
 
     // Get user from database to ensure they still exist and have current info
-    const user = await this.usersService.findById(payload.sub);
+    const user = await this.usersService.findById(payload.userId);
 
     if (!user) {
       throw new UnauthorizedException('User not found');
@@ -34,14 +34,10 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       throw new UnauthorizedException('User account is not active');
     }
 
-    // This will be available as req.user in your controllers
     return {
       userId: user.id,
-      email: user.email,
       role: user.role,
-      name: user.name,
       isGuest: user.isGuest,
-      status: user.status,
     };
   }
 }

@@ -1,7 +1,7 @@
 // screens/auth/RegisterScreen.tsx
 import React, { useState } from "react";
+import { SafeAreaView } from "react-native-safe-area-context";
 import {
-  SafeAreaView,
   View,
   Text,
   TextInput,
@@ -112,11 +112,12 @@ const RegisterScreen = () => {
         ]
       );
     } catch (error: any) {
-      console.error("Registration error:", error);
+      console.error("Registration error full object:", JSON.stringify(error, null, 2));
+      console.error("Registration error message:", error.message);
       Alert.alert(
         "Registration Error",
         error.message ||
-          "An error occurred during registration. Please try again."
+        "An error occurred during registration. Please try again."
       );
     } finally {
       setLoading(false);
@@ -204,6 +205,13 @@ const RegisterScreen = () => {
             {errors.confirmPassword ? (
               <Text style={styles.errorText}>{errors.confirmPassword}</Text>
             ) : null}
+          </View>
+
+          <View style={styles.brandOwnerNote}>
+            <Text style={styles.brandOwnerNoteText}>
+              Want to sell your products? Contact us at admin@localbrands.com to
+              become a Brand Owner.
+            </Text>
           </View>
 
           <Pressable
@@ -311,6 +319,21 @@ const styles = StyleSheet.create({
   },
   linkDisabled: {
     color: "#a0a0a0",
+  },
+  brandOwnerNote: {
+    backgroundColor: "#fff",
+    padding: 16,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#e0e0e0",
+    marginTop: 16,
+    borderLeftWidth: 4,
+    borderLeftColor: "#346beb",
+  },
+  brandOwnerNoteText: {
+    fontSize: 14,
+    color: "#666",
+    lineHeight: 20,
   },
 });
 

@@ -1,20 +1,20 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
-  SafeAreaView,
   View,
   StyleSheet,
   ActivityIndicator,
   ScrollView,
   Alert,
 } from "react-native";
-import { useRouter } from "expo-router";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { useFocusEffect, useRouter } from "expo-router";
 import { useAuth } from "@/context/AuthContext";
 import AdminDashboard from "@/components/AdminDashboard";
 import BrandOwnerDashboard from "@/components/BrandOwnerDashboard";
 import CustomerDashboard from "@/components/CustomerDashboard";
-import RecentActivity from "@/components/RecentActivityItem";
 import Header from "@/components/Header";
-import { getRecentActivity } from "@/utils/activityUtils";
+import getApiUrl from "@/helpers/getApiUrl";
+import { RefreshControl } from "react-native";
 
 const HomeScreen = () => {
   const router = useRouter();
@@ -31,6 +31,7 @@ const HomeScreen = () => {
     cartItems: 0,
   });
   const [loadingStats, setLoadingStats] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   // Get user role from JWT token
   const userRole = user?.role || user?.userRole || "customer";
@@ -43,59 +44,46 @@ const HomeScreen = () => {
   }, [token, loading]);
 
   // Fetch dashboard stats based on user role
-  useEffect(() => {
-    const fetchStats = async () => {
-      if (!token) return;
+  const fetchStats = async () => {
+    if (!token) return;
+    setLoadingStats(true);
 
-      try {
-        // Mock data based on user role
-        setTimeout(() => {
-          if (userRole === "admin") {
-            setStats({
-              brands: 24,
-              products: 156,
-              users: 89,
-              myProducts: 0,
-              orders: 0,
-              revenue: 0,
-              myOrders: 0,
-              wishlist: 0,
-              cartItems: 0,
-            });
-          } else if (userRole === "brandOwner") {
-            setStats({
-              brands: 0,
-              products: 0,
-              users: 0,
-              myProducts: 23,
-              orders: 45,
-              revenue: 2500,
-              myOrders: 0,
-              wishlist: 0,
-              cartItems: 0,
-            });
-          } else {
-            // customer
-            setStats({
-              brands: 0,
-              products: 0,
-              users: 0,
-              myProducts: 0,
-              orders: 0,
-              revenue: 0,
-              myOrders: 12,
-              wishlist: 8,
-              cartItems: 3,
-            });
-          }
-          setLoadingStats(false);
-        }, 1000);
-      } catch (error) {
-        console.error("Error fetching stats:", error);
-        setLoadingStats(false);
+    try {
+      const response = await fetch(`${getApiUrl()}/statistics`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      if (!response.ok) {
+        throw new Error("Failed to fetch statistics");
       }
-    };
+      const data = await response.json();
+      console.log('[DEBUG] Fetched Stats:', data);
+      setStats((prev) => {
+        const newStats = { ...prev, ...data };
+        console.log('[DEBUG] Updated State:', newStats);
+        return newStats;
+      });
+    } catch (error) {
+      console.error("Error fetching stats:", error);
+    } finally {
+      setLoadingStats(false);
+      setRefreshing(false);
+    }
+  };
 
+  // useEffect(() => {
+  //   fetchStats();
+  // }, [token, userRole]);
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchStats();
+    }, [token, userRole])
+  )
+
+  const onRefresh = React.useCallback(() => {
+    setRefreshing(true);
     fetchStats();
   }, [token, userRole]);
 
@@ -149,7 +137,13 @@ const HomeScreen = () => {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.container}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+      >
         {/* Header */}
         <Header
           userName={user?.name || user?.email?.split("@")[0]}
@@ -160,10 +154,10 @@ const HomeScreen = () => {
         {renderDashboard()}
 
         {/* Recent Activity */}
-        <RecentActivity
+        {/* <RecentActivity
           activities={getRecentActivity(userRole)}
           showComingSoon={showComingSoon}
-        />
+        /> */}
 
         {/* Bottom Spacing */}
         <View style={styles.bottomSpacing} />

@@ -10,15 +10,20 @@ import {
   ParseIntPipe,
   HttpCode,
   HttpStatus,
+  UseGuards,
+  Request,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
 import { WishlistService } from './wishlist.service';
 import { Wishlist } from './wishlist.entity';
 import { CreateWishlistDto } from './dto/create-wishlist.dto';
 import { UpdateWishlistDto } from './dto/update-wishlist.dto';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { ForbiddenException } from '@nestjs/common';
 
 @ApiTags('wishlist')
 @Controller('wishlist')
+@UseGuards(JwtAuthGuard)
 export class WishlistController {
   constructor(private readonly wishlistService: WishlistService) {}
 
@@ -31,7 +36,16 @@ export class WishlistController {
   @ApiResponse({ status: 400, description: 'Bad request' })
   @ApiResponse({ status: 404, description: 'User or Product not found' })
   @ApiResponse({ status: 409, description: 'Item already in wishlist' })
-  create(@Body() createWishlistDto: CreateWishlistDto): Promise<Wishlist> {
+  async create(
+    @Body() createWishlistDto: CreateWishlistDto,
+    @Request() req,
+  ): Promise<Wishlist> {
+    const userId = req.user.id; // Extract current user ID from the JWT payload
+    if (createWishlistDto.userId !== userId) {
+      throw new ForbiddenException(
+        "You can't add items to other user's wishlist.",
+      );
+    }
     return this.wishlistService.create(createWishlistDto);
   }
 
@@ -67,7 +81,12 @@ export class WishlistController {
   @ApiResponse({ status: 404, description: 'User not found' })
   findByUser(
     @Param('userId', ParseIntPipe) userId: number,
+    @Request() req,
   ): Promise<Wishlist[]> {
+    const currentUser = req.user;
+    if (currentUser.id !== userId) {
+      throw new ForbiddenException("You can't access another user's wishlist.");
+    }
     return this.wishlistService.findByUser(userId);
   }
 
@@ -96,7 +115,12 @@ export class WishlistController {
   async checkWishlist(
     @Param('userId', ParseIntPipe) userId: number,
     @Param('productId', ParseIntPipe) productId: number,
+    @Request() req,
   ): Promise<{ inWishlist: boolean }> {
+    const currentUser = req.user;
+    if (currentUser.id !== userId) {
+      throw new ForbiddenException("You can't check another user's wishlist.");
+    }
     const inWishlist = await this.wishlistService.isProductInUserWishlist(
       userId,
       productId,
@@ -113,7 +137,14 @@ export class WishlistController {
   })
   async getWishlistCount(
     @Param('userId', ParseIntPipe) userId: number,
+    @Request() req,
   ): Promise<{ count: number }> {
+    const currentUser = req.user;
+    if (currentUser.id !== userId) {
+      throw new ForbiddenException(
+        "You can't access another user's wishlist count.",
+      );
+    }
     const count = await this.wishlistService.getWishlistCount(userId);
     return { count };
   }
@@ -159,7 +190,14 @@ export class WishlistController {
   removeByUserAndProduct(
     @Param('userId', ParseIntPipe) userId: number,
     @Param('productId', ParseIntPipe) productId: number,
+    @Request() req,
   ): Promise<void> {
+    const currentUser = req.user;
+    if (currentUser.id !== userId) {
+      throw new ForbiddenException(
+        "You can't remove items from another user's wishlist.",
+      );
+    }
     return this.wishlistService.removeByUserAndProduct(userId, productId);
   }
 }

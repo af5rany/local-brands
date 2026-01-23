@@ -176,7 +176,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
       left: 12,
       flexDirection: "row",
       alignItems: "center",
-      backgroundColor: product.totalStock > 0 ? "#28a745" : "#dc3545",
+      backgroundColor: product.stock > 0 ? "#28a745" : "#dc3545",
       paddingHorizontal: 6,
       paddingVertical: 3,
       borderRadius: 6,
@@ -254,7 +254,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
       alignItems: "center",
       justifyContent: "center",
       flexDirection: "row",
-      opacity: product.totalStock > 0 ? 1 : 0.5,
+      opacity: product.stock > 0 ? 1 : 0.5,
     },
     addToCartText: {
       color: cardBackground,
@@ -342,12 +342,12 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
         {/* Stock Indicator */}
         <View style={styles.stockIndicator}>
           <Ionicons
-            name={product.totalStock > 0 ? "checkmark-circle" : "close-circle"}
+            name={product.stock > 0 ? "checkmark-circle" : "close-circle"}
             size={10}
             color="#ffffff"
           />
           <Text style={styles.stockText}>
-            {product.totalStock > 0 ? `${product.totalStock}` : "Out"}
+            {product.stock > 0 ? `${product.stock}` : "Out"}
           </Text>
         </View>
 
@@ -428,11 +428,11 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
         {/* Add to Cart Button */}
         <TouchableOpacity
           style={styles.addToCartButton}
-          disabled={product.totalStock === 0}
+          disabled={product.stock === 0}
         >
           <Ionicons name="bag-outline" size={16} color={cardBackground} />
           <Text style={styles.addToCartText}>
-            {product.totalStock > 0 ? "Add to Cart" : "Out of Stock"}
+            {product.stock > 0 ? "Add to Cart" : "Out of Stock"}
           </Text>
         </TouchableOpacity>
       </View>
