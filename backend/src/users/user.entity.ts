@@ -11,6 +11,7 @@ import {
   Index,
 } from 'typeorm';
 import { Brand } from '../brands/brand.entity';
+import { BrandUser } from '../brands/brand-user.entity';
 import { Cart } from '../cart/cart.entity';
 import { Order } from '../orders/order.entity';
 
@@ -121,8 +122,8 @@ export class User {
   })
   wishlist: Wishlist[];
 
-  @OneToMany(() => Brand, (brand) => brand.owner)
-  ownedBrands: Brand[];
+  @OneToMany(() => BrandUser, (brandUser) => brandUser.user)
+  brandUsers: BrandUser[];
 
   @CreateDateColumn()
   createdAt: Date;

@@ -42,6 +42,7 @@ const CreateBrandScreen = () => {
   const [loading, setLoading] = useState<boolean>(false);
   const [uploadingImage, setUploadingImage] = useState<boolean>(false);
 
+  // Theme colors
   const backgroundColor = useThemeColor({}, "background");
   const textColor = useThemeColor({}, "text");
   const buttonColor = useThemeColor(
@@ -53,12 +54,16 @@ const CreateBrandScreen = () => {
     "background"
   );
   const secondaryTextColor = useThemeColor(
-    { light: "#666666", dark: "#999999" },
+    { light: "#8e8e93", dark: "#98989d" },
     "text"
   );
+  const inputBackground = useThemeColor(
+    { light: "#f2f2f7", dark: "#2c2c2e" },
+    "background"
+  );
   const inputBorderColor = useThemeColor(
-    { light: "#e1e5e9", dark: "#38383a" },
-    "text"
+    { light: "#e5e5ea", dark: "#3a3a3c" },
+    "background"
   );
 
   // Fetch users from backend
@@ -133,7 +138,6 @@ const CreateBrandScreen = () => {
       const data = await response.json();
       if (response.ok) {
         setLogoUrl(data.secure_url);
-        Alert.alert("Success", "Logo uploaded successfully!", [{ text: "OK" }]);
       } else {
         throw new Error(data?.message || "Image upload failed.");
       }
@@ -212,52 +216,12 @@ const CreateBrandScreen = () => {
     }
   };
 
-  const InputField = ({
-    label,
-    value,
-    onChangeText,
-    placeholder,
-    multiline = false,
-    icon,
-  }: {
-    label: string;
-    value: string;
-    onChangeText: (text: string) => void;
-    placeholder: string;
-    multiline?: boolean;
-    icon: string;
-  }) => (
-    <View style={styles.inputContainer}>
-      <Text style={[styles.inputLabel, { color: textColor }]}>{label}</Text>
-      <View style={[styles.inputWrapper, { borderColor: inputBorderColor }]}>
-        <Ionicons
-          name={icon as any}
-          size={20}
-          color={secondaryTextColor}
-          style={styles.inputIcon}
-        />
-        <TextInput
-          style={[
-            styles.input,
-            { color: textColor, height: multiline ? 80 : 50 },
-            multiline && { textAlignVertical: "top", paddingTop: 12 },
-          ]}
-          placeholder={placeholder}
-          value={value}
-          onChangeText={onChangeText}
-          placeholderTextColor={secondaryTextColor}
-          multiline={multiline}
-        />
-      </View>
-    </View>
-  );
-
   return (
     <KeyboardAvoidingView
       style={{ flex: 1 }}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
-      <StatusBar barStyle="dark-content" backgroundColor={backgroundColor} />
+      <StatusBar barStyle={Platform.OS === "ios" ? "dark-content" : "default"} />
       <ScrollView
         style={[styles.container, { backgroundColor }]}
         contentContainerStyle={styles.scrollContent}
@@ -266,10 +230,10 @@ const CreateBrandScreen = () => {
         {/* Header */}
         <View style={styles.headerContainer}>
           <TouchableOpacity
-            style={styles.backButton}
+            style={[styles.backButton, { backgroundColor: cardBackground }]}
             onPress={() => router.back()}
           >
-            <Ionicons name="arrow-back" size={24} color={textColor} />
+            <Ionicons name="chevron-back" size={24} color={textColor} />
           </TouchableOpacity>
           <View style={styles.headerTextContainer}>
             <Text style={[styles.header, { color: textColor }]}>
@@ -282,59 +246,52 @@ const CreateBrandScreen = () => {
         </View>
 
         {/* Form Card */}
-        <View style={[styles.formCard, { backgroundColor: cardBackground }]}>
-          {/* Logo Upload Section */}
+        <View style={[styles.card, { backgroundColor: cardBackground }]}>
+          {/* Logo Section */}
           <View style={styles.logoSection}>
-            <Text style={[styles.sectionTitle, { color: textColor }]}>
-              Brand Logo
-            </Text>
+            <View style={styles.sectionHeader}>
+              <Ionicons name="image-outline" size={20} color={buttonColor} />
+              <Text style={[styles.sectionTitle, { color: textColor }]}>
+                Brand Identity
+              </Text>
+            </View>
+
             <TouchableOpacity
               style={[
                 styles.logoUploadContainer,
-                { borderColor: inputBorderColor },
+                {
+                  backgroundColor: inputBackground,
+                  borderColor: logoUrl ? buttonColor : inputBorderColor,
+                  borderStyle: logoUrl ? 'solid' : 'dashed'
+                },
               ]}
               onPress={handleImagePick}
               disabled={uploadingImage}
             >
               {uploadingImage ? (
                 <View style={styles.uploadingContainer}>
-                  <ActivityIndicator size="large" color={buttonColor} />
-                  <Text
-                    style={[
-                      styles.uploadingText,
-                      { color: secondaryTextColor },
-                    ]}
-                  >
+                  <ActivityIndicator size="small" color={buttonColor} />
+                  <Text style={[styles.uploadingText, { color: secondaryTextColor }]}>
                     Uploading...
                   </Text>
                 </View>
               ) : logoUrl ? (
                 <View style={styles.logoPreviewContainer}>
                   <Image source={{ uri: logoUrl }} style={styles.logoPreview} />
-                  <View style={styles.logoOverlay}>
-                    <Ionicons name="camera" size={24} color="white" />
-                    <Text style={styles.changeLogoText}>Change Logo</Text>
+                  <View style={styles.logoBadge}>
+                    <Ionicons name="camera" size={16} color="white" />
                   </View>
                 </View>
               ) : (
                 <View style={styles.logoPlaceholder}>
-                  <Ionicons
-                    name="camera"
-                    size={32}
-                    color={secondaryTextColor}
-                  />
-                  <Text
-                    style={[
-                      styles.logoPlaceholderText,
-                      { color: secondaryTextColor },
-                    ]}
-                  >
-                    Tap to upload logo
+                  <View style={[styles.iconCircle, { backgroundColor: cardBackground }]}>
+                    <Ionicons name="cloud-upload-outline" size={28} color={buttonColor} />
+                  </View>
+                  <Text style={[styles.logoPlaceholderText, { color: textColor }]}>
+                    Upload Brand Logo
                   </Text>
-                  <Text
-                    style={[styles.logoHintText, { color: secondaryTextColor }]}
-                  >
-                    Recommended: Square image, max 2MB
+                  <Text style={[styles.logoHintText, { color: secondaryTextColor }]}>
+                    Square image recommended
                   </Text>
                 </View>
               )}
@@ -349,40 +306,55 @@ const CreateBrandScreen = () => {
               onChangeText={setName}
               placeholder="Enter brand name"
               icon="business"
+              textColor={textColor}
+              secondaryTextColor={secondaryTextColor}
+              inputBorderColor={inputBorderColor}
+              inputBackground={inputBackground}
             />
 
             <InputField
               label="Description"
               value={description}
               onChangeText={setDescription}
-              placeholder="Describe your brand"
+              placeholder="Tell us about your brand"
               multiline={true}
               icon="document-text"
+              textColor={textColor}
+              secondaryTextColor={secondaryTextColor}
+              inputBorderColor={inputBorderColor}
+              inputBackground={inputBackground}
             />
 
             <InputField
               label="Location"
               value={location}
               onChangeText={setLocation}
-              placeholder="Brand headquarters location"
+              placeholder="Headquarters location"
               icon="location"
+              textColor={textColor}
+              secondaryTextColor={secondaryTextColor}
+              inputBorderColor={inputBorderColor}
+              inputBackground={inputBackground}
             />
 
             {/* Owner Dropdown */}
             <View style={styles.inputContainer}>
               <Text style={[styles.inputLabel, { color: textColor }]}>
-                Brand Owner
+                Assign Owner
               </Text>
               <View
                 style={[
                   styles.dropdownWrapper,
-                  { borderColor: inputBorderColor },
+                  {
+                    backgroundColor: inputBackground,
+                    borderColor: inputBorderColor
+                  },
                 ]}
               >
                 <Ionicons
-                  name="person"
+                  name="person-outline"
                   size={20}
-                  color={secondaryTextColor}
+                  color={buttonColor}
                   style={styles.inputIcon}
                 />
                 <Dropdown
@@ -391,7 +363,8 @@ const CreateBrandScreen = () => {
                   data={users}
                   value={owner}
                   onChange={(item) => setOwner(item.value)}
-                  placeholder="Select brand owner"
+                  placeholder="Select a user"
+                  search={true}
                   searchPlaceholder="Search users..."
                   style={styles.dropdown}
                   placeholderStyle={[
@@ -402,42 +375,45 @@ const CreateBrandScreen = () => {
                     styles.selectedTextStyle,
                     { color: textColor },
                   ]}
-                  inputSearchStyle={styles.inputSearchStyle}
+                  inputSearchStyle={[
+                    styles.inputSearchStyle,
+                    {
+                      backgroundColor: cardBackground,
+                      color: textColor,
+                      borderColor: inputBorderColor
+                    }
+                  ]}
                   containerStyle={[
                     styles.dropdownContainer,
-                    { backgroundColor: cardBackground },
+                    { backgroundColor: cardBackground, borderColor: inputBorderColor },
                   ]}
                   itemTextStyle={{ color: textColor }}
+                  activeColor={inputBackground}
                 />
               </View>
             </View>
           </View>
         </View>
 
-        {/* Create Button */}
+        {/* Action Button */}
         <TouchableOpacity
           style={[styles.createButton, loading && styles.buttonDisabled]}
           onPress={handleCreateBrand}
           disabled={loading || uploadingImage}
-          activeOpacity={0.8}
+          activeOpacity={0.9}
         >
           <LinearGradient
-            colors={
-              loading ? ["#bbb", "#999"] : [buttonColor, `${buttonColor}CC`]
-            }
+            colors={loading ? ["#bbb", "#999"] : [buttonColor, "#1B6ED9"]}
             style={styles.gradientButton}
             start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
+            end={{ x: 1, y: 1 }}
           >
             {loading ? (
-              <>
-                <ActivityIndicator size="small" color="#fff" />
-                <Text style={styles.buttonText}>Creating Brand...</Text>
-              </>
+              <ActivityIndicator size="small" color="#fff" />
             ) : (
               <>
-                <Ionicons name="checkmark" size={20} color="white" />
-                <Text style={styles.buttonText}>Create Brand</Text>
+                <Text style={styles.buttonText}>Publish Brand</Text>
+                <Ionicons name="arrow-forward" size={20} color="white" style={styles.buttonIcon} />
               </>
             )}
           </LinearGradient>
@@ -447,13 +423,66 @@ const CreateBrandScreen = () => {
   );
 };
 
+// Extracted InputField for stability
+const InputField = ({
+  label,
+  value,
+  onChangeText,
+  placeholder,
+  multiline = false,
+  icon,
+  textColor,
+  secondaryTextColor,
+  inputBorderColor,
+  inputBackground,
+}: {
+  label: string;
+  value: string;
+  onChangeText: (text: string) => void;
+  placeholder: string;
+  multiline?: boolean;
+  icon: string;
+  textColor: string;
+  secondaryTextColor: string;
+  inputBorderColor: string;
+  inputBackground: string;
+}) => (
+  <View style={styles.inputContainer}>
+    <Text style={[styles.inputLabel, { color: textColor }]}>{label}</Text>
+    <View style={[styles.inputWrapper, {
+      borderColor: inputBorderColor,
+      backgroundColor: inputBackground
+    }]}>
+      <Ionicons
+        name={`${icon}-outline` as any}
+        size={20}
+        color={useThemeColor({ light: "#007AFF", dark: "#0A84FF" }, "tint")}
+        style={styles.inputIcon}
+      />
+      <TextInput
+        style={[
+          styles.input,
+          { color: textColor, height: multiline ? 100 : 56 },
+          multiline && { textAlignVertical: "top", paddingTop: 16 },
+        ]}
+        placeholder={placeholder}
+        value={value}
+        onChangeText={onChangeText}
+        placeholderTextColor={secondaryTextColor}
+        multiline={multiline}
+        selectionColor={useThemeColor({ light: "#007AFF", dark: "#0A84FF" }, "tint")}
+      />
+    </View>
+  </View>
+);
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
   scrollContent: {
     paddingHorizontal: 20,
-    paddingTop: Platform.OS === "ios" ? 50 : 20,
+    paddingTop: Platform.OS === "ios" ? 60 : 20,
     paddingBottom: 40,
   },
   headerContainer: {
@@ -462,180 +491,199 @@ const styles = StyleSheet.create({
     marginBottom: 32,
   },
   backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
     marginRight: 16,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
   headerTextContainer: {
     flex: 1,
   },
   header: {
-    fontSize: 28,
-    fontWeight: "700",
-    marginBottom: 4,
+    fontSize: 32,
+    fontWeight: "800",
+    letterSpacing: -0.5,
   },
   subtitle: {
-    fontSize: 16,
-    opacity: 0.8,
+    fontSize: 15,
+    marginTop: 4,
+    letterSpacing: 0.2,
   },
-  formCard: {
-    borderRadius: 20,
+  card: {
+    borderRadius: 24,
     padding: 24,
     marginBottom: 24,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.05,
+    shadowRadius: 20,
     elevation: 5,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+    gap: 8,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: "700",
   },
   logoSection: {
     marginBottom: 32,
   },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    marginBottom: 16,
-  },
   logoUploadContainer: {
-    height: 160,
-    borderRadius: 16,
-    borderWidth: 2,
-    borderStyle: "dashed",
+    height: 180,
+    borderRadius: 20,
+    borderWidth: 1.5,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#f8f9fa",
-  },
-  uploadingContainer: {
-    alignItems: "center",
-  },
-  uploadingText: {
-    marginTop: 12,
-    fontSize: 16,
-    fontWeight: "500",
+    overflow: 'hidden',
   },
   logoPreviewContainer: {
-    position: "relative",
     width: "100%",
     height: "100%",
+    position: 'relative',
   },
   logoPreview: {
     width: "100%",
     height: "100%",
-    borderRadius: 14,
+    resizeMode: 'cover',
   },
-  logoOverlay: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: "rgba(0,0,0,0.5)",
-    borderRadius: 14,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  changeLogoText: {
-    color: "white",
-    marginTop: 8,
-    fontSize: 14,
-    fontWeight: "500",
+  logoBadge: {
+    position: 'absolute',
+    bottom: 12,
+    right: 12,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    padding: 8,
+    borderRadius: 12,
   },
   logoPlaceholder: {
     alignItems: "center",
+    padding: 20,
+  },
+  iconCircle: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   logoPlaceholderText: {
     fontSize: 16,
-    fontWeight: "500",
-    marginTop: 12,
-  },
-  logoHintText: {
-    fontSize: 12,
-    marginTop: 4,
-    opacity: 0.7,
-  },
-  formFields: {
-    gap: 20,
-  },
-  inputContainer: {
+    fontWeight: "600",
     marginBottom: 4,
   },
+  logoHintText: {
+    fontSize: 13,
+  },
+  formFields: {
+    gap: 24,
+  },
+  inputContainer: {
+    width: '100%',
+  },
   inputLabel: {
-    fontSize: 16,
-    fontWeight: "600",
-    marginBottom: 8,
+    fontSize: 15,
+    fontWeight: "700",
+    marginBottom: 10,
+    marginLeft: 4,
   },
   inputWrapper: {
     flexDirection: "row",
     alignItems: "center",
     borderWidth: 1.5,
-    borderRadius: 12,
-    backgroundColor: "#f8f9fa",
+    borderRadius: 16,
   },
   inputIcon: {
     marginLeft: 16,
-    marginRight: 12,
+    marginRight: 4,
   },
   input: {
     flex: 1,
     fontSize: 16,
-    paddingVertical: 12,
-    paddingRight: 16,
+    paddingHorizontal: 12,
+    fontWeight: '500',
   },
   dropdownWrapper: {
     flexDirection: "row",
     alignItems: "center",
     borderWidth: 1.5,
-    borderRadius: 12,
-    backgroundColor: "#f8f9fa",
+    borderRadius: 16,
+    paddingHorizontal: 4,
   },
   dropdown: {
     flex: 1,
-    paddingVertical: 12,
-    paddingRight: 16,
+    height: 56,
   },
   dropdownContainer: {
-    borderRadius: 12,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
+    borderRadius: 16,
+    borderWidth: 1,
+    marginTop: 8,
+    overflow: 'hidden',
   },
   placeholderStyle: {
     fontSize: 16,
+    paddingLeft: 8,
   },
   selectedTextStyle: {
     fontSize: 16,
-    fontWeight: "500",
+    paddingLeft: 8,
   },
   inputSearchStyle: {
-    height: 40,
-    fontSize: 16,
-    borderRadius: 8,
+    height: 44,
+    fontSize: 15,
+    borderRadius: 10,
+    margin: 8,
   },
   createButton: {
-    borderRadius: 16,
+    borderRadius: 20,
     overflow: "hidden",
+    shadowColor: "#007AFF",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 8,
   },
   gradientButton: {
-    paddingVertical: 16,
-    paddingHorizontal: 20,
+    paddingVertical: 18,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-  },
-  buttonDisabled: {
-    opacity: 0.6,
+    gap: 10,
   },
   buttonText: {
     color: "#ffffff",
-    fontSize: 16,
-    fontWeight: "600",
-    marginLeft: 8,
+    fontSize: 18,
+    fontWeight: "700",
   },
+  buttonIcon: {
+    marginTop: 2,
+  },
+  buttonDisabled: {
+    opacity: 0.7,
+  },
+  uploadingContainer: {
+    alignItems: 'center',
+    gap: 12,
+  },
+  uploadingText: {
+    fontSize: 15,
+    fontWeight: '600',
+  }
 });
 
 export default CreateBrandScreen;

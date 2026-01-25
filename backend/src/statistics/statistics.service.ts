@@ -43,7 +43,7 @@ export class StatisticsService {
     async getBrandOwnerStats(userId: number) {
         // Get brands owned by the user
         const brands = await this.brandsRepository.find({
-            where: { owner: { id: userId } },
+            where: { brandUsers: { userId } },
             select: ['id'],
         });
 

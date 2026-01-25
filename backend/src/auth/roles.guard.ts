@@ -55,12 +55,12 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { UserRole } from 'src/common/enums/user.enum';
+import { UserRole, UserStatus } from '../common/enums/user.enum';
 import { ROLES_KEY } from './roles.decorator';
 
 @Injectable()
 export class RolesGuard implements CanActivate {
-  constructor(private reflector: Reflector) {}
+  constructor(private reflector: Reflector) { }
 
   canActivate(context: ExecutionContext): boolean {
     const requiredRoles = this.reflector.getAllAndOverride<UserRole[]>(
@@ -76,6 +76,11 @@ export class RolesGuard implements CanActivate {
 
     if (!user) {
       throw new ForbiddenException('User not authenticated');
+    }
+
+    // Check user status - Blocked or Inactive users cannot perform actions
+    if (user.status === UserStatus.BLOCKED || user.status === UserStatus.INACTIVE) {
+      throw new ForbiddenException(`Access denied. Your account is ${user.status}.`);
     }
 
     console.log('User role:', user.role);

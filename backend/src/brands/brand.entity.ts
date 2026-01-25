@@ -11,6 +11,7 @@ import {
 } from 'typeorm';
 import { User } from '../users/user.entity';
 import { Product } from '../products/product.entity';
+import { BrandUser } from './brand-user.entity';
 
 @Entity()
 export class Brand {
@@ -29,9 +30,8 @@ export class Brand {
   @Column({ nullable: true })
   location: string;
 
-  @ManyToOne(() => User, (user) => user.ownedBrands, { nullable: true })
-  @JoinColumn()
-  owner: User;
+  @OneToMany(() => BrandUser, (brandUser) => brandUser.brand)
+  brandUsers: BrandUser[];
 
   @OneToMany(() => Product, (product) => product.brand)
   products: Product[];

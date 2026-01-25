@@ -2,14 +2,18 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Brand } from './brand.entity';
+import { BrandUser } from './brand-user.entity';
 import { GetBrandsDto } from './dto/get-brands.dto';
 import { PaginatedResult } from 'src/common/types/pagination.type';
+import { BrandUserRole } from 'src/common/enums/brand-user-role.enum';
 
 @Injectable()
 export class BrandsService {
   constructor(
     @InjectRepository(Brand)
     private brandsRepository: Repository<Brand>,
+    @InjectRepository(BrandUser)
+    private brandUsersRepository: Repository<BrandUser>,
   ) { }
 
   async findAll(dto: GetBrandsDto): Promise<PaginatedResult<Brand>> {
@@ -17,7 +21,8 @@ export class BrandsService {
 
     const queryBuilder = this.brandsRepository
       .createQueryBuilder('brand')
-      .leftJoinAndSelect('brand.owner', 'owner')
+      .leftJoinAndSelect('brand.brandUsers', 'brandUsers')
+      .leftJoinAndSelect('brandUsers.user', 'user')
       .leftJoinAndSelect('brand.products', 'products')
       .select([
         'brand.id',
@@ -27,9 +32,11 @@ export class BrandsService {
         'brand.location',
         'brand.createdAt',
         'brand.updatedAt',
-        'owner.id',
-        'owner.name',
-        'owner.email',
+        'brandUsers.id',
+        'brandUsers.role',
+        'user.id',
+        'user.name',
+        'user.email',
         'products.id',
       ]);
 
@@ -109,7 +116,7 @@ export class BrandsService {
   async findOne(id: number): Promise<Brand> {
     const brand = await this.brandsRepository.findOne({
       where: { id },
-      relations: ['owner'],
+      relations: ['brandUsers', 'brandUsers.user'],
       select: {
         id: true,
         name: true,
@@ -118,11 +125,14 @@ export class BrandsService {
         location: true,
         createdAt: true,
         updatedAt: true,
-        owner: {
+        brandUsers: {
           id: true,
-          name: true,
-          email: true,
           role: true,
+          user: {
+            id: true,
+            name: true,
+            email: true,
+          },
         },
       },
     });
@@ -134,25 +144,60 @@ export class BrandsService {
   }
 
   // Find brands owned by a specific user
-  async findByOwner(ownerId: number): Promise<Brand[]> {
-    return this.brandsRepository.find({
-      where: { owner: { id: ownerId } },
-      relations: ['owner'],
-      select: {
-        id: true,
-        name: true,
-        description: true,
-        logo: true,
-        location: true,
-        createdAt: true,
-        updatedAt: true,
-        owner: {
-          id: true,
-          name: true,
-          email: true,
-        },
-      },
+  async findByOwner(userId: number): Promise<Brand[]> {
+    const brandUsers = await this.brandUsersRepository.find({
+      where: { userId },
+      relations: ['brand'],
     });
+    return brandUsers.map((bu) => bu.brand);
+  }
+
+  async checkMembership(brandId: number, userId: number): Promise<boolean> {
+    const count = await this.brandUsersRepository.count({
+      where: { brandId, userId },
+    });
+    return count > 0;
+  }
+
+  async assignUserToBrand(
+    brandId: number,
+    userId: number,
+    role: BrandUserRole = BrandUserRole.STAFF,
+  ): Promise<BrandUser> {
+    // Check if already assigned
+    let brandUser = await this.brandUsersRepository.findOne({
+      where: { brandId, userId },
+    });
+
+    if (brandUser) {
+      brandUser.role = role;
+    } else {
+      brandUser = this.brandUsersRepository.create({
+        brandId,
+        userId,
+        role,
+      });
+    }
+
+    return this.brandUsersRepository.save(brandUser);
+  }
+
+  async removeUserFromBrand(brandId: number, userId: number): Promise<void> {
+    // Constraint: A brand must have at least one owner
+    const brandUser = await this.brandUsersRepository.findOne({
+      where: { brandId, userId },
+    });
+
+    if (brandUser?.role === BrandUserRole.OWNER) {
+      const ownerCount = await this.brandUsersRepository.count({
+        where: { brandId, role: BrandUserRole.OWNER },
+      });
+      if (ownerCount <= 1) {
+        throw new Error('A brand must have at least one owner');
+      }
+    }
+
+    await this.brandUsersRepository.delete({ brandId, userId });
   }
 
   async create(brandData: Partial<Brand>): Promise<Brand> {

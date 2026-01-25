@@ -1,5 +1,5 @@
-import { Product } from "./product"; // Import Product interface
-import { User } from "./user"; // Import User interface
+import { Product } from "./product";
+import { User, BrandUser } from "./user";
 
 // Brand Interface matching the backend structure
 export interface Brand {
@@ -8,7 +8,7 @@ export interface Brand {
   description?: string;
   logo?: string;
   location?: string;
-  owner?: User;
+  brandUsers: BrandUser[];
   createdAt: string;
   updatedAt: string;
   products: Product[];
