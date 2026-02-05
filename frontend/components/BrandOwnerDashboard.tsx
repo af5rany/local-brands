@@ -12,6 +12,7 @@ type BrandOwnerDashboardProps = {
     revenue?: number | string;
   };
   loadingStats: boolean;
+  setIsManagementMode: (isManagementMode: boolean) => void;
 };
 
 const BrandOwnerDashboard = ({
@@ -19,6 +20,7 @@ const BrandOwnerDashboard = ({
   showComingSoon,
   stats,
   loadingStats,
+  setIsManagementMode,
 }: BrandOwnerDashboardProps) => {
   const { width } = useWindowDimensions();
   const isTablet = width > 768;
@@ -33,7 +35,7 @@ const BrandOwnerDashboard = ({
   return (
     <>
       {/* Brand Owner Stats */}
-      <View style={[styles.section, isTablet && styles.sectionTablet]}>
+      {/* <View style={[styles.section, isTablet && styles.sectionTablet]}>
         <Text style={[styles.sectionTitle, isTablet && styles.sectionTitleTablet]}>My Brand Overview</Text>
         <View style={[styles.statsContainer, isTablet && styles.statsContainerTablet]}>
           <StatsCard
@@ -41,7 +43,7 @@ const BrandOwnerDashboard = ({
             value={loadingStats ? "..." : stats.myProducts || 0}
             icon="cube-outline"
             color="#10b981"
-            onPress={() => navigateTo("/my-products")}
+            onPress={() => navigateTo("/brands/select")}
             style={{ width: cardWidth }}
           />
           <StatsCard
@@ -61,7 +63,7 @@ const BrandOwnerDashboard = ({
             style={{ width: cardWidth }}
           />
         </View>
-      </View>
+      </View> */}
 
       {/* Brand Owner Actions */}
       <View style={[styles.section, isTablet && styles.sectionTablet]}>
@@ -69,24 +71,18 @@ const BrandOwnerDashboard = ({
         <View style={[styles.actionsContainer, isTablet && styles.actionsGrid]}>
           <QuickActionCard
             title="My Products"
-            description="Manage your brand's products"
+            description="Choose a brand to manage"
             icon="cube"
             color="#10b981"
-            onPress={() => navigateTo("/my-products")}
-          />
-          <QuickActionCard
-            title="Add New Product"
-            description="Create and add new products"
-            icon="add-circle"
-            color="#346beb"
-            onPress={() => navigateTo("/add-product")}
+            onPress={() => navigateTo("/brands/select")}
           />
           <QuickActionCard
             title="Order Management"
             description="View and manage orders"
             icon="receipt"
             color="#f59e0b"
-            onPress={() => navigateTo("/orders")}
+            // onPress={() => navigateTo("/orders")}
+            onPress={showComingSoon}
           />
           <QuickActionCard
             title="Brand Analytics"
@@ -94,6 +90,13 @@ const BrandOwnerDashboard = ({
             icon="bar-chart"
             color="#8b5cf6"
             onPress={showComingSoon}
+          />
+          <QuickActionCard
+            title="Continue as Customer"
+            description="Shop and browse other brands"
+            icon="cart"
+            color="#346beb"
+            onPress={() => setIsManagementMode(false)}
           />
         </View>
       </View>

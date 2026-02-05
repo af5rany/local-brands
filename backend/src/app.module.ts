@@ -11,6 +11,7 @@ import { CartModule } from './cart/cart.module';
 import { WishlistModule } from './wishlist/wishlist.module';
 import { OrdersModule } from './orders/orders.module';
 import { StatisticsModule } from './statistics/statistics.module';
+import { MailModule } from './common/mail/mail.module';
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import { StatisticsModule } from './statistics/statistics.module';
     WishlistModule,
     OrdersModule,
     StatisticsModule,
+    MailModule,
   ],
   controllers: [AppController],
   providers: [AppService],

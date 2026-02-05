@@ -1,4 +1,4 @@
-import { Controller, Get, UseGuards, Request } from '@nestjs/common';
+import { Controller, Get, UseGuards, Request, Query, ParseIntPipe } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { StatisticsService } from './statistics.service';
 import { UserRole } from '../common/enums/user.enum';
@@ -9,7 +9,10 @@ export class StatisticsController {
     constructor(private readonly statisticsService: StatisticsService) { }
 
     @Get()
-    async getStats(@Request() req) {
+    async getStats(
+        @Request() req,
+        @Query('brandId', new ParseIntPipe({ optional: true })) brandId?: number,
+    ) {
         const user = req.user;
         const userId = user.userId;
         const role = user.role;
@@ -19,7 +22,7 @@ export class StatisticsController {
             console.log('[DEBUG] Admin Stats:', adminStats);
             return adminStats;
         } else if (role === UserRole.BRAND_OWNER) {
-            const ownerStats = await this.statisticsService.getBrandOwnerStats(userId);
+            const ownerStats = await this.statisticsService.getBrandOwnerStats(userId, brandId);
             console.log('[DEBUG] Brand Owner Stats:', ownerStats);
             return ownerStats;
         } else {

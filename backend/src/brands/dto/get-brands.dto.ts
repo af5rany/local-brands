@@ -1,6 +1,6 @@
-// dto/get-brands.dto.ts
-import { IsOptional, IsString, IsNumber, Min, Max } from 'class-validator';
+import { IsOptional, IsString, IsNumber, Min, Max, IsEnum } from 'class-validator';
 import { Type } from 'class-transformer';
+import { BrandStatus } from 'src/common/enums/brand.enum';
 
 export class GetBrandsDto {
   @IsOptional()
@@ -37,4 +37,8 @@ export class GetBrandsDto {
   @IsOptional()
   @IsString()
   sortOrder?: 'ASC' | 'DESC' = 'DESC';
+
+  @IsOptional()
+  @IsEnum(BrandStatus)
+  status?: BrandStatus;
 }

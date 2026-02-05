@@ -11,15 +11,17 @@ import { useRouter } from "expo-router";
 import { useThemeColor } from "@/hooks/useThemeColor";
 import { Ionicons } from "@expo/vector-icons";
 import { Product } from "@/types/product";
+import { ProductStatus } from "@/types/enums";
 
 // Full width for the card
 const { width } = Dimensions.get("window");
 
 interface ProductCardProps {
   product: Product;
+  onEdit?: (productId: number) => void;
 }
 
-const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
+const ProductCard: React.FC<ProductCardProps> = ({ product, onEdit }) => {
   const router = useRouter();
   // console.log("ProductCard rendered with product:", JSON.stringify(product));
   // Theme colors
@@ -44,6 +46,10 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   const imageBackgroundColor = useThemeColor(
     { light: "#f8f8f8", dark: "#2c2c2e" },
     "background"
+  );
+  const buttonColor = useThemeColor(
+    { light: "#007AFF", dark: "#0A84FF" },
+    "tint"
   );
 
   const handlePress = () => {
@@ -186,6 +192,26 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
       fontWeight: "600",
       color: "#ffffff",
       marginLeft: 3,
+    },
+    statusBadge: {
+      position: "absolute",
+      top: 12,
+      right: onEdit ? 48 : 12, // Offset if edit button exists
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 8,
+      backgroundColor:
+        product.status === ProductStatus.PUBLISHED
+          ? "#10b981"
+          : product.status === ProductStatus.DRAFT
+            ? "#64748b"
+            : "#ef4444",
+    },
+    statusText: {
+      fontSize: 10,
+      fontWeight: "700",
+      color: "#ffffff",
+      textTransform: "uppercase",
     },
     productDetails: {
       flex: 1,
@@ -333,9 +359,16 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
         )}
 
         {/* Discount Badge */}
-        {hasDiscount && (
+        {hasDiscount && !onEdit && (
           <View style={styles.discountBadge}>
             <Text style={styles.discountText}>{discountPercentage}% OFF</Text>
+          </View>
+        )}
+
+        {/* Status Badge (for Management Mode) */}
+        {product.status && (
+          <View style={styles.statusBadge}>
+            <Text style={styles.statusText}>{product.status}</Text>
           </View>
         )}
 
@@ -355,6 +388,19 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
         <TouchableOpacity style={styles.favoriteButton}>
           <Ionicons name="heart-outline" size={16} color={textColor} />
         </TouchableOpacity>
+
+        {/* Edit Button for Management */}
+        {onEdit && (
+          <TouchableOpacity
+            style={[styles.favoriteButton, { top: 12, right: 12, bottom: undefined }]}
+            onPress={(e) => {
+              e.stopPropagation();
+              onEdit(product.id);
+            }}
+          >
+            <Ionicons name="create-outline" size={16} color={buttonColor} />
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* Product Details */}

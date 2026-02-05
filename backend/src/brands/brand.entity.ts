@@ -8,10 +8,12 @@ import {
   JoinColumn,
   CreateDateColumn,
   UpdateDateColumn,
+  DeleteDateColumn,
 } from 'typeorm';
 import { User } from '../users/user.entity';
 import { Product } from '../products/product.entity';
 import { BrandUser } from './brand-user.entity';
+import { BrandStatus } from 'src/common/enums/brand.enum';
 
 @Entity()
 export class Brand {
@@ -21,6 +23,13 @@ export class Brand {
   @Column()
   name: string;
 
+  @Column({
+    type: 'enum',
+    enum: BrandStatus,
+    default: BrandStatus.DRAFT,
+  })
+  status: BrandStatus;
+
   @Column({ nullable: true })
   description: string;
 
@@ -29,6 +38,9 @@ export class Brand {
 
   @Column({ nullable: true })
   location: string;
+
+  @Column({ unique: true, nullable: true })
+  slug: string;
 
   @OneToMany(() => BrandUser, (brandUser) => brandUser.brand)
   brandUsers: BrandUser[];
@@ -41,4 +53,7 @@ export class Brand {
 
   @UpdateDateColumn()
   updatedAt: Date;
+
+  @DeleteDateColumn()
+  deletedAt: Date;
 }

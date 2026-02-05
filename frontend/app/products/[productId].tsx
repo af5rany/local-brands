@@ -11,7 +11,7 @@ import {
   ActivityIndicator,
   Alert,
 } from "react-native";
-import { useLocalSearchParams } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import getApiUrl from "@/helpers/getApiUrl";
 import { useThemeColor } from "@/hooks/useThemeColor";
 import { Brand } from "@/types/brand";
@@ -22,6 +22,7 @@ import { Ionicons } from "@expo/vector-icons";
 const { width: screenWidth } = Dimensions.get("window");
 
 const ProductDetailScreen = () => {
+  const router = useRouter();
   const { productId } = useLocalSearchParams();
   const { token, user } = useAuth();
   const userRole = user?.role || user?.userRole;
@@ -39,7 +40,7 @@ const ProductDetailScreen = () => {
 
   useEffect(() => {
     const fetchProductDetails = async () => {
-      if (!token || !productId || isNaN(Number(productId))) {
+      if (!productId || isNaN(Number(productId))) {
         setLoading(false);
         return;
       }
@@ -47,7 +48,7 @@ const ProductDetailScreen = () => {
       try {
         const response = await fetch(`${getApiUrl()}/products/${productId}`, {
           headers: {
-            Authorization: `Bearer ${token}`,
+            ...(token && { Authorization: `Bearer ${token}` }),
             "Content-Type": "application/json",
           },
         });

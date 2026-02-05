@@ -4,5 +4,5 @@ import { useAuth } from "@/context/AuthContext";
 export default function Index() {
   const { token } = useAuth();
 
-  return <Redirect href={token ? "/(tabs)" : "/auth/login"} />;
+  return <Redirect href="/(tabs)" />;
 }

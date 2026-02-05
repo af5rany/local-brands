@@ -12,6 +12,7 @@ type AdminDashboardProps = {
     users: number | string;
   };
   loadingStats: boolean;
+  setIsManagementMode: (isManagementMode: boolean) => void;
 };
 
 const AdminDashboard = ({
@@ -19,6 +20,7 @@ const AdminDashboard = ({
   showComingSoon,
   stats,
   loadingStats,
+  setIsManagementMode,
 }: AdminDashboardProps) => {
   const { width } = useWindowDimensions();
   const isTablet = width > 768;
@@ -137,6 +139,13 @@ const AdminDashboard = ({
             icon="settings"
             color="#ef4444"
             onPress={showComingSoon}
+          />
+          <QuickActionCard
+            title="Continue as Customer"
+            description="Shop and browse as a customer"
+            icon="cart"
+            color="#346beb"
+            onPress={() => setIsManagementMode(false)}
           />
         </View>
       </View>

@@ -6,31 +6,36 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Brackets } from 'typeorm';
 import { Product } from './product.entity';
-import { Brand } from '../brands/brand.entity'; // Import Brand entity
+import { Brand } from '../brands/brand.entity';
 import { GetProductsDto } from './dto/get-products.dto';
 import { PaginatedResult } from '../common/types/pagination.type';
-import { SortBy, SortOrder } from 'src/common/enums/product.enum';
+import { ProductType, SortBy, SortOrder, ProductStatus } from 'src/common/enums/product.enum';
+import { PublicProductDto } from './dto/public-product.dto';
 
 @Injectable()
 export class ProductsService {
   constructor(
     @InjectRepository(Product)
     private productsRepository: Repository<Product>,
-    @InjectRepository(Brand) // Inject Brand repository
+    @InjectRepository(Brand)
     private brandsRepository: Repository<Brand>,
   ) { }
 
-  async findAll(dto: GetProductsDto): Promise<PaginatedResult<Product>> {
+  async findAll(dto: GetProductsDto): Promise<PaginatedResult<PublicProductDto>> {
     const {
       page = 1,
       limit = 10,
       search,
+      category,
       productType,
       gender,
       season,
       minPrice,
       maxPrice,
       brandId,
+      status,
+      isAvailable,
+      inStock,
       sortBy = SortBy.CREATED_AT,
       sortOrder = SortOrder.DESC,
     } = dto;
@@ -71,6 +76,8 @@ export class ProductsService {
     }
 
     // Filters
+    if (category)
+      qb.andWhere('product.subcategory = :category', { category });
     if (productType)
       qb.andWhere('product.productType = :productType', { productType });
     if (gender) qb.andWhere('product.gender = :gender', { gender });
@@ -78,6 +85,41 @@ export class ProductsService {
     if (minPrice) qb.andWhere('product.price >= :minPrice', { minPrice });
     if (maxPrice) qb.andWhere('product.price <= :maxPrice', { maxPrice });
     if (brandId) qb.andWhere('product.brandId = :brandId', { brandId });
+
+    if (status) {
+      qb.andWhere('product.status = :status', { status });
+    } else {
+      // Default to published for public browsing if no status specified
+      qb.andWhere('product.status = :defaultStatus', {
+        defaultStatus: ProductStatus.PUBLISHED,
+      });
+    }
+
+    if (isAvailable !== undefined) {
+      qb.andWhere('product.isAvailable = :isAvailable', { isAvailable });
+    }
+
+    if (inStock === true) {
+      qb.andWhere(
+        `EXISTS (
+          SELECT 1 FROM json_array_elements(CASE 
+            WHEN json_typeof(product.variants) = 'array' THEN product.variants 
+            ELSE '[]'::json 
+          END) AS variant 
+          WHERE (variant->>'stock')::int > 0
+        )`,
+      );
+    } else if (inStock === false) {
+      qb.andWhere(
+        `NOT EXISTS (
+          SELECT 1 FROM json_array_elements(CASE 
+            WHEN json_typeof(product.variants) = 'array' THEN product.variants 
+            ELSE '[]'::json 
+          END) AS variant 
+          WHERE (variant->>'stock')::int > 0
+        )`,
+      );
+    }
 
     // Sorting
     this.applySorting(qb, sortBy, sortOrder);
@@ -91,7 +133,7 @@ export class ProductsService {
     const totalPages = Math.ceil(total / limit);
 
     return {
-      items,
+      items: items.map(item => this.mapToPublicDto(item)),
       total,
       page,
       limit,
@@ -116,7 +158,6 @@ export class ProductsService {
         qb.orderBy('product.updatedAt', sortOrder);
         break;
       case SortBy.BRAND_NAME:
-        // Ensure brand is joined before sorting
         if (
           !qb.expressionMap.joinAttributes.find(
             (join: any) => join.alias?.name === 'brand',
@@ -127,8 +168,6 @@ export class ProductsService {
         qb.orderBy('brand.name', sortOrder);
         break;
       case SortBy.POPULARITY:
-        // Assuming you have a popularity field or want to sort by some metric
-        // You can customize this based on your business logic
         qb.orderBy('product.viewCount', sortOrder).addOrderBy(
           'product.salesCount',
           sortOrder,
@@ -138,11 +177,26 @@ export class ProductsService {
         qb.orderBy('product.createdAt', SortOrder.DESC);
     }
 
-    // Add secondary sort by id for consistent ordering
     qb.addOrderBy('product.id', sortOrder);
   }
 
-  async findOne(id: number): Promise<Product> {
+  async getFilterOptions() {
+    const productTypes = Object.values(ProductType);
+    const categoriesQuery = await this.productsRepository
+      .createQueryBuilder('product')
+      .select('DISTINCT(product.subcategory)', 'category')
+      .where("product.subcategory IS NOT NULL AND product.subcategory != ''")
+      .getRawMany();
+
+    const categories = categoriesQuery.map((item) => item.category);
+
+    return {
+      categories,
+      productTypes,
+    };
+  }
+
+  async findOne(id: number): Promise<PublicProductDto> {
     const product = await this.productsRepository.findOne({
       where: { id },
       relations: ['brand', 'brand.brandUsers'],
@@ -150,13 +204,41 @@ export class ProductsService {
     if (!product) {
       throw new NotFoundException(`Product #${id} not found`);
     }
-    return product;
+    return this.mapToPublicDto(product);
   }
 
-  async create(productData: Partial<Product>): Promise<Product> {
-    const startTime = Date.now();
+  private mapToPublicDto(product: Product): PublicProductDto {
+    return {
+      id: product.id,
+      slug: product.slug,
+      name: product.name,
+      description: product.description,
+      price: Number(product.price),
+      salePrice: product.salePrice ? Number(product.salePrice) : null,
+      basePrice: product.basePrice ? Number(product.basePrice) : null,
+      currency: product.currency,
+      mainImage: product.images?.[0] || '',
+      images: product.images || [],
+      brand: {
+        id: product.brand?.id,
+        name: product.brand?.name,
+        logo: product.brand?.logo,
+        slug: product.brand?.slug,
+      },
+      category: product.subcategory || 'Uncategorized',
+      productType: product.productType,
+      isAvailable: product.isAvailable,
+      inStock: product.isInStock(),
+      isLowStock: product.isLowStock(),
+      variants: product.variants || [],
+      rating: Number(product.averageRating),
+      reviewCount: product.reviewCount,
+      isFeatured: product.isFeatured,
+      isNewArrival: product.isNewArrival,
+    };
+  }
 
-    // Validate brand exists if brandId is provided
+  async create(productData: Partial<Product>): Promise<PublicProductDto> {
     if (productData.brandId) {
       const brand = await this.brandsRepository.findOne({
         where: { id: productData.brandId },
@@ -170,7 +252,6 @@ export class ProductsService {
       }
     }
 
-    // Process variants if provided
     if (productData.variants && Array.isArray(productData.variants)) {
       productData.variants = productData.variants.map((variant) => ({
         ...variant,
@@ -181,15 +262,10 @@ export class ProductsService {
 
     const product = this.productsRepository.create(productData);
     const savedProduct = await this.productsRepository.save(product);
-
-    const endTime = Date.now();
-    console.log('Saving product took:', endTime - startTime, 'ms');
-
-    return savedProduct;
+    return this.findOne(savedProduct.id);
   }
 
-  async update(id: number, updateData: Partial<Product>): Promise<Product> {
-    // Validate brand exists if brandId is being updated
+  async update(id: number, updateData: Partial<Product>): Promise<PublicProductDto> {
     if (updateData.brandId) {
       const brand = await this.brandsRepository.findOne({
         where: { id: updateData.brandId },
@@ -203,12 +279,10 @@ export class ProductsService {
       }
     }
 
-    // Process variants if provided
     if (updateData.variants && Array.isArray(updateData.variants)) {
       updateData.variants = updateData.variants.map((variant) => ({
         ...variant,
         updatedAt: new Date(),
-        // Keep existing createdAt or add new one
         createdAt: variant.createdAt || new Date(),
       }));
     }
@@ -218,10 +292,10 @@ export class ProductsService {
   }
 
   async remove(id: number): Promise<void> {
-    await this.productsRepository.delete(id);
+    await this.productsRepository.softDelete(id);
   }
 
   async deleteAll(): Promise<void> {
-    await this.productsRepository.delete({});
+    await this.productsRepository.softDelete({});
   }
 }

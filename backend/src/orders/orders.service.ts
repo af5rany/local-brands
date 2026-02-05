@@ -28,7 +28,7 @@ export class OrdersService {
     private productRepository: Repository<Product>,
     @InjectRepository(Address)
     private addressRepository: Repository<Address>,
-  ) {}
+  ) { }
 
   async create(createOrderDto: CreateOrderDto, userId: number): Promise<Order> {
     // Validate addresses
@@ -78,9 +78,19 @@ export class OrdersService {
         );
       }
 
-      if (product.stock < item.quantity) {
+      const variant = product.variants?.find(
+        (v) => v.color === item.color && (!item.size || v.size === item.size),
+      );
+
+      if (!variant) {
         throw new BadRequestException(
-          `Insufficient stock for product ${product.name}. Available: ${product.stock}, Requested: ${item.quantity}`,
+          `Variant with color ${item.color} and size ${item.size || 'N/A'} not found for product ${product.name}`,
+        );
+      }
+
+      if (variant.stock < item.quantity) {
+        throw new BadRequestException(
+          `Insufficient stock for product ${product.name} (Variant: ${item.color}/${item.size || 'N/A'}). Available: ${variant.stock}, Requested: ${item.quantity}`,
         );
       }
 
@@ -132,20 +142,35 @@ export class OrdersService {
 
     const savedOrder = await this.orderRepository.save(order);
 
-    // Create order items
+    // Create order items and update stock
     for (const itemData of orderItemsData) {
-      // ✅ Use correct variable name
       const orderItem = this.orderItemRepository.create({
         order: savedOrder,
         ...itemData,
       });
       await this.orderItemRepository.save(orderItem);
 
-      // Update product stock
-      await this.productRepository.update(
-        { id: itemData.product!.id }, // ✅ Non-null assertion since we know it exists
-        { stock: itemData.product!.stock - itemData.quantity! },
-      );
+      // Update product variant stock
+      const product = await this.productRepository.findOne({
+        where: { id: itemData.product!.id },
+      });
+
+      if (product && product.variants) {
+        product.variants = product.variants.map((v) => {
+          if (
+            v.color === itemData.productColor &&
+            (!itemData.productSize || v.size === itemData.productSize)
+          ) {
+            return {
+              ...v,
+              stock: v.stock - itemData.quantity!,
+              updatedAt: new Date(),
+            };
+          }
+          return v;
+        });
+        await this.productRepository.save(product);
+      }
     }
 
     return this.findOne(savedOrder.id, userId);
@@ -286,13 +311,29 @@ export class OrdersService {
     }
 
     // Restore product stock
-    const orderItems = await order.orderItems;
+    const orderItems = await this.orderItemRepository.find({
+      where: { order: { id: order.id } },
+      relations: ['product'],
+    });
+
     for (const item of orderItems) {
-      await this.productRepository.increment(
-        { id: item.product.id },
-        'stock',
-        item.quantity,
-      );
+      const product = item.product;
+      if (product && product.variants) {
+        product.variants = product.variants.map((v) => {
+          if (
+            v.color === item.productColor &&
+            (!item.productSize || v.size === item.productSize)
+          ) {
+            return {
+              ...v,
+              stock: v.stock + item.quantity,
+              updatedAt: new Date(),
+            };
+          }
+          return v;
+        });
+        await this.productRepository.save(product);
+      }
     }
 
     await this.orderRepository.update(id, {

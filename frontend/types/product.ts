@@ -1,4 +1,4 @@
-import { ProductType, Gender, Season } from "./enums"; // Import enums from enums.ts
+import { ProductType, Gender, Season, ProductStatus } from "./enums"; // Import enums from enums.ts
 import { Brand } from "./brand"; // Import Brand interface
 
 export interface ProductVariant {
@@ -29,7 +29,7 @@ export interface Product {
   width?: number;
   height?: number;
   stock: number;
-  isActive: boolean;
+  status: ProductStatus;
   isFeatured: boolean;
   brandId: number;
   brand: Brand;

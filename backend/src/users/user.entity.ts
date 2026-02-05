@@ -9,11 +9,13 @@ import {
   OneToOne,
   JoinColumn,
   Index,
+  DeleteDateColumn,
 } from 'typeorm';
 import { Brand } from '../brands/brand.entity';
 import { BrandUser } from '../brands/brand-user.entity';
 import { Cart } from '../cart/cart.entity';
 import { Order } from '../orders/order.entity';
+import { Address } from '../addresses/address.entity';
 
 import { Wishlist } from 'src/wishlist/wishlist.entity';
 import { UserRole, UserStatus } from 'src/common/enums/user.enum';
@@ -105,9 +107,17 @@ export class User {
   @Column({ nullable: true })
   lockedUntil: Date;
 
-  // ✅ Soft delete
-  @Column({ nullable: true })
+  @DeleteDateColumn()
   deletedAt: Date;
+
+  // ✅ New Commerce specific fields
+  @OneToOne(() => Address, { nullable: true })
+  @JoinColumn({ name: 'defaultShippingAddressId' })
+  defaultShippingAddress: Address;
+
+  @OneToOne(() => Address, { nullable: true })
+  @JoinColumn({ name: 'defaultBillingAddressId' })
+  defaultBillingAddress: Address;
 
   // Relationships
   @OneToMany(() => Order, (order) => order.user)

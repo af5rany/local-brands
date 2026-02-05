@@ -32,10 +32,32 @@ export class BrandAccessGuard implements CanActivate {
         }
 
         // Check if user is associated with this brand
-        const isMember = await this.brandsService.checkMembership(brandId, user.userId);
-
-        if (!isMember) {
+        const membership = await this.brandsService.getMembership(brandId, user.userId);
+        if (!membership) {
             throw new ForbiddenException('Access denied. You do not have permissions for this brand.');
+        }
+
+        // Owners have full access to their brand
+        if (membership.role === 'owner') {
+            return true;
+        }
+
+        // Staff check for specific scopes
+        const method = request.method;
+        const url = request.url;
+
+        // Product management scope
+        if (url.includes('/products') && ['POST', 'PUT', 'DELETE'].includes(method)) {
+            if (!membership.canManageProducts) {
+                throw new ForbiddenException('Access denied. You do not have permission to manage products for this brand.');
+            }
+        }
+
+        // Brand profile editing scope
+        if (url.match(/\/brands\/\d+$/) && method === 'PUT') {
+            if (!membership.canEditBrandProfile) {
+                throw new ForbiddenException('Access denied. You do not have permission to edit this brand\'s profile.');
+            }
         }
 
         return true;

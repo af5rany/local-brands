@@ -55,3 +55,16 @@ export enum BrandRole {
   STAFF = "staff",
   VIEWER = "viewer",
 }
+
+export enum BrandStatus {
+  DRAFT = "draft",
+  ACTIVE = "active",
+  SUSPENDED = "suspended",
+  ARCHIVED = "archived",
+}
+
+export enum ProductStatus {
+  DRAFT = "draft",
+  PUBLISHED = "published",
+  ARCHIVED = "archived",
+}

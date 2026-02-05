@@ -17,6 +17,7 @@ type RecommendationCardProps = {
   onPress: () => void;
   onAddToWishlist: () => void;
   isInWishlist?: boolean;
+  style?: any;
 };
 
 const RecommendationCard = ({
@@ -24,6 +25,7 @@ const RecommendationCard = ({
   onPress,
   onAddToWishlist,
   isInWishlist = false,
+  style,
 }: RecommendationCardProps) => {
   const [imageError, setImageError] = useState(false);
   const [wishlistLoading, setWishlistLoading] = useState(false);
@@ -90,7 +92,8 @@ const RecommendationCard = ({
     <TouchableOpacity
       style={[
         styles.card,
-        isTablet && styles.tabletCard
+        isTablet && styles.tabletCard,
+        style
       ]}
       onPress={onPress}
       activeOpacity={0.8}

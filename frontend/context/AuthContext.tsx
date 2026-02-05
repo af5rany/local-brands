@@ -17,6 +17,7 @@ interface AuthContextType {
   loading: boolean;
   login: (token: string) => void;
   logout: () => void;
+  refreshUser: () => Promise<void>;
   isTokenValid: () => boolean;
 }
 
@@ -167,6 +168,28 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
+  const refreshUser = async () => {
+    if (!token) return;
+
+    try {
+      const decodedToken = jwtDecode<JwtPayload>(token);
+      const userId = decodedToken.userId;
+
+      const response = await fetch(`${getApiUrl()}/users/${userId}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        const userData = await response.json();
+        setUser(userData);
+      }
+    } catch (error) {
+      console.error("Failed to refresh user data", error);
+    }
+  };
+
   const logout = async () => {
     setToken(null);
     setUser(null);
@@ -181,6 +204,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         loading,
         login,
         logout,
+        refreshUser,
         isTokenValid: () => isTokenValid(),
       }}
     >

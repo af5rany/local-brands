@@ -103,7 +103,7 @@ const BrandsListScreen = () => {
 
         const response = await fetch(buildApiUrl(page), {
           headers: {
-            Authorization: `Bearer ${token}`,
+            ...(token && { Authorization: `Bearer ${token}` }),
           },
         });
         if (!response.ok) {
@@ -291,7 +291,7 @@ const BrandsListScreen = () => {
               color={secondaryTextColor}
             />
           </View>
-          {(userRole === "admin" || item.owner?.id === user?.id) && (
+          {(userRole === "admin" || (item.owner?.id && item.owner.id === user?.userId)) && (
             <TouchableOpacity
               style={styles.trashContainer}
               onPress={(e) => {

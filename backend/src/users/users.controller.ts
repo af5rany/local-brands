@@ -12,6 +12,7 @@ import {
   Request,
   ForbiddenException,
   BadRequestException,
+  ParseIntPipe,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { User } from './user.entity';
@@ -61,7 +62,7 @@ export class UsersController {
 
   @Put(':id')
   async update(
-    @Param('id') id: number,
+    @Param('id', ParseIntPipe) id: number,
     @Body() updateData: Partial<User>,
     @Request() req,
   ): Promise<User> {

@@ -7,11 +7,12 @@ import { Order } from './order.entity';
 import { OrderItem } from './order-item.entity';
 import { Product } from '../products/product.entity';
 import { Address } from '../addresses/address.entity';
+import { OrderStatusHistory } from './order-status-history.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Order, OrderItem, Product, Address])],
+  imports: [TypeOrmModule.forFeature([Order, OrderItem, Product, Address, OrderStatusHistory])],
   controllers: [OrdersController],
   providers: [OrdersService],
   exports: [OrdersService],
 })
-export class OrdersModule {}
+export class OrdersModule { }

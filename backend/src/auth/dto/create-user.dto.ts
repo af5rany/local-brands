@@ -1,5 +1,5 @@
 // src/auth/dto/create-user.dto.ts
-import { IsString, IsEmail, IsEnum, IsOptional } from 'class-validator';
+import { IsString, IsEmail, IsEnum, IsOptional, IsDateString } from 'class-validator';
 import { UserRole, UserStatus } from 'src/common/enums/user.enum';
 
 export class CreateUserDto {
@@ -11,6 +11,22 @@ export class CreateUserDto {
 
   @IsString()
   password: string;
+
+  @IsString()
+  @IsOptional()
+  username?: string;
+
+  @IsString()
+  @IsOptional()
+  phoneNumber?: string;
+
+  @IsDateString()
+  @IsOptional()
+  dateOfBirth?: Date;
+
+  @IsString()
+  @IsOptional()
+  avatar?: string;
 
   @IsEnum(UserRole)
   role: UserRole = UserRole.CUSTOMER;

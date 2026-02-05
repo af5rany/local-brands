@@ -12,6 +12,7 @@ import {
 } from 'typeorm';
 import { User } from '../users/user.entity';
 import { OrderItem } from './order-item.entity';
+import { OrderStatusHistory } from './order-status-history.entity';
 import { Address } from 'src/addresses/address.entity';
 import {
   OrderStatus,
@@ -40,6 +41,12 @@ export class Order {
     lazy: true,
   })
   orderItems: Promise<OrderItem[]>;
+
+  @OneToMany(() => OrderStatusHistory, (history) => history.order, {
+    cascade: true,
+    lazy: true,
+  })
+  statusHistory: Promise<OrderStatusHistory[]>;
 
   @Column('decimal', { precision: 10, scale: 2 })
   subtotal: number;

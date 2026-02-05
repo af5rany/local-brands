@@ -12,6 +12,7 @@ import {
   Modal,
   Dimensions,
   RefreshControl,
+  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import getApiUrl from "@/helpers/getApiUrl";
@@ -21,8 +22,9 @@ import { useThemeColor } from "@/hooks/useThemeColor";
 import { Ionicons } from "@expo/vector-icons";
 import { Brand } from "@/types/brand";
 import { Product } from "@/types/product";
-import { Gender, ProductType, Season } from "@/types/enums";
+import { Gender, ProductType, Season, BrandStatus, ProductStatus } from "@/types/enums";
 import { useAuth } from "@/context/AuthContext";
+import { useToast } from "@/context/ToastContext";
 
 // Filter interface - simplified to match backend
 interface ProductFilters {
@@ -32,6 +34,7 @@ interface ProductFilters {
   season?: Season;
   minPrice?: number;
   maxPrice?: number;
+  status?: ProductStatus;
 }
 
 // Backend response interface
@@ -69,6 +72,7 @@ const BrandDetailScreen = () => {
   const router = useRouter();
   const { brandId, refresh } = useLocalSearchParams();
   const { token, user } = useAuth();
+  const { showToast } = useToast();
   const userRole = user?.role || user?.userRole;
   // Theme colors
   const backgroundColor = useThemeColor({}, "background");
@@ -175,6 +179,7 @@ const BrandDetailScreen = () => {
     productTypes: Object.values(ProductType),
     genders: Object.values(Gender),
     seasons: Object.values(Season),
+    statuses: Object.values(ProductStatus),
   };
 
   const fetchBrandDetails = async () => {
@@ -184,7 +189,7 @@ const BrandDetailScreen = () => {
     try {
       const response = await fetch(`${getApiUrl()}/brands/${brandId}`, {
         headers: {
-          Authorization: `Bearer ${token}`,
+          ...(token && { Authorization: `Bearer ${token}` }),
           "Content-Type": "application/json",
         },
       });
@@ -198,6 +203,40 @@ const BrandDetailScreen = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleDeleteBrand = () => {
+    Alert.alert(
+      "Delete Brand",
+      `Are you sure you want to delete "${brand?.name}"? This will also delete all associated products.`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              const response = await fetch(`${getApiUrl()}/brands/${brandId}`, {
+                method: "DELETE",
+                headers: {
+                  Authorization: `Bearer ${token}`,
+                },
+              });
+
+              if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.message || "Failed to delete brand");
+              }
+
+              Alert.alert("Success", "Brand deleted successfully");
+              router.replace("/brands");
+            } catch (err: any) {
+              Alert.alert("Error", err.message);
+            }
+          },
+        },
+      ]
+    );
   };
 
   const fetchProducts = useCallback(
@@ -226,6 +265,8 @@ const BrandDetailScreen = () => {
           queryParams.append("minPrice", filters.minPrice.toString());
         if (filters.maxPrice)
           queryParams.append("maxPrice", filters.maxPrice.toString());
+        if (filters.status)
+          queryParams.append("status", filters.status);
 
         console.log("Fetching with params:", queryParams.toString()); // Debug log
 
@@ -233,7 +274,7 @@ const BrandDetailScreen = () => {
           `${getApiUrl()}/products?${queryParams.toString()}`,
           {
             headers: {
-              Authorization: `Bearer ${token}`,
+              ...(token && { Authorization: `Bearer ${token}` }),
               "Content-Type": "application/json",
             },
           }
@@ -720,21 +761,46 @@ const BrandDetailScreen = () => {
               </Text>
             </View>
           )}
-          <Text style={styles.brandName}>{brand.name}</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+            <Text style={styles.brandName}>{brand.name}</Text>
+            <View style={[
+              {
+                paddingHorizontal: 8,
+                paddingVertical: 2,
+                borderRadius: 6,
+                backgroundColor: brand.status === BrandStatus.ACTIVE ? '#10b981' : '#64748b'
+              }
+            ]}>
+              <Text style={{ color: '#fff', fontSize: 10, fontWeight: '700', textTransform: 'uppercase' }}>
+                {brand.status}
+              </Text>
+            </View>
+          </View>
           {brand.description && (
             <Text style={styles.brandDescription}>{brand.description}</Text>
           )}
         </View>
 
-        {/* Create Product Button */}
+        {/* Admin/Owner Actions */}
         {isOwnerOrAdmin && (
-          <TouchableOpacity
-            style={styles.createButton}
-            onPress={() => router.push(`/products/create/${brand.id}`)}
-          >
-            <Ionicons name="add" size={20} color="#ffffff" />
-            <Text style={styles.createButtonText}>Create New Product</Text>
-          </TouchableOpacity>
+          <View style={{ gap: 10, marginBottom: 20 }}>
+            <TouchableOpacity
+              style={styles.createButton}
+              onPress={() => router.push(`/products/create/${brand.id}`)}
+            >
+              <Ionicons name="add" size={20} color="#ffffff" />
+              <Text style={styles.createButtonText}>Create New Product</Text>
+            </TouchableOpacity>
+
+            {/* Delete Brand Button */}
+            <TouchableOpacity
+              style={[styles.createButton, { backgroundColor: '#FF3B30', marginTop: 0 }]}
+              onPress={handleDeleteBrand}
+            >
+              <Ionicons name="trash-outline" size={20} color="#ffffff" />
+              <Text style={styles.createButtonText}>Delete Brand</Text>
+            </TouchableOpacity>
+          </View>
         )}
 
         {/* Search and Filter */}
@@ -967,6 +1033,38 @@ const BrandDetailScreen = () => {
                         ]}
                       >
                         {season}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+
+              {/* Status Filter */}
+              <View style={styles.filterSection}>
+                <Text style={styles.filterSectionTitle}>Status</Text>
+                <View style={styles.filterOptions}>
+                  {filterOptions.statuses.map((status) => (
+                    <TouchableOpacity
+                      key={status}
+                      style={[
+                        styles.filterOption,
+                        filters.status === status && styles.filterOptionActive,
+                      ]}
+                      onPress={() =>
+                        handleFilterChange(
+                          "status",
+                          filters.status === status ? undefined : status
+                        )
+                      }
+                    >
+                      <Text
+                        style={[
+                          styles.filterOptionText,
+                          filters.status === status &&
+                          styles.filterOptionTextActive,
+                        ]}
+                      >
+                        {status}
                       </Text>
                     </TouchableOpacity>
                   ))}

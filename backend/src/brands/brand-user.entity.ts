@@ -39,6 +39,12 @@ export class BrandUser {
     })
     role: BrandUserRole;
 
+    @Column({ default: true })
+    canManageProducts: boolean;
+
+    @Column({ default: false })
+    canEditBrandProfile: boolean;
+
     @CreateDateColumn()
     createdAt: Date;
 

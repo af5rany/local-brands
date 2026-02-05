@@ -9,36 +9,54 @@ import {
   Query,
   ParseIntPipe,
   UseGuards,
+  Header,
+  UsePipes,
+  ValidationPipe,
 } from '@nestjs/common';
 import { ProductsService } from './products.service';
 import { Product } from './product.entity';
 import { GetProductsDto } from './dto/get-products.dto';
+import { CreateProductDto } from './dto/create-product.dto';
+import { UpdateProductDto } from './dto/update-product.dto';
+import { PublicProductDto } from './dto/public-product.dto';
 import { PaginatedResult } from '../common/types/pagination.type';
 import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
+import { Public } from 'src/auth/public.decorator';
 
 @UseGuards(JwtAuthGuard)
 @Controller('products')
 export class ProductsController {
   constructor(private productsService: ProductsService) { }
 
+  @Public()
+  @Header('Cache-Control', 'public, max-age=600') // Cache for 10 minutes
   @Get()
   async findAll(
     @Query() query: GetProductsDto,
-  ): Promise<PaginatedResult<Product>> {
+  ): Promise<PaginatedResult<PublicProductDto>> {
     return this.productsService.findAll(query);
   }
 
+  @Public()
+  @Get('filters')
+  async getFilterOptions() {
+    return this.productsService.getFilterOptions();
+  }
+
+  @Public()
+  @Header('Cache-Control', 'public, max-age=3600') // Cache for 1 hour
   @Get(':id')
-  findOne(@Param('id', ParseIntPipe) id: number): Promise<Product> {
+  findOne(@Param('id', ParseIntPipe) id: number): Promise<PublicProductDto> {
     return this.productsService.findOne(id);
   }
 
   @Post()
-  async create(@Body() productData: Partial<Product>): Promise<Product> {
+  @UsePipes(new ValidationPipe({ whitelist: true }))
+  async create(@Body() productData: CreateProductDto): Promise<PublicProductDto> {
     const startTime = Date.now();
     // console.log('Creating product with data:', productData);
 
-    const result = await this.productsService.create(productData);
+    const result = await this.productsService.create(productData as any);
 
     const endTime = Date.now();
     console.log('Product creation took:', endTime - startTime, 'ms');
@@ -47,10 +65,11 @@ export class ProductsController {
   }
 
   @Put(':id')
+  @UsePipes(new ValidationPipe({ whitelist: true }))
   update(
-    @Param('id') id: number,
-    @Body() updateData: Partial<Product>,
-  ): Promise<Product> {
+    @Param('id', ParseIntPipe) id: number,
+    @Body() updateData: UpdateProductDto,
+  ): Promise<PublicProductDto> {
     return this.productsService.update(id, updateData);
   }
 

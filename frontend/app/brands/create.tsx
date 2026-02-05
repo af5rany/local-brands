@@ -23,6 +23,9 @@ import getApiUrl from "@/helpers/getApiUrl";
 import { useRouter } from "expo-router";
 import { useThemeColor } from "@/hooks/useThemeColor";
 import { useAuth } from "@/context/AuthContext";
+import { useCloudinaryUpload } from "@/hooks/useCloudinaryUpload";
+import { ImageUploadProgress } from "@/components/ImageUploadProgress";
+import * as ImageManipulator from "expo-image-manipulator";
 
 type User = {
   id: string;
@@ -40,7 +43,7 @@ const CreateBrandScreen = () => {
   const [location, setLocation] = useState<string>("");
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
-  const [uploadingImage, setUploadingImage] = useState<boolean>(false);
+  const { uploads, uploadImage } = useCloudinaryUpload();
 
   // Theme colors
   const backgroundColor = useThemeColor({}, "background");
@@ -92,60 +95,29 @@ const CreateBrandScreen = () => {
   }, []);
 
   const handleImagePick = async () => {
-    const permissionResult =
-      await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permissionResult.granted) {
-      Alert.alert(
-        "Permission Required",
-        "Permission to access photo library is required!",
-        [{ text: "OK" }]
-      );
-      return;
-    }
-
-    let result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ["images"],
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.8,
-    });
-
-    if (!result.canceled && result.assets && result.assets.length > 0) {
-      uploadToCloudinary(result.assets[0].uri);
-    }
-  };
-
-  const uploadToCloudinary = async (uri: string) => {
-    const formData = new FormData();
-    const filename = uri.split("/").pop();
-    formData.append("file", {
-      uri,
-      name: filename,
-      type: "image/jpeg",
-    } as any);
-    formData.append("upload_preset", "UnsignedPreset");
-    formData.append("cloud_name", "dg4l2eelg");
-
     try {
-      setUploadingImage(true);
-      const response = await fetch(
-        "https://api.cloudinary.com/v1_1/dg4l2eelg/image/upload",
-        {
-          method: "POST",
-          body: formData,
+      const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permissionResult.granted) {
+        Alert.alert("Permission Required", "Permission to access photo library is required!");
+        return;
+      }
+
+      let result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["images"],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 1,
+      });
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const uri = result.assets[0].uri;
+        const cloudUrl = await uploadImage(uri);
+        if (cloudUrl) {
+          setLogoUrl(cloudUrl);
         }
-      );
-      const data = await response.json();
-      if (response.ok) {
-        setLogoUrl(data.secure_url);
-      } else {
-        throw new Error(data?.message || "Image upload failed.");
       }
     } catch (error) {
-      console.error("Error uploading image:", error);
-      Alert.alert("Error", "An error occurred while uploading the image.");
-    } finally {
-      setUploadingImage(false);
+      console.error("Error picking image:", error);
     }
   };
 
@@ -266,14 +238,10 @@ const CreateBrandScreen = () => {
                 },
               ]}
               onPress={handleImagePick}
-              disabled={uploadingImage}
             >
-              {uploadingImage ? (
+              {uploads[Object.keys(uploads).reverse().find(k => !logoUrl.includes(k)) || ''] ? (
                 <View style={styles.uploadingContainer}>
-                  <ActivityIndicator size="small" color={buttonColor} />
-                  <Text style={[styles.uploadingText, { color: secondaryTextColor }]}>
-                    Uploading...
-                  </Text>
+                  <ImageUploadProgress upload={uploads[Object.keys(uploads).reverse()[0]]} size={150} />
                 </View>
               ) : logoUrl ? (
                 <View style={styles.logoPreviewContainer}>
@@ -399,7 +367,7 @@ const CreateBrandScreen = () => {
         <TouchableOpacity
           style={[styles.createButton, loading && styles.buttonDisabled]}
           onPress={handleCreateBrand}
-          disabled={loading || uploadingImage}
+          disabled={loading || Object.values(uploads).some(u => u.status === 'uploading')}
           activeOpacity={0.9}
         >
           <LinearGradient

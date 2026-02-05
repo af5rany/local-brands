@@ -14,14 +14,14 @@ import { useAuth } from "@/context/AuthContext";
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
-  const { logout } = useAuth();
+  const { token, logout } = useAuth();
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <Tabs
         screenOptions={{
           tabBarActiveTintColor: Colors[colorScheme ?? "light"].tint,
-          headerShown: true,
+          headerShown: false,
           tabBarButton: HapticTab,
           tabBarBackground: TabBarBackground,
           tabBarStyle: Platform.select({
@@ -30,7 +30,7 @@ export default function TabLayout() {
             },
             default: {},
           }),
-          headerRight: () => (
+          headerRight: () => token ? (
             <Pressable
               onPress={logout}
               style={({ pressed }) => ({
@@ -40,7 +40,7 @@ export default function TabLayout() {
             >
               <IconSymbol name="power" size={24} color="red" />
             </Pressable>
-          ),
+          ) : null,
         }}
       >
         <Tabs.Screen

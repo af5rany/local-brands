@@ -16,7 +16,7 @@ import {
   RefreshControl,
   Alert,
 } from "react-native";
-import { useRouter } from "expo-router";
+import { useRouter, useLocalSearchParams } from "expo-router";
 import getApiUrl from "@/helpers/getApiUrl";
 import { useThemeColor } from "@/hooks/useThemeColor";
 import { Ionicons } from "@expo/vector-icons";
@@ -26,6 +26,7 @@ import { useColorScheme } from "react-native";
 import { Filters, PaginatedResult, SortOptions } from "@/types/filters";
 import { Product } from "@/types/product";
 import { useAuth } from "@/context/AuthContext";
+import { useBrand } from "@/context/BrandContext";
 import { Brand } from "@/types/brand";
 import { Gender, ProductType } from "@/types/enums";
 
@@ -69,6 +70,7 @@ const { width } = Dimensions.get("window");
 
 const ProductsListScreen = () => {
   const { token, user } = useAuth();
+  const { setSelectedBrandId } = useBrand();
   const userRole = user?.role || user?.userRole;
   const [productsData, setProductsData] = useState<PaginatedResult<Product> | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -79,11 +81,13 @@ const ProductsListScreen = () => {
   const [loadingBrands, setLoadingBrands] = useState<boolean>(false);
 
   // Search and Filter States
+  const params = useLocalSearchParams();
+  const urlBrandId = params.brandId ? String(params.brandId) : "";
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [filters, setFilters] = useState<Filters>({
     location: "",
     ownerId: "",
-    brandId: "",
+    brandId: urlBrandId,
     gender: "",
     productType: "",
   });
@@ -98,6 +102,16 @@ const ProductsListScreen = () => {
   const [brandSearchQuery, setBrandSearchQuery] = useState<string>("");
 
   const router = useRouter();
+
+  // Set brandId from URL params on mount and sync with context
+  useEffect(() => {
+    if (urlBrandId) {
+      setFilters(prev => ({ ...prev, brandId: urlBrandId }));
+      setSelectedBrandId(parseInt(urlBrandId));
+    } else {
+      setSelectedBrandId(null);
+    }
+  }, [urlBrandId]);
 
   // Theme colors
   const backgroundColor = useThemeColor({}, "background");
@@ -150,7 +164,7 @@ const ProductsListScreen = () => {
 
         const response = await fetch(buildApiUrl(page), {
           headers: {
-            Authorization: `Bearer ${token}`,
+            ...(token && { Authorization: `Bearer ${token}` }),
           },
         });
         if (!response.ok) {
@@ -194,7 +208,7 @@ const ProductsListScreen = () => {
       setLoadingBrands(true);
       const response = await fetch(`${getApiUrl()}/brands?limit=100`, {
         headers: {
-          Authorization: `Bearer ${token}`,
+          ...(token && { Authorization: `Bearer ${token}` }),
         },
       });
       if (response.ok) {
@@ -740,18 +754,38 @@ const ProductsListScreen = () => {
   };
 
   // Render header
-  const renderHeader = () => (
-    <View style={styles.headerContainer}>
-      <Text style={[styles.header, { color: textColor }]}>Products</Text>
-      <Text style={[styles.subtitle, { color: secondaryTextColor }]}>
-        Discover and manage all products
-      </Text>
-    </View>
-  );
+  const renderHeader = () => {
+    const isMyProducts = userRole === "brandOwner";
+    const selectedBrandName = filters.brandId && allBrands.length > 0
+      ? allBrands.find(b => b.id.toString() === filters.brandId!.toString())?.name
+      : null;
+
+    return (
+      <View style={styles.headerContainer}>
+        <Text style={[styles.header, { color: textColor }]}>
+          {isMyProducts ? "My Products" : "Products"}
+        </Text>
+        {selectedBrandName && (
+          <View style={styles.brandFilterIndicator}>
+            <Ionicons name="pricetag" size={14} color={buttonColor} />
+            <Text style={[styles.brandFilterText, { color: buttonColor }]}>
+              Filtering by: {selectedBrandName}
+            </Text>
+          </View>
+        )}
+        <Text style={[styles.subtitle, { color: secondaryTextColor }]}>
+          {isMyProducts
+            ? "Manage your brand's products"
+            : "Discover and manage all products"
+          }
+        </Text>
+      </View>
+    );
+  };
 
   // Render create button
   const renderCreateButton = () => {
-    if (userRole !== "admin" && userRole !== "brandOwner") return null;
+    if (userRole !== "brandOwner") return null;
 
     return (
       <TouchableOpacity
@@ -1071,6 +1105,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 16,
     borderBottomWidth: 1,
+  },
+  brandFilterIndicator: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(0, 122, 255, 0.1)",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    alignSelf: "flex-start",
+    marginBottom: 8,
+    gap: 6,
+  },
+  brandFilterText: {
+    fontSize: 14,
+    fontWeight: "600",
   },
   modalTitle: {
     fontSize: 18,

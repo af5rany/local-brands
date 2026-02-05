@@ -13,39 +13,53 @@ import {
   ScrollView,
   ActivityIndicator,
   Keyboard,
+  Image,
+  TouchableOpacity,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import * as ImagePicker from "expo-image-picker";
 import { NavigationProp, useNavigation } from "@react-navigation/native";
 
 import getApiUrl from "@/helpers/getApiUrl";
 import { useRouter } from "expo-router";
+import { useCloudinaryUpload } from "@/hooks/useCloudinaryUpload";
+import { ImageUploadProgress } from "@/components/ImageUploadProgress";
+import * as ImageManipulator from "expo-image-manipulator";
 
 const RegisterScreen = () => {
   const router = useRouter();
   const [formData, setFormData] = useState({
     name: "",
+    username: "",
     email: "",
     password: "",
     confirmPassword: "",
+    phoneNumber: "",
+    dateOfBirth: "",
   });
+  const [avatar, setAvatar] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [errors, setErrors] = useState({
-    name: "",
-    email: "",
-    password: "",
-    confirmPassword: "",
-  });
+  const [errors, setErrors] = useState<any>({});
+  const { uploads, uploadImage } = useCloudinaryUpload();
 
   const validateForm = () => {
     let valid = true;
     const newErrors = {
       name: "",
+      username: "",
       email: "",
       password: "",
       confirmPassword: "",
     };
 
     if (!formData.name.trim()) {
-      newErrors.name = "Username is required";
+      newErrors.name = "Full name is required";
+      valid = false;
+    }
+
+    if (!formData.username.trim()) {
+      newErrors.username = "Username is required";
       valid = false;
     }
 
@@ -81,6 +95,8 @@ const RegisterScreen = () => {
 
     setLoading(true);
     try {
+      let finalAvatar = avatar;
+
       const response = await fetch(`${getApiUrl()}/auth/register`, {
         method: "POST",
         headers: {
@@ -88,8 +104,12 @@ const RegisterScreen = () => {
         },
         body: JSON.stringify({
           name: formData.name,
+          username: formData.username,
           email: formData.email,
           password: formData.password,
+          phoneNumber: formData.phoneNumber || null,
+          dateOfBirth: formData.dateOfBirth || null,
+          avatar: finalAvatar,
           role: "customer",
           status: "pending",
         }),
@@ -124,13 +144,43 @@ const RegisterScreen = () => {
     }
   };
 
-  const handleChange = (name: keyof typeof formData, value: string) => {
+  const isUploading = Object.values(uploads).some(u => u.status === 'uploading');
+
+  const handleChange = (name: string, value: string) => {
     setFormData((prev) => ({ ...prev, [name]: value }));
     // Clear error when user types
-    if (errors[name as keyof typeof errors]) {
-      setErrors((prev) => ({ ...prev, [name]: "" }));
+    if (errors[name]) {
+      setErrors((prev: any) => ({ ...prev, [name]: "" }));
     }
   };
+
+  const handleImagePick = async () => {
+    try {
+      const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permissionResult.granted) {
+        Alert.alert("Permission Required", "Permission to access camera roll is required!");
+        return;
+      }
+
+      let result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["images"],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 1,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        const cloudUrl = await uploadImage(result.assets[0].uri);
+        if (cloudUrl) {
+          setAvatar(cloudUrl);
+        }
+      }
+    } catch (error) {
+      console.error("Error picking avatar:", error);
+    }
+  };
+
+
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -144,11 +194,32 @@ const RegisterScreen = () => {
         >
           <Text style={styles.title}>Create Account</Text>
 
+          {/* Avatar Selector */}
+          <View style={styles.avatarPickerContainer}>
+            <TouchableOpacity style={styles.avatarButton} onPress={handleImagePick} disabled={isUploading}>
+              {uploads[Object.keys(uploads).reverse().find(k => !avatar?.includes(k)) || ''] ? (
+                <ImageUploadProgress upload={uploads[Object.keys(uploads).reverse()[0]]} size={100} />
+              ) : avatar ? (
+                <Image source={{ uri: avatar }} style={styles.avatarImage} />
+              ) : (
+                <View style={styles.avatarPlaceholder}>
+                  <Ionicons name="camera-outline" size={32} color="#666" />
+                  <Text style={styles.avatarPlaceholderText}>Add Photo</Text>
+                </View>
+              )}
+            </TouchableOpacity>
+            {avatar && (
+              <TouchableOpacity style={styles.removeAvatar} onPress={() => setAvatar(null)}>
+                <Text style={styles.removeAvatarText}>Remove</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+
           <View style={styles.inputContainer}>
-            <Text style={styles.label}>Username</Text>
+            <Text style={styles.label}>Full Name</Text>
             <TextInput
               style={[styles.input, errors.name && styles.inputError]}
-              placeholder="Enter your username"
+              placeholder="Enter your full name"
               value={formData.name}
               onChangeText={(text) => handleChange("name", text)}
               editable={!loading}
@@ -156,6 +227,45 @@ const RegisterScreen = () => {
             {errors.name ? (
               <Text style={styles.errorText}>{errors.name}</Text>
             ) : null}
+          </View>
+
+          <View style={styles.inputContainer}>
+            <Text style={styles.label}>Username</Text>
+            <TextInput
+              style={[styles.input, errors.username && styles.inputError]}
+              placeholder="Enter your username"
+              value={formData.username}
+              onChangeText={(text) => handleChange("username", text)}
+              editable={!loading}
+            />
+            {errors.username ? (
+              <Text style={styles.errorText}>{errors.username}</Text>
+            ) : null}
+          </View>
+
+          <View style={styles.rowContainer}>
+            <View style={[styles.inputContainer, { flex: 1 }]}>
+              <Text style={styles.label}>Phone Number</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="+1 234..."
+                keyboardType="phone-pad"
+                value={formData.phoneNumber}
+                onChangeText={(text) => handleChange("phoneNumber", text)}
+                editable={!loading}
+              />
+            </View>
+          </View>
+
+          <View style={styles.inputContainer}>
+            <Text style={styles.label}>Birthday</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="YYYY-MM-DD"
+              value={formData.dateOfBirth}
+              onChangeText={(text) => handleChange("dateOfBirth", text)}
+              editable={!loading}
+            />
           </View>
 
           <View style={styles.inputContainer}>
@@ -215,9 +325,9 @@ const RegisterScreen = () => {
           </View>
 
           <Pressable
-            style={[styles.button, loading && styles.buttonDisabled]}
+            style={[styles.button, (loading || isUploading) && styles.buttonDisabled]}
             onPress={handleRegister}
-            disabled={loading}
+            disabled={loading || isUploading}
           >
             {loading ? (
               <ActivityIndicator color="#fff" />
@@ -334,6 +444,46 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#666",
     lineHeight: 20,
+  },
+  avatarPickerContainer: {
+    alignItems: "center",
+    marginBottom: 24,
+  },
+  avatarButton: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: "#fff",
+    borderWidth: 1,
+    borderColor: "#ddd",
+    justifyContent: "center",
+    alignItems: "center",
+    overflow: "hidden",
+  },
+  avatarImage: {
+    width: "100%",
+    height: "100%",
+  },
+  avatarPlaceholder: {
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  avatarPlaceholderText: {
+    fontSize: 12,
+    color: "#666",
+    marginTop: 4,
+  },
+  removeAvatar: {
+    marginTop: 8,
+  },
+  removeAvatarText: {
+    color: "#ff4444",
+    fontSize: 14,
+    fontWeight: "500",
+  },
+  rowContainer: {
+    flexDirection: "row",
+    gap: 12,
   },
 });
 

@@ -40,8 +40,43 @@ export class StatisticsService {
         return { brands, products, users };
     }
 
-    async getBrandOwnerStats(userId: number) {
-        // Get brands owned by the user
+    async getBrandOwnerStats(userId: number, brandId?: number) {
+        // If brandId is provided, verify the user has access to it
+        if (brandId) {
+            const brand = await this.brandsRepository.findOne({
+                where: { id: brandId, brandUsers: { userId } },
+                select: ['id'],
+            });
+
+            if (!brand) {
+                // User doesn't have access to this brand, return empty stats
+                return { myProducts: 0, orders: 0, revenue: 0 };
+            }
+
+            // Get stats for specific brand
+            const myProducts = await this.productsRepository.count({
+                where: { brandId },
+            });
+
+            // Orders and Revenue for specific brand
+            const orderItems = await this.orderItemsRepository
+                .createQueryBuilder('orderItem')
+                .leftJoin('orderItem.product', 'product')
+                .leftJoin('orderItem.order', 'order')
+                .where('product.brandId = :brandId', { brandId })
+                .andWhere('order.status = :status', { status: OrderStatus.DELIVERED })
+                .select('SUM(orderItem.totalPrice)', 'revenue')
+                .addSelect('COUNT(DISTINCT orderItem.orderId)', 'orderCount')
+                .getRawOne();
+
+            return {
+                myProducts,
+                orders: parseInt(orderItems?.orderCount || '0', 10),
+                revenue: parseFloat(orderItems?.revenue || '0'),
+            };
+        }
+
+        // Get brands owned by the user (all brands)
         const brands = await this.brandsRepository.find({
             where: { brandUsers: { userId } },
             select: ['id'],

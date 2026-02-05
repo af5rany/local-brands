@@ -33,7 +33,7 @@ export class CartService {
     private cartItemRepository: Repository<CartItem>,
     @InjectRepository(Product)
     private productRepository: Repository<Product>,
-  ) {}
+  ) { }
 
   // Get cart summary (lightweight, no pagination needed)
   async getCartSummary(userId: number): Promise<Cart> {
@@ -190,7 +190,7 @@ export class CartService {
     // Get product
     const product = await this.productRepository.findOne({
       where: { id: productId },
-      select: ['id', 'name', 'price', 'stock'],
+      select: ['id', 'name', 'price'],
     });
 
     if (!product) {

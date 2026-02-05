@@ -1,10 +1,11 @@
 import { IsOptional, IsString, Min, Max, IsEnum } from 'class-validator';
-import { Type } from 'class-transformer';
+import { Type, Transform } from 'class-transformer';
 import {
   ProductType,
   Season,
   SortBy,
   SortOrder,
+  ProductStatus,
 } from 'src/common/enums/product.enum';
 import { Gender } from 'src/common/enums/user.enum';
 
@@ -23,6 +24,10 @@ export class GetProductsDto {
   @IsOptional()
   @IsString()
   search?: string;
+
+  @IsOptional()
+  @IsString()
+  category?: string;
 
   @IsOptional()
   @IsEnum(ProductType)
@@ -55,4 +60,16 @@ export class GetProductsDto {
   @IsOptional()
   @IsEnum(SortOrder)
   sortOrder?: SortOrder = SortOrder.DESC;
+
+  @IsOptional()
+  @IsEnum(ProductStatus)
+  status?: ProductStatus;
+
+  @IsOptional()
+  @Transform(({ value }) => value === 'true' || value === true)
+  isAvailable?: boolean;
+
+  @IsOptional()
+  @Transform(({ value }) => value === 'true' || value === true)
+  inStock?: boolean;
 }

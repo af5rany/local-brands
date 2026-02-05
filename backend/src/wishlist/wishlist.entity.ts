@@ -23,7 +23,9 @@ export class Wishlist {
   @JoinColumn()
   user: User;
 
-  @ManyToOne(() => Product, (product) => product.wishlist)
+  @ManyToOne(() => Product, (product) => product.wishlist, {
+    onDelete: 'CASCADE',
+  })
   @JoinColumn()
   product: Product;
 

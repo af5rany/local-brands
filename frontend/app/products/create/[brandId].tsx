@@ -18,15 +18,16 @@ import getApiUrl from "@/helpers/getApiUrl";
 import { Dropdown } from "react-native-element-dropdown";
 import { useThemeColor } from "@/hooks/useThemeColor";
 import { Ionicons } from "@expo/vector-icons";
-import { ProductVariant } from "@/types/product";
 import { useAuth } from "@/context/AuthContext";
+import { ProductVariant } from "@/types/product";
+import { useCloudinaryUpload } from "@/hooks/useCloudinaryUpload";
+import { ImageUploadProgress } from "@/components/ImageUploadProgress";
+import * as ImageManipulator from "expo-image-manipulator";
+import { ProductStatus } from "@/types/enums";
 
-const productTypeOptions = [
-  { label: "Shoes", value: "Shoes" },
-  { label: "Hoodies", value: "Hoodies" },
-  { label: "Shirts", value: "Shirts" },
-  { label: "Accessories", value: "Accessories" },
-];
+
+// Remove hardcoded productTypeOptions and subcategoryOptions
+
 
 const genderOptions = [
   { label: "Men", value: "men" },
@@ -52,12 +53,8 @@ const colorPalette = [
   { name: "White", hex: "#FFFFFF" },
 ];
 
-const subcategoryOptions = {
-  Hoodies: ["Pullover", "Zip-up", "Oversized", "Cropped"],
-  Shoes: ["Sneakers", "Boots", "Sandals", "Formal"],
-  Shirts: ["T-Shirt", "Button-up", "Tank Top", "Long Sleeve"],
-  Accessories: ["Bags", "Hats", "Jewelry", "Belts"],
-};
+// Gender/Season/Color remain static for now (or could be dynamic later)
+
 
 const CreateProductScreen = () => {
   const router = useRouter();
@@ -90,10 +87,16 @@ const CreateProductScreen = () => {
   // const [productImages, setProductImages] = useState<any[]>([]);
   const [productType, setProductType] = useState("");
   const [subcategory, setSubcategory] = useState("");
+  const [isNewSubcategory, setIsNewSubcategory] = useState(false);
+
   const [gender, setGender] = useState("");
   const [season, setSeason] = useState(null);
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState("");
+
+  // Dynamic Options State
+  const [dynamicProductTypes, setDynamicProductTypes] = useState<{ label: string; value: string }[]>([]);
+  const [dynamicCategories, setDynamicCategories] = useState<{ label: string; value: string }[]>([]);
 
   // Product Details
   const [material, setMaterial] = useState("");
@@ -107,7 +110,7 @@ const CreateProductScreen = () => {
   const [height, setHeight] = useState("");
 
   // Status
-  const [isActive, setIsActive] = useState(true);
+  const [status, setStatus] = useState<ProductStatus>(ProductStatus.DRAFT);
   const [isFeatured, setIsFeatured] = useState(false);
 
   // Variants - simplified approach for the form
@@ -119,9 +122,34 @@ const CreateProductScreen = () => {
 
   const [loading, setLoading] = useState(false);
 
+  const { uploads, uploadImage, pickAndUpload } = useCloudinaryUpload();
+
   useEffect(() => {
     // console.log("variants", variants);
   }, [variants]);
+
+  // Fetch Dynamic Options
+  useEffect(() => {
+    const fetchOptions = async () => {
+      try {
+        const response = await fetch(`${getApiUrl()}/products/filters`);
+        if (response.ok) {
+          const data = await response.json();
+          // Map to dropdown format
+          setDynamicProductTypes(
+            (data.productTypes || []).map((t: string) => ({ label: t, value: t }))
+          );
+          setDynamicCategories(
+            (data.categories || []).map((c: string) => ({ label: c, value: c }))
+          );
+        }
+      } catch (error) {
+        console.error("Error fetching options:", error);
+      }
+    };
+    fetchOptions();
+  }, []);
+
 
   const handleTagInput = (text: string) => {
     if (text.trim() && !tags.includes(text.trim())) {
@@ -165,117 +193,49 @@ const CreateProductScreen = () => {
     setVariants(updatedVariants);
   };
 
-  const uploadSingleImageToCloudinary = async (
-    imageUri: string
-  ): Promise<string | null> => {
-    const formData = new FormData();
-    const filename = imageUri.split("/").pop();
-
-    formData.append("file", {
-      uri: imageUri,
-      name: filename,
-      type: "image/jpeg",
-    } as any);
-    formData.append("upload_preset", "UnsignedPreset");
-    formData.append("cloud_name", "dg4l2eelg");
-
-    try {
-      const response = await fetch(
-        "https://api.cloudinary.com/v1_1/dg4l2eelg/image/upload",
-        {
-          method: "POST",
-          body: formData,
-        }
-      );
-
-      const data = await response.json();
-
-      if (response.ok) {
-        return data.secure_url;
-      } else {
-        throw new Error(data?.message || "Image upload failed.");
-      }
-    } catch (error) {
-      console.error("Error uploading image:", error);
-      return null;
-    }
-  };
-
   const handleVariantImagePick = async (index: number) => {
-    const permissionResult =
-      await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permissionResult.granted) {
-      alert("Permission to access camera roll is required!");
-      return;
-    }
+    try {
+      const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permissionResult.granted) {
+        alert("Permission to access camera roll is required!");
+        return;
+      }
 
-    let result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ["images"],
-      allowsEditing: true,
-      quality: 1,
-      selectionLimit: 5,
-    });
-
-    if (!result.canceled && result.assets) {
-      const updatedVariants = [...variants];
-
-      // Step 1: Immediately add local URIs to show images in UI
-      const localUris = result.assets.map((asset) => asset.uri);
-      const startIndex = updatedVariants[index].variantImages.length;
-
-      updatedVariants[index].variantImages = [
-        ...updatedVariants[index].variantImages,
-        ...localUris,
-      ];
-
-      // Update state immediately with local images
-      setVariants(updatedVariants);
-
-      // Step 2: Upload each image and replace local URI with cloud URL
-      const uploadPromises = result.assets.map(async (asset, assetIndex) => {
-        const imageIndex = startIndex + assetIndex;
-
-        try {
-          const cloudUrl = await uploadSingleImageToCloudinary(asset.uri);
-
-          if (cloudUrl) {
-            // Replace the specific local URI with cloud URL
-            setVariants((currentVariants) => {
-              const newVariants = [...currentVariants];
-              newVariants[index].variantImages[imageIndex] = cloudUrl;
-              return newVariants;
-            });
-            return { success: true, imageIndex, cloudUrl };
-          } else {
-            throw new Error("Upload returned null URL");
-          }
-        } catch (error) {
-          console.error(`22 Error uploading image ${assetIndex + 1}:`, error);
-
-          // Remove the failed image from the array
-          setVariants((currentVariants) => {
-            const newVariants = [...currentVariants];
-            // Remove the image at the specific index
-            newVariants[index].variantImages.splice(imageIndex, 1);
-            return newVariants;
-          });
-
-          return { success: false, imageIndex, error };
-        }
+      let result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        quality: 1,
+        allowsMultipleSelection: true,
+        selectionLimit: 5,
       });
 
-      // Wait for all uploads to complete
-      try {
-        const results = await Promise.all(uploadPromises);
-        // console.log("Image Picker Result:", results);
-        const successCount = results[0];
+      if (result.canceled || !result.assets) return;
 
-        if (!successCount.success) {
-          Alert.alert("Upload Status", `Error uploading image`);
+      const updatedVariants = [...variants];
+      const startIndex = updatedVariants[index].variantImages.length;
+
+      // Add local URIs immediately
+      const newLocalUris = result.assets.map(a => a.uri);
+      updatedVariants[index].variantImages = [...updatedVariants[index].variantImages, ...newLocalUris];
+      setVariants(updatedVariants);
+
+      // Start uploading each and update variants state when done
+      result.assets.forEach(async (asset, assetIndex) => {
+        const cloudUrl = await uploadImage(asset.uri);
+        if (cloudUrl) {
+          setVariants(currentVariants => {
+            const newVariants = [...currentVariants];
+            const imgIndex = startIndex + assetIndex;
+            // Only update if it's still there (user might have removed it manually)
+            if (newVariants[index].variantImages[imgIndex] === asset.uri) {
+              newVariants[index].variantImages[imgIndex] = cloudUrl;
+            }
+            return newVariants;
+          });
         }
-      } catch (error) {
-        console.error("Error in upload process:", error);
-      }
+      });
+    } catch (error) {
+      console.error("Error picking images:", error);
     }
   };
 
@@ -324,7 +284,7 @@ const CreateProductScreen = () => {
         length: parseFloat(length),
         width: parseFloat(width),
         height: parseFloat(height),
-        isActive,
+        status,
         isFeatured,
         stock: stock,
         brandId,
@@ -717,7 +677,7 @@ const CreateProductScreen = () => {
             <Dropdown
               labelField="label"
               valueField="value"
-              data={productTypeOptions}
+              data={dynamicProductTypes}
               value={productType}
               onChange={(item) => setProductType(item.value)}
               placeholder="Select Product Type"
@@ -762,14 +722,41 @@ const CreateProductScreen = () => {
           </View>
 
           <View style={styles.inputContainer}>
-            <Text style={styles.label}>Subcategory</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Enter subcategory"
-              placeholderTextColor={placeholderColor}
-              value={subcategory}
-              onChangeText={setSubcategory}
-            />
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+              <Text style={styles.label}>
+                Category
+              </Text>
+              <TouchableOpacity onPress={() => {
+                setIsNewSubcategory(!isNewSubcategory);
+                setSubcategory(""); // Clear when switching
+              }}>
+                <Text style={{ color: primaryColor, fontSize: 14, fontWeight: '600' }}>
+                  {isNewSubcategory ? "Select Existing" : "Type New"}
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {isNewSubcategory ? (
+              <TextInput
+                style={styles.input}
+                placeholder="Enter new category"
+                placeholderTextColor={placeholderColor}
+                value={subcategory}
+                onChangeText={setSubcategory}
+              />
+            ) : (
+              <Dropdown
+                labelField="label"
+                valueField="value"
+                data={dynamicCategories}
+                value={subcategory}
+                onChange={(item) => setSubcategory(item.value)}
+                placeholder="Select Category"
+                placeholderStyle={styles.dropdownPlaceholder}
+                selectedTextStyle={styles.dropdownText}
+                style={styles.dropdown}
+              />
+            )}
           </View>
 
           <View style={styles.inputContainer}>
@@ -835,7 +822,6 @@ const CreateProductScreen = () => {
                   <Text style={styles.label}>
                     Color <Text style={styles.required}>*</Text>
                   </Text>
-                  {/* Color Palette */}
                   <View style={styles.colorPaletteContainer}>
                     {colorPalette.map((color) => (
                       <TouchableOpacity
@@ -861,58 +847,43 @@ const CreateProductScreen = () => {
               </View>
               <View style={styles.inputContainer}>
                 <Text style={styles.label}>
-                  Related Image <Text style={styles.required}>*</Text>
+                  Related Images <Text style={styles.required}>*</Text>
                 </Text>
-                <TouchableOpacity
-                  style={styles.imagePickerButton}
-                  onPress={() => handleVariantImagePick(index)}
-                >
-                  <Ionicons name="camera" size={20} color="#ffffff" />
-                  <Text style={styles.imagePickerText}>Upload Image</Text>
-                </TouchableOpacity>
-                {variant.variantImages.length > 0 && (
-                  <View style={styles.imageGrid}>
-                    {variant.variantImages.map((imageUri, imageIndex) => {
-                      const isUploading = imageUri.startsWith("file://");
-
-                      return (
-                        <View key={imageIndex} style={styles.imageContainer}>
-                          <Image
-                            source={{ uri: imageUri }}
-                            style={[
-                              styles.imagePreview,
-                              isUploading && styles.uploadingImage,
-                            ]}
-                          />
-
-                          {isUploading && (
-                            <View style={styles.loadingOverlay}>
-                              <ActivityIndicator size="small" color="#ffffff" />
-                            </View>
-                          )}
-
-                          <TouchableOpacity
-                            style={[
-                              styles.removeImageButton,
-                              isUploading && styles.disabledButton,
-                            ]}
-                            onPress={() =>
-                              !isUploading &&
-                              removeVariantImage(index, imageIndex)
-                            }
-                            disabled={isUploading}
-                          >
-                            <Ionicons
-                              name="close"
-                              size={16}
-                              color={isUploading ? "#cccccc" : "#ffffff"}
-                            />
-                          </TouchableOpacity>
-                        </View>
-                      );
-                    })}
-                  </View>
-                )}
+                <View style={styles.imageGrid}>
+                  {variant.variantImages.map((uri, imgIndex) => (
+                    <View key={imgIndex} style={styles.imageContainer}>
+                      {uploads[uri] ? (
+                        <ImageUploadProgress upload={uploads[uri]} size={80} />
+                      ) : (
+                        <Image
+                          source={{ uri }}
+                          style={styles.imagePreview}
+                        />
+                      )}
+                      <TouchableOpacity
+                        style={styles.removeImageButton}
+                        onPress={() => removeVariantImage(index, imgIndex)}
+                      >
+                        <Ionicons name="close" size={16} color="#ffffff" />
+                      </TouchableOpacity>
+                    </View>
+                  ))}
+                  <TouchableOpacity
+                    style={[
+                      styles.imagePreview,
+                      {
+                        justifyContent: "center",
+                        alignItems: "center",
+                        borderStyle: "dashed",
+                        borderWidth: 1.5,
+                        borderColor: primaryColor,
+                      },
+                    ]}
+                    onPress={() => handleVariantImagePick(index)}
+                  >
+                    <Ionicons name="add" size={32} color={primaryColor} />
+                  </TouchableOpacity>
+                </View>
               </View>
             </View>
           ))}
@@ -1023,13 +994,19 @@ const CreateProductScreen = () => {
         <View style={styles.card}>
           <Text style={styles.sectionTitle}>Status & Visibility</Text>
 
-          <View style={styles.switchContainer}>
-            <Text style={styles.label}>Active Product</Text>
-            <Switch
-              value={isActive}
-              onValueChange={setIsActive}
-              trackColor={{ false: placeholderColor, true: primaryColor }}
-              thumbColor={isActive ? "#ffffff" : "#f4f3f4"}
+
+
+          <View style={styles.inputContainer}>
+            <Text style={styles.label}>Product Status</Text>
+            <Dropdown
+              data={Object.values(ProductStatus).map(s => ({ label: s.toUpperCase(), value: s }))}
+              labelField="label"
+              valueField="value"
+              value={status}
+              onChange={(item) => setStatus(item.value as ProductStatus)}
+              style={styles.dropdown}
+              placeholderStyle={styles.dropdownPlaceholder}
+              selectedTextStyle={styles.dropdownText}
             />
           </View>
 

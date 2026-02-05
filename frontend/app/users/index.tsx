@@ -145,18 +145,22 @@ const UsersListScreen = () => {
     const assignBrandToUser = async (brandId: number, userId: number, role: BrandRole = BrandRole.OWNER) => {
         try {
             setProcessing(true);
-            const response = await fetch(`${getApiUrl()}/brands/${brandId}`, {
-                method: "PUT",
+            const response = await fetch(`${getApiUrl()}/brands/${brandId}/assign-user`, {
+                method: "POST",
                 headers: {
                     "Content-Type": "application/json",
                     Authorization: `Bearer ${token}`,
                 },
                 body: JSON.stringify({
-                    brandUsers: [{ userId, role }]
+                    userId,
+                    role
                 }),
             });
 
-            if (!response.ok) throw new Error("Failed to assign brand");
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.message || "Failed to assign brand");
+            }
 
             const user = users.find(u => u.id === userId);
             if (user && user.role === UserRole.CUSTOMER) {
@@ -180,6 +184,30 @@ const UsersListScreen = () => {
         }
     };
 
+    const removeUserFromBrand = async (brandId: number, userId: number) => {
+        try {
+            setProcessing(true);
+            const response = await fetch(`${getApiUrl()}/brands/${brandId}/remove-user/${userId}`, {
+                method: "DELETE",
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                },
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.message || "Failed to remove user from brand");
+            }
+
+            Alert.alert("Success", "User removed from brand successfully");
+            fetchUsers();
+        } catch (err: any) {
+            Alert.alert("Error", err.message);
+        } finally {
+            setProcessing(false);
+        }
+    };
+
     const filteredUsers = useMemo(() => {
         return users.filter((u) => {
             const matchesSearch =
@@ -191,11 +219,35 @@ const UsersListScreen = () => {
         });
     }, [users, searchQuery, roleFilter, statusFilter]);
 
+    const getRoleColor = (role: UserRole) => {
+        switch (role) {
+            case UserRole.ADMIN: return "#ef4444";
+            case UserRole.BRAND_OWNER: return "#3b82f6";
+            default: return "#10b981";
+        }
+    };
+
+    const getStatusColor = (status: UserStatus) => {
+        switch (status) {
+            case UserStatus.APPROVED: return "#10b981";
+            case UserStatus.PENDING: return "#f59e0b";
+            case UserStatus.BLOCKED: return "#ef4444";
+            default: return "#6b7280";
+        }
+    };
+
     const renderUser = ({ item }: { item: User }) => (
         <View style={[styles.userCard, { backgroundColor: cardBackground, borderColor }]}>
             <View style={styles.userInfo}>
                 <View style={styles.userHeader}>
-                    <Text style={[styles.userName, { color: textColor }]}>{item.name}</Text>
+                    <View style={styles.userNameContainer}>
+                        <Text style={[styles.userName, { color: textColor }]}>{item.name}</Text>
+                        {item.id === currentUser?.id && (
+                            <View style={styles.youBadge}>
+                                <Text style={styles.youText}>You</Text>
+                            </View>
+                        )}
+                    </View>
                     <View style={[styles.roleBadge, { backgroundColor: getRoleColor(item.role) + "20" }]}>
                         <Text style={[styles.roleText, { color: getRoleColor(item.role) }]}>
                             {item.role.toUpperCase()}
@@ -223,6 +275,25 @@ const UsersListScreen = () => {
                                     <Text style={[styles.brandChipText, { color: textColor }]}>
                                         {bu.brand?.name || `Brand #${bu.brandId}`} ({bu.role})
                                     </Text>
+                                    <TouchableOpacity
+                                        onPress={() => {
+                                            Alert.alert(
+                                                "Remove Brand",
+                                                `Are you sure you want to remove ${item.name} from ${bu.brand?.name || `this brand`}?`,
+                                                [
+                                                    { text: "Cancel", style: "cancel" },
+                                                    {
+                                                        text: "Remove",
+                                                        onPress: () => removeUserFromBrand(bu.brandId, item.id),
+                                                        style: "destructive"
+                                                    }
+                                                ]
+                                            );
+                                        }}
+                                        style={styles.removeChipButton}
+                                    >
+                                        <Ionicons name="close-circle" size={14} color="#ef4444" />
+                                    </TouchableOpacity>
                                 </View>
                             ))}
                         </View>
@@ -232,14 +303,15 @@ const UsersListScreen = () => {
 
             <View style={styles.actions}>
                 <TouchableOpacity
-                    style={[styles.actionButton, { borderColor }]}
+                    style={[styles.actionButton, { borderColor }, item.id === currentUser?.id && styles.disabledAction]}
                     onPress={() => {
                         setSelectedUser(item);
                         setShowRoleModal(true);
                     }}
+                    disabled={item.id === currentUser?.id}
                 >
-                    <Ionicons name="shield-outline" size={18} color={buttonColor} />
-                    <Text style={[styles.actionText, { color: buttonColor }]}>Role</Text>
+                    <Ionicons name="shield-outline" size={18} color={item.id === currentUser?.id ? secondaryTextColor : buttonColor} />
+                    <Text style={[styles.actionText, { color: item.id === currentUser?.id ? secondaryTextColor : buttonColor }]}>Role</Text>
                 </TouchableOpacity>
 
                 {item.role === UserRole.BRAND_OWNER && (
@@ -256,21 +328,21 @@ const UsersListScreen = () => {
                 )}
 
                 <TouchableOpacity
-                    style={[styles.actionButton, { borderColor }]}
+                    style={[styles.actionButton, { borderColor }, item.id === currentUser?.id && styles.disabledAction]}
                     onPress={() => {
                         const newStatus = item.status === UserStatus.BLOCKED ? UserStatus.APPROVED : UserStatus.BLOCKED;
                         updateUserStatus(item.id, newStatus);
                     }}
-                    disabled={processing}
+                    disabled={processing || item.id === currentUser?.id}
                 >
                     <Ionicons
                         name={item.status === UserStatus.BLOCKED ? "checkmark-circle-outline" : "ban-outline"}
                         size={18}
-                        color={item.status === UserStatus.BLOCKED ? "#10b981" : "#ef4444"}
+                        color={item.id === currentUser?.id ? secondaryTextColor : (item.status === UserStatus.BLOCKED ? "#10b981" : "#ef4444")}
                     />
                     <Text style={[
                         styles.actionText,
-                        { color: item.status === UserStatus.BLOCKED ? "#10b981" : "#ef4444" }
+                        { color: item.id === currentUser?.id ? secondaryTextColor : (item.status === UserStatus.BLOCKED ? "#10b981" : "#ef4444") }
                     ]}>
                         {item.status === UserStatus.BLOCKED ? "Unblock" : "Block"}
                     </Text>
@@ -278,23 +350,6 @@ const UsersListScreen = () => {
             </View>
         </View>
     );
-
-    const getRoleColor = (role: UserRole) => {
-        switch (role) {
-            case UserRole.ADMIN: return "#ef4444";
-            case UserRole.BRAND_OWNER: return "#3b82f6";
-            default: return "#10b981";
-        }
-    };
-
-    const getStatusColor = (status: UserStatus) => {
-        switch (status) {
-            case UserStatus.APPROVED: return "#10b981";
-            case UserStatus.PENDING: return "#f59e0b";
-            case UserStatus.BLOCKED: return "#ef4444";
-            default: return "#6b7280";
-        }
-    };
 
     if (loading && !refreshing) {
         return (
@@ -494,7 +549,19 @@ const styles = StyleSheet.create({
     },
     userInfo: { marginBottom: 12 },
     userHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 4 },
+    userNameContainer: { flexDirection: "row", alignItems: "center", gap: 8 },
     userName: { fontSize: 18, fontWeight: "bold" },
+    youBadge: {
+        backgroundColor: "#007AFF20",
+        paddingHorizontal: 6,
+        paddingVertical: 2,
+        borderRadius: 4,
+    },
+    youText: {
+        color: "#007AFF",
+        fontSize: 10,
+        fontWeight: "bold",
+    },
     roleBadge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
     roleText: { fontSize: 10, fontWeight: "bold" },
     userEmail: { fontSize: 14, marginBottom: 8 },
@@ -504,8 +571,21 @@ const styles = StyleSheet.create({
     assignedBrands: { marginTop: 8, padding: 8, backgroundColor: "rgba(0,0,0,0.02)", borderRadius: 8 },
     smallLabel: { fontSize: 11, fontWeight: "600", marginBottom: 4 },
     brandChipContainer: { flexDirection: "row", flexWrap: "wrap", gap: 4 },
-    brandChip: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
+    brandChip: {
+        flexDirection: "row",
+        alignItems: "center",
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 6,
+        gap: 4
+    },
     brandChipText: { fontSize: 11, fontWeight: "500" },
+    removeChipButton: {
+        marginLeft: 2,
+    },
+    disabledAction: {
+        opacity: 0.5,
+    },
     actions: { flexDirection: "row", gap: 8 },
     actionButton: {
         flex: 1,

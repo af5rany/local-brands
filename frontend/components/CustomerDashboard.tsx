@@ -1,357 +1,344 @@
 import React from "react";
-import { View, Text, StyleSheet, ScrollView, useWindowDimensions } from "react-native";
-import StatsCard from "./StatsCard";
-import QuickActionCard from "./QuickActionCard";
-import RecentOrderCard from "./RecentOrderCard";
+import { View, Text, StyleSheet, ScrollView, useWindowDimensions, TouchableOpacity, Image, FlatList } from "react-native";
+import { Brand } from "@/types/brand";
+import { Product } from "@/types/product";
+import BrandCard from "./BrandCard";
 import RecommendationCard from "./RecommendationCard";
+import FilterChips from "./FilterChips";
+import FilterModal from "./FilterModal";
+import { Ionicons } from "@expo/vector-icons";
+import Pagination from "./Pagination";
 
 type CustomerDashboardProps = {
   navigateTo: (path: string) => void;
-  stats: {
-    myOrders?: number;
-    wishlist?: number;
-    cartItems?: number;
-    totalSpent?: number;
-    pendingOrders?: number;
-    completedOrders?: number;
-    [key: string]: number | undefined;
-  };
+  stats: any;
   loadingStats: boolean;
-  recentOrders?: Array<{
-    id: string;
-    status: string;
-    total: number;
-    date: string;
-    items: number;
-  }>;
-  recommendations?: Array<{
-    id: string;
-    name: string;
-    price: number;
-    image: string;
-    brand: string;
-  }>;
-  user?: {
-    name: string;
-    memberSince?: string;
+  featuredBrands?: Brand[];
+  newArrivals?: Product[];
+  isGuest?: boolean;
+  searchQuery?: string;
+  onSearchChange?: (text: string) => void;
+  activeFilters?: {
+    category?: string;
+    type?: string;
+    brand?: string;
+    sort?: string;
   };
+  onFilterPress?: (type: string, value?: string) => void;
+  filterOptions?: {
+    categories: string[];
+    productTypes: string[];
+  };
+  currentPage?: number;
+  totalPages?: number;
+  onPageChange?: (page: number) => void;
 };
 
 const CustomerDashboard = ({
   navigateTo,
   stats,
   loadingStats,
-  recentOrders = [],
-  recommendations = [],
-  user,
+  featuredBrands = [],
+  newArrivals = [],
+  isGuest = false,
+  searchQuery,
+  onSearchChange,
+  activeFilters = {},
+  onFilterPress,
+  filterOptions = { categories: [], productTypes: [] },
+  currentPage = 1,
+  totalPages = 1,
+  onPageChange = () => { },
 }: CustomerDashboardProps) => {
   const { width } = useWindowDimensions();
+  const [activeTab, setActiveTab] = React.useState<"products" | "brands">("products");
+  const [isFilterModalVisible, setFilterModalVisible] = React.useState(false);
+  const [currentFilterType, setCurrentFilterType] = React.useState<string>("");
+
+  const handleChipPress = (type: string) => {
+    setCurrentFilterType(type);
+    setFilterModalVisible(true);
+  };
+
+  const getModalOptions = () => {
+    switch (currentFilterType) {
+      case "category":
+        return filterOptions.categories.map(c => ({ id: c, label: c }));
+      case "type":
+        return filterOptions.productTypes.map(t => ({ id: t, label: t }));
+      case "brand":
+        return featuredBrands.map(b => ({ id: b.id.toString(), label: b.name }));
+      case "sort":
+        return [
+          { id: "DESC", label: "Newest First" },
+          { id: "ASC", label: "Oldest First" },
+        ];
+      default:
+        return [];
+    }
+  };
+
+  const handleSelectOption = (id: string, label: string) => {
+    onFilterPress?.(currentFilterType, id);
+    setFilterModalVisible(false);
+  };
   const isTablet = width > 768;
+  const numColumns = isTablet ? 3 : 2;
+  const cardGap = 12;
+  const cardWidth = (width - (16 * 2) - (cardGap * (numColumns - 1))) / numColumns;
 
-  // Grid layout calculations
-  const sidePadding = isTablet ? 32 : 20;
-  const gridGap = isTablet ? 16 : 8;
-  const availableWidth = width - (sidePadding * 2) - 8; // Adjust for horizontal margins
+  const renderProductItem = ({ item }: { item: Product }) => (
+    <RecommendationCard
+      product={{
+        id: item.id.toString(),
+        name: item.name,
+        price: item.salePrice ?? item.price,
+        image: item.variants?.[0]?.variantImages?.[0] || "",
+        brand: item.brand?.name || "Global Brand",
+        rating: 4.8,
+        originalPrice: item.salePrice ? item.price : undefined,
+      }}
+      onPress={() => navigateTo(`/products/${item.id}`)}
+      onAddToWishlist={() => { }}
+      style={{ width: cardWidth, marginRight: 0, marginBottom: cardGap }}
+    />
+  );
 
-  const statsCols = isTablet ? 4 : 2;
-  const cardWidth = (availableWidth / statsCols) - (gridGap);
-
-  const actionCols = isTablet ? 2 : 1;
-  const actionCardWidth = (availableWidth / actionCols) - (gridGap);
+  const renderBrandItem = ({ item }: { item: Brand }) => (
+    <TouchableOpacity
+      style={[styles.brandCard, { width: cardWidth, marginRight: 0 }]}
+      onPress={() => navigateTo(`/brands/${item.id}`)}
+      activeOpacity={0.7}
+    >
+      <View style={styles.brandLogoBox}>
+        {item.logo ? (
+          <Image source={{ uri: item.logo }} style={styles.brandLogo} resizeMode="contain" />
+        ) : (
+          <Ionicons name="business" size={32} color="#64748b" />
+        )}
+      </View>
+      <View style={styles.brandInfo}>
+        <Text style={styles.brandName} numberOfLines={1}>{item.name}</Text>
+        <Text style={styles.brandTagline} numberOfLines={1}>{item.location || "Global"}</Text>
+        <View style={styles.productCountBadge}>
+          <Text style={styles.productCountText}>{item.products?.length || 0} Products</Text>
+        </View>
+      </View>
+    </TouchableOpacity>
+  );
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      {/* Welcome Section */}
-      {user && (
-        <View style={[styles.welcomeSection, isTablet && styles.welcomeSectionTablet]}>
-          <Text style={[styles.welcomeText, isTablet && styles.welcomeTextTablet]}>Welcome back, {user.name}! 👋</Text>
-          {user.memberSince && (
-            <Text style={[styles.memberSince, isTablet && styles.memberSinceTablet]}>
-              Member since {user.memberSince}
-            </Text>
-          )}
-        </View>
-      )}
-
-      {/* Enhanced Stats Section */}
-      <View style={[styles.section, isTablet && styles.sectionTablet]}>
-        <Text style={[styles.sectionTitle, isTablet && styles.sectionTitleTablet]}>Shopping Overview</Text>
-        <View style={[styles.statsGrid, isTablet && styles.statsGridTablet]}>
-          <StatsCard
-            title="My Orders"
-            value={loadingStats ? "..." : stats.myOrders || 0}
-            icon="bag-outline"
-            color="#346beb"
-            onPress={() => navigateTo("/my-orders")}
-            style={{ width: cardWidth }}
-          />
-          <StatsCard
-            title="Wishlist"
-            value={loadingStats ? "..." : stats.wishlist || 0}
-            icon="heart-outline"
-            color="#ef4444"
-            onPress={() => navigateTo("/wishlist")}
-            style={{ width: cardWidth }}
-          />
-          <StatsCard
-            title="Cart Items"
-            value={loadingStats ? "..." : stats.cartItems || 0}
-            icon="cart-outline"
-            color="#10b981"
-            onPress={() => navigateTo("/cart")}
-            style={{ width: cardWidth }}
-          />
-          <StatsCard
-            title="Total Spent"
-            value={loadingStats ? "..." : `$${Number(stats.totalSpent).toLocaleString() || 0}`}
-            icon="cash-outline"
-            color="#8b5cf6"
-            onPress={() => navigateTo("/order-history")}
-            style={{ width: cardWidth }}
-          />
-        </View>
-
-        {/* Order Status Stats */}
-        <View style={[styles.orderStatsContainer, isTablet && styles.orderStatsContainerTablet]}>
-          <StatsCard
-            title="Pending"
-            value={loadingStats ? "..." : stats.pendingOrders || 0}
-            icon="time-outline"
-            color="#f59e0b"
-            size="small"
-            onPress={() => navigateTo("/my-orders?status=pending")}
-            style={{ width: isTablet ? cardWidth : cardWidth * 0.95 }}
-          />
-          <StatsCard
-            title="Completed"
-            value={loadingStats ? "..." : stats.completedOrders || 0}
-            icon="checkmark-circle-outline"
-            color="#10b981"
-            size="small"
-            onPress={() => navigateTo("/my-orders?status=completed")}
-            style={{ width: isTablet ? cardWidth : cardWidth * 0.95 }}
-          />
-        </View>
+    <View style={styles.container}>
+      {/* 2) Primary CTAs - Segmented Switch */}
+      <View style={styles.tabContainer}>
+        <TouchableOpacity
+          style={[styles.tab, activeTab === "products" && styles.activeTab]}
+          onPress={() => setActiveTab("products")}
+        >
+          <Text style={[styles.tabText, activeTab === "products" && styles.activeTabText]}>Products</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.tab, activeTab === "brands" && styles.activeTab]}
+          onPress={() => setActiveTab("brands")}
+        >
+          <Text style={[styles.tabText, activeTab === "brands" && styles.activeTabText]}>Brands</Text>
+        </TouchableOpacity>
       </View>
 
-      {/* Recent Orders Section */}
-      {recentOrders.length > 0 && (
-        <View style={[styles.section, isTablet && styles.sectionTablet]}>
+      {/* 3) Quick Filter Chips */}
+      <FilterChips
+        activeFilters={activeFilters}
+        onFilterPress={handleChipPress}
+      />
+
+      {/* Filter Selection Modal */}
+      <FilterModal
+        visible={isFilterModalVisible}
+        onClose={() => setFilterModalVisible(false)}
+        title={`Filter by ${currentFilterType.charAt(0).toUpperCase() + currentFilterType.slice(1)}`}
+        options={getModalOptions()}
+        onSelect={handleSelectOption}
+        activeId={activeFilters[currentFilterType as keyof typeof activeFilters]}
+        enableSearch={currentFilterType === "brand"}
+      />
+
+      {/* 4) Featured Strip (Curation Layer) - Only show for Product tab or as a global entry */}
+      {featuredBrands.length > 0 && activeTab === "products" && (
+        <View style={styles.featuredSection}>
           <View style={styles.sectionHeader}>
-            <Text style={[styles.sectionTitle, isTablet && styles.sectionTitleTablet]}>Recent Orders</Text>
-            <Text
-              style={[styles.seeAllText, isTablet && styles.seeAllTextTablet]}
-              onPress={() => navigateTo("/my-orders")}
-            >
-              See All
-            </Text>
+            <Text style={styles.sectionTitle}>Featured Brands</Text>
+            <TouchableOpacity onPress={() => navigateTo("/brands")}>
+              <Text style={styles.seeAll}>See All</Text>
+            </TouchableOpacity>
           </View>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={isTablet && styles.horizontalScrollContent}>
-            {recentOrders.slice(0, 3).map((order) => (
-              <RecentOrderCard
-                key={order.id}
-                order={order}
-                onPress={() => navigateTo(`/orders/${order.id}`)}
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.featuredList}>
+            {featuredBrands.map((brand) => (
+              <BrandCard
+                key={brand.id}
+                brand={brand}
+                size="small"
+                onPress={() => navigateTo(`/brands/${brand.id}`)}
               />
             ))}
           </ScrollView>
         </View>
       )}
 
-      {/* Quick Actions Section */}
-      <View style={[styles.section, isTablet && styles.sectionTablet]}>
-        <Text style={[styles.sectionTitle, isTablet && styles.sectionTitleTablet]}>Quick Shopping</Text>
-        <View style={[styles.actionsContainer, isTablet && styles.actionsGrid]}>
-          <QuickActionCard
-            title="Browse Products"
-            description="Explore available products"
-            icon="grid"
-            color="#10b981"
-            onPress={() => navigateTo("/products")}
-          />
-          <QuickActionCard
-            title="Browse Brands"
-            description="Discover your favorite brands"
-            icon="storefront"
-            color="#346beb"
-            onPress={() => navigateTo("/brands")}
-          />
-          <QuickActionCard
-            title="Order Status"
-            description="Track your current orders"
-            icon="location"
-            color="#f59e0b"
-            onPress={() => navigateTo("/track-orders")}
-          />
-          <QuickActionCard
-            title="Customer Support"
-            description="Get help with your orders"
-            icon="help-circle"
-            color="#6366f1"
-            onPress={() => navigateTo("/support")}
-          />
-        </View>
-      </View>
+      {/* 5) Main Content Grid */}
+      <View style={styles.gridContainer}>
+        <Text style={styles.discoveryTitle}>
+          {activeTab === "products" ? "Latest Arrivals" : "All Brands"}
+        </Text>
+        <FlatList
+          data={activeTab === "products" ? (newArrivals as any[]) : (featuredBrands as any[])}
+          keyExtractor={(item) => item.id.toString()}
+          renderItem={activeTab === "products" ? (renderProductItem as any) : (renderBrandItem as any)}
+          numColumns={numColumns}
+          scrollEnabled={false}
+          columnWrapperStyle={styles.gridRow}
+          ListEmptyComponent={<Text style={styles.emptyText}>Nothing found in this section</Text>}
+          key={activeTab === "products" ? "h-grid" : "v-grid"} // Force re-render on tab change for grid layout
+        />
 
-      {/* Recommendations Section */}
-      {recommendations.length > 0 && (
-        <View style={[styles.section, isTablet && styles.sectionTablet]}>
-          <View style={styles.sectionHeader}>
-            <Text style={[styles.sectionTitle, isTablet && styles.sectionTitleTablet]}>Recommended for You</Text>
-            <Text
-              style={[styles.seeAllText, isTablet && styles.seeAllTextTablet]}
-              onPress={() => navigateTo("/products?recommended=true")}
-            >
-              See All
-            </Text>
-          </View>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={isTablet && styles.horizontalScrollContent}>
-            {recommendations.slice(0, 5).map((product) => (
-              <RecommendationCard
-                key={product.id}
-                product={product}
-                onPress={() => navigateTo(`/products/${product.id}`)}
-                onAddToWishlist={() => {
-                  /* Add to wishlist logic */
-                }}
-              />
-            ))}
-          </ScrollView>
-        </View>
-      )}
-
-      {/* Additional Quick Actions */}
-      <View style={[styles.section, isTablet && styles.sectionTablet]}>
-        <Text style={[styles.sectionTitle, isTablet && styles.sectionTitleTablet]}>Account & Settings</Text>
-        <View style={[styles.actionsContainer, isTablet && styles.actionsGrid]}>
-          <QuickActionCard
-            title="Profile Settings"
-            description="Update your personal information"
-            icon="person"
-            color="#64748b"
-            onPress={() => navigateTo("/profile")}
-          />
-          <QuickActionCard
-            title="Order History"
-            description="View all your past orders"
-            icon="time"
-            color="#8b5cf6"
-            onPress={() => navigateTo("/order-history")}
-          />
-          <QuickActionCard
-            title="Notifications"
-            description="Manage your preferences"
-            icon="notifications"
-            color="#f97316"
-            onPress={() => navigateTo("/notifications")}
-          />
-        </View>
+        {/* Pagination Controls */}
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={onPageChange}
+        />
       </View>
-    </ScrollView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
+    backgroundColor: "#fff",
     flex: 1,
-    backgroundColor: "#f8fafc",
   },
-  welcomeSection: {
-    marginTop: 16,
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    backgroundColor: "#ffffff",
-    borderRadius: 12,
-    marginHorizontal: 20,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+  tabContainer: {
+    flexDirection: "row",
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    gap: 12,
   },
-  welcomeSectionTablet: {
-    paddingHorizontal: 32,
-    paddingVertical: 24,
-    marginHorizontal: 32,
+  tab: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    backgroundColor: "#f1f5f9",
   },
-  welcomeText: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: "#1e293b",
-    marginBottom: 4,
+  activeTab: {
+    backgroundColor: "#1e293b",
   },
-  welcomeTextTablet: {
-    fontSize: 32,
-  },
-  memberSince: {
-    fontSize: 14,
+  tabText: {
+    fontSize: 15,
+    fontWeight: "600",
     color: "#64748b",
   },
-  memberSinceTablet: {
-    fontSize: 16,
+  activeTabText: {
+    color: "#fff",
   },
-  section: {
-    marginTop: 24,
-    paddingHorizontal: 20,
-  },
-  sectionTablet: {
-    paddingHorizontal: 32,
-    marginTop: 32,
+  featuredSection: {
+    paddingVertical: 16,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: "#f1f5f9",
+    backgroundColor: "#f8fafc",
+    marginVertical: 12,
   },
   sectionHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 16,
+    paddingHorizontal: 16,
+    marginBottom: 12,
   },
   sectionTitle: {
-    fontSize: 20,
-    fontWeight: "bold",
+    fontSize: 16,
+    fontWeight: "700",
     color: "#1e293b",
-    marginBottom: 16,
   },
-  sectionTitleTablet: {
-    fontSize: 26,
-    marginBottom: 20,
-  },
-  seeAllText: {
+  seeAll: {
     fontSize: 14,
     color: "#346beb",
     fontWeight: "600",
   },
-  seeAllTextTablet: {
-    fontSize: 16,
-  },
-  statsGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-between",
-    marginHorizontal: -4,
-  },
-  statsGridTablet: {
-    marginHorizontal: -8,
-  },
-  orderStatsContainer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginTop: 12,
-    marginHorizontal: -4,
-  },
-  orderStatsContainerTablet: {
-    marginHorizontal: -8,
-    marginTop: 16,
-  },
-  actionsContainer: {
+  featuredList: {
+    paddingHorizontal: 16,
     gap: 12,
   },
-  actionsGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-between",
-    gap: 16,
+  gridContainer: {
+    padding: 16,
   },
-  horizontalScrollContent: {
-    paddingRight: 32,
+  discoveryTitle: {
+    fontSize: 20,
+    fontWeight: "800",
+    color: "#0f172a",
+    marginBottom: 16,
+  },
+  gridRow: {
+    justifyContent: "flex-start",
+    gap: 12,
+    marginBottom: 4,
+  },
+  brandCard: {
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  brandLogoBox: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: "#f8fafc",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 10,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: "#f1f5f9",
+  },
+  brandLogo: {
+    width: "100%",
+    height: "100%",
+  },
+  brandInfo: {
+    alignItems: "center",
+    width: "100%",
+  },
+  brandName: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#1e293b",
+    marginBottom: 2,
+    textAlign: "center",
+  },
+  brandTagline: {
+    fontSize: 12,
+    color: "#94a3b8",
+    marginBottom: 6,
+    textAlign: "center",
+  },
+  productCountBadge: {
+    backgroundColor: "#346beb10",
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10,
+  },
+  productCountText: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: "#346beb",
+  },
+  emptyText: {
+    textAlign: "center",
+    color: "#64748b",
+    marginTop: 20,
   },
 });
 

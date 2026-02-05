@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Brand } from './brand.entity';
@@ -6,6 +6,7 @@ import { BrandUser } from './brand-user.entity';
 import { GetBrandsDto } from './dto/get-brands.dto';
 import { PaginatedResult } from 'src/common/types/pagination.type';
 import { BrandUserRole } from 'src/common/enums/brand-user-role.enum';
+import { BrandStatus } from 'src/common/enums/brand.enum';
 
 @Injectable()
 export class BrandsService {
@@ -17,7 +18,7 @@ export class BrandsService {
   ) { }
 
   async findAll(dto: GetBrandsDto): Promise<PaginatedResult<Brand>> {
-    const { page = 1, limit = 10, search } = dto;
+    const { page = 1, limit = 10, search, status } = dto;
 
     const queryBuilder = this.brandsRepository
       .createQueryBuilder('brand')
@@ -42,6 +43,15 @@ export class BrandsService {
 
     if (search) {
       queryBuilder.where('brand.name ILIKE :search', { search: `%${search}%` });
+    }
+
+    if (status) {
+      queryBuilder.andWhere('brand.status = :status', { status });
+    } else {
+      // Default to ACTIVE for public browsing
+      queryBuilder.andWhere('brand.status = :defaultStatus', {
+        defaultStatus: BrandStatus.ACTIVE,
+      });
     }
 
     const [items, total] = await queryBuilder
@@ -143,13 +153,35 @@ export class BrandsService {
     return brand;
   }
 
-  // Find brands owned by a specific user
-  async findByOwner(userId: number): Promise<Brand[]> {
-    const brandUsers = await this.brandUsersRepository.find({
-      where: { userId },
-      relations: ['brand'],
+  // Find brands owned by a specific user with product count
+  async findByOwner(userId: number): Promise<any[]> {
+    const queryBuilder = this.brandsRepository
+      .createQueryBuilder('brand')
+      .innerJoin('brand.brandUsers', 'brandUser')
+      .leftJoin('brand.products', 'product')
+      .where('brandUser.userId = :userId', { userId })
+      .select([
+        'brand.id',
+        'brand.name',
+        'brand.description',
+        'brand.logo',
+        'brand.location',
+        'brand.createdAt',
+        'brand.updatedAt',
+      ])
+      .addSelect('COUNT(product.id)', 'productCount')
+      .groupBy('brand.id');
+
+    const result = await queryBuilder.getRawAndEntities();
+
+    return result.entities.map((brand, index) => {
+      // Find the raw result for this brand to get the productCount
+      const raw = result.raw.find((r) => r.brand_id === brand.id);
+      return {
+        ...brand,
+        productCount: raw ? parseInt(raw.productCount, 10) : 0,
+      };
     });
-    return brandUsers.map((bu) => bu.brand);
   }
 
   async checkMembership(brandId: number, userId: number): Promise<boolean> {
@@ -157,6 +189,12 @@ export class BrandsService {
       where: { brandId, userId },
     });
     return count > 0;
+  }
+
+  async getMembership(brandId: number, userId: number): Promise<BrandUser | null> {
+    return this.brandUsersRepository.findOne({
+      where: { brandId, userId },
+    });
   }
 
   async assignUserToBrand(
@@ -193,7 +231,7 @@ export class BrandsService {
         where: { brandId, role: BrandUserRole.OWNER },
       });
       if (ownerCount <= 1) {
-        throw new Error('A brand must have at least one owner');
+        throw new BadRequestException('A brand must have at least one owner');
       }
     }
 
@@ -214,7 +252,7 @@ export class BrandsService {
   }
 
   async remove(id: number): Promise<void> {
-    const result = await this.brandsRepository.delete(id);
+    const result = await this.brandsRepository.softDelete(id);
     if (result.affected === 0) {
       throw new NotFoundException(`Brand with id ${id} not found`);
     }

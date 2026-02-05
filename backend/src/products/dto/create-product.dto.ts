@@ -7,18 +7,33 @@ import {
   IsOptional,
   ValidateNested,
   IsUrl,
+  ArrayMinSize,
+  ArrayMaxSize,
+  Matches,
 } from 'class-validator';
 import { Type, Transform } from 'class-transformer';
-import { ProductType, Season } from 'src/common/enums/product.enum';
+import { ProductType, Season, ProductStatus } from 'src/common/enums/product.enum';
 import { Gender } from 'src/common/enums/user.enum';
 
 export class CreateProductVariantDto {
   @IsString()
   color: string;
 
+  @IsOptional()
+  @IsString()
+  size?: string;
+
   @IsArray()
-  @IsUrl({}, { each: true })
+  @ArrayMinSize(1)
+  @ArrayMaxSize(5)
+  @Matches(/^https:\/\/res\.cloudinary\.com\/.*$/, {
+    each: true,
+    message: 'Each image must be a valid Cloudinary URL',
+  })
   variantImages: string[];
+
+  @IsNumber()
+  stock: number;
 }
 
 export class CreateProductDto {
@@ -86,19 +101,35 @@ export class CreateProductDto {
   @IsNumber()
   height?: number;
 
-  @IsNumber()
-  stock: number;
-
+  @IsOptional()
   @IsBoolean()
-  isActive: boolean;
+  isAvailable?: boolean = true;
+
+  @IsOptional()
+  @IsString()
+  currency?: string = 'USD';
+
+  @IsOptional()
+  @IsNumber()
+  basePrice?: number;
+
+  @IsOptional()
+  @IsNumber()
+  lowStockThreshold?: number;
+
+  @IsOptional()
+  @IsEnum(ProductStatus)
+  status?: ProductStatus = ProductStatus.DRAFT;
 
   @IsBoolean()
   isFeatured: boolean;
 
   @IsNumber()
-  brand: number; // This will be mapped to brandId
+  brandId: number;
 
   @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(5)
   @ValidateNested({ each: true })
   @Type(() => CreateProductVariantDto)
   variants: CreateProductVariantDto[];

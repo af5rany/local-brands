@@ -14,6 +14,7 @@ import {
   ActivityIndicator,
   Keyboard,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 
 import { useAuth } from "@/context/AuthContext";
 import getApiUrl from "@/helpers/getApiUrl";
@@ -118,35 +119,44 @@ const LoginScreen = () => {
           keyboardShouldPersistTaps="handled"
         >
           <Image
-            source={require("@/assets/images/icon.png")}
+            source={require("@/assets/images/local-sooq.png")}
             style={styles.logo}
             resizeMode="contain"
           />
           <Text style={styles.title}>Welcome Back</Text>
+          <Text style={styles.subtitle}>Sign in to continue</Text>
 
           <View style={styles.inputContainer}>
             <Text style={styles.label}>Email</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="you@example.com"
-              value={email}
-              onChangeText={setEmail}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              editable={!isAnyLoading}
-            />
+            <View style={styles.inputWrapper}>
+              <Ionicons name="mail-outline" size={20} color="#64748b" style={styles.inputIcon} />
+              <TextInput
+                style={styles.input}
+                placeholder="you@example.com"
+                value={email}
+                onChangeText={setEmail}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                editable={!isAnyLoading}
+                placeholderTextColor="#94a3b8"
+              />
+            </View>
           </View>
 
           <View style={styles.inputContainer}>
             <Text style={styles.label}>Password</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="••••••••"
-              secureTextEntry
-              value={password}
-              onChangeText={setPassword}
-              editable={!isAnyLoading}
-            />
+            <View style={styles.inputWrapper}>
+              <Ionicons name="lock-closed-outline" size={20} color="#64748b" style={styles.inputIcon} />
+              <TextInput
+                style={styles.input}
+                placeholder="••••••••"
+                secureTextEntry
+                value={password}
+                onChangeText={setPassword}
+                editable={!isAnyLoading}
+                placeholderTextColor="#94a3b8"
+              />
+            </View>
           </View>
 
           <Pressable
@@ -183,6 +193,15 @@ const LoginScreen = () => {
 
           <View style={styles.footer}>
             <Pressable
+              onPress={() => !isAnyLoading && router.push("/auth/forgot-password")}
+              disabled={isAnyLoading}
+            >
+              <Text style={[styles.link, isAnyLoading && styles.linkDisabled]}>
+                Forgot Password?
+              </Text>
+            </Pressable>
+            <View style={styles.footerDivider} />
+            <Pressable
               onPress={() => !isAnyLoading && router.push("/auth/register")}
               disabled={isAnyLoading}
             >
@@ -198,83 +217,104 @@ const LoginScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: "#f5f5f5" },
+  safeArea: { flex: 1, backgroundColor: "#fff" },
   container: { flex: 1, justifyContent: "center" },
-  scroll: { padding: 20, alignItems: "center" },
-  logo: { width: 120, height: 120, marginBottom: 30 },
-  title: { fontSize: 28, fontWeight: "600", color: "#333", marginBottom: 20 },
-  inputContainer: { width: "100%", marginBottom: 15 },
-  label: { fontSize: 14, color: "#555", marginBottom: 5 },
-  input: {
-    backgroundColor: "#fff",
-    padding: 12,
-    borderRadius: 8,
+  scroll: { flexGrow: 1, padding: 24, justifyContent: "center", alignItems: "center" },
+  logo: { width: 140, height: 80, marginBottom: 24 },
+  title: { fontSize: 24, fontWeight: "700", color: "#1e293b", marginBottom: 8 },
+  subtitle: { fontSize: 16, color: "#64748b", marginBottom: 32 },
+  inputContainer: { width: "100%", marginBottom: 16 },
+  label: { fontSize: 14, fontWeight: "500", color: "#475569", marginBottom: 8 },
+  inputWrapper: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#f8fafc",
     borderWidth: 1,
-    borderColor: "#ddd",
+    borderColor: "#e2e8f0",
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    height: 48,
+  },
+  inputIcon: { marginRight: 10 },
+  input: {
+    flex: 1,
+    fontSize: 16,
+    color: "#1e293b",
+    height: "100%",
   },
   button: {
     backgroundColor: "#346beb",
-    paddingVertical: 15,
-    paddingHorizontal: 80,
-    borderRadius: 8,
-    marginTop: 10,
-    elevation: 2,
+    paddingVertical: 14,
+    borderRadius: 12,
+    marginTop: 24,
+    width: "100%",
     alignItems: "center",
     justifyContent: "center",
-    minWidth: 200,
+    shadowColor: "#346beb",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
   },
   buttonDisabled: {
-    backgroundColor: "#a0a0a0",
+    backgroundColor: "#94a3b8",
+    shadowOpacity: 0,
+    elevation: 0,
   },
-  buttonText: { color: "#fff", fontSize: 16, fontWeight: "500" },
+  buttonText: { color: "#fff", fontSize: 16, fontWeight: "600" },
 
   // Divider styles
   divider: {
     flexDirection: "row",
     alignItems: "center",
     width: "100%",
-    marginVertical: 20,
+    marginVertical: 24,
   },
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: "#ddd",
+    backgroundColor: "#e2e8f0",
   },
   dividerText: {
-    marginHorizontal: 15,
-    color: "#666",
+    marginHorizontal: 16,
+    color: "#94a3b8",
     fontSize: 14,
+    fontWeight: "500",
   },
 
   // Guest button styles
   guestButton: {
     backgroundColor: "#fff",
-    paddingVertical: 15,
-    paddingHorizontal: 80,
-    borderRadius: 8,
-    borderWidth: 2,
-    borderColor: "#346beb",
-    elevation: 1,
+    paddingVertical: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    width: "100%",
     alignItems: "center",
     justifyContent: "center",
-    minWidth: 200,
-    marginBottom: 10,
+    marginBottom: 8,
   },
   guestButtonText: {
-    color: "#346beb",
+    color: "#475569",
     fontSize: 16,
-    fontWeight: "500",
+    fontWeight: "600",
   },
 
   footer: {
     flexDirection: "row",
     justifyContent: "center",
     width: "100%",
-    marginTop: 20,
+    marginTop: 24,
   },
-  link: { color: "#346beb", fontSize: 14 },
+  link: { color: "#346beb", fontSize: 14, fontWeight: "600" },
   linkDisabled: {
-    color: "#a0a0a0",
+    color: "#94a3b8",
+  },
+  footerDivider: {
+    width: 1,
+    height: 14,
+    backgroundColor: "#e2e8f0",
+    marginHorizontal: 12,
   },
 });
 

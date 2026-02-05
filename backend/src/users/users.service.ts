@@ -8,19 +8,30 @@ export class UsersService {
   constructor(
     @InjectRepository(User)
     private usersRepository: Repository<User>,
-  ) {}
+  ) { }
 
   findAll(): Promise<User[]> {
     return this.usersRepository.find({
+      relations: ['brandUsers', 'brandUsers.brand'],
       select: {
         id: true,
         name: true,
         email: true,
         role: true,
         status: true,
+        avatar: true,
         isGuest: true,
         createdAt: true,
         updatedAt: true,
+        brandUsers: {
+          id: true,
+          role: true,
+          brandId: true,
+          brand: {
+            id: true,
+            name: true,
+          },
+        },
       },
     });
   }
@@ -32,15 +43,26 @@ export class UsersService {
   async findOne(id: number): Promise<User> {
     const user = await this.usersRepository.findOne({
       where: { id },
+      relations: ['brandUsers', 'brandUsers.brand'],
       select: {
         id: true,
         name: true,
         email: true,
         role: true,
         status: true,
+        avatar: true,
         isGuest: true,
         createdAt: true,
         updatedAt: true,
+        brandUsers: {
+          id: true,
+          role: true,
+          brandId: true,
+          brand: {
+            id: true,
+            name: true,
+          },
+        },
       },
     });
 
@@ -52,6 +74,10 @@ export class UsersService {
 
   findByEmail(email: string): Promise<User | null> {
     return this.usersRepository.findOne({ where: { email } });
+  }
+
+  findByResetToken(token: string): Promise<User | null> {
+    return this.usersRepository.findOne({ where: { resetPasswordToken: token } });
   }
 
   async create(userData: Partial<User>): Promise<User> {
@@ -68,7 +94,7 @@ export class UsersService {
   }
 
   async remove(id: number): Promise<void> {
-    const result = await this.usersRepository.delete(id);
+    const result = await this.usersRepository.softDelete(id);
     if (result.affected === 0) {
       throw new NotFoundException(`User with id ${id} not found`);
     }

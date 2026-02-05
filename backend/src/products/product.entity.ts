@@ -9,12 +9,15 @@ import {
   UpdateDateColumn,
   OneToMany,
   Index,
+  Check,
+  DeleteDateColumn,
 } from 'typeorm';
 import { Brand } from '../brands/brand.entity';
 import {
   ProductType,
   ProductVariantData,
   Season,
+  ProductStatus,
 } from 'src/common/enums/product.enum';
 import { Gender } from 'src/common/enums/user.enum';
 import { Wishlist } from 'src/wishlist/wishlist.entity';
@@ -27,6 +30,7 @@ import { OrderItem } from 'src/orders/order-item.entity';
 @Index(['createdAt']) // For sorting by date
 @Index(['isFeatured']) // For featured products
 @Index(['isActive']) // For active products
+@Check('"salePrice" IS NULL OR "salePrice" <= "price"')
 export class Product {
   @PrimaryGeneratedColumn()
   id: number;
@@ -104,18 +108,29 @@ export class Product {
   @Column('decimal', { precision: 8, scale: 2, nullable: true })
   height: number;
 
-  @Column({ default: 0 })
-  stock: number;
+  @Column('boolean', { default: true })
+  @Index()
+  isAvailable: boolean;
 
-  // ✅ Add low stock threshold
+  @Column({ default: 'USD' })
+  currency: string;
+
+  @Column('decimal', { precision: 10, scale: 2, nullable: true })
+  basePrice: number;
+
   @Column({ default: 10 })
   lowStockThreshold: number;
 
   @Column('simple-array', { nullable: true })
   images: string[];
 
-  @Column('boolean', { default: true })
-  isActive: boolean;
+  @Column({
+    type: 'enum',
+    enum: ProductStatus,
+    default: ProductStatus.DRAFT,
+  })
+  @Index()
+  status: ProductStatus;
 
   @Column('boolean', { default: false })
   isFeatured: boolean;
@@ -148,7 +163,7 @@ export class Product {
   brandId: number;
 
   // Relation to Brand entity
-  @ManyToOne(() => Brand, { eager: true, nullable: false })
+  @ManyToOne(() => Brand, { eager: true, nullable: false, onDelete: 'CASCADE' })
   @JoinColumn({ name: 'brandId' })
   brand: Brand;
 
@@ -195,18 +210,18 @@ export class Product {
   @UpdateDateColumn()
   updatedAt: Date;
 
-  // ✅ Soft delete
-  @Column({ nullable: true })
+  @DeleteDateColumn()
   deletedAt: Date;
 
   // Helper methods for working with variants
-  addVariant(color: string, variantImages: string[]): void {
+  addVariant(color: string, stock: number, variantImages: string[]): void {
     if (!this.variants) {
       this.variants = [];
     }
 
     const newVariant: ProductVariantData = {
       color,
+      stock,
       variantImages,
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -260,14 +275,18 @@ export class Product {
     this.availableColors = this.variants?.map((v) => v.color) || [];
   }
 
-  // ✅ Check if product is in stock
+  // ✅ Check if product is in stock (sum of all variant stocks)
   isInStock(): boolean {
-    return this.stock > 0;
+    if (!this.variants || this.variants.length === 0) return false;
+    const totalStock = this.variants.reduce((sum, v) => sum + (v.stock || 0), 0);
+    return totalStock > 0;
   }
 
   // ✅ Check if product is low stock
   isLowStock(): boolean {
-    return this.stock > 0 && this.stock <= this.lowStockThreshold;
+    if (!this.variants || this.variants.length === 0) return false;
+    const totalStock = this.variants.reduce((sum, v) => sum + (v.stock || 0), 0);
+    return totalStock > 0 && totalStock <= this.lowStockThreshold;
   }
 
   // ✅ Calculate final price
