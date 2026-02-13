@@ -29,7 +29,6 @@ import { OrderItem } from 'src/orders/order-item.entity';
 @Index(['price']) // For price range filtering
 @Index(['createdAt']) // For sorting by date
 @Index(['isFeatured']) // For featured products
-@Index(['isActive']) // For active products
 @Check('"salePrice" IS NULL OR "salePrice" <= "price"')
 export class Product {
   @PrimaryGeneratedColumn()
@@ -134,6 +133,10 @@ export class Product {
 
   @Column('boolean', { default: false })
   isFeatured: boolean;
+
+  @Column('boolean', { default: true })
+  @Index()
+  isActive: boolean;
 
   // ✅ Add more product flags
   @Column('boolean', { default: false })

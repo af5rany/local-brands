@@ -29,4 +29,12 @@ export class PublicProductDto {
     reviewCount: number;
     isFeatured: boolean;
     isNewArrival: boolean;
+    status: ProductStatus;
+    gender?: string;
+    season?: string;
+    tags?: string[];
+    material?: string;
+    careInstructions?: string;
+    origin?: string;
+    stock: number;
 }

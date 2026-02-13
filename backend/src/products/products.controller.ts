@@ -12,11 +12,13 @@ import {
   Header,
   UsePipes,
   ValidationPipe,
+  Req,
 } from '@nestjs/common';
 import { ProductsService } from './products.service';
 import { Product } from './product.entity';
 import { GetProductsDto } from './dto/get-products.dto';
 import { CreateProductDto } from './dto/create-product.dto';
+import { BatchCreateProductDto } from './dto/batch-create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { PublicProductDto } from './dto/public-product.dto';
 import { PaginatedResult } from '../common/types/pagination.type';
@@ -33,8 +35,9 @@ export class ProductsController {
   @Get()
   async findAll(
     @Query() query: GetProductsDto,
+    @Req() req,
   ): Promise<PaginatedResult<PublicProductDto>> {
-    return this.productsService.findAll(query);
+    return this.productsService.findAll(query, req.user);
   }
 
   @Public()
@@ -62,6 +65,12 @@ export class ProductsController {
     console.log('Product creation took:', endTime - startTime, 'ms');
 
     return result;
+  }
+
+  @Post('batch')
+  @UsePipes(new ValidationPipe({ whitelist: true }))
+  async batchCreate(@Body() data: BatchCreateProductDto): Promise<PublicProductDto[]> {
+    return this.productsService.batchCreate(data.products);
   }
 
   @Put(':id')

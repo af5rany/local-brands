@@ -17,7 +17,10 @@ export class BrandsService {
     private brandUsersRepository: Repository<BrandUser>,
   ) { }
 
-  async findAll(dto: GetBrandsDto): Promise<PaginatedResult<Brand>> {
+  async findAll(
+    dto: GetBrandsDto,
+    isAdmin: boolean = false,
+  ): Promise<PaginatedResult<Brand>> {
     const { page = 1, limit = 10, search, status } = dto;
 
     const queryBuilder = this.brandsRepository
@@ -31,6 +34,7 @@ export class BrandsService {
         'brand.description',
         'brand.logo',
         'brand.location',
+        'brand.status',
         'brand.createdAt',
         'brand.updatedAt',
         'brandUsers.id',
@@ -46,10 +50,15 @@ export class BrandsService {
     }
 
     if (status) {
-      queryBuilder.andWhere('brand.status = :status', { status });
-    } else {
+      if (search) {
+        queryBuilder.andWhere('brand.status = :status', { status });
+      } else {
+        queryBuilder.where('brand.status = :status', { status });
+      }
+    } else if (!isAdmin) {
       // Default to ACTIVE for public browsing
-      queryBuilder.andWhere('brand.status = :defaultStatus', {
+      const condition = search ? queryBuilder.andWhere.bind(queryBuilder) : queryBuilder.where.bind(queryBuilder);
+      condition('brand.status = :defaultStatus', {
         defaultStatus: BrandStatus.ACTIVE,
       });
     }
@@ -249,6 +258,11 @@ export class BrandsService {
       throw new NotFoundException(`Brand with id ${id} not found`);
     }
     return this.findOne(id);
+  }
+
+  async batchCreate(brandsData: Partial<Brand>[]): Promise<Brand[]> {
+    const brands = this.brandsRepository.create(brandsData);
+    return this.brandsRepository.save(brands);
   }
 
   async remove(id: number): Promise<void> {

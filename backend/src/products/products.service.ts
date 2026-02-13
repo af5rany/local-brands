@@ -8,8 +8,10 @@ import { Repository, Brackets } from 'typeorm';
 import { Product } from './product.entity';
 import { Brand } from '../brands/brand.entity';
 import { GetProductsDto } from './dto/get-products.dto';
+import { CreateProductDto } from './dto/create-product.dto';
 import { PaginatedResult } from '../common/types/pagination.type';
 import { ProductType, SortBy, SortOrder, ProductStatus } from 'src/common/enums/product.enum';
+import { UserRole } from 'src/common/enums/user.enum';
 import { PublicProductDto } from './dto/public-product.dto';
 
 @Injectable()
@@ -21,7 +23,7 @@ export class ProductsService {
     private brandsRepository: Repository<Brand>,
   ) { }
 
-  async findAll(dto: GetProductsDto): Promise<PaginatedResult<PublicProductDto>> {
+  async findAll(dto: GetProductsDto, currentUser?: any): Promise<PaginatedResult<PublicProductDto>> {
     const {
       page = 1,
       limit = 10,
@@ -86,13 +88,22 @@ export class ProductsService {
     if (maxPrice) qb.andWhere('product.price <= :maxPrice', { maxPrice });
     if (brandId) qb.andWhere('product.brandId = :brandId', { brandId });
 
-    if (status) {
+    // Role-based visibility logic
+    const canSeeAll = currentUser && (
+      currentUser.role === UserRole.ADMIN ||
+      (
+        currentUser.role === UserRole.BRAND_OWNER &&
+        brandId &&
+        currentUser.brandIds?.includes(Number(brandId))
+      )
+    );
+
+    if (!canSeeAll) {
+      // If not admin/owner, only show PUBLISHED products
+      qb.andWhere('product.status = :publishedStatus', { publishedStatus: ProductStatus.PUBLISHED });
+    } else if (status) {
+      // If admin/owner and a specific status is requested, apply it
       qb.andWhere('product.status = :status', { status });
-    } else {
-      // Default to published for public browsing if no status specified
-      qb.andWhere('product.status = :defaultStatus', {
-        defaultStatus: ProductStatus.PUBLISHED,
-      });
     }
 
     if (isAvailable !== undefined) {
@@ -208,6 +219,8 @@ export class ProductsService {
   }
 
   private mapToPublicDto(product: Product): PublicProductDto {
+    const totalStock = product.variants?.reduce((sum, v) => sum + (v.stock || 0), 0) || 0;
+
     return {
       id: product.id,
       slug: product.slug,
@@ -235,6 +248,14 @@ export class ProductsService {
       reviewCount: product.reviewCount,
       isFeatured: product.isFeatured,
       isNewArrival: product.isNewArrival,
+      status: product.status,
+      gender: product.gender,
+      season: product.season,
+      tags: product.tags,
+      material: product.material,
+      careInstructions: product.careInstructions,
+      origin: product.origin,
+      stock: totalStock,
     };
   }
 
@@ -293,6 +314,51 @@ export class ProductsService {
 
   async remove(id: number): Promise<void> {
     await this.productsRepository.softDelete(id);
+  }
+
+  async batchCreate(productsData: CreateProductDto[]): Promise<PublicProductDto[]> {
+    console.log(`[ProductsService] Starting batchCreate for ${productsData.length} products`);
+    const products: Product[] = [];
+
+    for (let i = 0; i < productsData.length; i++) {
+      const data = productsData[i];
+      console.log(`[ProductsService] Processing product ${i + 1}/${productsData.length}: ${data.name}`);
+
+      if (data.brandId) {
+        const brand = await this.brandsRepository.findOne({
+          where: { id: data.brandId },
+          select: ['id', 'name'],
+        });
+
+        if (!brand) {
+          console.error(`[ProductsService] Brand with id ${data.brandId} does not exist`);
+          throw new BadRequestException(
+            `Brand with id ${data.brandId} does not exist`,
+          );
+        }
+        console.log(`[ProductsService] Brand validation passed for product ${i + 1}`);
+      }
+
+      if (data.variants && Array.isArray(data.variants)) {
+        console.log(`[ProductsService] Processing ${data.variants.length} variants for product ${i + 1}`);
+        data.variants = data.variants.map((variant) => ({
+          ...variant,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        })) as any;
+      }
+
+      const product = this.productsRepository.create(data as any) as unknown as Product;
+      products.push(product);
+    }
+
+    console.log(`[ProductsService] Saving ${products.length} products to database...`);
+    const savedProducts = await this.productsRepository.save(products as any);
+    console.log(`[ProductsService] Successfully saved ${savedProducts.length} products`);
+
+    // Filter out duplicates and fetch full products to map to public DTOs
+    // Using simple approach: wait for all findOne calls
+    return Promise.all(savedProducts.map((p) => this.findOne(p.id)));
   }
 
   async deleteAll(): Promise<void> {

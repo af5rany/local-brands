@@ -87,12 +87,14 @@ const HomeScreen = () => {
     setLoadingStats(true);
 
     // Fetch Statistics (Only for authenticated users)
+    const apiUrl = getApiUrl();
+    // console.log('[DEBUG] GLOBAL API URL used in fetchStats (v2):', apiUrl);
+
     if (token) {
       try {
-        // Build statistics URL with optional brandId for brand owners
         const statsUrl = userRole === "brandOwner" && selectedBrandId
-          ? `${getApiUrl()}/statistics?brandId=${selectedBrandId}`
-          : `${getApiUrl()}/statistics`;
+          ? `${apiUrl}/statistics?brandId=${selectedBrandId}`
+          : `${apiUrl}/statistics`;
 
         const response = await fetch(statsUrl, {
           headers: {
@@ -144,6 +146,8 @@ const HomeScreen = () => {
         if (productsData.meta) {
           setTotalPages(productsData.meta.totalPages || 1);
         }
+      } else {
+        console.error('[DEBUG] Products API Error:', productsRes.status, await productsRes.text());
       }
     } catch (error) {
       console.error("Error fetching discovery data:", error);

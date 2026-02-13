@@ -10,6 +10,8 @@ async function bootstrap() {
   app.useGlobalPipes(new ValidationPipe({ transform: true, whitelist: true }));
   app.enableCors();
 
-  await app.listen(5000);
+  await app.listen(5000, '0.0.0.0', () => {
+    console.log('Server running on port 5000');
+  });
 }
 bootstrap();

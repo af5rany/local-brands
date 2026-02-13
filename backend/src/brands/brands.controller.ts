@@ -27,6 +27,8 @@ import { Roles } from '../auth/roles.decorator';
 import { UserRole } from 'src/common/enums/user.enum';
 import { Public } from '../auth/public.decorator';
 
+import { BatchCreateBrandDto } from './dto/batch-create-brand.dto';
+
 @Controller('brands')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class BrandsController {
@@ -36,6 +38,12 @@ export class BrandsController {
   @Get()
   findAll(@Query() dto: GetBrandsDto): Promise<PaginatedResult<Brand>> {
     return this.brandsService.findAll(dto);
+  }
+
+  @Get('admin')
+  @Roles(UserRole.ADMIN)
+  findAllAdmin(@Query() dto: GetBrandsDto): Promise<PaginatedResult<Brand>> {
+    return this.brandsService.findAll(dto, true);
   }
 
   // @Get('with-product-count')
@@ -64,6 +72,14 @@ export class BrandsController {
   @UsePipes(new ValidationPipe({ whitelist: true }))
   async create(@Body() brandData: CreateBrandDto): Promise<Brand> {
     return this.brandsService.create(brandData);
+  }
+
+  // Batch import brands - Admin only
+  @Post('batch')
+  @Roles(UserRole.ADMIN)
+  @UsePipes(new ValidationPipe({ whitelist: true }))
+  async batchCreate(@Body() data: BatchCreateBrandDto): Promise<Brand[]> {
+    return this.brandsService.batchCreate(data.brands);
   }
 
   // Update brand - Admin can update any, Brand Owner can update they are assigned to

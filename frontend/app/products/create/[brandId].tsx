@@ -115,7 +115,7 @@ const CreateProductScreen = () => {
 
   // Variants - simplified approach for the form
   const [variants, setVariants] = useState<ProductVariant[]>([
-    { color: "", variantImages: [] },
+    { color: "", variantImages: [], stock: 0 },
   ]);
 
   const [stock, setStock] = useState(0);
@@ -174,7 +174,7 @@ const CreateProductScreen = () => {
   };
 
   const addVariant = () => {
-    setVariants([...variants, { color: "", variantImages: [] }]);
+    setVariants([...variants, { color: "", variantImages: [], stock: 0 }]);
   };
 
   const removeVariant = (index: number) => {
@@ -256,7 +256,7 @@ const CreateProductScreen = () => {
       !productPrice ||
       !productType ||
       !gender ||
-      variants.some((v) => !v.color || !v.variantImages.length)
+      variants.some((v) => !v.color || !v.variantImages.length || v.stock === undefined)
     ) {
       Alert.alert(
         "Validation Error",
@@ -286,9 +286,12 @@ const CreateProductScreen = () => {
         height: parseFloat(height),
         status,
         isFeatured,
-        stock: stock,
-        brandId,
-        variants,
+        stock: variants.reduce((acc, v) => acc + (v.stock || 0), 0),
+        brandId: parseInt(brandId as string),
+        variants: variants.map(v => ({
+          ...v,
+          stock: Number(v.stock)
+        })),
       };
 
       console.log("Product Data:", JSON.stringify(productData));
@@ -885,6 +888,20 @@ const CreateProductScreen = () => {
                   </TouchableOpacity>
                 </View>
               </View>
+
+              <View style={styles.inputContainer}>
+                <Text style={styles.label}>
+                  Stock Quantity <Text style={styles.required}>*</Text>
+                </Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Enter stock for this variant"
+                  placeholderTextColor={placeholderColor}
+                  value={String(variant.stock)}
+                  onChangeText={(text) => updateVariant(index, "stock", parseInt(text) || 0)}
+                  keyboardType="numeric"
+                />
+              </View>
             </View>
           ))}
           <TouchableOpacity
@@ -1036,8 +1053,8 @@ const CreateProductScreen = () => {
             <Text style={styles.createButtonText}>Create Product</Text>
           )}
         </TouchableOpacity>
-      </ScrollView>
-    </SafeAreaView>
+      </ScrollView >
+    </SafeAreaView >
   );
 };
 

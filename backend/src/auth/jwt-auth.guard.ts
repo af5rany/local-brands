@@ -15,23 +15,27 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
     super();
   }
 
-  canActivate(
+  async canActivate(
     context: ExecutionContext,
-  ): boolean | Promise<boolean> | Observable<boolean> {
+  ): Promise<boolean> {
     const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
       context.getHandler(),
       context.getClass(),
     ]);
-    if (isPublic) {
-      return true;
+
+    try {
+      const result = await super.canActivate(context);
+      return result as boolean;
+    } catch (err) {
+      if (isPublic) {
+        return true;
+      }
+      throw err;
     }
-    return super.canActivate(context);
   }
 
   handleRequest<TUser = User>(err: any, user: any, info: any): TUser {
     if (err || !user) {
-      console.log('JWT Auth Error:', err);
-      console.log('JWT Info:', info);
 
       if (info?.name === 'TokenExpiredError') {
         throw new UnauthorizedException('Token has expired');

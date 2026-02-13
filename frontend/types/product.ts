@@ -5,6 +5,7 @@ export interface ProductVariant {
   color: string;
   colorHex?: string;
   variantImages: string[]; // Added field for variant-specific image
+  stock: number;
   createdAt?: string; // Using string for date representation (ISO format)
   updatedAt?: string;
 }

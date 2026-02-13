@@ -20,7 +20,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     // console.log('JWT Payload:', payload);
 
     // Get user from database to ensure they still exist and have current info
-    const user = await this.usersService.findById(payload.userId);
+    const user = await this.usersService.findOne(payload.userId).catch(() => null);
 
     if (!user) {
       throw new UnauthorizedException('User not found');
@@ -38,6 +38,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       userId: user.id,
       role: user.role,
       isGuest: user.isGuest,
+      brandIds: user.brandUsers?.map((bu) => Number(bu.brandId)) || [],
     };
   }
 }

@@ -65,7 +65,9 @@ export class AuthService {
     // Restrict public registration roles to CUSTOMER ONLY
     // NOTE: In production, this should be guarded or handled via a different internal endpoint.
     // For seeding purposes, we allow it if the email is our seed admin email.
-    if (dto.role !== UserRole.CUSTOMER && dto.email !== 'admin@example.com') {
+    if (
+      dto.role !== UserRole.CUSTOMER && dto.email !== 'admin@gmail.com'
+    ) {
       if (dto.role === UserRole.ADMIN) {
         throw new ForbiddenException('Admin registration is not allowed');
       }

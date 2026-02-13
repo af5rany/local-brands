@@ -121,7 +121,7 @@ const EditProductScreen = () => {
             setHeight(data.height ? String(data.height) : "");
             setStatus(data.status);
             setIsFeatured(data.isFeatured);
-            setVariants(data.variants || [{ color: "", variantImages: [] }]);
+            setVariants(data.variants || [{ color: "", variantImages: [], stock: 0 }]);
             setStock(data.stock || 0);
             setBrandId(data.brandId);
         } catch (error) {
@@ -194,8 +194,11 @@ const EditProductScreen = () => {
                 height: height ? parseFloat(height) : null,
                 status,
                 isFeatured,
-                stock,
-                variants,
+                stock: variants.reduce((acc, v) => acc + (v.stock || 0), 0),
+                variants: variants.map(v => ({
+                    ...v,
+                    stock: Number(v.stock)
+                })),
             };
 
             const response = await fetch(`${getApiUrl()}/products/${productId}`, {
@@ -233,7 +236,7 @@ const EditProductScreen = () => {
     };
 
     const addVariant = () => {
-        setVariants([...variants, { color: "", variantImages: [] }]);
+        setVariants([...variants, { color: "", variantImages: [], stock: 0 }]);
     };
 
     const removeVariant = (index: number) => {
@@ -372,6 +375,17 @@ const EditProductScreen = () => {
                                     ))}
                                 </View>
 
+                                <View style={styles.inputContainer}>
+                                    <Text style={[styles.label, { color: textColor }]}>Stock Quantity <Text style={styles.required}>*</Text></Text>
+                                    <TextInput
+                                        style={[styles.input, { color: textColor, borderColor }]}
+                                        value={String(variant.stock || 0)}
+                                        onChangeText={text => updateVariant(index, "stock", parseInt(text) || 0)}
+                                        keyboardType="numeric"
+                                        placeholder="Enter stock"
+                                    />
+                                </View>
+
                                 <TouchableOpacity onPress={() => handleVariantImagePick(index)} style={[styles.imagePickerButton, { backgroundColor: primaryColor }]}>
                                     <Ionicons name="camera-outline" size={20} color="#fff" />
                                     <Text style={styles.imagePickerText}>Add Variant Images</Text>
@@ -433,7 +447,7 @@ const EditProductScreen = () => {
                     </TouchableOpacity>
                 </ScrollView>
             </KeyboardAvoidingView>
-        </SafeAreaView>
+        </SafeAreaView >
     );
 };
 
