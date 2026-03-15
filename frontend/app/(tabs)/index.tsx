@@ -10,6 +10,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useAuth } from "@/context/AuthContext";
 import { useBrand } from "@/context/BrandContext";
+import { useToast } from "@/context/ToastContext";
 import AdminDashboard from "@/components/AdminDashboard";
 import BrandOwnerDashboard from "@/components/BrandOwnerDashboard";
 import CustomerDashboard from "@/components/CustomerDashboard";
@@ -23,6 +24,7 @@ const HomeScreen = () => {
   const router = useRouter();
   const { token, loading, user } = useAuth();
   const { selectedBrandId, isManagementMode, setIsManagementMode } = useBrand();
+  const { showToast } = useToast();
   const [stats, setStats] = useState({
     brands: 0,
     products: 0,
@@ -48,6 +50,8 @@ const HomeScreen = () => {
   });
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [brandsPage, setBrandsPage] = useState(1);
+  const [brandsTotalPages, setBrandsTotalPages] = useState(1);
   const [filterOptions, setFilterOptions] = useState({
     categories: [] as string[],
     productTypes: [] as string[],
@@ -114,10 +118,11 @@ const HomeScreen = () => {
       }
     }
 
-    // Build Discovery Query Params
-    const queryParams = new URLSearchParams({
+    // Build Products Query Params
+    const productsParams = new URLSearchParams({
       limit: "12",
       page: page.toString(),
+      status: "published",
       ...(searchQuery && { search: searchQuery }),
       ...(activeFilters.category && { category: activeFilters.category }),
       ...(activeFilters.productType && { type: activeFilters.productType }),
@@ -126,13 +131,22 @@ const HomeScreen = () => {
       sortOrder: activeFilters.sortOrder,
     }).toString();
 
+    // Build Brands Query Params (separate page state, no product-specific filters)
+    const brandsParams = new URLSearchParams({
+      limit: "12",
+      page: brandsPage.toString(),
+      ...(searchQuery && { search: searchQuery }),
+      sortBy: "createdAt",
+      sortOrder: activeFilters.sortOrder,
+    }).toString();
+
     // Fetch Discovery Data (Products & Brands) - For Everyone
     try {
       const [brandsRes, productsRes] = await Promise.all([
-        fetch(`${getApiUrl()}/brands?${queryParams}`, {
+        fetch(`${getApiUrl()}/brands?${brandsParams}`, {
           headers: { ...(token && { Authorization: `Bearer ${token}` }) },
         }),
-        fetch(`${getApiUrl()}/products?${queryParams}`, {
+        fetch(`${getApiUrl()}/products?${productsParams}`, {
           headers: { ...(token && { Authorization: `Bearer ${token}` }) },
         }),
       ]);
@@ -140,16 +154,13 @@ const HomeScreen = () => {
       if (brandsRes.ok) {
         const brandsData = await brandsRes.json();
         setFeaturedBrands(brandsData.items || []);
+        setBrandsTotalPages(brandsData.totalPages || 1);
       }
 
       if (productsRes.ok) {
         const productsData = await productsRes.json();
         setNewArrivals(productsData.items || []);
-
-        // Update pagination from meta if available
-        if (productsData.meta) {
-          setTotalPages(productsData.meta.totalPages || 1);
-        }
+        setTotalPages(productsData.totalPages || 1);
       } else {
         console.error(
           "[DEBUG] Products API Error:",
@@ -205,6 +216,27 @@ const HomeScreen = () => {
     }
   }, [token]);
 
+  const addToCart = useCallback(async (productId: number) => {
+    if (!token) return;
+    try {
+      const response = await fetch(`${getApiUrl()}/cart/add`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ productId, quantity: 1 }),
+      });
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.message || "Failed to add to cart");
+      }
+      showToast("Added to cart", "success");
+    } catch (err: any) {
+      showToast(err.message || "Failed to add to cart", "error");
+    }
+  }, [token]);
+
   const searchTimeout = React.useRef<any>(null);
 
   const handleSearchChange = (text: string) => {
@@ -238,6 +270,10 @@ const HomeScreen = () => {
     setPage(newPage);
   };
 
+  const handleBrandsPageChange = (newPage: number) => {
+    setBrandsPage(newPage);
+  };
+
   const handleFilterPress = (type: string, value?: string) => {
     setActiveFilters((prev) => {
       const next = { ...prev };
@@ -258,7 +294,7 @@ const HomeScreen = () => {
 
   useEffect(() => {
     fetchStats();
-  }, [token, userRole, searchQuery, activeFilters, selectedBrandId, page]);
+  }, [token, userRole, searchQuery, activeFilters, selectedBrandId, page, brandsPage]);
 
   useFocusEffect(
     useCallback(() => {
@@ -355,8 +391,12 @@ const HomeScreen = () => {
             currentPage={page}
             totalPages={totalPages}
             onPageChange={handlePageChange}
+            brandsCurrentPage={brandsPage}
+            brandsTotalPages={brandsTotalPages}
+            onBrandsPageChange={handleBrandsPageChange}
             wishlistProductIds={wishlistProductIds}
             onToggleWishlist={toggleWishlist}
+            onAddToCart={addToCart}
           />
         )}
 

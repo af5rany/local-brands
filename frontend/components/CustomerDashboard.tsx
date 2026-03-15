@@ -41,8 +41,12 @@ type CustomerDashboardProps = {
   currentPage?: number;
   totalPages?: number;
   onPageChange?: (page: number) => void;
+  brandsCurrentPage?: number;
+  brandsTotalPages?: number;
+  onBrandsPageChange?: (page: number) => void;
   wishlistProductIds?: number[];
   onToggleWishlist?: (productId: number) => void;
+  onAddToCart?: (productId: number) => Promise<void>;
 };
 
 const CustomerDashboard = ({
@@ -60,8 +64,12 @@ const CustomerDashboard = ({
   currentPage = 1,
   totalPages = 1,
   onPageChange = () => {},
+  brandsCurrentPage = 1,
+  brandsTotalPages = 1,
+  onBrandsPageChange = () => {},
   wishlistProductIds = [],
   onToggleWishlist,
+  onAddToCart,
 }: CustomerDashboardProps) => {
   const { width } = useWindowDimensions();
   const [activeTab, setActiveTab] = React.useState<"products" | "brands">(
@@ -123,6 +131,13 @@ const CustomerDashboard = ({
         } else {
           onToggleWishlist?.(item.id);
         }
+      }}
+      onAddToCart={() => {
+        if (isGuest) {
+          navigateTo("/auth/login");
+          return Promise.resolve();
+        }
+        return onAddToCart?.(item.id) ?? Promise.resolve();
       }}
       isInWishlist={!isGuest && wishlistProductIds.includes(item.id)}
       style={{ width: cardWidth, marginRight: 0, marginBottom: cardGap }}
@@ -214,7 +229,7 @@ const CustomerDashboard = ({
       />
 
       {/* 4) Featured Strip (Curation Layer) - Only show for Product tab or as a global entry */}
-      {featuredBrands.length > 0 && activeTab === "products" && (
+      {/* {featuredBrands.length > 0 && activeTab === "products" && (
         <View style={styles.featuredSection}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Featured Brands</Text>
@@ -237,7 +252,7 @@ const CustomerDashboard = ({
             ))}
           </ScrollView>
         </View>
-      )}
+      )} */}
 
       {/* 5) Main Content Grid */}
       <View style={styles.gridContainer}>
@@ -267,9 +282,11 @@ const CustomerDashboard = ({
 
         {/* Pagination Controls */}
         <Pagination
-          currentPage={currentPage}
-          totalPages={totalPages}
-          onPageChange={onPageChange}
+          currentPage={activeTab === "brands" ? brandsCurrentPage : currentPage}
+          totalPages={activeTab === "brands" ? brandsTotalPages : totalPages}
+          onPageChange={
+            activeTab === "brands" ? onBrandsPageChange : onPageChange
+          }
         />
       </View>
     </View>

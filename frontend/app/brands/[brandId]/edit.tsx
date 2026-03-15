@@ -23,6 +23,7 @@ import getApiUrl from "@/helpers/getApiUrl";
 import { useThemeColor } from "@/hooks/useThemeColor";
 import { useAuth } from "@/context/AuthContext";
 import { Brand } from "@/types/brand";
+import { BrandStatus } from "@/types/enums";
 import { useCloudinaryUpload } from "@/hooks/useCloudinaryUpload";
 import { ImageUploadProgress } from "@/components/ImageUploadProgress";
 import * as ImageManipulator from "expo-image-manipulator";
@@ -36,6 +37,7 @@ const EditBrandScreen = () => {
   const [description, setDescription] = useState<string>("");
   const [logoUrl, setLogoUrl] = useState<string>("");
   const [location, setLocation] = useState<string>("");
+  const [status, setStatus] = useState<BrandStatus>(BrandStatus.DRAFT);
   const [loading, setLoading] = useState<boolean>(true);
   const [submitting, setSubmitting] = useState<boolean>(false);
   const { uploads, uploadImage } = useCloudinaryUpload();
@@ -79,6 +81,7 @@ const EditBrandScreen = () => {
       setDescription(data.description || "");
       setLogoUrl(data.logo || "");
       setLocation(data.location || "");
+      setStatus(data.status || BrandStatus.DRAFT);
     } catch (error) {
       console.error("Error fetching brand:", error);
       Alert.alert("Error", "Failed to fetch brand details.");
@@ -141,6 +144,7 @@ const EditBrandScreen = () => {
         description: description.trim(),
         logo: logoUrl,
         location: location.trim(),
+        status,
       };
 
       const response = await fetch(`${getApiUrl()}/brands/${brandId}`, {
@@ -308,6 +312,49 @@ const EditBrandScreen = () => {
               inputBorderColor={inputBorderColor}
               inputBackground={inputBackground}
             />
+
+            <View style={styles.inputContainer}>
+              <Text style={[styles.inputLabel, { color: textColor }]}>
+                Status
+              </Text>
+              <View style={styles.statusRow}>
+                {Object.values(BrandStatus).map((s) => {
+                  const isSelected = status === s;
+                  const statusColor =
+                    s === BrandStatus.ACTIVE
+                      ? "#10b981"
+                      : s === BrandStatus.SUSPENDED
+                        ? "#ef4444"
+                        : s === BrandStatus.ARCHIVED
+                          ? "#6b7280"
+                          : "#f59e0b";
+                  return (
+                    <TouchableOpacity
+                      key={s}
+                      onPress={() => setStatus(s)}
+                      style={[
+                        styles.statusChip,
+                        {
+                          backgroundColor: isSelected
+                            ? statusColor
+                            : inputBackground,
+                          borderColor: isSelected ? statusColor : inputBorderColor,
+                        },
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.statusChipText,
+                          { color: isSelected ? "#fff" : secondaryTextColor },
+                        ]}
+                      >
+                        {s.charAt(0).toUpperCase() + s.slice(1)}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
           </View>
         </View>
 
@@ -516,6 +563,21 @@ const styles = StyleSheet.create({
   buttonDisabled: { opacity: 0.7 },
   uploadingContainer: { alignItems: "center", gap: 12 },
   uploadingText: { fontSize: 15, fontWeight: "600" },
+  statusRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+  },
+  statusChip: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 12,
+    borderWidth: 1.5,
+  },
+  statusChipText: {
+    fontSize: 14,
+    fontWeight: "600",
+  },
 });
 
 export default EditBrandScreen;

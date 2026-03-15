@@ -111,6 +111,7 @@ const BrandDetailScreen = () => {
   const [error, setError] = useState<string | null>(null);
   const [showFilters, setShowFilters] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [changingStatus, setChangingStatus] = useState(false);
 
   // Pagination state - simplified to match backend response
   const [pagination, setPagination] = useState({
@@ -245,6 +246,31 @@ const BrandDetailScreen = () => {
         },
       ],
     );
+  };
+
+  const handleStatusChange = async (newStatus: BrandStatus) => {
+    if (!brand || newStatus === brand.status) return;
+    setChangingStatus(true);
+    try {
+      const response = await fetch(`${getApiUrl()}/brands/${brandId}`, {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.message || "Failed to update status");
+      }
+      setBrand((prev) => (prev ? { ...prev, status: newStatus } : prev));
+      showToast(`Status changed to ${newStatus}`, "success");
+    } catch (err: any) {
+      showToast(err.message || "Failed to update status", "error");
+    } finally {
+      setChangingStatus(false);
+    }
   };
 
   const fetchProducts = useCallback(
@@ -808,6 +834,69 @@ const BrandDetailScreen = () => {
               <Ionicons name="add" size={20} color="#ffffff" />
               <Text style={styles.createButtonText}>Create New Product</Text>
             </TouchableOpacity>
+
+            {/* Status Changer */}
+            <View
+              style={{
+                backgroundColor: cardBackground,
+                borderRadius: 12,
+                padding: 14,
+                borderWidth: 1,
+                borderColor: borderColor,
+              }}
+            >
+              <Text
+                style={{
+                  fontSize: 13,
+                  fontWeight: "600",
+                  color: secondaryTextColor,
+                  marginBottom: 10,
+                  textTransform: "uppercase",
+                  letterSpacing: 0.5,
+                }}
+              >
+                Brand Status
+              </Text>
+              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+                {Object.values(BrandStatus).map((s) => {
+                  const isSelected = brand.status === s;
+                  const statusColor =
+                    s === BrandStatus.ACTIVE
+                      ? "#10b981"
+                      : s === BrandStatus.SUSPENDED
+                        ? "#ef4444"
+                        : s === BrandStatus.ARCHIVED
+                          ? "#6b7280"
+                          : "#f59e0b";
+                  return (
+                    <TouchableOpacity
+                      key={s}
+                      disabled={changingStatus}
+                      onPress={() => handleStatusChange(s)}
+                      style={{
+                        paddingHorizontal: 14,
+                        paddingVertical: 8,
+                        borderRadius: 8,
+                        borderWidth: 1.5,
+                        backgroundColor: isSelected ? statusColor : "transparent",
+                        borderColor: isSelected ? statusColor : borderColor,
+                        opacity: changingStatus ? 0.6 : 1,
+                      }}
+                    >
+                      <Text
+                        style={{
+                          fontSize: 13,
+                          fontWeight: "600",
+                          color: isSelected ? "#fff" : secondaryTextColor,
+                        }}
+                      >
+                        {s.charAt(0).toUpperCase() + s.slice(1)}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
 
             {/* Delete Brand Button */}
             <TouchableOpacity

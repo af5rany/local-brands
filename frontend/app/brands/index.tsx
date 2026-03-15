@@ -25,6 +25,7 @@ import { debounce } from "lodash";
 import { useColorScheme } from "react-native";
 import { Filters, PaginatedResult, SortOptions } from "@/types/filters";
 import { Brand } from "@/types/brand";
+import { BrandStatus } from "@/types/enums";
 import { useAuth } from "@/context/AuthContext";
 
 const { width } = Dimensions.get("window");
@@ -45,6 +46,7 @@ const BrandsListScreen = () => {
   const [filters, setFilters] = useState<Filters>({
     location: "",
     ownerId: "",
+    status: "",
   });
   const [sortOptions, setSortOptions] = useState<SortOptions>({
     sortBy: "createdAt",
@@ -84,6 +86,7 @@ const BrandsListScreen = () => {
         ...(searchQuery && { search: searchQuery }),
         ...(filters.location && { location: filters.location }),
         ...(filters.ownerId && { ownerId: filters.ownerId }),
+        ...(filters.status && { status: filters.status }),
         sortBy: sortOptions.sortBy,
         sortOrder: sortOptions.sortOrder,
       });
@@ -180,7 +183,7 @@ const BrandsListScreen = () => {
   // Clear all filters
   const clearFilters = () => {
     setSearchQuery("");
-    setFilters({ location: "", ownerId: "" });
+    setFilters({ location: "", ownerId: "", status: "" });
     setSortOptions({ sortBy: "createdAt", sortOrder: "DESC" });
   };
 
@@ -233,106 +236,161 @@ const BrandsListScreen = () => {
   };
 
   // Render brand item
-  const renderBrand = ({ item, index }: { item: Brand; index: number }) => (
-    <TouchableOpacity
-      style={[styles.brandContainer, { backgroundColor: cardBackground }]}
-      onPress={() => router.push(`/brands/${item.id}`)}
-      activeOpacity={0.8}
-    >
-      <View style={styles.brandContent}>
-        <View style={styles.brandHeader}>
-          <View style={styles.logoContainer}>
-            {item.logo ? (
-              <Image
-                style={styles.brandLogo}
-                source={{ uri: item.logo }}
-                defaultSource={require("@/assets/images/placeholder-logo.png")}
+  const renderBrand = ({ item, index }: { item: Brand; index: number }) => {
+    const isActive = item.status === BrandStatus.ACTIVE;
+    const statusColor =
+      item.status === BrandStatus.ACTIVE
+        ? "#10b981"
+        : item.status === BrandStatus.SUSPENDED
+          ? "#ef4444"
+          : item.status === BrandStatus.ARCHIVED
+            ? "#6b7280"
+            : "#f59e0b";
+
+    return (
+      <TouchableOpacity
+        style={[
+          styles.brandContainer,
+          { backgroundColor: cardBackground },
+          isActive && styles.activeBrandContainer,
+        ]}
+        onPress={() => router.push(`/brands/${item.id}`)}
+        activeOpacity={0.8}
+      >
+        {/* Active brand accent bar */}
+        {isActive && <View style={styles.activeBrandBar} />}
+
+        <View style={styles.brandContent}>
+          <View style={styles.brandHeader}>
+            <View style={styles.logoContainer}>
+              {item.logo ? (
+                <Image
+                  style={[
+                    styles.brandLogo,
+                    isActive && { borderColor: "#10b981", borderWidth: 2 },
+                  ]}
+                  source={{ uri: item.logo }}
+                  defaultSource={require("@/assets/images/placeholder-logo.png")}
+                />
+              ) : (
+                <View
+                  style={[
+                    styles.logoPlaceholder,
+                    { backgroundColor: isActive ? "#10b981" : buttonColor },
+                  ]}
+                >
+                  <Ionicons name="business" size={24} color="white" />
+                </View>
+              )}
+            </View>
+            <View style={styles.brandInfo}>
+              <View style={styles.nameRow}>
+                <Text
+                  style={[styles.brandName, { color: textColor }]}
+                  numberOfLines={1}
+                >
+                  {item.name}
+                </Text>
+                <View
+                  style={[
+                    styles.statusBadge,
+                    {
+                      backgroundColor: statusColor + "20",
+                      borderColor: statusColor,
+                    },
+                  ]}
+                >
+                  <View
+                    style={[styles.statusDot, { backgroundColor: statusColor }]}
+                  />
+                  <Text
+                    style={[styles.statusBadgeText, { color: statusColor }]}
+                  >
+                    {item.status
+                      ? item.status.charAt(0).toUpperCase() +
+                        item.status.slice(1)
+                      : "Draft"}
+                  </Text>
+                </View>
+              </View>
+              <Text
+                style={[styles.brandDescription, { color: secondaryTextColor }]}
+                numberOfLines={2}
+              >
+                {item.description || "No description available"}
+              </Text>
+              {item.location && (
+                <View style={styles.locationContainer}>
+                  <Ionicons
+                    name="location-outline"
+                    size={12}
+                    color={secondaryTextColor}
+                  />
+                  <Text
+                    style={[styles.locationText, { color: secondaryTextColor }]}
+                  >
+                    {item.location}
+                  </Text>
+                </View>
+              )}
+            </View>
+            <View style={styles.chevronContainer}>
+              <Ionicons
+                name="chevron-forward"
+                size={20}
+                color={secondaryTextColor}
               />
-            ) : (
-              <View
+            </View>
+            {(userRole === "admin" ||
+              (item.owner?.id && item.owner.id === user?.id)) && (
+              <TouchableOpacity
+                style={styles.trashContainer}
+                onPress={(e) => {
+                  e.stopPropagation();
+                  handleDeleteBrand(item.id, item.name);
+                }}
+              >
+                <Ionicons name="trash-outline" size={20} color="#FF3B30" />
+              </TouchableOpacity>
+            )}
+          </View>
+
+          <View
+            style={[
+              styles.brandStats,
+              { borderTopColor: isActive ? "#10b98130" : borderColor },
+            ]}
+          >
+            <View style={styles.statItem}>
+              <Ionicons
+                name="cube-outline"
+                size={16}
+                color={isActive ? "#10b981" : secondaryTextColor}
+              />
+              <Text
                 style={[
-                  styles.logoPlaceholder,
-                  { backgroundColor: buttonColor },
+                  styles.statText,
+                  { color: isActive ? "#10b981" : secondaryTextColor },
                 ]}
               >
-                <Ionicons name="business" size={24} color="white" />
-              </View>
-            )}
-          </View>
-          <View style={styles.brandInfo}>
-            <Text
-              style={[styles.brandName, { color: textColor }]}
-              numberOfLines={1}
-            >
-              {item.name}
-            </Text>
-            <Text
-              style={[styles.brandDescription, { color: secondaryTextColor }]}
-              numberOfLines={2}
-            >
-              {item.description || "No description available"}
-            </Text>
-            {item.location && (
-              <View style={styles.locationContainer}>
-                <Ionicons
-                  name="location-outline"
-                  size={12}
-                  color={secondaryTextColor}
-                />
-                <Text
-                  style={[styles.locationText, { color: secondaryTextColor }]}
-                >
-                  {item.location}
-                </Text>
-              </View>
-            )}
-          </View>
-          <View style={styles.chevronContainer}>
-            <Ionicons
-              name="chevron-forward"
-              size={20}
-              color={secondaryTextColor}
-            />
-          </View>
-          {(userRole === "admin" ||
-            (item.owner?.id && item.owner.id === user?.id)) && (
-            <TouchableOpacity
-              style={styles.trashContainer}
-              onPress={(e) => {
-                e.stopPropagation();
-                handleDeleteBrand(item.id, item.name);
-              }}
-            >
-              <Ionicons name="trash-outline" size={20} color="#FF3B30" />
-            </TouchableOpacity>
-          )}
-        </View>
-
-        <View style={[styles.brandStats, { borderTopColor: borderColor }]}>
-          <View style={styles.statItem}>
-            <Ionicons
-              name="cube-outline"
-              size={16}
-              color={secondaryTextColor}
-            />
-            <Text style={[styles.statText, { color: secondaryTextColor }]}>
-              {item?.products?.length || 0} products
-            </Text>
-          </View>
-          <View style={styles.statItem}>
-            <Ionicons
-              name="time-outline"
-              size={16}
-              color={secondaryTextColor}
-            />
-            <Text style={[styles.statText, { color: secondaryTextColor }]}>
-              {new Date(item.createdAt).toLocaleDateString()}
-            </Text>
+                {item?.products?.length || 0} products
+              </Text>
+            </View>
+            <View style={styles.statItem}>
+              <Ionicons
+                name="time-outline"
+                size={16}
+                color={secondaryTextColor}
+              />
+              <Text style={[styles.statText, { color: secondaryTextColor }]}>
+                {new Date(item.createdAt).toLocaleDateString()}
+              </Text>
+            </View>
           </View>
         </View>
-      </View>
-    </TouchableOpacity>
-  );
+      </TouchableOpacity>
+    );
+  };
 
   // Render search bar
   const renderSearchBar = () => (
@@ -378,7 +436,7 @@ const BrandsListScreen = () => {
         <Text style={[styles.controlButtonText, { color: buttonColor }]}>
           Filter
         </Text>
-        {(filters.location || filters.ownerId) && (
+        {(filters.location || filters.ownerId || filters.status) && (
           <View
             style={[styles.filterBadge, { backgroundColor: buttonColor }]}
           />
@@ -398,7 +456,10 @@ const BrandsListScreen = () => {
         </Text>
       </TouchableOpacity>
 
-      {(searchQuery || filters.location || filters.ownerId) && (
+      {(searchQuery ||
+        filters.location ||
+        filters.ownerId ||
+        filters.status) && (
         <TouchableOpacity
           style={[styles.controlButton, { backgroundColor: "#FF3B30" }]}
           onPress={clearFilters}
@@ -456,26 +517,81 @@ const BrandsListScreen = () => {
             />
           </View>
 
-          <View style={styles.filterSection}>
-            <Text style={[styles.filterLabel, { color: textColor }]}>
-              Owner ID
-            </Text>
-            <TextInput
-              style={[
-                styles.filterInput,
-                {
-                  backgroundColor: cardBackground,
-                  borderColor,
-                  color: textColor,
-                },
-              ]}
-              placeholder="Enter owner ID..."
-              placeholderTextColor={secondaryTextColor}
-              value={filters.ownerId}
-              onChangeText={(text) => handleFilterChange("ownerId", text)}
-              keyboardType="numeric"
-            />
-          </View>
+          {userRole === "admin" && (
+            <View style={styles.filterSection}>
+              <Text style={[styles.filterLabel, { color: textColor }]}>
+                Owner ID
+              </Text>
+              <TextInput
+                style={[
+                  styles.filterInput,
+                  {
+                    backgroundColor: cardBackground,
+                    borderColor,
+                    color: textColor,
+                  },
+                ]}
+                placeholder="Enter owner ID..."
+                placeholderTextColor={secondaryTextColor}
+                value={filters.ownerId}
+                onChangeText={(text) => handleFilterChange("ownerId", text)}
+                keyboardType="numeric"
+              />
+            </View>
+          )}
+
+          {userRole === "admin" && (
+            <View style={styles.filterSection}>
+              <Text style={[styles.filterLabel, { color: textColor }]}>
+                Status
+              </Text>
+              <View style={styles.statusChips}>
+                {Object.values(BrandStatus).map((s) => {
+                  const isSelected = filters.status === s;
+                  const chipColor =
+                    s === BrandStatus.ACTIVE
+                      ? "#10b981"
+                      : s === BrandStatus.SUSPENDED
+                        ? "#ef4444"
+                        : s === BrandStatus.ARCHIVED
+                          ? "#6b7280"
+                          : "#f59e0b";
+                  return (
+                    <TouchableOpacity
+                      key={s}
+                      style={[
+                        styles.statusChip,
+                        {
+                          backgroundColor: isSelected
+                            ? chipColor
+                            : cardBackground,
+                          borderColor: isSelected ? chipColor : borderColor,
+                        },
+                      ]}
+                      onPress={() =>
+                        handleFilterChange("status", isSelected ? "" : s)
+                      }
+                    >
+                      <View
+                        style={[
+                          styles.statusDot,
+                          { backgroundColor: isSelected ? "#fff" : chipColor },
+                        ]}
+                      />
+                      <Text
+                        style={[
+                          styles.statusChipText,
+                          { color: isSelected ? "#fff" : textColor },
+                        ]}
+                      >
+                        {s.charAt(0).toUpperCase() + s.slice(1)}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
+          )}
         </ScrollView>
       </View>
     </Modal>
@@ -634,7 +750,10 @@ const BrandsListScreen = () => {
           ? "Try adjusting your search or filters"
           : "Create your first brand to get started"}
       </Text>
-      {(searchQuery || filters.location || filters.ownerId) && (
+      {(searchQuery ||
+        filters.location ||
+        filters.ownerId ||
+        filters.status) && (
         <TouchableOpacity
           style={[styles.clearFiltersButton, { backgroundColor: buttonColor }]}
           onPress={clearFilters}
@@ -789,6 +908,20 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.08,
     shadowRadius: 8,
     elevation: 3,
+    overflow: "hidden",
+  },
+  activeBrandContainer: {
+    shadowColor: "#10b981",
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    elevation: 5,
+    borderWidth: 1,
+    borderColor: "#10b98130",
+  },
+  activeBrandBar: {
+    height: 3,
+    backgroundColor: "#10b981",
+    width: "100%",
   },
   brandContent: {
     padding: 16,
@@ -818,10 +951,34 @@ const styles = StyleSheet.create({
     flex: 1,
     marginRight: 12,
   },
+  nameRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 4,
+    flexWrap: "wrap",
+  },
   brandName: {
     fontSize: 18,
     fontWeight: "600",
-    marginBottom: 4,
+  },
+  statusBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 6,
+    borderWidth: 1,
+  },
+  statusDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 3,
+  },
+  statusBadgeText: {
+    fontSize: 10,
+    fontWeight: "700",
   },
   brandDescription: {
     fontSize: 14,
@@ -1019,6 +1176,24 @@ const styles = StyleSheet.create({
     color: "white",
     fontSize: 14,
     fontWeight: "500",
+  },
+  statusChips: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  statusChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 10,
+    borderWidth: 1.5,
+  },
+  statusChipText: {
+    fontSize: 14,
+    fontWeight: "600",
   },
 });
 

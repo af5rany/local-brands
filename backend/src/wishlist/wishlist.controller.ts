@@ -50,13 +50,13 @@ export class WishlistController {
   }
 
   @Get()
-  @ApiOperation({ summary: 'Get all wishlist items' })
+  @ApiOperation({ summary: "Get current user's wishlist items" })
   @ApiResponse({
     status: 200,
-    description: 'All wishlist items retrieved successfully',
+    description: 'Wishlist items retrieved successfully',
   })
-  findAll(): Promise<Wishlist[]> {
-    return this.wishlistService.findAll();
+  findAll(@Request() req): Promise<Wishlist[]> {
+    return this.wishlistService.findByUser(req.user.id);
   }
 
   @Get(':id')

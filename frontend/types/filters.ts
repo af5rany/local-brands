@@ -14,6 +14,7 @@ export interface Filters {
   brandId?: number | string;
   gender?: string;
   productType?: string;
+  status?: string;
 }
 
 export interface SortOptions {

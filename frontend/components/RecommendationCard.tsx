@@ -23,6 +23,7 @@ type RecommendationCardProps = {
   product: Product;
   onPress: () => void;
   onAddToWishlist: () => void;
+  onAddToCart?: () => void;
   isInWishlist?: boolean;
   style?: any;
 };
@@ -31,11 +32,13 @@ const RecommendationCard = ({
   product,
   onPress,
   onAddToWishlist,
+  onAddToCart,
   isInWishlist = false,
   style,
 }: RecommendationCardProps) => {
   const [imageError, setImageError] = useState(false);
   const [wishlistLoading, setWishlistLoading] = useState(false);
+  const [cartLoading, setCartLoading] = useState(false);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("en-US", {
@@ -177,8 +180,25 @@ const RecommendationCard = ({
         </View>
 
         {/* Add to Cart Button */}
-        <TouchableOpacity style={styles.addToCartButton} activeOpacity={0.8}>
-          <Ionicons name="cart-outline" size={16} color="white" />
+        <TouchableOpacity
+          style={[styles.addToCartButton, cartLoading && { opacity: 0.7 }]}
+          activeOpacity={0.8}
+          disabled={cartLoading}
+          onPress={async () => {
+            if (!onAddToCart) return;
+            setCartLoading(true);
+            try {
+              await onAddToCart();
+            } finally {
+              setCartLoading(false);
+            }
+          }}
+        >
+          {cartLoading ? (
+            <Ionicons name="refresh" size={16} color="white" />
+          ) : (
+            <Ionicons name="cart-outline" size={16} color="white" />
+          )}
           <Text style={styles.addToCartText}>Add to Cart</Text>
         </TouchableOpacity>
       </View>
