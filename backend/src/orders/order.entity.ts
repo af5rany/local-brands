@@ -1,4 +1,3 @@
-// src/orders/order.entity.ts
 import {
   Entity,
   PrimaryGeneratedColumn,
@@ -9,6 +8,7 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   Index,
+  Unique,
 } from 'typeorm';
 import { User } from '../users/user.entity';
 import { OrderItem } from './order-item.entity';
@@ -21,6 +21,7 @@ import {
 } from 'src/common/enums/order.enum';
 
 @Entity()
+@Unique(['user', 'idempotencyKey'])
 @Index(['user', 'createdAt'])
 @Index(['status', 'createdAt'])
 @Index(['orderNumber'])
@@ -109,6 +110,10 @@ export class Order {
 
   @Column({ nullable: true })
   deliveredAt: Date;
+
+  @Column({ nullable: true })
+  @Index()
+  idempotencyKey: string;
 
   @CreateDateColumn()
   createdAt: Date;

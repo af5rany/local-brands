@@ -18,6 +18,11 @@ export class CreateOrderItemDto {
   @IsPositive()
   productId: number;
 
+  @IsOptional()
+  @IsNumber()
+  @IsPositive()
+  variantId?: number;
+
   @IsNumber()
   @IsPositive()
   @Min(1)
@@ -38,6 +43,10 @@ export class CreateOrderDto {
   @ValidateNested({ each: true })
   @Type(() => CreateOrderItemDto)
   items: CreateOrderItemDto[];
+
+  @IsOptional()
+  @IsString()
+  idempotencyKey?: string;
 
   @IsNumber()
   @IsPositive()

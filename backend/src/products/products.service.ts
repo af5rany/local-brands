@@ -10,7 +10,12 @@ import { Brand } from '../brands/brand.entity';
 import { GetProductsDto } from './dto/get-products.dto';
 import { CreateProductDto } from './dto/create-product.dto';
 import { PaginatedResult } from '../common/types/pagination.type';
-import { ProductType, SortBy, SortOrder, ProductStatus } from 'src/common/enums/product.enum';
+import {
+  ProductType,
+  SortBy,
+  SortOrder,
+  ProductStatus,
+} from 'src/common/enums/product.enum';
 import { UserRole } from 'src/common/enums/user.enum';
 import { PublicProductDto } from './dto/public-product.dto';
 
@@ -21,9 +26,12 @@ export class ProductsService {
     private productsRepository: Repository<Product>,
     @InjectRepository(Brand)
     private brandsRepository: Repository<Brand>,
-  ) { }
+  ) {}
 
-  async findAll(dto: GetProductsDto, currentUser?: any): Promise<PaginatedResult<PublicProductDto>> {
+  async findAll(
+    dto: GetProductsDto,
+    currentUser?: any,
+  ): Promise<PaginatedResult<PublicProductDto>> {
     const {
       page = 1,
       limit = 10,
@@ -78,8 +86,7 @@ export class ProductsService {
     }
 
     // Filters
-    if (category)
-      qb.andWhere('product.subcategory = :category', { category });
+    if (category) qb.andWhere('product.subcategory = :category', { category });
     if (productType)
       qb.andWhere('product.productType = :productType', { productType });
     if (gender) qb.andWhere('product.gender = :gender', { gender });
@@ -89,18 +96,18 @@ export class ProductsService {
     if (brandId) qb.andWhere('product.brandId = :brandId', { brandId });
 
     // Role-based visibility logic
-    const canSeeAll = currentUser && (
-      currentUser.role === UserRole.ADMIN ||
-      (
-        currentUser.role === UserRole.BRAND_OWNER &&
-        brandId &&
-        currentUser.brandIds?.includes(Number(brandId))
-      )
-    );
+    const canSeeAll =
+      currentUser &&
+      (currentUser.role === UserRole.ADMIN ||
+        (currentUser.role === UserRole.BRAND_OWNER &&
+          brandId &&
+          currentUser.brandIds?.includes(Number(brandId))));
 
     if (!canSeeAll) {
       // If not admin/owner, only show PUBLISHED products
-      qb.andWhere('product.status = :publishedStatus', { publishedStatus: ProductStatus.PUBLISHED });
+      qb.andWhere('product.status = :publishedStatus', {
+        publishedStatus: ProductStatus.PUBLISHED,
+      });
     } else if (status) {
       // If admin/owner and a specific status is requested, apply it
       qb.andWhere('product.status = :status', { status });
@@ -144,7 +151,7 @@ export class ProductsService {
     const totalPages = Math.ceil(total / limit);
 
     return {
-      items: items.map(item => this.mapToPublicDto(item)),
+      items: items.map((item) => this.mapToPublicDto(item)),
       total,
       page,
       limit,
@@ -219,7 +226,8 @@ export class ProductsService {
   }
 
   private mapToPublicDto(product: Product): PublicProductDto {
-    const totalStock = product.variants?.reduce((sum, v) => sum + (v.stock || 0), 0) || 0;
+    const totalStock =
+      product.variants?.reduce((sum, v) => sum + (v.stock || 0), 0) || 0;
 
     return {
       id: product.id,
@@ -243,7 +251,11 @@ export class ProductsService {
       isAvailable: product.isAvailable,
       inStock: product.isInStock(),
       isLowStock: product.isLowStock(),
-      variants: product.variants || [],
+      variants: (product.variants || []).map((v: any) => ({
+        ...v,
+        images: v.images?.length ? v.images : v.variantImages || [],
+        attributes: v.attributes || (v.color ? { color: v.color } : {}),
+      })),
       rating: Number(product.averageRating),
       reviewCount: product.reviewCount,
       isFeatured: product.isFeatured,
@@ -274,11 +286,19 @@ export class ProductsService {
     }
 
     if (productData.variants && Array.isArray(productData.variants)) {
-      productData.variants = productData.variants.map((variant) => ({
-        ...variant,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      }));
+      productData.variants = productData.variants.map((variant: any) => {
+        const { variantImages, color, ...rest } = variant;
+        return {
+          ...rest,
+          images: variantImages ?? rest.images ?? [],
+          attributes: {
+            ...(rest.attributes ?? {}),
+            ...(color ? { color } : {}),
+          },
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        };
+      });
     }
 
     const product = this.productsRepository.create(productData);
@@ -286,7 +306,10 @@ export class ProductsService {
     return this.findOne(savedProduct.id);
   }
 
-  async update(id: number, updateData: Partial<Product>): Promise<PublicProductDto> {
+  async update(
+    id: number,
+    updateData: Partial<Product>,
+  ): Promise<PublicProductDto> {
     if (updateData.brandId) {
       const brand = await this.brandsRepository.findOne({
         where: { id: updateData.brandId },
@@ -308,7 +331,17 @@ export class ProductsService {
       }));
     }
 
-    await this.productsRepository.update(id, updateData);
+    // Defensive check: TypeORM update() fails with empty object or object with only undefined values
+    const updatePayload = { ...updateData };
+    const hasUpdateValues = Object.values(updatePayload).some(
+      (v) => v !== undefined,
+    );
+
+    if (!hasUpdateValues) {
+      return this.findOne(id);
+    }
+
+    await this.productsRepository.update(id, updatePayload);
     return this.findOne(id);
   }
 
@@ -316,13 +349,19 @@ export class ProductsService {
     await this.productsRepository.softDelete(id);
   }
 
-  async batchCreate(productsData: CreateProductDto[]): Promise<PublicProductDto[]> {
-    console.log(`[ProductsService] Starting batchCreate for ${productsData.length} products`);
+  async batchCreate(
+    productsData: CreateProductDto[],
+  ): Promise<PublicProductDto[]> {
+    console.log(
+      `[ProductsService] Starting batchCreate for ${productsData.length} products`,
+    );
     const products: Product[] = [];
 
     for (let i = 0; i < productsData.length; i++) {
       const data = productsData[i];
-      console.log(`[ProductsService] Processing product ${i + 1}/${productsData.length}: ${data.name}`);
+      console.log(
+        `[ProductsService] Processing product ${i + 1}/${productsData.length}: ${data.name}`,
+      );
 
       if (data.brandId) {
         const brand = await this.brandsRepository.findOne({
@@ -331,16 +370,22 @@ export class ProductsService {
         });
 
         if (!brand) {
-          console.error(`[ProductsService] Brand with id ${data.brandId} does not exist`);
+          console.error(
+            `[ProductsService] Brand with id ${data.brandId} does not exist`,
+          );
           throw new BadRequestException(
             `Brand with id ${data.brandId} does not exist`,
           );
         }
-        console.log(`[ProductsService] Brand validation passed for product ${i + 1}`);
+        console.log(
+          `[ProductsService] Brand validation passed for product ${i + 1}`,
+        );
       }
 
       if (data.variants && Array.isArray(data.variants)) {
-        console.log(`[ProductsService] Processing ${data.variants.length} variants for product ${i + 1}`);
+        console.log(
+          `[ProductsService] Processing ${data.variants.length} variants for product ${i + 1}`,
+        );
         data.variants = data.variants.map((variant) => ({
           ...variant,
           createdAt: new Date(),
@@ -348,13 +393,19 @@ export class ProductsService {
         })) as any;
       }
 
-      const product = this.productsRepository.create(data as any) as unknown as Product;
+      const product = this.productsRepository.create(
+        data as any,
+      ) as unknown as Product;
       products.push(product);
     }
 
-    console.log(`[ProductsService] Saving ${products.length} products to database...`);
+    console.log(
+      `[ProductsService] Saving ${products.length} products to database...`,
+    );
     const savedProducts = await this.productsRepository.save(products as any);
-    console.log(`[ProductsService] Successfully saved ${savedProducts.length} products`);
+    console.log(
+      `[ProductsService] Successfully saved ${savedProducts.length} products`,
+    );
 
     // Filter out duplicates and fetch full products to map to public DTOs
     // Using simple approach: wait for all findOne calls

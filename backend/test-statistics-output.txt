@@ -1,0 +1,97 @@
+
+> local-brands-backend@0.0.1 test:e2e
+> jest --config ./test/jest-e2e.json statistics.e2e-spec.ts
+
+(node:31076) DeprecationWarning: Calling client.query() when the client is already executing a query is deprecated and will be removed in pg@9.0. Use asycn/await or an external async flow control mechanism instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+  console.log
+    User role: admin
+
+      at RolesGuard.canActivate (../src/auth/roles.guard.ts:86:13)
+
+  console.log
+    Required roles: [ 'admin' ]
+
+      at RolesGuard.canActivate (../src/auth/roles.guard.ts:87:13)
+
+  console.log
+    User role: admin
+
+      at RolesGuard.canActivate (../src/auth/roles.guard.ts:86:13)
+
+  console.log
+    Required roles: [ 'admin' ]
+
+      at RolesGuard.canActivate (../src/auth/roles.guard.ts:87:13)
+
+  console.log
+    [DEBUG] Admin Stats: { brands: 1, products: 0, users: 3 }
+
+      at StatisticsController.getStats (../src/statistics/statistics.controller.ts:22:21)
+
+  console.log
+    User role: admin
+
+      at RolesGuard.canActivate (../src/auth/roles.guard.ts:86:13)
+
+  console.log
+    Required roles: [ 'admin' ]
+
+      at RolesGuard.canActivate (../src/auth/roles.guard.ts:87:13)
+
+  console.log
+    [DEBUG] Brand Owner Stats: { myProducts: 0, orders: 0, revenue: 0 }
+
+      at StatisticsController.getStats (../src/statistics/statistics.controller.ts:26:21)
+
+  console.log
+    User role: admin
+
+      at RolesGuard.canActivate (../src/auth/roles.guard.ts:86:13)
+
+  console.log
+    Required roles: [ 'admin' ]
+
+      at RolesGuard.canActivate (../src/auth/roles.guard.ts:87:13)
+
+  console.log
+    [DEBUG] Brand Owner Stats: { myProducts: 0, orders: 0, revenue: 0 }
+
+      at StatisticsController.getStats (../src/statistics/statistics.controller.ts:26:21)
+
+  console.log
+    User role: admin
+
+      at RolesGuard.canActivate (../src/auth/roles.guard.ts:86:13)
+
+  console.log
+    Required roles: [ 'admin' ]
+
+      at RolesGuard.canActivate (../src/auth/roles.guard.ts:87:13)
+
+  console.log
+    [DEBUG] Customer Stats: {
+      myOrders: 0,
+      wishlist: 0,
+      cartItems: 0,
+      totalSpent: 0,
+      pendingOrders: 0,
+      completedOrders: 0
+    }
+
+      at StatisticsController.getStats (../src/statistics/statistics.controller.ts:30:21)
+
+PASS test/statistics.e2e-spec.ts (8.471 s)
+  StatisticsModule (e2e)
+    /statistics (GET)
+      ✓ should return 401 if unauthenticated (945 ms)
+      ✓ should return admin statistics (917 ms)
+      ✓ should return brand owner statistics without passing brandId explicitly (950 ms)
+      ✓ should return brand owner statistics with passing brandId explicitly (883 ms)
+      ✓ should return customer statistics (915 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       5 passed, 5 total
+Snapshots:   0 total
+Time:        8.736 s, estimated 9 s
+Ran all test suites matching /statistics.e2e-spec.ts/i.

@@ -28,7 +28,7 @@ import { Public } from 'src/auth/public.decorator';
 @UseGuards(JwtAuthGuard)
 @Controller('products')
 export class ProductsController {
-  constructor(private productsService: ProductsService) { }
+  constructor(private productsService: ProductsService) {}
 
   @Public()
   @Header('Cache-Control', 'public, max-age=600') // Cache for 10 minutes
@@ -55,7 +55,9 @@ export class ProductsController {
 
   @Post()
   @UsePipes(new ValidationPipe({ whitelist: true }))
-  async create(@Body() productData: CreateProductDto): Promise<PublicProductDto> {
+  async create(
+    @Body() productData: CreateProductDto,
+  ): Promise<PublicProductDto> {
     const startTime = Date.now();
     // console.log('Creating product with data:', productData);
 
@@ -69,7 +71,9 @@ export class ProductsController {
 
   @Post('batch')
   @UsePipes(new ValidationPipe({ whitelist: true }))
-  async batchCreate(@Body() data: BatchCreateProductDto): Promise<PublicProductDto[]> {
+  async batchCreate(
+    @Body() data: BatchCreateProductDto,
+  ): Promise<PublicProductDto[]> {
     return this.productsService.batchCreate(data.products);
   }
 

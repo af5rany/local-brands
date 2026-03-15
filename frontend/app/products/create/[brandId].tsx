@@ -25,9 +25,7 @@ import { ImageUploadProgress } from "@/components/ImageUploadProgress";
 import * as ImageManipulator from "expo-image-manipulator";
 import { ProductStatus } from "@/types/enums";
 
-
 // Remove hardcoded productTypeOptions and subcategoryOptions
-
 
 const genderOptions = [
   { label: "Men", value: "men" },
@@ -55,7 +53,6 @@ const colorPalette = [
 
 // Gender/Season/Color remain static for now (or could be dynamic later)
 
-
 const CreateProductScreen = () => {
   const router = useRouter();
   const { token } = useAuth();
@@ -64,19 +61,19 @@ const CreateProductScreen = () => {
   const textColor = useThemeColor({}, "text");
   const cardBackground = useThemeColor(
     { light: "#ffffff", dark: "#1c1c1e" },
-    "background"
+    "background",
   );
   const borderColor = useThemeColor(
     { light: "#e1e5e9", dark: "#38383a" },
-    "text"
+    "text",
   );
   const primaryColor = useThemeColor(
     { light: "#007AFF", dark: "#0A84FF" },
-    "tint"
+    "tint",
   );
   const placeholderColor = useThemeColor(
     { light: "#8e8e93", dark: "#8e8e93" },
-    "text"
+    "text",
   );
 
   // Basic Information
@@ -95,8 +92,12 @@ const CreateProductScreen = () => {
   const [tagInput, setTagInput] = useState("");
 
   // Dynamic Options State
-  const [dynamicProductTypes, setDynamicProductTypes] = useState<{ label: string; value: string }[]>([]);
-  const [dynamicCategories, setDynamicCategories] = useState<{ label: string; value: string }[]>([]);
+  const [dynamicProductTypes, setDynamicProductTypes] = useState<
+    { label: string; value: string }[]
+  >([]);
+  const [dynamicCategories, setDynamicCategories] = useState<
+    { label: string; value: string }[]
+  >([]);
 
   // Product Details
   const [material, setMaterial] = useState("");
@@ -110,11 +111,11 @@ const CreateProductScreen = () => {
   const [height, setHeight] = useState("");
 
   // Status
-  const [status, setStatus] = useState<ProductStatus>(ProductStatus.DRAFT);
+  const [status, setStatus] = useState<ProductStatus | null>(null);
   const [isFeatured, setIsFeatured] = useState(false);
 
   // Variants - simplified approach for the form
-  const [variants, setVariants] = useState<ProductVariant[]>([
+  const [variants, setVariants] = useState<any[]>([
     { color: "", variantImages: [], stock: 0 },
   ]);
 
@@ -137,10 +138,16 @@ const CreateProductScreen = () => {
           const data = await response.json();
           // Map to dropdown format
           setDynamicProductTypes(
-            (data.productTypes || []).map((t: string) => ({ label: t, value: t }))
+            (data.productTypes || []).map((t: string) => ({
+              label: t,
+              value: t,
+            })),
           );
           setDynamicCategories(
-            (data.categories || []).map((c: string) => ({ label: c, value: c }))
+            (data.categories || []).map((c: string) => ({
+              label: c,
+              value: c,
+            })),
           );
         }
       } catch (error) {
@@ -149,7 +156,6 @@ const CreateProductScreen = () => {
     };
     fetchOptions();
   }, []);
-
 
   const handleTagInput = (text: string) => {
     if (text.trim() && !tags.includes(text.trim())) {
@@ -166,9 +172,9 @@ const CreateProductScreen = () => {
   const removeVariantImage = (variantIndex: number, imageIndex: number) => {
     const updatedVariants = [...variants];
 
-    updatedVariants[variantIndex].variantImages = updatedVariants[
-      variantIndex
-    ].variantImages.filter((_, i) => i !== imageIndex);
+    updatedVariants[variantIndex].variantImages = (
+      updatedVariants[variantIndex].variantImages || []
+    ).filter((_: any, i: number) => i !== imageIndex);
 
     setVariants(updatedVariants);
   };
@@ -186,7 +192,7 @@ const CreateProductScreen = () => {
   const updateVariant = (
     index: number,
     field: keyof ProductVariant,
-    value: any
+    value: any,
   ) => {
     const updatedVariants = [...variants];
     updatedVariants[index] = { ...updatedVariants[index], [field]: value };
@@ -195,14 +201,15 @@ const CreateProductScreen = () => {
 
   const handleVariantImagePick = async (index: number) => {
     try {
-      const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      const permissionResult =
+        await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!permissionResult.granted) {
         alert("Permission to access camera roll is required!");
         return;
       }
 
       let result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ['images'],
+        mediaTypes: ["images"],
         allowsEditing: true,
         quality: 1,
         allowsMultipleSelection: true,
@@ -215,19 +222,25 @@ const CreateProductScreen = () => {
       const startIndex = updatedVariants[index].variantImages.length;
 
       // Add local URIs immediately
-      const newLocalUris = result.assets.map(a => a.uri);
-      updatedVariants[index].variantImages = [...updatedVariants[index].variantImages, ...newLocalUris];
+      const newLocalUris = result.assets.map((a) => a.uri);
+      updatedVariants[index].variantImages = [
+        ...updatedVariants[index].variantImages,
+        ...newLocalUris,
+      ];
       setVariants(updatedVariants);
 
       // Start uploading each and update variants state when done
       result.assets.forEach(async (asset, assetIndex) => {
         const cloudUrl = await uploadImage(asset.uri);
         if (cloudUrl) {
-          setVariants(currentVariants => {
+          setVariants((currentVariants) => {
             const newVariants = [...currentVariants];
             const imgIndex = startIndex + assetIndex;
             // Only update if it's still there (user might have removed it manually)
-            if (newVariants[index].variantImages[imgIndex] === asset.uri) {
+            if (
+              newVariants[index].variantImages &&
+              newVariants[index].variantImages[imgIndex] === asset.uri
+            ) {
               newVariants[index].variantImages[imgIndex] = cloudUrl;
             }
             return newVariants;
@@ -240,9 +253,9 @@ const CreateProductScreen = () => {
   };
 
   const hasNonCloudinaryImage = variants.some((variant) =>
-    variant.variantImages.some(
-      (uri) => !uri.startsWith("https://res.cloudinary.")
-    )
+    (variant.variantImages || []).some(
+      (uri: string) => !uri.startsWith("https://res.cloudinary."),
+    ),
   );
 
   const handleCreateProduct = async () => {
@@ -256,11 +269,14 @@ const CreateProductScreen = () => {
       !productPrice ||
       !productType ||
       !gender ||
-      variants.some((v) => !v.color || !v.variantImages.length || v.stock === undefined)
+      !status ||
+      variants.some(
+        (v) => !v.color || !v.variantImages.length || v.stock === undefined,
+      )
     ) {
       Alert.alert(
         "Validation Error",
-        "Please fill in all required fields and ensure all variants color have images"
+        "Please fill in all required fields (including Status) and ensure all variants have a color and images",
       );
       return;
     }
@@ -288,9 +304,9 @@ const CreateProductScreen = () => {
         isFeatured,
         stock: variants.reduce((acc, v) => acc + (v.stock || 0), 0),
         brandId: parseInt(brandId as string),
-        variants: variants.map(v => ({
+        variants: variants.map((v) => ({
           ...v,
-          stock: Number(v.stock)
+          stock: Number(v.stock),
         })),
       };
 
@@ -725,15 +741,28 @@ const CreateProductScreen = () => {
           </View>
 
           <View style={styles.inputContainer}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-              <Text style={styles.label}>
-                Category
-              </Text>
-              <TouchableOpacity onPress={() => {
-                setIsNewSubcategory(!isNewSubcategory);
-                setSubcategory(""); // Clear when switching
-              }}>
-                <Text style={{ color: primaryColor, fontSize: 14, fontWeight: '600' }}>
+            <View
+              style={{
+                flexDirection: "row",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: 8,
+              }}
+            >
+              <Text style={styles.label}>Category</Text>
+              <TouchableOpacity
+                onPress={() => {
+                  setIsNewSubcategory(!isNewSubcategory);
+                  setSubcategory(""); // Clear when switching
+                }}
+              >
+                <Text
+                  style={{
+                    color: primaryColor,
+                    fontSize: 14,
+                    fontWeight: "600",
+                  }}
+                >
                   {isNewSubcategory ? "Select Existing" : "Type New"}
                 </Text>
               </TouchableOpacity>
@@ -853,24 +882,26 @@ const CreateProductScreen = () => {
                   Related Images <Text style={styles.required}>*</Text>
                 </Text>
                 <View style={styles.imageGrid}>
-                  {variant.variantImages.map((uri, imgIndex) => (
-                    <View key={imgIndex} style={styles.imageContainer}>
-                      {uploads[uri] ? (
-                        <ImageUploadProgress upload={uploads[uri]} size={80} />
-                      ) : (
-                        <Image
-                          source={{ uri }}
-                          style={styles.imagePreview}
-                        />
-                      )}
-                      <TouchableOpacity
-                        style={styles.removeImageButton}
-                        onPress={() => removeVariantImage(index, imgIndex)}
-                      >
-                        <Ionicons name="close" size={16} color="#ffffff" />
-                      </TouchableOpacity>
-                    </View>
-                  ))}
+                  {(variant.variantImages || []).map(
+                    (uri: string, imgIndex: number) => (
+                      <View key={imgIndex} style={styles.imageContainer}>
+                        {uploads[uri] ? (
+                          <ImageUploadProgress
+                            upload={uploads[uri]}
+                            size={80}
+                          />
+                        ) : (
+                          <Image source={{ uri }} style={styles.imagePreview} />
+                        )}
+                        <TouchableOpacity
+                          style={styles.removeImageButton}
+                          onPress={() => removeVariantImage(index, imgIndex)}
+                        >
+                          <Ionicons name="close" size={16} color="#ffffff" />
+                        </TouchableOpacity>
+                      </View>
+                    ),
+                  )}
                   <TouchableOpacity
                     style={[
                       styles.imagePreview,
@@ -898,7 +929,9 @@ const CreateProductScreen = () => {
                   placeholder="Enter stock for this variant"
                   placeholderTextColor={placeholderColor}
                   value={String(variant.stock)}
-                  onChangeText={(text) => updateVariant(index, "stock", parseInt(text) || 0)}
+                  onChangeText={(text) =>
+                    updateVariant(index, "stock", parseInt(text) || 0)
+                  }
                   keyboardType="numeric"
                 />
               </View>
@@ -1011,12 +1044,15 @@ const CreateProductScreen = () => {
         <View style={styles.card}>
           <Text style={styles.sectionTitle}>Status & Visibility</Text>
 
-
-
           <View style={styles.inputContainer}>
-            <Text style={styles.label}>Product Status</Text>
+            <Text style={styles.label}>
+              Product Status <Text style={styles.required}>*</Text>
+            </Text>
             <Dropdown
-              data={Object.values(ProductStatus).map(s => ({ label: s.toUpperCase(), value: s }))}
+              data={Object.values(ProductStatus).map((s) => ({
+                label: s.toUpperCase(),
+                value: s,
+              }))}
               labelField="label"
               valueField="value"
               value={status}
@@ -1053,8 +1089,8 @@ const CreateProductScreen = () => {
             <Text style={styles.createButtonText}>Create Product</Text>
           )}
         </TouchableOpacity>
-      </ScrollView >
-    </SafeAreaView >
+      </ScrollView>
+    </SafeAreaView>
   );
 };
 

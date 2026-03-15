@@ -12,6 +12,7 @@ import { WishlistModule } from './wishlist/wishlist.module';
 import { OrdersModule } from './orders/orders.module';
 import { StatisticsModule } from './statistics/statistics.module';
 import { MailModule } from './common/mail/mail.module';
+import { ReviewsModule } from './reviews/reviews.module';
 
 @Module({
   imports: [
@@ -24,7 +25,10 @@ import { MailModule } from './common/mail/mail.module';
       password: process.env.DB_PASSWORD || 'postgres',
       database: process.env.DB_DATABASE || 'local_brands_db',
       autoLoadEntities: true,
-      synchronize: true,
+      // synchronize: true,
+      synchronize: false,
+      migrationsRun: true,
+      migrations: [__dirname + '/migrations/*.{ts,js}'],
       // logging: true,
     }),
     AuthModule,
@@ -36,8 +40,9 @@ import { MailModule } from './common/mail/mail.module';
     OrdersModule,
     StatisticsModule,
     MailModule,
+    ReviewsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule { }
+export class AppModule {}

@@ -129,22 +129,27 @@ const RegisterScreen = () => {
             text: "OK",
             onPress: () => router.push("/auth/login"),
           },
-        ]
+        ],
       );
     } catch (error: any) {
-      console.error("Registration error full object:", JSON.stringify(error, null, 2));
+      console.error(
+        "Registration error full object:",
+        JSON.stringify(error, null, 2),
+      );
       console.error("Registration error message:", error.message);
       Alert.alert(
         "Registration Error",
         error.message ||
-        "An error occurred during registration. Please try again."
+          "An error occurred during registration. Please try again.",
       );
     } finally {
       setLoading(false);
     }
   };
 
-  const isUploading = Object.values(uploads).some(u => u.status === 'uploading');
+  const isUploading = Object.values(uploads).some(
+    (u) => u.status === "uploading",
+  );
 
   const handleChange = (name: string, value: string) => {
     setFormData((prev) => ({ ...prev, [name]: value }));
@@ -156,9 +161,13 @@ const RegisterScreen = () => {
 
   const handleImagePick = async () => {
     try {
-      const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      const permissionResult =
+        await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!permissionResult.granted) {
-        Alert.alert("Permission Required", "Permission to access camera roll is required!");
+        Alert.alert(
+          "Permission Required",
+          "Permission to access camera roll is required!",
+        );
         return;
       }
 
@@ -180,8 +189,6 @@ const RegisterScreen = () => {
     }
   };
 
-
-
   return (
     <SafeAreaView style={styles.safeArea}>
       <KeyboardAvoidingView
@@ -196,9 +203,20 @@ const RegisterScreen = () => {
 
           {/* Avatar Selector */}
           <View style={styles.avatarPickerContainer}>
-            <TouchableOpacity style={styles.avatarButton} onPress={handleImagePick} disabled={isUploading}>
-              {uploads[Object.keys(uploads).reverse().find(k => !avatar?.includes(k)) || ''] ? (
-                <ImageUploadProgress upload={uploads[Object.keys(uploads).reverse()[0]]} size={100} />
+            <TouchableOpacity
+              style={styles.avatarButton}
+              onPress={handleImagePick}
+              disabled={isUploading}
+            >
+              {uploads[
+                Object.keys(uploads)
+                  .reverse()
+                  .find((k) => !avatar?.includes(k)) || ""
+              ] ? (
+                <ImageUploadProgress
+                  upload={uploads[Object.keys(uploads).reverse()[0]]}
+                  size={100}
+                />
               ) : avatar ? (
                 <Image source={{ uri: avatar }} style={styles.avatarImage} />
               ) : (
@@ -209,7 +227,10 @@ const RegisterScreen = () => {
               )}
             </TouchableOpacity>
             {avatar && (
-              <TouchableOpacity style={styles.removeAvatar} onPress={() => setAvatar(null)}>
+              <TouchableOpacity
+                style={styles.removeAvatar}
+                onPress={() => setAvatar(null)}
+              >
                 <Text style={styles.removeAvatarText}>Remove</Text>
               </TouchableOpacity>
             )}
@@ -325,7 +346,10 @@ const RegisterScreen = () => {
           </View>
 
           <Pressable
-            style={[styles.button, (loading || isUploading) && styles.buttonDisabled]}
+            style={[
+              styles.button,
+              (loading || isUploading) && styles.buttonDisabled,
+            ]}
             onPress={handleRegister}
             disabled={loading || isUploading}
           >

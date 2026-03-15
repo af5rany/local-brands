@@ -1,0 +1,112 @@
+
+> local-brands-backend@0.0.1 test:e2e
+> jest --config ./test/jest-e2e.json brands.e2e-spec.ts
+
+(node:24015) DeprecationWarning: Calling client.query() when the client is already executing a query is deprecated and will be removed in pg@9.0. Use asycn/await or an external async flow control mechanism instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+  console.log
+    User role: admin
+
+      at RolesGuard.canActivate (../src/auth/roles.guard.ts:86:13)
+
+  console.log
+    Required roles: [ 'admin' ]
+
+      at RolesGuard.canActivate (../src/auth/roles.guard.ts:87:13)
+
+  console.log
+    User role: customer
+
+      at RolesGuard.canActivate (../src/auth/roles.guard.ts:86:13)
+
+  console.log
+    Required roles: [ 'admin' ]
+
+      at RolesGuard.canActivate (../src/auth/roles.guard.ts:87:13)
+
+  console.log
+    User role: admin
+
+      at RolesGuard.canActivate (../src/auth/roles.guard.ts:86:13)
+
+  console.log
+    Required roles: [ 'admin' ]
+
+      at RolesGuard.canActivate (../src/auth/roles.guard.ts:87:13)
+
+  console.log
+    User role: admin
+
+      at RolesGuard.canActivate (../src/auth/roles.guard.ts:86:13)
+
+  console.log
+    Required roles: [ 'admin' ]
+
+      at RolesGuard.canActivate (../src/auth/roles.guard.ts:87:13)
+
+  console.log
+    User role: admin
+
+      at RolesGuard.canActivate (../src/auth/roles.guard.ts:86:13)
+
+  console.log
+    Required roles: [ 'admin' ]
+
+      at RolesGuard.canActivate (../src/auth/roles.guard.ts:87:13)
+
+  console.log
+    User role: admin
+
+      at RolesGuard.canActivate (../src/auth/roles.guard.ts:86:13)
+
+  console.log
+    Required roles: [ 'admin', 'brandOwner' ]
+
+      at RolesGuard.canActivate (../src/auth/roles.guard.ts:87:13)
+
+  console.log
+    Updating brand: {
+      user: { id: 1, role: 'admin', isGuest: false, brandIds: [] },
+      brandId: 1
+    }
+
+      at BrandsController.update (../src/brands/brands.controller.ts:95:13)
+
+  console.log
+    User role: admin
+
+      at RolesGuard.canActivate (../src/auth/roles.guard.ts:86:13)
+
+  console.log
+    Required roles: [ 'admin' ]
+
+      at RolesGuard.canActivate (../src/auth/roles.guard.ts:87:13)
+
+  console.log
+    User role: brandOwner
+
+      at RolesGuard.canActivate (../src/auth/roles.guard.ts:86:13)
+
+  console.log
+    Required roles: [ 'admin', 'brandOwner' ]
+
+      at RolesGuard.canActivate (../src/auth/roles.guard.ts:87:13)
+
+PASS test/brands.e2e-spec.ts (9.94 s)
+  BrandsModule (e2e)
+    /brands (POST)
+      ✓ should create a brand as Admin (1043 ms)
+      ✓ should fail to create a brand as Customer (939 ms)
+    /brands (GET)
+      ✓ should get all brands (publicly accessible) (936 ms)
+    /brands/:id (GET)
+      ✓ should get a brand by ID (946 ms)
+    /brands/:id (PUT)
+      ✓ should update a brand as Admin (1163 ms)
+      ✓ should fail to update if not assigned to brand (for Brand Owner) (962 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       6 passed, 6 total
+Snapshots:   0 total
+Time:        10.367 s
+Ran all test suites matching /brands.e2e-spec.ts/i.

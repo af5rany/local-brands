@@ -11,4 +11,4 @@ import { BrandsController } from './brands.controller';
   controllers: [BrandsController],
   exports: [BrandsService, TypeOrmModule],
 })
-export class BrandsModule { }
+export class BrandsModule {}

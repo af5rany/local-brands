@@ -1,5 +1,14 @@
 import React from "react";
-import { View, Text, StyleSheet, ScrollView, useWindowDimensions, TouchableOpacity, Image, FlatList } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  useWindowDimensions,
+  TouchableOpacity,
+  Image,
+  FlatList,
+} from "react-native";
 import { Brand } from "@/types/brand";
 import { Product } from "@/types/product";
 import BrandCard from "./BrandCard";
@@ -48,10 +57,12 @@ const CustomerDashboard = ({
   filterOptions = { categories: [], productTypes: [] },
   currentPage = 1,
   totalPages = 1,
-  onPageChange = () => { },
+  onPageChange = () => {},
 }: CustomerDashboardProps) => {
   const { width } = useWindowDimensions();
-  const [activeTab, setActiveTab] = React.useState<"products" | "brands">("products");
+  const [activeTab, setActiveTab] = React.useState<"products" | "brands">(
+    "products",
+  );
   const [isFilterModalVisible, setFilterModalVisible] = React.useState(false);
   const [currentFilterType, setCurrentFilterType] = React.useState<string>("");
 
@@ -63,11 +74,14 @@ const CustomerDashboard = ({
   const getModalOptions = () => {
     switch (currentFilterType) {
       case "category":
-        return filterOptions.categories.map(c => ({ id: c, label: c }));
+        return filterOptions.categories.map((c) => ({ id: c, label: c }));
       case "type":
-        return filterOptions.productTypes.map(t => ({ id: t, label: t }));
+        return filterOptions.productTypes.map((t) => ({ id: t, label: t }));
       case "brand":
-        return featuredBrands.map(b => ({ id: b.id.toString(), label: b.name }));
+        return featuredBrands.map((b) => ({
+          id: b.id.toString(),
+          label: b.name,
+        }));
       case "sort":
         return [
           { id: "DESC", label: "Newest First" },
@@ -85,7 +99,7 @@ const CustomerDashboard = ({
   const isTablet = width > 768;
   const numColumns = isTablet ? 3 : 2;
   const cardGap = 12;
-  const cardWidth = (width - (16 * 2) - (cardGap * (numColumns - 1))) / numColumns;
+  const cardWidth = (width - 16 * 2 - cardGap * (numColumns - 1)) / numColumns;
 
   const renderProductItem = ({ item }: { item: Product }) => (
     <RecommendationCard
@@ -93,13 +107,13 @@ const CustomerDashboard = ({
         id: item.id.toString(),
         name: item.name,
         price: item.salePrice ?? item.price,
-        image: item.variants?.[0]?.variantImages?.[0] || "",
+        image: item.variants?.[0]?.images?.[0] || "",
         brand: item.brand?.name || "Global Brand",
         rating: 4.8,
         originalPrice: item.salePrice ? item.price : undefined,
       }}
       onPress={() => navigateTo(`/products/${item.id}`)}
-      onAddToWishlist={() => { }}
+      onAddToWishlist={() => {}}
       style={{ width: cardWidth, marginRight: 0, marginBottom: cardGap }}
     />
   );
@@ -112,16 +126,26 @@ const CustomerDashboard = ({
     >
       <View style={styles.brandLogoBox}>
         {item.logo ? (
-          <Image source={{ uri: item.logo }} style={styles.brandLogo} resizeMode="contain" />
+          <Image
+            source={{ uri: item.logo }}
+            style={styles.brandLogo}
+            resizeMode="contain"
+          />
         ) : (
           <Ionicons name="business" size={32} color="#64748b" />
         )}
       </View>
       <View style={styles.brandInfo}>
-        <Text style={styles.brandName} numberOfLines={1}>{item.name}</Text>
-        <Text style={styles.brandTagline} numberOfLines={1}>{item.location || "Global"}</Text>
+        <Text style={styles.brandName} numberOfLines={1}>
+          {item.name}
+        </Text>
+        <Text style={styles.brandTagline} numberOfLines={1}>
+          {item.location || "Global"}
+        </Text>
         <View style={styles.productCountBadge}>
-          <Text style={styles.productCountText}>{item.products?.length || 0} Products</Text>
+          <Text style={styles.productCountText}>
+            {item.products?.length || 0} Products
+          </Text>
         </View>
       </View>
     </TouchableOpacity>
@@ -135,13 +159,27 @@ const CustomerDashboard = ({
           style={[styles.tab, activeTab === "products" && styles.activeTab]}
           onPress={() => setActiveTab("products")}
         >
-          <Text style={[styles.tabText, activeTab === "products" && styles.activeTabText]}>Products</Text>
+          <Text
+            style={[
+              styles.tabText,
+              activeTab === "products" && styles.activeTabText,
+            ]}
+          >
+            Products
+          </Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.tab, activeTab === "brands" && styles.activeTab]}
           onPress={() => setActiveTab("brands")}
         >
-          <Text style={[styles.tabText, activeTab === "brands" && styles.activeTabText]}>Brands</Text>
+          <Text
+            style={[
+              styles.tabText,
+              activeTab === "brands" && styles.activeTabText,
+            ]}
+          >
+            Brands
+          </Text>
         </TouchableOpacity>
       </View>
 
@@ -158,7 +196,9 @@ const CustomerDashboard = ({
         title={`Filter by ${currentFilterType.charAt(0).toUpperCase() + currentFilterType.slice(1)}`}
         options={getModalOptions()}
         onSelect={handleSelectOption}
-        activeId={activeFilters[currentFilterType as keyof typeof activeFilters]}
+        activeId={
+          activeFilters[currentFilterType as keyof typeof activeFilters]
+        }
         enableSearch={currentFilterType === "brand"}
       />
 
@@ -171,7 +211,11 @@ const CustomerDashboard = ({
               <Text style={styles.seeAll}>See All</Text>
             </TouchableOpacity>
           </View>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.featuredList}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.featuredList}
+          >
             {featuredBrands.map((brand) => (
               <BrandCard
                 key={brand.id}
@@ -190,13 +234,23 @@ const CustomerDashboard = ({
           {activeTab === "products" ? "Latest Arrivals" : "All Brands"}
         </Text>
         <FlatList
-          data={activeTab === "products" ? (newArrivals as any[]) : (featuredBrands as any[])}
+          data={
+            activeTab === "products"
+              ? (newArrivals as any[])
+              : (featuredBrands as any[])
+          }
           keyExtractor={(item) => item.id.toString()}
-          renderItem={activeTab === "products" ? (renderProductItem as any) : (renderBrandItem as any)}
+          renderItem={
+            activeTab === "products"
+              ? (renderProductItem as any)
+              : (renderBrandItem as any)
+          }
           numColumns={numColumns}
           scrollEnabled={false}
           columnWrapperStyle={styles.gridRow}
-          ListEmptyComponent={<Text style={styles.emptyText}>Nothing found in this section</Text>}
+          ListEmptyComponent={
+            <Text style={styles.emptyText}>Nothing found in this section</Text>
+          }
           key={activeTab === "products" ? "h-grid" : "v-grid"} // Force re-render on tab change for grid layout
         />
 

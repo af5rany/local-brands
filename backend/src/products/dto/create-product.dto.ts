@@ -10,9 +10,14 @@ import {
   ArrayMinSize,
   ArrayMaxSize,
   Matches,
+  Min,
 } from 'class-validator';
 import { Type, Transform } from 'class-transformer';
-import { ProductType, Season, ProductStatus } from 'src/common/enums/product.enum';
+import {
+  ProductType,
+  Season,
+  ProductStatus,
+} from 'src/common/enums/product.enum';
 import { Gender } from 'src/common/enums/user.enum';
 
 export class CreateProductVariantDto {
@@ -33,6 +38,7 @@ export class CreateProductVariantDto {
   variantImages: string[];
 
   @IsNumber()
+  @Min(0)
   stock: number;
 }
 
@@ -45,10 +51,12 @@ export class CreateProductDto {
   description?: string;
 
   @IsNumber()
+  @Min(0)
   price: number;
 
   @IsOptional()
   @IsNumber()
+  @Min(0)
   salePrice?: number;
 
   @IsOptional()
@@ -117,9 +125,8 @@ export class CreateProductDto {
   @IsNumber()
   lowStockThreshold?: number;
 
-  @IsOptional()
   @IsEnum(ProductStatus)
-  status?: ProductStatus = ProductStatus.DRAFT;
+  status: ProductStatus;
 
   @IsBoolean()
   isFeatured: boolean;

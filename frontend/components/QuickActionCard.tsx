@@ -20,7 +20,7 @@ const QuickActionCard: React.FC<QuickActionCardProps> = ({
 }) => {
   const renderRightActions = (
     progress: Animated.AnimatedInterpolation<number>,
-    dragX: Animated.AnimatedInterpolation<number>
+    dragX: Animated.AnimatedInterpolation<number>,
   ) => {
     const trans = dragX.interpolate({
       inputRange: [-100, 0],
@@ -29,7 +29,10 @@ const QuickActionCard: React.FC<QuickActionCardProps> = ({
     });
 
     return (
-      <RectButton style={[styles.rightAction, { backgroundColor: color }]} onPress={onPress}>
+      <RectButton
+        style={[styles.rightAction, { backgroundColor: color }]}
+        onPress={onPress}
+      >
         <Animated.View style={{ transform: [{ scale: trans }] }}>
           <Ionicons name="arrow-forward" size={30} color="#fff" />
           <Text style={styles.actionText}>Go</Text>

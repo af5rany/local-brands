@@ -22,6 +22,7 @@ import getApiUrl from "@/helpers/getApiUrl";
 import { useThemeColor } from "@/hooks/useThemeColor";
 import { Product } from "@/types/product";
 import { useAuth } from "@/context/AuthContext";
+import ProductReviews from "@/components/ProductReviews";
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get("window");
 
@@ -35,15 +36,30 @@ const ProductDetailScreen = () => {
   const [loading, setLoading] = useState(true);
   const [selectedVariantIndex, setSelectedVariantIndex] = useState(0);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+  const [isInWishlist, setIsInWishlist] = useState(false);
+  const [wishlistLoading, setWishlistLoading] = useState(false);
+  const [cartLoading, setCartLoading] = useState(false);
   const scrollY = useRef(new Animated.Value(0)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
   const backgroundColor = useThemeColor({}, "background");
   const textColor = useThemeColor({}, "text");
-  const cardBackground = useThemeColor({ light: "#FAFAFA", dark: "#0A0A0A" }, "background");
-  const primaryColor = useThemeColor({ light: "#1A1A1A", dark: "#FFFFFF" }, "text");
-  const secondaryTextColor = useThemeColor({ light: "#737373", dark: "#A3A3A3" }, "text");
-  const accentColor = useThemeColor({ light: "#DC2626", dark: "#EF4444" }, "tint");
+  const cardBackground = useThemeColor(
+    { light: "#FAFAFA", dark: "#0A0A0A" },
+    "background",
+  );
+  const primaryColor = useThemeColor(
+    { light: "#1A1A1A", dark: "#FFFFFF" },
+    "text",
+  );
+  const secondaryTextColor = useThemeColor(
+    { light: "#737373", dark: "#A3A3A3" },
+    "text",
+  );
+  const accentColor = useThemeColor(
+    { light: "#DC2626", dark: "#EF4444" },
+    "tint",
+  );
 
   useEffect(() => {
     const fetchProductDetails = async () => {
@@ -61,10 +77,31 @@ const ProductDetailScreen = () => {
         });
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({}));
-          throw new Error(errorData.message || "Failed to fetch product details");
+          throw new Error(
+            errorData.message || "Failed to fetch product details",
+          );
         }
         const data = await response.json();
+        // console.log('[DEBUG] product.variants:', JSON.stringify(data.variants, null, 2));
         setProduct(data);
+
+        // Check wishlist status
+        if (token) {
+          try {
+            const wishlistRes = await fetch(`${getApiUrl()}/wishlist`, {
+              headers: { Authorization: `Bearer ${token}` },
+            });
+            if (wishlistRes.ok) {
+              const wishlistItems = await wishlistRes.json();
+              const isItemInWishlist = wishlistItems.some(
+                (item: any) => item.product.id === Number(productId),
+              );
+              setIsInWishlist(isItemInWishlist);
+            }
+          } catch (e) {
+            console.warn("Error checking wishlist status:", e);
+          }
+        }
 
         // Fade in animation
         Animated.timing(fadeAnim, {
@@ -84,11 +121,108 @@ const ProductDetailScreen = () => {
     setSelectedImageIndex(0);
   }, [productId, token]);
 
+  const handleToggleWishlist = async () => {
+    if (!token) {
+      Alert.alert(
+        "Login Required",
+        "Please login to add items to your collection.",
+        [
+          { text: "Cancel", style: "cancel" },
+          { text: "Login", onPress: () => router.push("/auth/login") },
+        ],
+      );
+      return;
+    }
+
+    setWishlistLoading(true);
+    try {
+      const response = await fetch(
+        `${getApiUrl()}/wishlist/toggle/${productId}`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        },
+      );
+
+      if (!response.ok) throw new Error("Failed to update collection");
+
+      const result = await response.json();
+      setIsInWishlist(result.added);
+
+      // Haptic feedback could be added here
+    } catch (error: any) {
+      Alert.alert("Error", error.message);
+    } finally {
+      setWishlistLoading(false);
+    }
+  };
+
+  const handleAddToCart = async () => {
+    if (!token) {
+      Alert.alert("Login Required", "Please login to add items to your cart.", [
+        { text: "Cancel", style: "cancel" },
+        { text: "Login", onPress: () => router.push("/auth/login") },
+      ]);
+      return;
+    }
+
+    const currentVariant = product?.variants?.[selectedVariantIndex];
+    if (!currentVariant) return;
+
+    if (currentVariant.stock <= 0) {
+      Alert.alert("Out of Stock", "This variant is currently unavailable.");
+      return;
+    }
+
+    setCartLoading(true);
+    try {
+      const response = await fetch(`${getApiUrl()}/cart/items`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          productId: Number(productId),
+          variantId: currentVariant.id,
+          quantity: 1,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to add to cart");
+      }
+
+      Alert.alert("Success", "Added to collection");
+    } catch (error: any) {
+      Alert.alert("Error", error.message);
+    } finally {
+      setCartLoading(false);
+    }
+  };
+
   if (loading) {
     return (
-      <View style={[styles.center, { backgroundColor: backgroundColor === '#000000' ? '#000' : '#FFF' }]}>
+      <View
+        style={[
+          styles.center,
+          { backgroundColor: backgroundColor === "#000000" ? "#000" : "#FFF" },
+        ]}
+      >
         <ActivityIndicator size="large" color={primaryColor} />
-        <Text style={{ color: textColor, marginTop: 20, fontSize: 11, letterSpacing: 2, fontWeight: "500" }}>
+        <Text
+          style={{
+            color: textColor,
+            marginTop: 20,
+            fontSize: 11,
+            letterSpacing: 2,
+            fontWeight: "500",
+          }}
+        >
           LOADING
         </Text>
       </View>
@@ -99,11 +233,29 @@ const ProductDetailScreen = () => {
     return (
       <View style={[styles.center, { backgroundColor }]}>
         <Ionicons name="alert-circle-outline" size={56} color={accentColor} />
-        <Text style={{ color: textColor, fontSize: 18, fontWeight: "300", marginTop: 24, letterSpacing: 1 }}>
+        <Text
+          style={{
+            color: textColor,
+            fontSize: 18,
+            fontWeight: "300",
+            marginTop: 24,
+            letterSpacing: 1,
+          }}
+        >
           Product Not Found
         </Text>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButtonSimple}>
-          <Text style={{ color: primaryColor, fontWeight: "500", fontSize: 13, letterSpacing: 1 }}>
+        <TouchableOpacity
+          onPress={() => router.back()}
+          style={styles.backButtonSimple}
+        >
+          <Text
+            style={{
+              color: primaryColor,
+              fontWeight: "500",
+              fontSize: 13,
+              letterSpacing: 1,
+            }}
+          >
             GO BACK
           </Text>
         </TouchableOpacity>
@@ -112,8 +264,13 @@ const ProductDetailScreen = () => {
   }
 
   const currentVariant = product.variants[selectedVariantIndex];
-  const hasDiscount = product.salePrice !== undefined && product.salePrice < product.price;
-  const isOwnerOrAdmin = userRole === "admin" || (user?.id && product?.brand?.owner?.id && user.id === product.brand.owner.id);
+  const hasDiscount =
+    product.salePrice !== undefined && product.salePrice < product.price;
+  const isOwnerOrAdmin =
+    userRole === "admin" ||
+    (user?.id &&
+      product?.brand?.owner?.id &&
+      user.id === product.brand.owner.id);
 
   const headerOpacity = scrollY.interpolate({
     inputRange: [200, 300],
@@ -150,10 +307,13 @@ const ProductDetailScreen = () => {
           style: "destructive",
           onPress: async () => {
             try {
-              const response = await fetch(`${getApiUrl()}/products/${productId}`, {
-                method: "DELETE",
-                headers: { Authorization: `Bearer ${token}` },
-              });
+              const response = await fetch(
+                `${getApiUrl()}/products/${productId}`,
+                {
+                  method: "DELETE",
+                  headers: { Authorization: `Bearer ${token}` },
+                },
+              );
               if (!response.ok) throw new Error("Failed to delete product");
               Alert.alert("Success", "Product removed.");
               router.back();
@@ -162,18 +322,28 @@ const ProductDetailScreen = () => {
             }
           },
         },
-      ]
+      ],
     );
   };
 
   const renderMinimalHeader = () => (
     <Animated.View style={[styles.minimalHeader, { opacity: headerOpacity }]}>
-      <BlurView intensity={100} tint={Platform.OS === 'ios' ? 'light' : 'dark'} style={StyleSheet.absoluteFill} />
+      <BlurView
+        intensity={100}
+        tint={Platform.OS === "ios" ? "light" : "dark"}
+        style={StyleSheet.absoluteFill}
+      />
       <View style={styles.minimalHeaderContent}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.headerIconBtn}>
+        <TouchableOpacity
+          onPress={() => router.back()}
+          style={styles.headerIconBtn}
+        >
           <Ionicons name="arrow-back" size={20} color={textColor} />
         </TouchableOpacity>
-        <Text style={[styles.minimalHeaderTitle, { color: textColor }]} numberOfLines={1}>
+        <Text
+          style={[styles.minimalHeaderTitle, { color: textColor }]}
+          numberOfLines={1}
+        >
           {product.name}
         </Text>
         <TouchableOpacity style={styles.headerIconBtn}>
@@ -185,19 +355,44 @@ const ProductDetailScreen = () => {
 
   const renderFloatingControls = () => (
     <View style={styles.floatingControls}>
-      <TouchableOpacity onPress={() => router.back()} style={styles.floatingBtn}>
-        <View style={[styles.floatingBtnInner, { backgroundColor: 'rgba(255,255,255,0.95)' }]}>
+      <TouchableOpacity
+        onPress={() => router.back()}
+        style={styles.floatingBtn}
+      >
+        <View
+          style={[
+            styles.floatingBtnInner,
+            { backgroundColor: "rgba(255,255,255,0.95)" },
+          ]}
+        >
           <Ionicons name="arrow-back" size={18} color="#000" />
         </View>
       </TouchableOpacity>
       <View style={styles.floatingRightGroup}>
-        <TouchableOpacity style={styles.floatingBtn}>
-          <View style={[styles.floatingBtnInner, { backgroundColor: 'rgba(255,255,255,0.95)' }]}>
-            <Ionicons name="heart-outline" size={18} color="#000" />
+        <TouchableOpacity
+          style={styles.floatingBtn}
+          onPress={handleToggleWishlist}
+        >
+          <View
+            style={[
+              styles.floatingBtnInner,
+              { backgroundColor: "rgba(255,255,255,0.95)" },
+            ]}
+          >
+            <Ionicons
+              name={isInWishlist ? "heart" : "heart-outline"}
+              size={18}
+              color={isInWishlist ? accentColor : "#000"}
+            />
           </View>
         </TouchableOpacity>
         <TouchableOpacity style={styles.floatingBtn}>
-          <View style={[styles.floatingBtnInner, { backgroundColor: 'rgba(255,255,255,0.95)' }]}>
+          <View
+            style={[
+              styles.floatingBtnInner,
+              { backgroundColor: "rgba(255,255,255,0.95)" },
+            ]}
+          >
             <Ionicons name="share-outline" size={18} color="#000" />
           </View>
         </TouchableOpacity>
@@ -213,15 +408,17 @@ const ProductDetailScreen = () => {
         showsHorizontalScrollIndicator={false}
         scrollEventThrottle={16}
         onMomentumScrollEnd={(e) => {
-          setSelectedImageIndex(Math.round(e.nativeEvent.contentOffset.x / screenWidth));
+          setSelectedImageIndex(
+            Math.round(e.nativeEvent.contentOffset.x / screenWidth),
+          );
         }}
       >
-        {currentVariant?.variantImages.map((uri, index) => (
+        {currentVariant?.images?.map((uri, index) => (
           <Animated.View
             key={index}
             style={[
               styles.imageContainer,
-              { transform: [{ translateY: imageParallax }] }
+              { transform: [{ translateY: imageParallax }] },
             ]}
           >
             <Image
@@ -240,13 +437,13 @@ const ProductDetailScreen = () => {
       {/* Image Counter */}
       <View style={styles.imageCounter}>
         <Text style={styles.imageCounterText}>
-          {selectedImageIndex + 1} / {currentVariant?.variantImages.length}
+          {selectedImageIndex + 1} / {currentVariant?.images?.length || 0}
         </Text>
       </View>
 
       {/* Minimal Pagination */}
       <View style={styles.minimalPagination}>
-        {currentVariant?.variantImages.map((_, i) => (
+        {currentVariant?.images?.map((_, i) => (
           <View
             key={i}
             style={[
@@ -261,7 +458,11 @@ const ProductDetailScreen = () => {
 
   return (
     <View style={[styles.container, { backgroundColor }]}>
-      <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
+      <StatusBar
+        barStyle="light-content"
+        translucent
+        backgroundColor="transparent"
+      />
       {renderMinimalHeader()}
       {renderFloatingControls()}
 
@@ -269,7 +470,7 @@ const ProductDetailScreen = () => {
         showsVerticalScrollIndicator={false}
         onScroll={Animated.event(
           [{ nativeEvent: { contentOffset: { y: scrollY } } }],
-          { useNativeDriver: false }
+          { useNativeDriver: false },
         )}
         scrollEventThrottle={16}
       >
@@ -281,7 +482,7 @@ const ProductDetailScreen = () => {
             {
               backgroundColor,
               opacity: fadeAnim,
-            }
+            },
           ]}
         >
           {/* Editorial Header */}
@@ -291,7 +492,7 @@ const ProductDetailScreen = () => {
               {
                 transform: [{ translateY: titleTranslate }],
                 opacity: titleOpacity,
-              }
+              },
             ]}
           >
             {/* Brand Badge */}
@@ -311,16 +512,26 @@ const ProductDetailScreen = () => {
 
             {/* Status Badge */}
             <View style={styles.statusRow}>
-              <View style={[
-                styles.statusPill,
-                {
-                  backgroundColor: product.status === 'published' ? 'rgba(34, 197, 94, 0.1)' : 'rgba(163, 163, 163, 0.1)'
-                }
-              ]}>
-                <Text style={[
-                  styles.statusLabel,
-                  { color: product.status === 'published' ? '#22C55E' : '#A3A3A3' }
-                ]}>
+              <View
+                style={[
+                  styles.statusPill,
+                  {
+                    backgroundColor:
+                      product.status === "published"
+                        ? "rgba(34, 197, 94, 0.1)"
+                        : "rgba(163, 163, 163, 0.1)",
+                  },
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.statusLabel,
+                    {
+                      color:
+                        product.status === "published" ? "#22C55E" : "#A3A3A3",
+                    },
+                  ]}
+                >
                   {(product.status || "draft").toUpperCase()}
                 </Text>
               </View>
@@ -331,18 +542,36 @@ const ProductDetailScreen = () => {
           <View style={styles.priceSection}>
             <View style={styles.priceGroup}>
               {hasDiscount && (
-                <Text style={[styles.originalPrice, { color: secondaryTextColor }]}>
+                <Text
+                  style={[styles.originalPrice, { color: secondaryTextColor }]}
+                >
                   ${product.price.toFixed(2)}
                 </Text>
               )}
-              <Text style={[styles.currentPrice, { color: hasDiscount ? accentColor : textColor }]}>
-                ${(hasDiscount ? product.salePrice : product.price)?.toFixed(2)}
+              <Text
+                style={[
+                  styles.currentPrice,
+                  { color: hasDiscount ? accentColor : textColor },
+                ]}
+              >
+                $
+                {(
+                  currentVariant?.priceOverride ||
+                  (hasDiscount ? product.salePrice : product.price)
+                )?.toFixed(2)}
               </Text>
             </View>
             {hasDiscount && (
-              <View style={[styles.savingsBadge, { backgroundColor: accentColor }]}>
+              <View
+                style={[styles.savingsBadge, { backgroundColor: accentColor }]}
+              >
                 <Text style={styles.savingsText}>
-                  SAVE {Math.round(((product.price - product.salePrice!) / product.price) * 100)}%
+                  SAVE{" "}
+                  {Math.round(
+                    ((product.price - product.salePrice!) / product.price) *
+                      100,
+                  )}
+                  %
                 </Text>
               </View>
             )}
@@ -350,28 +579,39 @@ const ProductDetailScreen = () => {
 
           {/* Stock Status */}
           <View style={styles.stockRow}>
-            <View style={[
-              styles.stockIndicator,
-              { backgroundColor: product.stock > 0 ? '#22C55E' : accentColor }
-            ]} />
+            <View
+              style={[
+                styles.stockIndicator,
+                {
+                  backgroundColor:
+                    (currentVariant?.stock || 0) > 0 ? "#22C55E" : accentColor,
+                },
+              ]}
+            />
             <Text style={[styles.stockText, { color: secondaryTextColor }]}>
-              {product.stock > 0
-                ? `${product.stock} AVAILABLE`
-                : "OUT OF STOCK"
-              }
+              {(currentVariant?.stock || 0) > 0
+                ? `${currentVariant.stock} AVAILABLE`
+                : "OUT OF STOCK"}
             </Text>
           </View>
 
-          <View style={[styles.dividerLine, { backgroundColor: textColor, opacity: 0.08 }]} />
+          <View
+            style={[
+              styles.dividerLine,
+              { backgroundColor: textColor, opacity: 0.08 },
+            ]}
+          />
 
           {/* Color Variants */}
           <View style={styles.variantSection}>
             <View style={styles.variantHeader}>
-              <Text style={[styles.sectionLabel, { color: secondaryTextColor }]}>
+              <Text
+                style={[styles.sectionLabel, { color: secondaryTextColor }]}
+              >
                 COLOR
               </Text>
               <Text style={[styles.selectedVariant, { color: textColor }]}>
-                {currentVariant?.color}
+                {currentVariant?.attributes?.color}
               </Text>
             </View>
             <ScrollView
@@ -392,8 +632,14 @@ const ProductDetailScreen = () => {
                     style={[
                       styles.colorSwatch,
                       {
-                        backgroundColor: v.color,
-                        borderColor: selectedVariantIndex === i ? textColor : 'transparent',
+                        backgroundColor:
+                          v.attributes?.colorHex ||
+                          v.attributes?.color?.toLowerCase() ||
+                          "#CCC",
+                        borderColor:
+                          selectedVariantIndex === i
+                            ? textColor
+                            : "transparent",
                       },
                     ]}
                   />
@@ -405,11 +651,21 @@ const ProductDetailScreen = () => {
             </ScrollView>
           </View>
 
-          <View style={[styles.dividerLine, { backgroundColor: textColor, opacity: 0.08 }]} />
+          <View
+            style={[
+              styles.dividerLine,
+              { backgroundColor: textColor, opacity: 0.08 },
+            ]}
+          />
 
           {/* Description */}
           <View style={styles.descriptionSection}>
-            <Text style={[styles.sectionLabel, { color: secondaryTextColor, marginBottom: 16 }]}>
+            <Text
+              style={[
+                styles.sectionLabel,
+                { color: secondaryTextColor, marginBottom: 16 },
+              ]}
+            >
               DESCRIPTION
             </Text>
             <Text style={[styles.descriptionText, { color: textColor }]}>
@@ -417,34 +673,52 @@ const ProductDetailScreen = () => {
             </Text>
           </View>
 
-          <View style={[styles.dividerLine, { backgroundColor: textColor, opacity: 0.08 }]} />
+          <View
+            style={[
+              styles.dividerLine,
+              { backgroundColor: textColor, opacity: 0.08 },
+            ]}
+          />
 
           {/* Product Details */}
           <View style={styles.detailsSection}>
-            <Text style={[styles.sectionLabel, { color: secondaryTextColor, marginBottom: 20 }]}>
+            <Text
+              style={[
+                styles.sectionLabel,
+                { color: secondaryTextColor, marginBottom: 20 },
+              ]}
+            >
               DETAILS
             </Text>
             <View style={styles.detailsGrid}>
               <View style={styles.detailRow}>
-                <Text style={[styles.detailKey, { color: secondaryTextColor }]}>Type</Text>
+                <Text style={[styles.detailKey, { color: secondaryTextColor }]}>
+                  Type
+                </Text>
                 <Text style={[styles.detailValue, { color: textColor }]}>
                   {product.productType}
                 </Text>
               </View>
               <View style={styles.detailRow}>
-                <Text style={[styles.detailKey, { color: secondaryTextColor }]}>Material</Text>
+                <Text style={[styles.detailKey, { color: secondaryTextColor }]}>
+                  Material
+                </Text>
                 <Text style={[styles.detailValue, { color: textColor }]}>
                   {product.material || "Premium Cotton"}
                 </Text>
               </View>
               <View style={styles.detailRow}>
-                <Text style={[styles.detailKey, { color: secondaryTextColor }]}>Origin</Text>
+                <Text style={[styles.detailKey, { color: secondaryTextColor }]}>
+                  Origin
+                </Text>
                 <Text style={[styles.detailValue, { color: textColor }]}>
                   {product.origin || "Locally Made"}
                 </Text>
               </View>
               <View style={styles.detailRow}>
-                <Text style={[styles.detailKey, { color: secondaryTextColor }]}>Season</Text>
+                <Text style={[styles.detailKey, { color: secondaryTextColor }]}>
+                  Season
+                </Text>
                 <Text style={[styles.detailValue, { color: textColor }]}>
                   {product.season}
                 </Text>
@@ -452,28 +726,56 @@ const ProductDetailScreen = () => {
             </View>
           </View>
 
+          {/* Reviews Section */}
+          <ProductReviews productId={product.id} />
+
           {/* Admin Actions */}
           {isOwnerOrAdmin && (
             <>
-              <View style={[styles.dividerLine, { backgroundColor: textColor, opacity: 0.08 }]} />
+              <View
+                style={[
+                  styles.dividerLine,
+                  { backgroundColor: textColor, opacity: 0.08 },
+                ]}
+              />
               <View style={styles.adminSection}>
-                <Text style={[styles.sectionLabel, { color: secondaryTextColor, marginBottom: 16 }]}>
+                <Text
+                  style={[
+                    styles.sectionLabel,
+                    { color: secondaryTextColor, marginBottom: 16 },
+                  ]}
+                >
                   ADMIN CONTROLS
                 </Text>
                 <View style={styles.adminButtons}>
                   <TouchableOpacity
                     onPress={() => router.push(`/products/edit/${productId}`)}
-                    style={[styles.adminBtn, { borderColor: textColor, opacity: 0.8 }]}
+                    style={[
+                      styles.adminBtn,
+                      { borderColor: textColor, opacity: 0.8 },
+                    ]}
                   >
-                    <Ionicons name="create-outline" size={16} color={textColor} />
-                    <Text style={[styles.adminBtnText, { color: textColor }]}>EDIT</Text>
+                    <Ionicons
+                      name="create-outline"
+                      size={16}
+                      color={textColor}
+                    />
+                    <Text style={[styles.adminBtnText, { color: textColor }]}>
+                      EDIT
+                    </Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     onPress={handleDelete}
                     style={[styles.adminBtn, { borderColor: accentColor }]}
                   >
-                    <Ionicons name="trash-outline" size={16} color={accentColor} />
-                    <Text style={[styles.adminBtnText, { color: accentColor }]}>DELETE</Text>
+                    <Ionicons
+                      name="trash-outline"
+                      size={16}
+                      color={accentColor}
+                    />
+                    <Text style={[styles.adminBtnText, { color: accentColor }]}>
+                      DELETE
+                    </Text>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -487,15 +789,48 @@ const ProductDetailScreen = () => {
       {/* Bottom Action Bar */}
       <View style={[styles.bottomActionBar, { backgroundColor }]}>
         <View style={styles.bottomBarInner}>
-          <TouchableOpacity style={[styles.iconOnlyBtn, { borderColor: textColor, opacity: 0.2 }]}>
-            <Ionicons name="heart-outline" size={22} color={textColor} />
+          <TouchableOpacity
+            style={[
+              styles.iconOnlyBtn,
+              { borderColor: textColor, opacity: 0.2 },
+            ]}
+            onPress={handleToggleWishlist}
+            disabled={wishlistLoading}
+          >
+            {wishlistLoading ? (
+              <ActivityIndicator size="small" color={textColor} />
+            ) : (
+              <Ionicons
+                name={isInWishlist ? "heart" : "heart-outline"}
+                size={22}
+                color={isInWishlist ? accentColor : textColor}
+              />
+            )}
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.primaryAction, { backgroundColor: textColor }]}
+            style={[
+              styles.primaryAction,
+              {
+                backgroundColor:
+                  (currentVariant?.stock || 0) > 0
+                    ? textColor
+                    : secondaryTextColor,
+              },
+            ]}
+            onPress={handleAddToCart}
+            disabled={cartLoading || (currentVariant?.stock || 0) <= 0}
           >
-            <Text style={[styles.primaryActionText, { color: backgroundColor }]}>
-              ADD TO COLLECTION
-            </Text>
+            {cartLoading ? (
+              <ActivityIndicator size="small" color={backgroundColor} />
+            ) : (
+              <Text
+                style={[styles.primaryActionText, { color: backgroundColor }]}
+              >
+                {(currentVariant?.stock || 0) > 0
+                  ? "ADD TO COLLECTION"
+                  : "OUT OF STOCK"}
+              </Text>
+            )}
           </TouchableOpacity>
         </View>
       </View>
@@ -537,7 +872,7 @@ const styles = StyleSheet.create({
     flex: 1,
     textAlign: "center",
     marginHorizontal: 16,
-    textTransform: 'uppercase',
+    textTransform: "uppercase",
   },
   headerIconBtn: {
     width: 40,
@@ -834,7 +1169,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    paddingBottom: Platform.OS === 'ios' ? 34 : 20,
+    paddingBottom: Platform.OS === "ios" ? 34 : 20,
     paddingTop: 20,
     paddingHorizontal: 24,
     borderTopWidth: 1,

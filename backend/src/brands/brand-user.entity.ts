@@ -1,12 +1,12 @@
 import {
-    Entity,
-    PrimaryGeneratedColumn,
-    Column,
-    ManyToOne,
-    JoinColumn,
-    CreateDateColumn,
-    UpdateDateColumn,
-    Unique,
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  ManyToOne,
+  JoinColumn,
+  CreateDateColumn,
+  UpdateDateColumn,
+  Unique,
 } from 'typeorm';
 import { User } from '../users/user.entity';
 import { Brand } from './brand.entity';
@@ -15,39 +15,39 @@ import { BrandUserRole } from 'src/common/enums/brand-user-role.enum';
 @Entity('brand_users')
 @Unique(['user', 'brand'])
 export class BrandUser {
-    @PrimaryGeneratedColumn()
-    id: number;
+  @PrimaryGeneratedColumn()
+  id: number;
 
-    @ManyToOne(() => User, (user) => user.brandUsers, { onDelete: 'CASCADE' })
-    @JoinColumn({ name: 'userId' })
-    user: User;
+  @ManyToOne(() => User, (user) => user.brandUsers, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'userId' })
+  user: User;
 
-    @Column()
-    userId: number;
+  @Column()
+  userId: number;
 
-    @ManyToOne(() => Brand, (brand) => brand.brandUsers, { onDelete: 'CASCADE' })
-    @JoinColumn({ name: 'brandId' })
-    brand: Brand;
+  @ManyToOne(() => Brand, (brand) => brand.brandUsers, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'brandId' })
+  brand: Brand;
 
-    @Column()
-    brandId: number;
+  @Column()
+  brandId: number;
 
-    @Column({
-        type: 'enum',
-        enum: BrandUserRole,
-        default: BrandUserRole.STAFF,
-    })
-    role: BrandUserRole;
+  @Column({
+    type: 'enum',
+    enum: BrandUserRole,
+    default: BrandUserRole.STAFF,
+  })
+  role: BrandUserRole;
 
-    @Column({ default: true })
-    canManageProducts: boolean;
+  @Column({ default: true })
+  canManageProducts: boolean;
 
-    @Column({ default: false })
-    canEditBrandProfile: boolean;
+  @Column({ default: false })
+  canEditBrandProfile: boolean;
 
-    @CreateDateColumn()
-    createdAt: Date;
+  @CreateDateColumn()
+  createdAt: Date;
 
-    @UpdateDateColumn()
-    updatedAt: Date;
+  @UpdateDateColumn()
+  updatedAt: Date;
 }

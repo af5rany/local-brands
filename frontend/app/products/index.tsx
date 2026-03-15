@@ -72,7 +72,8 @@ const ProductsListScreen = () => {
   const { token, user } = useAuth();
   const { setSelectedBrandId } = useBrand();
   const userRole = user?.role || user?.userRole;
-  const [productsData, setProductsData] = useState<PaginatedResult<Product> | null>(null);
+  const [productsData, setProductsData] =
+    useState<PaginatedResult<Product> | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [refreshing, setRefreshing] = useState<boolean>(false);
   const [loadingMore, setLoadingMore] = useState<boolean>(false);
@@ -106,7 +107,7 @@ const ProductsListScreen = () => {
   // Set brandId from URL params on mount and sync with context
   useEffect(() => {
     if (urlBrandId) {
-      setFilters(prev => ({ ...prev, brandId: urlBrandId }));
+      setFilters((prev) => ({ ...prev, brandId: urlBrandId }));
       setSelectedBrandId(parseInt(urlBrandId));
     } else {
       setSelectedBrandId(null);
@@ -118,15 +119,15 @@ const ProductsListScreen = () => {
   const textColor = useThemeColor({}, "text");
   const buttonColor = useThemeColor(
     { light: "#007AFF", dark: "#0A84FF" },
-    "tint"
+    "tint",
   );
   const cardBackground = useThemeColor(
     { light: "#ffffff", dark: "#1c1c1e" },
-    "background"
+    "background",
   );
   const secondaryTextColor = useThemeColor(
     { light: "#666666", dark: "#999999" },
-    "text"
+    "text",
   );
   const colorScheme = useColorScheme() as "light" | "dark";
   const borderColor = colorScheme === "dark" ? "#38383A" : "#E5E5EA";
@@ -149,7 +150,7 @@ const ProductsListScreen = () => {
 
       return `${getApiUrl()}/products?${params.toString()}`;
     },
-    [searchQuery, filters, sortOptions]
+    [searchQuery, filters, sortOptions],
   );
 
   // Fetch products with pagination
@@ -177,10 +178,10 @@ const ProductsListScreen = () => {
           setProductsData((prev) =>
             prev
               ? {
-                ...data,
-                items: [...prev.items, ...data.items],
-              }
-              : data
+                  ...data,
+                  items: [...prev.items, ...data.items],
+                }
+              : data,
           );
         } else {
           setProductsData(data);
@@ -199,14 +200,15 @@ const ProductsListScreen = () => {
         setRefreshing(false);
       }
     },
-    [buildApiUrl, productsData]
+    [buildApiUrl, productsData],
   );
 
   // Fetch all brands for filter
   const fetchBrands = useCallback(async () => {
     try {
       setLoadingBrands(true);
-      const response = await fetch(`${getApiUrl()}/brands?limit=100`, {
+      const endpoint = userRole === "admin" ? "/brands/admin" : "/brands";
+      const response = await fetch(`${getApiUrl()}${endpoint}?limit=100`, {
         headers: {
           ...(token && { Authorization: `Bearer ${token}` }),
         },
@@ -225,7 +227,7 @@ const ProductsListScreen = () => {
   // Debounced search
   const debouncedFetch = useMemo(
     () => debounce((page: number = 1) => fetchProducts(page, false), 300),
-    [fetchProducts]
+    [fetchProducts],
   );
 
   // Initial fetch and search/filter changes
@@ -253,7 +255,7 @@ const ProductsListScreen = () => {
   // Handle sort changes
   const handleSortChange = (
     sortBy: SortOptions["sortBy"],
-    sortOrder: SortOptions["sortOrder"]
+    sortOrder: SortOptions["sortOrder"],
   ) => {
     setSortOptions({ sortBy, sortOrder });
     setShowSort(false);
@@ -328,9 +330,7 @@ const ProductsListScreen = () => {
             </Text>
             {item.price && (
               <View style={styles.priceContainer}>
-                <Text
-                  style={[styles.priceText, { color: buttonColor }]}
-                >
+                <Text style={[styles.priceText, { color: buttonColor }]}>
                   ${item.price}
                 </Text>
               </View>
@@ -420,10 +420,10 @@ const ProductsListScreen = () => {
           filters.brandId ||
           filters.gender ||
           filters.productType) && (
-            <View
-              style={[styles.filterBadge, { backgroundColor: buttonColor }]}
-            />
-          )}
+          <View
+            style={[styles.filterBadge, { backgroundColor: buttonColor }]}
+          />
+        )}
       </TouchableOpacity>
 
       <TouchableOpacity
@@ -445,16 +445,16 @@ const ProductsListScreen = () => {
         filters.brandId ||
         filters.gender ||
         filters.productType) && (
-          <TouchableOpacity
-            style={[styles.controlButton, { backgroundColor: "#FF3B30" }]}
-            onPress={clearFilters}
-          >
-            <Ionicons name="refresh" size={16} color="white" />
-            <Text style={[styles.controlButtonText, { color: "white" }]}>
-              Clear
-            </Text>
-          </TouchableOpacity>
-        )}
+        <TouchableOpacity
+          style={[styles.controlButton, { backgroundColor: "#FF3B30" }]}
+          onPress={clearFilters}
+        >
+          <Ionicons name="refresh" size={16} color="white" />
+          <Text style={[styles.controlButtonText, { color: "white" }]}>
+            Clear
+          </Text>
+        </TouchableOpacity>
+      )}
     </View>
   );
 
@@ -481,13 +481,21 @@ const ProductsListScreen = () => {
           </TouchableOpacity>
         </View>
 
-        <ScrollView style={styles.modalContent} keyboardShouldPersistTaps="handled">
+        <ScrollView
+          style={styles.modalContent}
+          keyboardShouldPersistTaps="handled"
+        >
           <View style={styles.filterSection}>
             <View style={styles.filterHeaderWithSearch}>
               <Text style={[styles.filterLabel, { color: textColor }]}>
                 Brand
               </Text>
-              <View style={[styles.miniSearchContainer, { borderColor, backgroundColor: backgroundColor }]}>
+              <View
+                style={[
+                  styles.miniSearchContainer,
+                  { borderColor, backgroundColor: backgroundColor },
+                ]}
+              >
                 <Ionicons name="search" size={14} color={secondaryTextColor} />
                 <TextInput
                   style={[styles.miniSearchInput, { color: textColor }]}
@@ -499,12 +507,20 @@ const ProductsListScreen = () => {
                 />
                 {brandSearchQuery.length > 0 && (
                   <TouchableOpacity onPress={() => setBrandSearchQuery("")}>
-                    <Ionicons name="close-circle" size={14} color={secondaryTextColor} />
+                    <Ionicons
+                      name="close-circle"
+                      size={14}
+                      color={secondaryTextColor}
+                    />
                   </TouchableOpacity>
                 )}
               </View>
             </View>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterChips}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={styles.filterChips}
+            >
               <TouchableOpacity
                 style={[
                   styles.filterChip,
@@ -513,10 +529,21 @@ const ProductsListScreen = () => {
                 ]}
                 onPress={() => handleFilterChange("brandId", "")}
               >
-                <Text style={[styles.filterChipText, !filters.brandId && styles.activeFilterChipText]}>All</Text>
+                <Text
+                  style={[
+                    styles.filterChipText,
+                    !filters.brandId && styles.activeFilterChipText,
+                  ]}
+                >
+                  All
+                </Text>
               </TouchableOpacity>
               {allBrands
-                .filter(brand => brand.name.toLowerCase().includes(brandSearchQuery.toLowerCase()))
+                .filter((brand) =>
+                  brand.name
+                    .toLowerCase()
+                    .includes(brandSearchQuery.toLowerCase()),
+                )
                 .map((brand) => (
                   <TouchableOpacity
                     key={brand.id}
@@ -525,9 +552,17 @@ const ProductsListScreen = () => {
                       filters.brandId === brand.id && styles.activeFilterChip,
                       { borderColor },
                     ]}
-                    onPress={() => handleFilterChange("brandId", brand.id as any)}
+                    onPress={() =>
+                      handleFilterChange("brandId", brand.id as any)
+                    }
                   >
-                    <Text style={[styles.filterChipText, filters.brandId === brand.id && styles.activeFilterChipText]}>
+                    <Text
+                      style={[
+                        styles.filterChipText,
+                        filters.brandId === brand.id &&
+                          styles.activeFilterChipText,
+                      ]}
+                    >
                       {brand.name}
                     </Text>
                   </TouchableOpacity>
@@ -539,7 +574,11 @@ const ProductsListScreen = () => {
             <Text style={[styles.filterLabel, { color: textColor }]}>
               Gender
             </Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterChips}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={styles.filterChips}
+            >
               <TouchableOpacity
                 style={[
                   styles.filterChip,
@@ -548,7 +587,14 @@ const ProductsListScreen = () => {
                 ]}
                 onPress={() => handleFilterChange("gender", "")}
               >
-                <Text style={[styles.filterChipText, !filters.gender && styles.activeFilterChipText]}>All</Text>
+                <Text
+                  style={[
+                    styles.filterChipText,
+                    !filters.gender && styles.activeFilterChipText,
+                  ]}
+                >
+                  All
+                </Text>
               </TouchableOpacity>
               {Object.values(Gender).map((gender) => (
                 <TouchableOpacity
@@ -560,7 +606,12 @@ const ProductsListScreen = () => {
                   ]}
                   onPress={() => handleFilterChange("gender", gender)}
                 >
-                  <Text style={[styles.filterChipText, filters.gender === gender && styles.activeFilterChipText]}>
+                  <Text
+                    style={[
+                      styles.filterChipText,
+                      filters.gender === gender && styles.activeFilterChipText,
+                    ]}
+                  >
                     {gender}
                   </Text>
                 </TouchableOpacity>
@@ -572,7 +623,11 @@ const ProductsListScreen = () => {
             <Text style={[styles.filterLabel, { color: textColor }]}>
               Product Type
             </Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterChips}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={styles.filterChips}
+            >
               <TouchableOpacity
                 style={[
                   styles.filterChip,
@@ -581,7 +636,14 @@ const ProductsListScreen = () => {
                 ]}
                 onPress={() => handleFilterChange("productType", "")}
               >
-                <Text style={[styles.filterChipText, !filters.productType && styles.activeFilterChipText]}>All</Text>
+                <Text
+                  style={[
+                    styles.filterChipText,
+                    !filters.productType && styles.activeFilterChipText,
+                  ]}
+                >
+                  All
+                </Text>
               </TouchableOpacity>
               {Object.values(ProductType).map((type) => (
                 <TouchableOpacity
@@ -593,7 +655,13 @@ const ProductsListScreen = () => {
                   ]}
                   onPress={() => handleFilterChange("productType", type)}
                 >
-                  <Text style={[styles.filterChipText, filters.productType === type && styles.activeFilterChipText]}>
+                  <Text
+                    style={[
+                      styles.filterChipText,
+                      filters.productType === type &&
+                        styles.activeFilterChipText,
+                    ]}
+                  >
                     {type}
                   </Text>
                 </TouchableOpacity>
@@ -756,9 +824,11 @@ const ProductsListScreen = () => {
   // Render header
   const renderHeader = () => {
     const isMyProducts = userRole === "brandOwner";
-    const selectedBrandName = filters.brandId && allBrands.length > 0
-      ? allBrands.find(b => b.id.toString() === filters.brandId!.toString())?.name
-      : null;
+    const selectedBrandName =
+      filters.brandId && allBrands.length > 0
+        ? allBrands.find((b) => b.id.toString() === filters.brandId!.toString())
+            ?.name
+        : null;
 
     return (
       <View style={styles.headerContainer}>
@@ -776,8 +846,7 @@ const ProductsListScreen = () => {
         <Text style={[styles.subtitle, { color: secondaryTextColor }]}>
           {isMyProducts
             ? "Manage your brand's products"
-            : "Discover and manage all products"
-          }
+            : "Discover and manage all products"}
         </Text>
       </View>
     );
@@ -797,7 +866,7 @@ const ProductsListScreen = () => {
             [
               { text: "Go to Brands", onPress: () => router.push("/brands") },
               { text: "Cancel", style: "cancel" },
-            ]
+            ],
           );
         }}
         activeOpacity={0.8}
@@ -820,16 +889,31 @@ const ProductsListScreen = () => {
     <View style={styles.emptyState}>
       <Ionicons name="cube-outline" size={64} color={secondaryTextColor} />
       <Text style={[styles.emptyStateTitle, { color: textColor }]}>
-        {searchQuery || filters.location || filters.ownerId || filters.brandId || filters.gender || filters.productType
+        {searchQuery ||
+        filters.location ||
+        filters.ownerId ||
+        filters.brandId ||
+        filters.gender ||
+        filters.productType
           ? "No products found"
           : "No Products Yet"}
       </Text>
       <Text style={[styles.emptyStateText, { color: secondaryTextColor }]}>
-        {searchQuery || filters.location || filters.ownerId || filters.brandId || filters.gender || filters.productType
+        {searchQuery ||
+        filters.location ||
+        filters.ownerId ||
+        filters.brandId ||
+        filters.gender ||
+        filters.productType
           ? "Try adjusting your search or filters"
           : "Add your first product to get started"}
       </Text>
-      {(searchQuery || filters.location || filters.ownerId || filters.brandId || filters.gender || filters.productType) && (
+      {(searchQuery ||
+        filters.location ||
+        filters.ownerId ||
+        filters.brandId ||
+        filters.gender ||
+        filters.productType) && (
         <TouchableOpacity
           style={[styles.clearFiltersButton, { backgroundColor: buttonColor }]}
           onPress={clearFilters}

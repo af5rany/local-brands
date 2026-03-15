@@ -13,6 +13,7 @@ import { UsersService } from 'src/users/users.service';
 import { UserRole, UserStatus } from 'src/common/enums/user.enum';
 import { v4 as uuidv4 } from 'uuid';
 import { MailService } from 'src/common/mail/mail.service';
+import { JwtPayload } from './jwt-payload.interface';
 
 @Injectable()
 export class AuthService {
@@ -20,7 +21,7 @@ export class AuthService {
     private usersService: UsersService,
     private jwtService: JwtService,
     private mailService: MailService,
-  ) { }
+  ) {}
 
   async validateUser(email: string, pass: string): Promise<User | null> {
     const user = await this.usersService.findByEmail(email);
@@ -32,7 +33,11 @@ export class AuthService {
   }
 
   async login(user: User): Promise<{ token: string }> {
-    const payload = { userId: user.id, role: user.role };
+    const payload: JwtPayload = {
+      id: user.id,
+      role: user.role,
+      isGuest: user.isGuest,
+    };
     const token = await this.jwtService.signAsync(payload);
     return { token };
   }
@@ -53,7 +58,11 @@ export class AuthService {
     guestUser.password = '';
 
     // Generate token with shorter expiration for guests
-    const payload = { userId: guestUser.id, role: guestUser.role };
+    const payload: JwtPayload = {
+      id: guestUser.id,
+      role: guestUser.role,
+      isGuest: true,
+    };
     const token = await this.jwtService.signAsync(payload, {
       expiresIn: '30m',
     }); // Shorter session for guests
@@ -65,9 +74,7 @@ export class AuthService {
     // Restrict public registration roles to CUSTOMER ONLY
     // NOTE: In production, this should be guarded or handled via a different internal endpoint.
     // For seeding purposes, we allow it if the email is our seed admin email.
-    if (
-      dto.role !== UserRole.CUSTOMER && dto.email !== 'admin@gmail.com'
-    ) {
+    if (dto.role !== UserRole.CUSTOMER && dto.email !== 'admin@gmail.com') {
       if (dto.role === UserRole.ADMIN) {
         throw new ForbiddenException('Admin registration is not allowed');
       }
@@ -97,12 +104,18 @@ export class AuthService {
         throw new ConflictException('Email or username is already registered');
       }
       // something else went wrong
-      throw new InternalServerErrorException(err.message || 'Internal server error during registration');
+      throw new InternalServerErrorException(
+        err.message || 'Internal server error during registration',
+      );
     }
     newUser.password = '';
 
     // generate a token right away
-    const payload = { userId: newUser.id, role: newUser.role };
+    const payload: JwtPayload = {
+      id: newUser.id,
+      role: newUser.role,
+      isGuest: false,
+    };
     const token = await this.jwtService.signAsync(payload);
 
     return { user: newUser, token };
@@ -133,7 +146,11 @@ export class AuthService {
     updatedUser.password = '';
 
     // Generate new token
-    const payload = { userId: updatedUser.id, role: updatedUser.role };
+    const payload: JwtPayload = {
+      id: updatedUser.id,
+      role: updatedUser.role,
+      isGuest: false,
+    };
     const token = await this.jwtService.signAsync(payload);
 
     return { user: updatedUser, token };
@@ -143,7 +160,10 @@ export class AuthService {
     const user = await this.usersService.findByEmail(email);
     if (!user) {
       // Return success even if user not found for security reasons
-      return { message: 'If an account with that email exists, a reset link has been sent.' };
+      return {
+        message:
+          'If an account with that email exists, a reset link has been sent.',
+      };
     }
 
     const token = uuidv4();
@@ -157,10 +177,16 @@ export class AuthService {
 
     await this.mailService.sendPasswordResetEmail(user.email, token);
 
-    return { message: 'If an account with that email exists, a reset link has been sent.' };
+    return {
+      message:
+        'If an account with that email exists, a reset link has been sent.',
+    };
   }
 
-  async resetPassword(token: string, newPass: string): Promise<{ message: string }> {
+  async resetPassword(
+    token: string,
+    newPass: string,
+  ): Promise<{ message: string }> {
     const user = await this.usersService.findByResetToken(token);
 
     if (!user || user.resetPasswordExpires < new Date()) {

@@ -12,6 +12,8 @@ import {
   Check,
   DeleteDateColumn,
 } from 'typeorm';
+import { ProductReview } from '../reviews/review.entity';
+import { ProductVariant } from './product-variant.entity';
 import { Brand } from '../brands/brand.entity';
 import {
   ProductType,
@@ -155,6 +157,9 @@ export class Product {
   @Column({ default: 0 })
   reviewCount: number;
 
+  @Column('decimal', { precision: 10, scale: 2, default: 0 })
+  ratingSum: number;
+
   @Column({ default: 0 })
   viewCount: number;
 
@@ -179,7 +184,15 @@ export class Product {
   @OneToMany(() => OrderItem, (orderItem) => orderItem.product)
   orderItems: OrderItem[];
 
-  // Embedded variants as JSON column
+  @OneToMany(() => ProductVariant, (variant) => variant.product, {
+    cascade: true,
+  })
+  productVariants: ProductVariant[];
+
+  @OneToMany(() => ProductReview, (review) => review.product)
+  reviews: ProductReview[];
+
+  // Deprecated: Moving to ProductVariant table
   @Column({
     type: 'json',
     nullable: true,
@@ -281,14 +294,20 @@ export class Product {
   // ✅ Check if product is in stock (sum of all variant stocks)
   isInStock(): boolean {
     if (!this.variants || this.variants.length === 0) return false;
-    const totalStock = this.variants.reduce((sum, v) => sum + (v.stock || 0), 0);
+    const totalStock = this.variants.reduce(
+      (sum, v) => sum + (v.stock || 0),
+      0,
+    );
     return totalStock > 0;
   }
 
   // ✅ Check if product is low stock
   isLowStock(): boolean {
     if (!this.variants || this.variants.length === 0) return false;
-    const totalStock = this.variants.reduce((sum, v) => sum + (v.stock || 0), 0);
+    const totalStock = this.variants.reduce(
+      (sum, v) => sum + (v.stock || 0),
+      0,
+    );
     return totalStock > 0 && totalStock <= this.lowStockThreshold;
   }
 

@@ -1,5 +1,11 @@
 import React from "react";
-import { View, Text, StyleSheet, Pressable, useWindowDimensions } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  Pressable,
+  useWindowDimensions,
+} from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
 type StatsCardProps = {
@@ -38,18 +44,20 @@ const StatsCard: React.FC<StatsCardProps> = ({
     >
       <View style={styles.statsContent}>
         <View style={styles.textContainer}>
-          <Text style={[
-            styles.statsValue,
-            isSmall && styles.smallStatsValue,
-            isTablet && styles.tabletStatsValue
-          ]}>
+          <Text
+            style={[
+              styles.statsValue,
+              isSmall && styles.smallStatsValue,
+              isTablet && styles.tabletStatsValue,
+            ]}
+          >
             {value}
           </Text>
           <Text
             style={[
               styles.statsTitle,
               isSmall && styles.smallStatsTitle,
-              isTablet && styles.tabletStatsTitle
+              isTablet && styles.tabletStatsTitle,
             ]}
             numberOfLines={1}
           >
@@ -64,7 +72,11 @@ const StatsCard: React.FC<StatsCardProps> = ({
             isTablet && styles.tabletStatsIcon,
           ]}
         >
-          <Ionicons name={icon} size={isTablet ? 32 : (isSmall ? 20 : 24)} color={color} />
+          <Ionicons
+            name={icon}
+            size={isTablet ? 32 : isSmall ? 20 : 24}
+            color={color}
+          />
         </View>
       </View>
     </Pressable>

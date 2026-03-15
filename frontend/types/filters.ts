@@ -17,6 +17,12 @@ export interface Filters {
 }
 
 export interface SortOptions {
-  sortBy: "name" | "createdAt" | "updatedAt" | "location" | "price" | "brandName";
+  sortBy:
+    | "name"
+    | "createdAt"
+    | "updatedAt"
+    | "location"
+    | "price"
+    | "brandName";
   sortOrder: "ASC" | "DESC";
 }

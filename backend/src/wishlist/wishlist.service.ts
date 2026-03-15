@@ -51,8 +51,8 @@ export class WishlistService {
     }
 
     const wishlistItem = this.wishlistRepository.create({
-      user,
-      product,
+      userId,
+      productId,
       notes,
     });
 
@@ -158,5 +158,32 @@ export class WishlistService {
     return this.wishlistRepository.count({
       where: { user: { id: userId } },
     });
+  }
+
+  async toggle(userId: number, productId: number): Promise<{ added: boolean }> {
+    console.log('reached hereee', userId, productId);
+    const existing = await this.wishlistRepository.findOne({
+      where: { user: { id: userId }, product: { id: productId } },
+    });
+
+    if (existing) {
+      await this.wishlistRepository.remove(existing);
+      return { added: false };
+    }
+
+    // Ensure product exists
+    const product = await this.productRepository.findOne({
+      where: { id: productId },
+    });
+    if (!product) {
+      throw new NotFoundException('Product not found');
+    }
+
+    const item = this.wishlistRepository.create({
+      userId,
+      productId,
+    });
+    await this.wishlistRepository.save(item);
+    return { added: true };
   }
 }

@@ -1,5 +1,13 @@
 import React from "react";
-import { View, Text, StyleSheet, Pressable, useWindowDimensions, TextInput, Image } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  Pressable,
+  useWindowDimensions,
+  TextInput,
+  Image,
+} from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useBrand } from "@/context/BrandContext";
@@ -37,7 +45,10 @@ const Header: React.FC<HeaderProps> = ({
     <View style={styles.headerWrapper}>
       <View style={[styles.header, isTablet && styles.headerTablet]}>
         {/* Brand Logo */}
-        <Pressable onPress={() => router.push("/(tabs)")} style={styles.logoContainer}>
+        <Pressable
+          onPress={() => router.push("/(tabs)")}
+          style={styles.logoContainer}
+        >
           <Image
             source={LOGO_IMAGE}
             style={styles.logoImage}
@@ -47,7 +58,12 @@ const Header: React.FC<HeaderProps> = ({
 
         {/* Search Bar */}
         <View style={styles.searchContainer}>
-          <Ionicons name="search-outline" size={18} color="#64748b" style={styles.searchIcon} />
+          <Ionicons
+            name="search-outline"
+            size={18}
+            color="#64748b"
+            style={styles.searchIcon}
+          />
           <TextInput
             placeholder="Search products or brands..."
             placeholderTextColor="#94a3b8"
@@ -78,23 +94,30 @@ const Header: React.FC<HeaderProps> = ({
                 <Pressable
                   style={[
                     styles.dashboardBadge,
-                    isManagementMode && styles.dashboardBadgeActive
+                    isManagementMode && styles.dashboardBadgeActive,
                   ]}
                   onPress={onDashboardPress}
                 >
                   <Ionicons
-                    name={isManagementMode ? "speedometer" : "speedometer-outline"}
+                    name={
+                      isManagementMode ? "speedometer" : "speedometer-outline"
+                    }
                     size={20}
                     color={isManagementMode ? "#346beb" : "#64748b"}
                   />
                 </Pressable>
               )}
-              <Pressable style={styles.iconButton} onPress={() => router.push("/profile")}>
-                <Ionicons
-                  name="person-circle-outline"
-                  size={28}
-                  color="#333"
-                />
+              <Pressable
+                style={styles.iconButton}
+                onPress={() => router.push("/cart" as any)}
+              >
+                <Ionicons name="bag-handle-outline" size={24} color="#333" />
+              </Pressable>
+              <Pressable
+                style={styles.iconButton}
+                onPress={() => router.push("/profile" as any)}
+              >
+                <Ionicons name="person-circle-outline" size={28} color="#333" />
               </Pressable>
             </View>
           )}
@@ -112,20 +135,34 @@ const Header: React.FC<HeaderProps> = ({
             >
               <View style={styles.suggestionLeft}>
                 <Ionicons
-                  name={item.type === "Product" ? "cube-outline" : "business-outline"}
+                  name={
+                    item.type === "Product"
+                      ? "cube-outline"
+                      : "business-outline"
+                  }
                   size={16}
                   color="#94a3b8"
                 />
                 <Text style={styles.suggestionText}>{item.text}</Text>
               </View>
-              <View style={[
-                styles.typeBadge,
-                item.type === "Brand" ? styles.brandBadge : styles.productBadge
-              ]}>
-                <Text style={[
-                  styles.typeText,
-                  item.type === "Brand" ? styles.brandText : styles.productText
-                ]}>{item.type}</Text>
+              <View
+                style={[
+                  styles.typeBadge,
+                  item.type === "Brand"
+                    ? styles.brandBadge
+                    : styles.productBadge,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.typeText,
+                    item.type === "Brand"
+                      ? styles.brandText
+                      : styles.productText,
+                  ]}
+                >
+                  {item.type}
+                </Text>
               </View>
             </Pressable>
           ))}

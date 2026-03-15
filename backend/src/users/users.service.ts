@@ -8,7 +8,7 @@ export class UsersService {
   constructor(
     @InjectRepository(User)
     private usersRepository: Repository<User>,
-  ) { }
+  ) {}
 
   findAll(): Promise<User[]> {
     return this.usersRepository.find({
@@ -77,7 +77,9 @@ export class UsersService {
   }
 
   findByResetToken(token: string): Promise<User | null> {
-    return this.usersRepository.findOne({ where: { resetPasswordToken: token } });
+    return this.usersRepository.findOne({
+      where: { resetPasswordToken: token },
+    });
   }
 
   async create(userData: Partial<User>): Promise<User> {
@@ -86,6 +88,12 @@ export class UsersService {
   }
 
   async update(id: number, updateData: Partial<User>): Promise<User> {
+    if (
+      !updateData ||
+      !Object.values(updateData).some((v) => v !== undefined)
+    ) {
+      return this.findOne(id);
+    }
     const result = await this.usersRepository.update(id, updateData);
     if (result.affected === 0) {
       throw new NotFoundException(`User with id ${id} not found`);

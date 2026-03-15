@@ -32,7 +32,7 @@ import { BatchCreateBrandDto } from './dto/batch-create-brand.dto';
 @Controller('brands')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class BrandsController {
-  constructor(private brandsService: BrandsService) { }
+  constructor(private brandsService: BrandsService) {}
 
   @Public()
   @Get()

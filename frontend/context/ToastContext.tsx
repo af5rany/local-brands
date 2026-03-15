@@ -1,47 +1,56 @@
-import React, { createContext, useContext, useState, useCallback, ReactNode } from "react";
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useCallback,
+  ReactNode,
+} from "react";
 import Toast, { ToastType } from "../components/Toast";
 
 interface ToastContextType {
-    showToast: (message: string, type?: ToastType, duration?: number) => void;
-    hideToast: () => void;
+  showToast: (message: string, type?: ToastType, duration?: number) => void;
+  hideToast: () => void;
 }
 
 const ToastContext = createContext<ToastContextType | undefined>(undefined);
 
 export const ToastProvider = ({ children }: { children: ReactNode }) => {
-    const [toast, setToast] = useState<{
-        message: string;
-        type: ToastType;
-        duration: number;
-    } | null>(null);
+  const [toast, setToast] = useState<{
+    message: string;
+    type: ToastType;
+    duration: number;
+  } | null>(null);
 
-    const showToast = useCallback((message: string, type: ToastType = "info", duration: number = 3000) => {
-        setToast({ message, type, duration });
-    }, []);
+  const showToast = useCallback(
+    (message: string, type: ToastType = "info", duration: number = 3000) => {
+      setToast({ message, type, duration });
+    },
+    [],
+  );
 
-    const hideToast = useCallback(() => {
-        setToast(null);
-    }, []);
+  const hideToast = useCallback(() => {
+    setToast(null);
+  }, []);
 
-    return (
-        <ToastContext.Provider value={{ showToast, hideToast }}>
-            {children}
-            {toast && (
-                <Toast
-                    message={toast.message}
-                    type={toast.type}
-                    duration={toast.duration}
-                    onHide={hideToast}
-                />
-            )}
-        </ToastContext.Provider>
-    );
+  return (
+    <ToastContext.Provider value={{ showToast, hideToast }}>
+      {children}
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          duration={toast.duration}
+          onHide={hideToast}
+        />
+      )}
+    </ToastContext.Provider>
+  );
 };
 
 export const useToast = () => {
-    const context = useContext(ToastContext);
-    if (!context) {
-        throw new Error("useToast must be used within a ToastProvider");
-    }
-    return context;
+  const context = useContext(ToastContext);
+  if (!context) {
+    throw new Error("useToast must be used within a ToastProvider");
+  }
+  return context;
 };

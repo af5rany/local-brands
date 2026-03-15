@@ -1,0 +1,169 @@
+
+> local-brands-backend@0.0.1 test:e2e
+> jest --config ./test/jest-e2e.json reviews.e2e-spec.ts
+
+(node:30060) DeprecationWarning: Calling client.query() when the client is already executing a query is deprecated and will be removed in pg@9.0. Use asycn/await or an external async flow control mechanism instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+  console.log
+    User role: admin
+
+      at RolesGuard.canActivate (../src/auth/roles.guard.ts:86:13)
+
+  console.log
+    Required roles: [ 'admin' ]
+
+      at RolesGuard.canActivate (../src/auth/roles.guard.ts:87:13)
+
+  console.log
+    Product creation took: 17 ms
+
+      at ProductsController.create (../src/products/products.controller.ts:65:13)
+
+  console.log
+    User role: admin
+
+      at RolesGuard.canActivate (../src/auth/roles.guard.ts:86:13)
+
+  console.log
+    Required roles: [ 'admin' ]
+
+      at RolesGuard.canActivate (../src/auth/roles.guard.ts:87:13)
+
+  console.log
+    Product creation took: 14 ms
+
+      at ProductsController.create (../src/products/products.controller.ts:65:13)
+
+  console.log
+    User role: admin
+
+      at RolesGuard.canActivate (../src/auth/roles.guard.ts:86:13)
+
+  console.log
+    Required roles: [ 'admin' ]
+
+      at RolesGuard.canActivate (../src/auth/roles.guard.ts:87:13)
+
+  console.log
+    Product creation took: 13 ms
+
+      at ProductsController.create (../src/products/products.controller.ts:65:13)
+
+  console.log
+    User role: admin
+
+      at RolesGuard.canActivate (../src/auth/roles.guard.ts:86:13)
+
+  console.log
+    Required roles: [ 'admin' ]
+
+      at RolesGuard.canActivate (../src/auth/roles.guard.ts:87:13)
+
+  console.log
+    User role: admin
+
+      at RolesGuard.canActivate (../src/auth/roles.guard.ts:86:13)
+
+  console.log
+    Required roles: [ 'admin' ]
+
+      at RolesGuard.canActivate (../src/auth/roles.guard.ts:87:13)
+
+  console.log
+    Product creation took: 11 ms
+
+      at ProductsController.create (../src/products/products.controller.ts:65:13)
+
+  console.log
+    User role: admin
+
+      at RolesGuard.canActivate (../src/auth/roles.guard.ts:86:13)
+
+  console.log
+    Required roles: [ 'admin' ]
+
+      at RolesGuard.canActivate (../src/auth/roles.guard.ts:87:13)
+
+  console.log
+    User role: admin
+
+      at RolesGuard.canActivate (../src/auth/roles.guard.ts:86:13)
+
+  console.log
+    Required roles: [ 'admin' ]
+
+      at RolesGuard.canActivate (../src/auth/roles.guard.ts:87:13)
+
+  console.log
+    Product creation took: 11 ms
+
+      at ProductsController.create (../src/products/products.controller.ts:65:13)
+
+  console.log
+    User role: customer
+
+      at RolesGuard.canActivate (../src/auth/roles.guard.ts:86:13)
+
+  console.log
+    Required roles: [ 'admin' ]
+
+      at RolesGuard.canActivate (../src/auth/roles.guard.ts:87:13)
+
+  console.log
+    User role: admin
+
+      at RolesGuard.canActivate (../src/auth/roles.guard.ts:86:13)
+
+  console.log
+    Required roles: [ 'admin' ]
+
+      at RolesGuard.canActivate (../src/auth/roles.guard.ts:87:13)
+
+  console.log
+    Product creation took: 10 ms
+
+      at ProductsController.create (../src/products/products.controller.ts:65:13)
+
+  console.log
+    User role: admin
+
+      at RolesGuard.canActivate (../src/auth/roles.guard.ts:86:13)
+
+  console.log
+    Required roles: [ 'admin' ]
+
+      at RolesGuard.canActivate (../src/auth/roles.guard.ts:87:13)
+
+  console.log
+    Product creation took: 12 ms
+
+      at ProductsController.create (../src/products/products.controller.ts:65:13)
+
+  console.log
+    User role: admin
+
+      at RolesGuard.canActivate (../src/auth/roles.guard.ts:86:13)
+
+  console.log
+    Required roles: [ 'admin' ]
+
+      at RolesGuard.canActivate (../src/auth/roles.guard.ts:87:13)
+
+PASS test/reviews.e2e-spec.ts (9.316 s)
+  ReviewsModule (e2e)
+    /reviews (POST) - Create a review
+      ✓ should create a review successfully (919 ms)
+      ✓ should fail if unauthenticated (770 ms)
+    /reviews/:id/approve and /reject (PATCH) - Admin Approval
+      ✓ should allow admin to approve a review (785 ms)
+      ✓ should allow admin to reject a review (776 ms)
+      ✓ should forbid customer from approving a review (760 ms)
+    /reviews/product/:productId (GET) - Fetch approved reviews
+      ✓ should not return unapproved reviews (800 ms)
+      ✓ should return approved reviews for a product (783 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       7 passed, 7 total
+Snapshots:   0 total
+Time:        9.584 s, estimated 10 s
+Ran all test suites matching /reviews.e2e-spec.ts/i.

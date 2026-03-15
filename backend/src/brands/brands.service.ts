@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Brand } from './brand.entity';
@@ -15,7 +19,7 @@ export class BrandsService {
     private brandsRepository: Repository<Brand>,
     @InjectRepository(BrandUser)
     private brandUsersRepository: Repository<BrandUser>,
-  ) { }
+  ) {}
 
   async findAll(
     dto: GetBrandsDto,
@@ -57,7 +61,9 @@ export class BrandsService {
       }
     } else if (!isAdmin) {
       // Default to ACTIVE for public browsing
-      const condition = search ? queryBuilder.andWhere.bind(queryBuilder) : queryBuilder.where.bind(queryBuilder);
+      const condition = search
+        ? queryBuilder.andWhere.bind(queryBuilder)
+        : queryBuilder.where.bind(queryBuilder);
       condition('brand.status = :defaultStatus', {
         defaultStatus: BrandStatus.ACTIVE,
       });
@@ -200,7 +206,10 @@ export class BrandsService {
     return count > 0;
   }
 
-  async getMembership(brandId: number, userId: number): Promise<BrandUser | null> {
+  async getMembership(
+    brandId: number,
+    userId: number,
+  ): Promise<BrandUser | null> {
     return this.brandUsersRepository.findOne({
       where: { brandId, userId },
     });
@@ -253,6 +262,12 @@ export class BrandsService {
   }
 
   async update(id: number, updateData: Partial<Brand>): Promise<Brand> {
+    if (
+      !updateData ||
+      !Object.values(updateData).some((v) => v !== undefined)
+    ) {
+      return this.findOne(id);
+    }
     const result = await this.brandsRepository.update(id, updateData);
     if (result.affected === 0) {
       throw new NotFoundException(`Brand with id ${id} not found`);

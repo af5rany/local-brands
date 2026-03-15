@@ -1,10 +1,16 @@
-// src/cart/cart.service.ts
-import { Injectable } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Cart } from './cart.entity';
 import { CartItem } from './cart-item.entity';
 import { Product } from '../products/product.entity';
+import { ProductVariant } from '../products/product-variant.entity';
+import { ProductStatus } from 'src/common/enums/product.enum';
+import { UpdateCartItemDto } from './dto/add-to-cart.dto';
 
 export interface PaginationResult<T> {
   items: T[];
@@ -33,7 +39,9 @@ export class CartService {
     private cartItemRepository: Repository<CartItem>,
     @InjectRepository(Product)
     private productRepository: Repository<Product>,
-  ) { }
+    @InjectRepository(ProductVariant)
+    private variantRepository: Repository<ProductVariant>,
+  ) {}
 
   // Get cart summary (lightweight, no pagination needed)
   async getCartSummary(userId: number): Promise<Cart> {
@@ -42,7 +50,12 @@ export class CartService {
       select: ['id', 'totalAmount', 'totalItems', 'updatedAt'],
     });
     if (!cart) {
-      throw new Error('Cart not found');
+      // Create cart if not found on summary request (optional, but safer)
+      return this.cartRepository.save({
+        user: { id: userId },
+        totalAmount: 0,
+        totalItems: 0,
+      });
     }
     return cart;
   }
@@ -61,27 +74,24 @@ export class CartService {
     } = query;
 
     // First get the cart
-    const cart = await this.cartRepository.findOne({
+    let cart = await this.cartRepository.findOne({
       where: { user: { id: userId } },
       select: ['id'],
     });
 
     if (!cart) {
-      return {
-        items: [],
-        total: 0,
-        page,
-        limit,
-        totalPages: 0,
-        hasNext: false,
-        hasPrevious: false,
-      };
+      cart = await this.cartRepository.save({
+        user: { id: userId },
+        totalAmount: 0,
+        totalItems: 0,
+      });
     }
 
     // Build query with search and sorting
     const queryBuilder = this.cartItemRepository
       .createQueryBuilder('cartItem')
       .leftJoinAndSelect('cartItem.product', 'product')
+      .leftJoinAndSelect('cartItem.variant', 'variant')
       .leftJoinAndSelect('product.brand', 'brand')
       .where('cartItem.cartId = :cartId', { cartId: cart.id });
 
@@ -142,6 +152,7 @@ export class CartService {
     const queryBuilder = this.cartItemRepository
       .createQueryBuilder('cartItem')
       .leftJoinAndSelect('cartItem.product', 'product')
+      .leftJoinAndSelect('cartItem.variant', 'variant')
       .leftJoinAndSelect('product.brand', 'brand')
       .where('cartItem.cartId = :cartId', { cartId: cart.id })
       .orderBy('cartItem.createdAt', 'DESC')
@@ -171,8 +182,7 @@ export class CartService {
     userId: number,
     productId: number,
     quantity: number,
-    selectedColor?: string,
-    selectedSize?: string,
+    variantId?: number,
   ): Promise<CartItem> {
     // Get or create cart
     let cart = await this.cartRepository.findOne({
@@ -187,45 +197,131 @@ export class CartService {
       });
     }
 
-    // Get product
+    // Get product with variants to validate
     const product = await this.productRepository.findOne({
       where: { id: productId },
-      select: ['id', 'name', 'price'],
+      relations: ['productVariants'],
     });
 
     if (!product) {
-      throw new Error('Product not found');
+      throw new NotFoundException('Product not found');
     }
+
+    if (product.status !== ProductStatus.PUBLISHED) {
+      throw new BadRequestException('Product is not available for purchase');
+    }
+
+    // Validate variant if product has them or if variantId provided
+    let variant: ProductVariant | null = null;
+    if (variantId) {
+      variant = await this.variantRepository.findOne({
+        where: { id: variantId, productId: product.id },
+      });
+      if (!variant) {
+        throw new NotFoundException('Product variant not found');
+      }
+      if (!variant.isAvailable) {
+        throw new BadRequestException('Variant is not available');
+      }
+    } else if (product.productVariants?.length > 0) {
+      throw new BadRequestException('Please select a product variant');
+    }
+
+    // Determine unit price (Server-owned pricing)
+    const unitPrice = variant?.priceOverride
+      ? Number(variant.priceOverride)
+      : product.salePrice
+        ? Number(product.salePrice)
+        : Number(product.price);
 
     // Check if item already exists with same variants
     let cartItem = await this.cartItemRepository.findOne({
       where: {
-        cart: { id: cart.id },
-        product: { id: productId },
-        selectedColor,
-        selectedSize,
+        cartId: cart.id,
+        productId: product.id,
+        variantId: variantId || undefined,
       },
     });
 
+    const newQuantity = cartItem ? cartItem.quantity + quantity : quantity;
+
+    // Validate stock
+    const availableStock = variant
+      ? variant.stock
+      : product.isInStock()
+        ? 999
+        : 0; // Fallback if no variants
+    // Note: product.isInStock() logic in entity might need update to support table variants
+
+    if (variant && variant.stock < newQuantity) {
+      throw new BadRequestException(
+        `Insufficient stock. Available: ${variant.stock}`,
+      );
+    }
+
     if (cartItem) {
-      // Update existing item
-      cartItem.quantity += quantity;
-      cartItem.totalPrice = cartItem.quantity * product.price;
+      // Update existing item (upsert logic)
+      cartItem.quantity = newQuantity;
+      cartItem.unitPrice = unitPrice;
+      cartItem.totalPrice = newQuantity * unitPrice;
     } else {
       // Create new item
       cartItem = this.cartItemRepository.create({
-        cart: { id: cart.id },
-        product: { id: productId },
-        quantity,
-        selectedColor,
-        selectedSize,
-        unitPrice: product.price,
-        totalPrice: quantity * product.price,
+        cartId: cart.id,
+        productId: product.id,
+        variantId: variantId,
+        quantity: newQuantity,
+        unitPrice: unitPrice,
+        totalPrice: newQuantity * unitPrice,
+        // Snapshot attributes if available for display
+        selectedColor: variant?.attributes?.color,
+        selectedSize: variant?.attributes?.size,
       });
     }
 
     await this.cartItemRepository.save(cartItem);
     await this.updateCartTotals(cart.id);
+
+    return cartItem;
+  }
+
+  async updateCartItem(
+    userId: number,
+    cartItemId: number,
+    updateDto: UpdateCartItemDto,
+  ): Promise<CartItem | null> {
+    const cartItem = await this.cartItemRepository.findOne({
+      where: { id: cartItemId, cart: { user: { id: userId } } },
+      relations: ['cart', 'product', 'variant'],
+    });
+
+    if (!cartItem) {
+      throw new NotFoundException('Cart item not found');
+    }
+
+    if (updateDto.quantity !== undefined) {
+      if (updateDto.quantity <= 0) {
+        await this.removeFromCart(userId, cartItemId);
+        return null; // or throw/return something else, but here we just remove
+      }
+
+      // Validate stock
+      const variant = cartItem.variant;
+      const product = cartItem.product;
+
+      if (variant && variant.stock < updateDto.quantity) {
+        throw new BadRequestException(
+          `Insufficient stock. Available: ${variant.stock}`,
+        );
+      }
+
+      cartItem.quantity = updateDto.quantity;
+      cartItem.totalPrice =
+        Number(cartItem.quantity) * Number(cartItem.unitPrice);
+    }
+
+    await this.cartItemRepository.save(cartItem);
+    await this.updateCartTotals(cartItem.cartId);
 
     return cartItem;
   }

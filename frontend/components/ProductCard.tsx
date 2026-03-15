@@ -29,27 +29,27 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onEdit }) => {
   const textColor = useThemeColor({}, "text");
   const cardBackground = useThemeColor(
     { light: "#ffffff", dark: "#1c1c1e" },
-    "background"
+    "background",
   );
   const borderColor = useThemeColor(
     { light: "#f0f0f0", dark: "#2c2c2e" },
-    "text"
+    "text",
   );
   const secondaryTextColor = useThemeColor(
     { light: "#666666", dark: "#999999" },
-    "text"
+    "text",
   );
   const accentColor = useThemeColor(
     { light: "#000000", dark: "#ffffff" },
-    "text"
+    "text",
   );
   const imageBackgroundColor = useThemeColor(
     { light: "#f8f8f8", dark: "#2c2c2e" },
-    "background"
+    "background",
   );
   const buttonColor = useThemeColor(
     { light: "#007AFF", dark: "#0A84FF" },
-    "tint"
+    "tint",
   );
 
   const handlePress = () => {
@@ -71,7 +71,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onEdit }) => {
   const getDiscountPercentage = () => {
     if (product.salePrice && product.salePrice < product.price) {
       return Math.round(
-        ((product.price - product.salePrice) / product.price) * 100
+        ((product.price - product.salePrice) / product.price) * 100,
       );
     }
     return 0;
@@ -392,7 +392,10 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onEdit }) => {
         {/* Edit Button for Management */}
         {onEdit && (
           <TouchableOpacity
-            style={[styles.favoriteButton, { top: 12, right: 12, bottom: undefined }]}
+            style={[
+              styles.favoriteButton,
+              { top: 12, right: 12, bottom: undefined },
+            ]}
             onPress={(e) => {
               e.stopPropagation();
               onEdit(product.id);

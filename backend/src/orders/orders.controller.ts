@@ -12,6 +12,7 @@ import {
   UseGuards,
   Request,
 } from '@nestjs/common';
+import { IsEnum } from 'class-validator';
 import { OrdersService } from './orders.service';
 import { Order } from './order.entity';
 import { OrderStatus } from 'src/common/enums/order.enum';
@@ -25,6 +26,7 @@ import { OrderQueryDto } from './dto/get-orders.dto';
 
 // DTOs for request validation
 export class UpdateOrderStatusDto {
+  @IsEnum(OrderStatus)
   status: OrderStatus;
 }
 

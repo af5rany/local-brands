@@ -30,16 +30,16 @@ function RootLayoutNav() {
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="auth/login" options={{ headerShown: false }} />
       <Stack.Screen name="auth/register" options={{ headerShown: false }} />
-      <Stack.Screen name="auth/forgot-password" options={{ headerShown: false }} />
-      <Stack.Screen name="auth/reset-password" options={{ headerShown: false }} />
       <Stack.Screen
-        name="brands/index"
-        options={{ title: "Local Brands" }}
+        name="auth/forgot-password"
+        options={{ headerShown: false }}
       />
       <Stack.Screen
-        name="brands/create"
-        options={{ title: "Create Brand" }}
+        name="auth/reset-password"
+        options={{ headerShown: false }}
       />
+      <Stack.Screen name="brands/index" options={{ title: "Local Brands" }} />
+      <Stack.Screen name="brands/create" options={{ title: "Create Brand" }} />
       <Stack.Screen
         name="brands/[brandId]/index"
         options={{ title: "Brand Details" }}
@@ -52,11 +52,24 @@ function RootLayoutNav() {
         name="products/[productId]"
         options={{ title: "Product Details" }}
       />
-      <Stack.Screen name="profile" options={{ title: "My Profile" }} />
+      <Stack.Screen name="profile/index" options={{ title: "My Profile" }} />
+      <Stack.Screen name="cart/index" options={{ title: "My Collection" }} />
+      <Stack.Screen name="checkout/index" options={{ title: "Checkout" }} />
+      <Stack.Screen name="orders/index" options={{ title: "My Orders" }} />
+      <Stack.Screen name="wishlist/index" options={{ title: "Wishlist" }} />
       <Stack.Screen
-        name="users/index"
-        options={{ title: "User Management" }}
+        name="profile/addresses/index"
+        options={{ title: "My Addresses" }}
       />
+      <Stack.Screen
+        name="profile/addresses/new"
+        options={{ title: "Add New Address" }}
+      />
+      <Stack.Screen
+        name="profile/addresses/[id]"
+        options={{ title: "Edit Address" }}
+      />
+      <Stack.Screen name="users/index" options={{ title: "User Management" }} />
     </Stack>
   );
 }

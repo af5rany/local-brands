@@ -17,7 +17,7 @@ import { User } from 'src/users/user.entity';
 
 @Controller('auth')
 export class AuthController {
-  constructor(private authService: AuthService) { }
+  constructor(private authService: AuthService) {}
 
   // Register new user (no authentication required)
   @Post('register')

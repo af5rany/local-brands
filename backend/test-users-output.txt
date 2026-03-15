@@ -1,0 +1,98 @@
+
+> local-brands-backend@0.0.1 test:e2e
+> jest --config ./test/jest-e2e.json users.e2e-spec.ts
+
+(node:31311) DeprecationWarning: Calling client.query() when the client is already executing a query is deprecated and will be removed in pg@9.0. Use asycn/await or an external async flow control mechanism instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+  console.log
+    User role: admin
+
+      at RolesGuard.canActivate (../src/auth/roles.guard.ts:86:13)
+
+  console.log
+    Required roles: [ 'admin' ]
+
+      at RolesGuard.canActivate (../src/auth/roles.guard.ts:87:13)
+
+  console.log
+    Admin accessing all users: { id: 1, role: 'admin', isGuest: false, brandIds: [] }
+
+      at UsersController.findAll (../src/users/users.controller.ts:32:13)
+
+  console.log
+    User role: customer
+
+      at RolesGuard.canActivate (../src/auth/roles.guard.ts:86:13)
+
+  console.log
+    Required roles: [ 'admin' ]
+
+      at RolesGuard.canActivate (../src/auth/roles.guard.ts:87:13)
+
+  console.log
+    User role: admin
+
+      at RolesGuard.canActivate (../src/auth/roles.guard.ts:86:13)
+
+  console.log
+    Required roles: [ 'admin' ]
+
+      at RolesGuard.canActivate (../src/auth/roles.guard.ts:87:13)
+
+  console.log
+    Admin creating user: { id: 1, role: 'admin', isGuest: false, brandIds: [] }
+
+      at UsersController.create (../src/users/users.controller.ts:59:13)
+
+  console.log
+    User role: customer
+
+      at RolesGuard.canActivate (../src/auth/roles.guard.ts:86:13)
+
+  console.log
+    Required roles: [ 'admin' ]
+
+      at RolesGuard.canActivate (../src/auth/roles.guard.ts:87:13)
+
+  console.log
+    Admin or user updating data: { id: 1, role: 'admin', isGuest: false, brandIds: [] }
+
+      at UsersController.update (../src/users/users.controller.ts:71:15)
+
+  console.log
+    Admin or user updating data: { id: 2, role: 'customer', isGuest: false, brandIds: [] }
+
+      at UsersController.update (../src/users/users.controller.ts:71:15)
+
+  console.log
+    Admin deleting user: { id: 1, role: 'admin', isGuest: false, brandIds: [] }
+
+      at UsersController.remove (../src/users/users.controller.ts:85:15)
+
+PASS test/users.e2e-spec.ts (16.187 s)
+  UsersModule (e2e)
+    /users (GET) - Find All
+      ✓ should return all users for Admin (960 ms)
+      ✓ should forbid non-Admin from viewing all users (859 ms)
+    /users/:id (GET) - Find One
+      ✓ should allow Admin to view any user (908 ms)
+      ✓ should allow User to view their own profile (878 ms)
+      ✓ should forbid User from viewing other user profiles (913 ms)
+      ✓ should throw BadRequestException if id is invalid (903 ms)
+    /users (POST) - Create User
+      ✓ should allow Admin to create user directly (840 ms)
+      ✓ should forbid Customer from creating a user directly (870 ms)
+    /users/:id (PUT) - Update User
+      ✓ should allow Admin to update any user (884 ms)
+      ✓ should allow User to update their own profile (859 ms)
+      ✓ should forbid User from updating another user (843 ms)
+    /users/:id (DELETE) - Delete User
+      ✓ should forbid User from deleting another user (850 ms)
+      ✓ should forbid User from deleting themselves through this endpoint (845 ms)
+      ✓ should allow Admin to delete a user (853 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       14 passed, 14 total
+Snapshots:   0 total
+Time:        16.484 s
+Ran all test suites matching /users.e2e-spec.ts/i.

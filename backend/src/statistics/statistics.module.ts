@@ -11,18 +11,18 @@ import { Wishlist } from '../wishlist/wishlist.entity';
 import { Cart } from '../cart/cart.entity';
 
 @Module({
-    imports: [
-        TypeOrmModule.forFeature([
-            Brand,
-            Product,
-            User,
-            Order,
-            OrderItem,
-            Wishlist,
-            Cart,
-        ]),
-    ],
-    providers: [StatisticsService],
-    controllers: [StatisticsController],
+  imports: [
+    TypeOrmModule.forFeature([
+      Brand,
+      Product,
+      User,
+      Order,
+      OrderItem,
+      Wishlist,
+      Cart,
+    ]),
+  ],
+  providers: [StatisticsService],
+  controllers: [StatisticsController],
 })
-export class StatisticsModule { }
+export class StatisticsModule {}

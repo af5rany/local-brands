@@ -1,0 +1,272 @@
+
+> local-brands-backend@0.0.1 test:e2e
+> jest --config ./test/jest-e2e.json wishlist.e2e-spec.ts
+
+(node:29347) DeprecationWarning: Calling client.query() when the client is already executing a query is deprecated and will be removed in pg@9.0. Use asycn/await or an external async flow control mechanism instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+  console.log
+    User role: admin
+
+      at RolesGuard.canActivate (../src/auth/roles.guard.ts:86:13)
+
+  console.log
+    Required roles: [ 'admin' ]
+
+      at RolesGuard.canActivate (../src/auth/roles.guard.ts:87:13)
+
+  console.log
+    Product creation took: 15 ms
+
+      at ProductsController.create (../src/products/products.controller.ts:65:13)
+
+  console.log
+    User role: admin
+
+      at RolesGuard.canActivate (../src/auth/roles.guard.ts:86:13)
+
+  console.log
+    Required roles: [ 'admin' ]
+
+      at RolesGuard.canActivate (../src/auth/roles.guard.ts:87:13)
+
+  console.log
+    Product creation took: 13 ms
+
+      at ProductsController.create (../src/products/products.controller.ts:65:13)
+
+  console.log
+    User role: admin
+
+      at RolesGuard.canActivate (../src/auth/roles.guard.ts:86:13)
+
+  console.log
+    Required roles: [ 'admin' ]
+
+      at RolesGuard.canActivate (../src/auth/roles.guard.ts:87:13)
+
+  console.log
+    Product creation took: 34 ms
+
+      at ProductsController.create (../src/products/products.controller.ts:65:13)
+
+  console.log
+    User role: admin
+
+      at RolesGuard.canActivate (../src/auth/roles.guard.ts:86:13)
+
+  console.log
+    Required roles: [ 'admin' ]
+
+      at RolesGuard.canActivate (../src/auth/roles.guard.ts:87:13)
+
+  console.log
+    Product creation took: 11 ms
+
+      at ProductsController.create (../src/products/products.controller.ts:65:13)
+
+  console.log
+    User role: admin
+
+      at RolesGuard.canActivate (../src/auth/roles.guard.ts:86:13)
+
+  console.log
+    Required roles: [ 'admin' ]
+
+      at RolesGuard.canActivate (../src/auth/roles.guard.ts:87:13)
+
+  console.log
+    Product creation took: 10 ms
+
+      at ProductsController.create (../src/products/products.controller.ts:65:13)
+
+  console.log
+    User role: admin
+
+      at RolesGuard.canActivate (../src/auth/roles.guard.ts:86:13)
+
+  console.log
+    Required roles: [ 'admin' ]
+
+      at RolesGuard.canActivate (../src/auth/roles.guard.ts:87:13)
+
+  console.log
+    Product creation took: 12 ms
+
+      at ProductsController.create (../src/products/products.controller.ts:65:13)
+
+  console.log
+    User role: admin
+
+      at RolesGuard.canActivate (../src/auth/roles.guard.ts:86:13)
+
+  console.log
+    Required roles: [ 'admin' ]
+
+      at RolesGuard.canActivate (../src/auth/roles.guard.ts:87:13)
+
+  console.log
+    Product creation took: 11 ms
+
+      at ProductsController.create (../src/products/products.controller.ts:65:13)
+
+  console.log
+    User role: admin
+
+      at RolesGuard.canActivate (../src/auth/roles.guard.ts:86:13)
+
+  console.log
+    Required roles: [ 'admin' ]
+
+      at RolesGuard.canActivate (../src/auth/roles.guard.ts:87:13)
+
+  console.log
+    Product creation took: 11 ms
+
+      at ProductsController.create (../src/products/products.controller.ts:65:13)
+
+  console.log
+    User role: admin
+
+      at RolesGuard.canActivate (../src/auth/roles.guard.ts:86:13)
+
+  console.log
+    Required roles: [ 'admin' ]
+
+      at RolesGuard.canActivate (../src/auth/roles.guard.ts:87:13)
+
+  console.log
+    Product creation took: 12 ms
+
+      at ProductsController.create (../src/products/products.controller.ts:65:13)
+
+  console.log
+    User role: admin
+
+      at RolesGuard.canActivate (../src/auth/roles.guard.ts:86:13)
+
+  console.log
+    Required roles: [ 'admin' ]
+
+      at RolesGuard.canActivate (../src/auth/roles.guard.ts:87:13)
+
+  console.log
+    Product creation took: 11 ms
+
+      at ProductsController.create (../src/products/products.controller.ts:65:13)
+
+  console.log
+    User role: admin
+
+      at RolesGuard.canActivate (../src/auth/roles.guard.ts:86:13)
+
+  console.log
+    Required roles: [ 'admin' ]
+
+      at RolesGuard.canActivate (../src/auth/roles.guard.ts:87:13)
+
+  console.log
+    Product creation took: 10 ms
+
+      at ProductsController.create (../src/products/products.controller.ts:65:13)
+
+  console.log
+    User role: admin
+
+      at RolesGuard.canActivate (../src/auth/roles.guard.ts:86:13)
+
+  console.log
+    Required roles: [ 'admin' ]
+
+      at RolesGuard.canActivate (../src/auth/roles.guard.ts:87:13)
+
+  console.log
+    Product creation took: 10 ms
+
+      at ProductsController.create (../src/products/products.controller.ts:65:13)
+
+  console.log
+    reached hereee 1 1
+
+      at WishlistService.toggle (../src/wishlist/wishlist.service.ts:164:13)
+
+  console.log
+    User role: admin
+
+      at RolesGuard.canActivate (../src/auth/roles.guard.ts:86:13)
+
+  console.log
+    Required roles: [ 'admin' ]
+
+      at RolesGuard.canActivate (../src/auth/roles.guard.ts:87:13)
+
+  console.log
+    Product creation took: 11 ms
+
+      at ProductsController.create (../src/products/products.controller.ts:65:13)
+
+  console.log
+    reached hereee 1 1
+
+      at WishlistService.toggle (../src/wishlist/wishlist.service.ts:164:13)
+
+  console.log
+    reached hereee 1 1
+
+      at WishlistService.toggle (../src/wishlist/wishlist.service.ts:164:13)
+
+  console.log
+    User role: admin
+
+      at RolesGuard.canActivate (../src/auth/roles.guard.ts:86:13)
+
+  console.log
+    Required roles: [ 'admin' ]
+
+      at RolesGuard.canActivate (../src/auth/roles.guard.ts:87:13)
+
+  console.log
+    Product creation took: 11 ms
+
+      at ProductsController.create (../src/products/products.controller.ts:65:13)
+
+  console.log
+    User role: admin
+
+      at RolesGuard.canActivate (../src/auth/roles.guard.ts:86:13)
+
+  console.log
+    Required roles: [ 'admin' ]
+
+      at RolesGuard.canActivate (../src/auth/roles.guard.ts:87:13)
+
+  console.log
+    Product creation took: 14 ms
+
+      at ProductsController.create (../src/products/products.controller.ts:65:13)
+
+PASS test/wishlist.e2e-spec.ts (15.726 s)
+  WishlistModule (e2e)
+    /wishlist (POST)
+      ✓ should add an item to the wishlist (877 ms)
+      ✓ should fail to add an item for another user (776 ms)
+      ✓ should fail if item is already in wishlist (857 ms)
+    /wishlist (GET endpoints)
+      ✓ should get all wishlist items (findAll) (749 ms)
+      ✓ should get wishlist item by id (772 ms)
+      ✓ should get wishlist items by user id (875 ms)
+      ✓ should fail to get items for another user (751 ms)
+      ✓ should get wishlist items by product id (757 ms)
+      ✓ should check if product is in user wishlist (751 ms)
+      ✓ should get wishlist count for user (754 ms)
+    /wishlist (PATCH and DELETE endpoints)
+      ✓ should update wishlist item notes (749 ms)
+      ✓ should toggle product out of wishlist (775 ms)
+      ✓ should toggle product back into wishlist (777 ms)
+      ✓ should remove item by user and product id (763 ms)
+      ✓ should remove item by id (935 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       15 passed, 15 total
+Snapshots:   0 total
+Time:        16.009 s
+Ran all test suites matching /wishlist.e2e-spec.ts/i.

@@ -60,7 +60,7 @@ import { ROLES_KEY } from './roles.decorator';
 
 @Injectable()
 export class RolesGuard implements CanActivate {
-  constructor(private reflector: Reflector) { }
+  constructor(private reflector: Reflector) {}
 
   canActivate(context: ExecutionContext): boolean {
     const requiredRoles = this.reflector.getAllAndOverride<UserRole[]>(
@@ -79,8 +79,13 @@ export class RolesGuard implements CanActivate {
     }
 
     // Check user status - Blocked or Inactive users cannot perform actions
-    if (user.status === UserStatus.BLOCKED || user.status === UserStatus.INACTIVE) {
-      throw new ForbiddenException(`Access denied. Your account is ${user.status}.`);
+    if (
+      user.status === UserStatus.BLOCKED ||
+      user.status === UserStatus.INACTIVE
+    ) {
+      throw new ForbiddenException(
+        `Access denied. Your account is ${user.status}.`,
+      );
     }
 
     console.log('User role:', user.role);

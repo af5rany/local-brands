@@ -24,7 +24,7 @@ import { UserRole } from 'src/common/enums/user.enum';
 @Controller('users')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class UsersController {
-  constructor(private usersService: UsersService) { }
+  constructor(private usersService: UsersService) {}
 
   @Roles(UserRole.ADMIN)
   @Get()
@@ -44,7 +44,7 @@ export class UsersController {
       throw new BadRequestException('Invalid user ID');
     }
 
-    if (currentUser.role === UserRole.ADMIN || currentUser.userId === userId) {
+    if (currentUser.role === UserRole.ADMIN || currentUser.id === userId) {
       return this.usersService.findOne(userId);
     } else {
       throw new ForbiddenException(
@@ -67,7 +67,7 @@ export class UsersController {
     @Request() req,
   ): Promise<User> {
     const currentUser = req.user;
-    if (currentUser.role === UserRole.ADMIN || currentUser.userId === id) {
+    if (currentUser.role === UserRole.ADMIN || currentUser.id === id) {
       console.log('Admin or user updating data:', currentUser);
       return this.usersService.update(id, updateData);
     } else {

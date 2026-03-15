@@ -28,9 +28,9 @@ const BrandOwnerDashboard = ({
   // Grid layout calculations
   const sidePadding = isTablet ? 32 : 20;
   const gridGap = isTablet ? 16 : 8;
-  const availableWidth = width - (sidePadding * 2) - 8;
+  const availableWidth = width - sidePadding * 2 - 8;
   const statsCols = isTablet ? 3 : 1;
-  const cardWidth = (availableWidth / statsCols) - (gridGap);
+  const cardWidth = availableWidth / statsCols - gridGap;
 
   return (
     <>
@@ -67,7 +67,11 @@ const BrandOwnerDashboard = ({
 
       {/* Brand Owner Actions */}
       <View style={[styles.section, isTablet && styles.sectionTablet]}>
-        <Text style={[styles.sectionTitle, isTablet && styles.sectionTitleTablet]}>Brand Management</Text>
+        <Text
+          style={[styles.sectionTitle, isTablet && styles.sectionTitleTablet]}
+        >
+          Brand Management
+        </Text>
         <View style={[styles.actionsContainer, isTablet && styles.actionsGrid]}>
           <QuickActionCard
             title="My Products"

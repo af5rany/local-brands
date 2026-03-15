@@ -10,6 +10,10 @@ export class AddToCartDto {
   quantity: number;
 
   @IsOptional()
+  @IsNumber()
+  variantId?: number;
+
+  @IsOptional()
   @IsString()
   selectedColor?: string;
 
@@ -23,8 +27,12 @@ export class AddToCartDto {
 export class UpdateCartItemDto {
   @IsOptional()
   @IsNumber()
-  @Min(1)
+  @Min(0)
   quantity?: number;
+
+  @IsOptional()
+  @IsNumber()
+  variantId?: number;
 
   @IsOptional()
   @IsString()

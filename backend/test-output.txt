@@ -1,0 +1,25 @@
+
+> local-brands-backend@0.0.1 test:e2e
+> jest --config ./test/jest-e2e.json auth.e2e-spec.ts
+
+(node:23348) DeprecationWarning: Calling client.query() when the client is already executing a query is deprecated and will be removed in pg@9.0. Use asycn/await or an external async flow control mechanism instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+PASS test/auth.e2e-spec.ts (8.479 s)
+  AuthModule (e2e)
+    /auth/register (POST)
+      ✓ should register a new user (715 ms)
+      ✓ should fail if email is invalid (512 ms)
+    /auth/login (POST)
+      ✓ should login successfully (611 ms)
+      ✓ should fail with wrong credentials (672 ms)
+    /auth/guest-login (POST)
+      ✓ should login as a guest (580 ms)
+    /auth/protected (POST)
+      ✓ should access protected route with token (760 ms)
+      ✓ should fail without token (670 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       7 passed, 7 total
+Snapshots:   0 total
+Time:        8.753 s, estimated 9 s
+Ran all test suites matching /auth.e2e-spec.ts/i.

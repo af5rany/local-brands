@@ -1,0 +1,131 @@
+
+> local-brands-backend@0.0.1 test:e2e
+> jest --config ./test/jest-e2e.json cart.e2e-spec.ts
+
+(node:27878) DeprecationWarning: Calling client.query() when the client is already executing a query is deprecated and will be removed in pg@9.0. Use asycn/await or an external async flow control mechanism instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+  console.log
+    User role: admin
+
+      at RolesGuard.canActivate (../src/auth/roles.guard.ts:86:13)
+
+  console.log
+    Required roles: [ 'admin' ]
+
+      at RolesGuard.canActivate (../src/auth/roles.guard.ts:87:13)
+
+  console.log
+    Product creation took: 20 ms
+
+      at ProductsController.create (../src/products/products.controller.ts:65:13)
+
+  console.log
+    User role: admin
+
+      at RolesGuard.canActivate (../src/auth/roles.guard.ts:86:13)
+
+  console.log
+    Required roles: [ 'admin' ]
+
+      at RolesGuard.canActivate (../src/auth/roles.guard.ts:87:13)
+
+  console.log
+    Product creation took: 13 ms
+
+      at ProductsController.create (../src/products/products.controller.ts:65:13)
+
+  console.log
+    User role: admin
+
+      at RolesGuard.canActivate (../src/auth/roles.guard.ts:86:13)
+
+  console.log
+    Required roles: [ 'admin' ]
+
+      at RolesGuard.canActivate (../src/auth/roles.guard.ts:87:13)
+
+  console.log
+    Product creation took: 11 ms
+
+      at ProductsController.create (../src/products/products.controller.ts:65:13)
+
+  console.log
+    User role: admin
+
+      at RolesGuard.canActivate (../src/auth/roles.guard.ts:86:13)
+
+  console.log
+    Required roles: [ 'admin' ]
+
+      at RolesGuard.canActivate (../src/auth/roles.guard.ts:87:13)
+
+  console.log
+    Product creation took: 22 ms
+
+      at ProductsController.create (../src/products/products.controller.ts:65:13)
+
+  console.log
+    User role: admin
+
+      at RolesGuard.canActivate (../src/auth/roles.guard.ts:86:13)
+
+  console.log
+    Required roles: [ 'admin' ]
+
+      at RolesGuard.canActivate (../src/auth/roles.guard.ts:87:13)
+
+  console.log
+    Product creation took: 12 ms
+
+      at ProductsController.create (../src/products/products.controller.ts:65:13)
+
+  console.log
+    User role: admin
+
+      at RolesGuard.canActivate (../src/auth/roles.guard.ts:86:13)
+
+  console.log
+    Required roles: [ 'admin' ]
+
+      at RolesGuard.canActivate (../src/auth/roles.guard.ts:87:13)
+
+  console.log
+    Product creation took: 12 ms
+
+      at ProductsController.create (../src/products/products.controller.ts:65:13)
+
+  console.log
+    User role: admin
+
+      at RolesGuard.canActivate (../src/auth/roles.guard.ts:86:13)
+
+  console.log
+    Required roles: [ 'admin' ]
+
+      at RolesGuard.canActivate (../src/auth/roles.guard.ts:87:13)
+
+  console.log
+    Product creation took: 17 ms
+
+      at ProductsController.create (../src/products/products.controller.ts:65:13)
+
+PASS test/cart.e2e-spec.ts (10.383 s)
+  CartModule (e2e)
+    /cart/add (POST)
+      ✓ should add an item to the cart (889 ms)
+      ✓ should fail if stock is insufficient (788 ms)
+    /cart (GET)
+      ✓ should get cart summary (815 ms)
+    /cart/items/:id (PUT)
+      ✓ should update cart item quantity (894 ms)
+      ✓ should remove item if quantity set to 0 (1125 ms)
+    /cart/items/:id (DELETE)
+      ✓ should remove item from cart (894 ms)
+    /cart/clear (DELETE)
+      ✓ should clear the cart (996 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       7 passed, 7 total
+Snapshots:   0 total
+Time:        10.661 s, estimated 11 s
+Ran all test suites matching /cart.e2e-spec.ts/i.

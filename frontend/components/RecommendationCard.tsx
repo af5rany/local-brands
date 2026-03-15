@@ -1,5 +1,12 @@
 import React, { useState } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, Image, useWindowDimensions } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Image,
+  useWindowDimensions,
+} from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
 type Product = {
@@ -57,7 +64,7 @@ const RecommendationCard = ({
 
     if (hasHalfStar) {
       stars.push(
-        <Ionicons key="half" name="star-half" size={12} color="#f59e0b" />
+        <Ionicons key="half" name="star-half" size={12} color="#f59e0b" />,
       );
     }
 
@@ -69,7 +76,7 @@ const RecommendationCard = ({
           name="star-outline"
           size={12}
           color="#d1d5db"
-        />
+        />,
       );
     }
 
@@ -80,9 +87,9 @@ const RecommendationCard = ({
     product.originalPrice && product.originalPrice > product.price;
   const discountPercentage = hasDiscount
     ? Math.round(
-      ((product.originalPrice! - product.price) / product.originalPrice!) *
-      100
-    )
+        ((product.originalPrice! - product.price) / product.originalPrice!) *
+          100,
+      )
     : 0;
 
   const { width } = useWindowDimensions();
@@ -90,15 +97,13 @@ const RecommendationCard = ({
 
   return (
     <TouchableOpacity
-      style={[
-        styles.card,
-        isTablet && styles.tabletCard,
-        style
-      ]}
+      style={[styles.card, isTablet && styles.tabletCard, style]}
       onPress={onPress}
       activeOpacity={0.8}
     >
-      <View style={[styles.imageContainer, isTablet && styles.tabletImageContainer]}>
+      <View
+        style={[styles.imageContainer, isTablet && styles.tabletImageContainer]}
+      >
         {!imageError ? (
           <Image
             source={{ uri: product.image }}

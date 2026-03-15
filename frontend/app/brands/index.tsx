@@ -32,7 +32,9 @@ const { width } = Dimensions.get("window");
 const BrandsListScreen = () => {
   const { token, user } = useAuth();
   const userRole = user?.role || user?.userRole;
-  const [brandsData, setBrandsData] = useState<PaginatedResult<Brand> | null>(null);
+  const [brandsData, setBrandsData] = useState<PaginatedResult<Brand> | null>(
+    null,
+  );
   const [loading, setLoading] = useState<boolean>(true);
   const [refreshing, setRefreshing] = useState<boolean>(false);
   const [loadingMore, setLoadingMore] = useState<boolean>(false);
@@ -60,15 +62,15 @@ const BrandsListScreen = () => {
   const textColor = useThemeColor({}, "text");
   const buttonColor = useThemeColor(
     { light: "#007AFF", dark: "#0A84FF" },
-    "tint"
+    "tint",
   );
   const cardBackground = useThemeColor(
     { light: "#ffffff", dark: "#1c1c1e" },
-    "background"
+    "background",
   );
   const secondaryTextColor = useThemeColor(
     { light: "#666666", dark: "#999999" },
-    "text"
+    "text",
   );
   const colorScheme = useColorScheme() as "light" | "dark";
   const borderColor = colorScheme === "dark" ? "#38383A" : "#E5E5EA";
@@ -86,9 +88,10 @@ const BrandsListScreen = () => {
         sortOrder: sortOptions.sortOrder,
       });
 
-      return `${getApiUrl()}/brands?${params.toString()}`;
+      const endpoint = userRole === "admin" ? "/brands/admin" : "/brands";
+      return `${getApiUrl()}${endpoint}?${params.toString()}`;
     },
-    [searchQuery, filters, sortOptions]
+    [searchQuery, filters, sortOptions, userRole],
   );
 
   // Fetch brands with pagination
@@ -112,14 +115,14 @@ const BrandsListScreen = () => {
 
         const data: PaginatedResult<Brand> = await response.json();
 
-        if (append && brandsData) {
+        if (append) {
           setBrandsData((prev) =>
             prev
               ? {
-                ...data,
-                items: [...prev.items, ...data.items],
-              }
-              : data
+                  ...data,
+                  items: [...prev.items, ...data.items],
+                }
+              : data,
           );
         } else {
           setBrandsData(data);
@@ -138,13 +141,13 @@ const BrandsListScreen = () => {
         setRefreshing(false);
       }
     },
-    [buildApiUrl, brandsData]
+    [buildApiUrl],
   );
 
   // Debounced search
   const debouncedFetch = useMemo(
     () => debounce((page: number = 1) => fetchBrands(page, false), 300),
-    [fetchBrands]
+    [fetchBrands],
   );
 
   // Initial fetch and search/filter changes
@@ -168,7 +171,7 @@ const BrandsListScreen = () => {
   // Handle sort changes
   const handleSortChange = (
     sortBy: SortOptions["sortBy"],
-    sortOrder: SortOptions["sortOrder"]
+    sortOrder: SortOptions["sortOrder"],
   ) => {
     setSortOptions({ sortBy, sortOrder });
     setShowSort(false);
@@ -225,7 +228,7 @@ const BrandsListScreen = () => {
             }
           },
         },
-      ]
+      ],
     );
   };
 
@@ -291,7 +294,8 @@ const BrandsListScreen = () => {
               color={secondaryTextColor}
             />
           </View>
-          {(userRole === "admin" || (item.owner?.id && item.owner.id === user?.userId)) && (
+          {(userRole === "admin" ||
+            (item.owner?.id && item.owner.id === user?.id)) && (
             <TouchableOpacity
               style={styles.trashContainer}
               onPress={(e) => {

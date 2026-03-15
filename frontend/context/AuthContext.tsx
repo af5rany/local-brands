@@ -83,7 +83,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
           // Decode userId from token
           const decodedToken = jwtDecode<JwtPayload>(savedToken);
-          const userId = decodedToken.userId;
+          const userId = decodedToken.id;
 
           // Fetch user data using userId
           const response = await fetch(`${getApiUrl()}/users/${userId}`, {
@@ -147,7 +147,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       // Decode userId from token
       const decodedToken = jwtDecode<JwtPayload>(newToken);
-      const userId = decodedToken.userId;
+      const userId = decodedToken.id;
 
       // Fetch user data using userId
       const response = await fetch(`${getApiUrl()}/users/${userId}`, {
@@ -173,7 +173,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     try {
       const decodedToken = jwtDecode<JwtPayload>(token);
-      const userId = decodedToken.userId;
+      const userId = decodedToken.id;
 
       const response = await fetch(`${getApiUrl()}/users/${userId}`, {
         headers: {

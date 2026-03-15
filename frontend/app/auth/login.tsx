@@ -95,7 +95,7 @@ const LoginScreen = () => {
         Alert.alert(
           "Welcome Guest!",
           "You're browsing as a guest. Some features may be limited. You can create an account anytime to unlock full access.",
-          [{ text: "Got it", style: "default" }]
+          [{ text: "Got it", style: "default" }],
         );
       }, 1000);
     } catch (err: any) {
@@ -129,7 +129,12 @@ const LoginScreen = () => {
           <View style={styles.inputContainer}>
             <Text style={styles.label}>Email</Text>
             <View style={styles.inputWrapper}>
-              <Ionicons name="mail-outline" size={20} color="#64748b" style={styles.inputIcon} />
+              <Ionicons
+                name="mail-outline"
+                size={20}
+                color="#64748b"
+                style={styles.inputIcon}
+              />
               <TextInput
                 style={styles.input}
                 placeholder="you@example.com"
@@ -146,7 +151,12 @@ const LoginScreen = () => {
           <View style={styles.inputContainer}>
             <Text style={styles.label}>Password</Text>
             <View style={styles.inputWrapper}>
-              <Ionicons name="lock-closed-outline" size={20} color="#64748b" style={styles.inputIcon} />
+              <Ionicons
+                name="lock-closed-outline"
+                size={20}
+                color="#64748b"
+                style={styles.inputIcon}
+              />
               <TextInput
                 style={styles.input}
                 placeholder="••••••••"
@@ -193,7 +203,9 @@ const LoginScreen = () => {
 
           <View style={styles.footer}>
             <Pressable
-              onPress={() => !isAnyLoading && router.push("/auth/forgot-password")}
+              onPress={() =>
+                !isAnyLoading && router.push("/auth/forgot-password")
+              }
               disabled={isAnyLoading}
             >
               <Text style={[styles.link, isAnyLoading && styles.linkDisabled]}>
@@ -219,7 +231,12 @@ const LoginScreen = () => {
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: "#fff" },
   container: { flex: 1, justifyContent: "center" },
-  scroll: { flexGrow: 1, padding: 24, justifyContent: "center", alignItems: "center" },
+  scroll: {
+    flexGrow: 1,
+    padding: 24,
+    justifyContent: "center",
+    alignItems: "center",
+  },
   logo: { width: 140, height: 80, marginBottom: 24 },
   title: { fontSize: 24, fontWeight: "700", color: "#1e293b", marginBottom: 8 },
   subtitle: { fontSize: 16, color: "#64748b", marginBottom: 32 },

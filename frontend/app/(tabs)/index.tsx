@@ -44,7 +44,7 @@ const HomeScreen = () => {
     productType: "",
     brandId: "",
     sortBy: "createdAt",
-    sortOrder: "DESC" as "ASC" | "DESC"
+    sortOrder: "DESC" as "ASC" | "DESC",
   });
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -52,7 +52,9 @@ const HomeScreen = () => {
     categories: [] as string[],
     productTypes: [] as string[],
   });
-  const [suggestions, setSuggestions] = useState<{ text: string; type: "Product" | "Brand" }[]>([]);
+  const [suggestions, setSuggestions] = useState<
+    { text: string; type: "Product" | "Brand" }[]
+  >([]);
   const [isSearching, setIsSearching] = useState(false);
   const [loadingStats, setLoadingStats] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -63,7 +65,7 @@ const HomeScreen = () => {
   // No longer redirecting to login automatically
   useEffect(() => {
     // We can still log if token changed, but no redirect
-    console.log('[DEBUG] Token state:', token ? 'Logged in' : 'Guest');
+    console.log("[DEBUG] Token state:", token ? "Logged in" : "Guest");
   }, [token, loading]);
 
   // Fetch Filter Options
@@ -92,9 +94,10 @@ const HomeScreen = () => {
 
     if (token) {
       try {
-        const statsUrl = userRole === "brandOwner" && selectedBrandId
-          ? `${apiUrl}/statistics?brandId=${selectedBrandId}`
-          : `${apiUrl}/statistics`;
+        const statsUrl =
+          userRole === "brandOwner" && selectedBrandId
+            ? `${apiUrl}/statistics?brandId=${selectedBrandId}`
+            : `${apiUrl}/statistics`;
 
         const response = await fetch(statsUrl, {
           headers: {
@@ -126,11 +129,11 @@ const HomeScreen = () => {
     try {
       const [brandsRes, productsRes] = await Promise.all([
         fetch(`${getApiUrl()}/brands?${queryParams}`, {
-          headers: { ...(token && { Authorization: `Bearer ${token}` }) }
+          headers: { ...(token && { Authorization: `Bearer ${token}` }) },
         }),
         fetch(`${getApiUrl()}/products?${queryParams}`, {
-          headers: { ...(token && { Authorization: `Bearer ${token}` }) }
-        })
+          headers: { ...(token && { Authorization: `Bearer ${token}` }) },
+        }),
       ]);
 
       if (brandsRes.ok) {
@@ -147,7 +150,11 @@ const HomeScreen = () => {
           setTotalPages(productsData.meta.totalPages || 1);
         }
       } else {
-        console.error('[DEBUG] Products API Error:', productsRes.status, await productsRes.text());
+        console.error(
+          "[DEBUG] Products API Error:",
+          productsRes.status,
+          await productsRes.text(),
+        );
       }
     } catch (error) {
       console.error("Error fetching discovery data:", error);
@@ -165,14 +172,14 @@ const HomeScreen = () => {
     // Autocomplete Logic
     if (text.length > 1) {
       const productSuggestions = newArrivals
-        .filter(p => p.name.toLowerCase().includes(text.toLowerCase()))
+        .filter((p) => p.name.toLowerCase().includes(text.toLowerCase()))
         .slice(0, 3)
-        .map(p => ({ text: p.name, type: "Product" }));
+        .map((p) => ({ text: p.name, type: "Product" }));
 
       const brandSuggestions = featuredBrands
-        .filter(b => b.name.toLowerCase().includes(text.toLowerCase()))
+        .filter((b) => b.name.toLowerCase().includes(text.toLowerCase()))
         .slice(0, 2)
-        .map(b => ({ text: b.name, type: "Brand" }));
+        .map((b) => ({ text: b.name, type: "Brand" }));
 
       setSuggestions([...productSuggestions, ...brandSuggestions] as any);
     } else {
@@ -191,7 +198,7 @@ const HomeScreen = () => {
   };
 
   const handleFilterPress = (type: string, value?: string) => {
-    setActiveFilters(prev => {
+    setActiveFilters((prev) => {
       const next = { ...prev };
       // Reset page on filter change
       setPage(1);
@@ -215,8 +222,8 @@ const HomeScreen = () => {
   useFocusEffect(
     useCallback(() => {
       fetchStats();
-    }, [token, userRole, selectedBrandId])
-  )
+    }, [token, userRole, selectedBrandId]),
+  );
 
   const onRefresh = React.useCallback(() => {
     setRefreshing(true);
@@ -238,7 +245,6 @@ const HomeScreen = () => {
   const showComingSoon = () => {
     Alert.alert("Coming Soon", "This feature is under development!");
   };
-
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -268,7 +274,6 @@ const HomeScreen = () => {
             setSuggestions([]);
           }}
         />
-
 
         {/* Role-based Dashboard */}
         {userRole === "admin" && isManagementMode ? (
@@ -301,7 +306,7 @@ const HomeScreen = () => {
               category: activeFilters.category,
               type: activeFilters.productType,
               brand: activeFilters.brandId,
-              sort: activeFilters.sortOrder
+              sort: activeFilters.sortOrder,
             }}
             onFilterPress={handleFilterPress}
             filterOptions={filterOptions}

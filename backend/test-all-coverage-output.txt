@@ -1,0 +1,970 @@
+
+> local-brands-backend@0.0.1 test:e2e
+> jest --config ./test/jest-e2e.json --coverage --runInBand
+
+(node:31783) DeprecationWarning: Calling client.query() when the client is already executing a query is deprecated and will be removed in pg@9.0. Use asycn/await or an external async flow control mechanism instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+PASS test/users.e2e-spec.ts (17.089 s)
+  ● Console
+
+    console.log
+      User role: admin
+
+      at RolesGuard.log [as canActivate] (../src/auth/roles.guard.ts:86:13)
+
+    console.log
+      Required roles: [ 'admin' ]
+
+      at RolesGuard.log [as canActivate] (../src/auth/roles.guard.ts:87:13)
+
+    console.log
+      Admin accessing all users: { id: 1, role: 'admin', isGuest: false, brandIds: [] }
+
+      at UsersController.log [as findAll] (../src/users/users.controller.ts:32:13)
+
+    console.log
+      User role: customer
+
+      at RolesGuard.log [as canActivate] (../src/auth/roles.guard.ts:86:13)
+
+    console.log
+      Required roles: [ 'admin' ]
+
+      at RolesGuard.log [as canActivate] (../src/auth/roles.guard.ts:87:13)
+
+    console.log
+      User role: admin
+
+      at RolesGuard.log [as canActivate] (../src/auth/roles.guard.ts:86:13)
+
+    console.log
+      Required roles: [ 'admin' ]
+
+      at RolesGuard.log [as canActivate] (../src/auth/roles.guard.ts:87:13)
+
+    console.log
+      Admin creating user: { id: 1, role: 'admin', isGuest: false, brandIds: [] }
+
+      at UsersController.log [as create] (../src/users/users.controller.ts:59:13)
+
+    console.log
+      User role: customer
+
+      at RolesGuard.log [as canActivate] (../src/auth/roles.guard.ts:86:13)
+
+    console.log
+      Required roles: [ 'admin' ]
+
+      at RolesGuard.log [as canActivate] (../src/auth/roles.guard.ts:87:13)
+
+    console.log
+      Admin or user updating data: { id: 1, role: 'admin', isGuest: false, brandIds: [] }
+
+      at UsersController.log [as update] (../src/users/users.controller.ts:71:15)
+
+    console.log
+      Admin or user updating data: { id: 2, role: 'customer', isGuest: false, brandIds: [] }
+
+      at UsersController.log [as update] (../src/users/users.controller.ts:71:15)
+
+    console.log
+      Admin deleting user: { id: 1, role: 'admin', isGuest: false, brandIds: [] }
+
+      at UsersController.log [as remove] (../src/users/users.controller.ts:85:15)
+
+(node:31783) DeprecationWarning: Calling client.query() when the client is already executing a query is deprecated and will be removed in pg@9.0. Use asycn/await or an external async flow control mechanism instead.
+PASS test/wishlist.e2e-spec.ts (12.839 s)
+  ● Console
+
+    console.log
+      User role: admin
+
+      at RolesGuard.log [as canActivate] (../src/auth/roles.guard.ts:86:13)
+
+    console.log
+      Required roles: [ 'admin' ]
+
+      at RolesGuard.log [as canActivate] (../src/auth/roles.guard.ts:87:13)
+
+    console.log
+      Product creation took: 16 ms
+
+      at ProductsController.log [as create] (../src/products/products.controller.ts:65:13)
+
+    console.log
+      User role: admin
+
+      at RolesGuard.log [as canActivate] (../src/auth/roles.guard.ts:86:13)
+
+    console.log
+      Required roles: [ 'admin' ]
+
+      at RolesGuard.log [as canActivate] (../src/auth/roles.guard.ts:87:13)
+
+    console.log
+      Product creation took: 14 ms
+
+      at ProductsController.log [as create] (../src/products/products.controller.ts:65:13)
+
+    console.log
+      User role: admin
+
+      at RolesGuard.log [as canActivate] (../src/auth/roles.guard.ts:86:13)
+
+    console.log
+      Required roles: [ 'admin' ]
+
+      at RolesGuard.log [as canActivate] (../src/auth/roles.guard.ts:87:13)
+
+    console.log
+      Product creation took: 11 ms
+
+      at ProductsController.log [as create] (../src/products/products.controller.ts:65:13)
+
+    console.log
+      User role: admin
+
+      at RolesGuard.log [as canActivate] (../src/auth/roles.guard.ts:86:13)
+
+    console.log
+      Required roles: [ 'admin' ]
+
+      at RolesGuard.log [as canActivate] (../src/auth/roles.guard.ts:87:13)
+
+    console.log
+      Product creation took: 11 ms
+
+      at ProductsController.log [as create] (../src/products/products.controller.ts:65:13)
+
+    console.log
+      User role: admin
+
+      at RolesGuard.log [as canActivate] (../src/auth/roles.guard.ts:86:13)
+
+    console.log
+      Required roles: [ 'admin' ]
+
+      at RolesGuard.log [as canActivate] (../src/auth/roles.guard.ts:87:13)
+
+    console.log
+      Product creation took: 10 ms
+
+      at ProductsController.log [as create] (../src/products/products.controller.ts:65:13)
+
+    console.log
+      User role: admin
+
+      at RolesGuard.log [as canActivate] (../src/auth/roles.guard.ts:86:13)
+
+    console.log
+      Required roles: [ 'admin' ]
+
+      at RolesGuard.log [as canActivate] (../src/auth/roles.guard.ts:87:13)
+
+    console.log
+      Product creation took: 14 ms
+
+      at ProductsController.log [as create] (../src/products/products.controller.ts:65:13)
+
+    console.log
+      User role: admin
+
+      at RolesGuard.log [as canActivate] (../src/auth/roles.guard.ts:86:13)
+
+    console.log
+      Required roles: [ 'admin' ]
+
+      at RolesGuard.log [as canActivate] (../src/auth/roles.guard.ts:87:13)
+
+    console.log
+      Product creation took: 11 ms
+
+      at ProductsController.log [as create] (../src/products/products.controller.ts:65:13)
+
+    console.log
+      User role: admin
+
+      at RolesGuard.log [as canActivate] (../src/auth/roles.guard.ts:86:13)
+
+    console.log
+      Required roles: [ 'admin' ]
+
+      at RolesGuard.log [as canActivate] (../src/auth/roles.guard.ts:87:13)
+
+    console.log
+      Product creation took: 13 ms
+
+      at ProductsController.log [as create] (../src/products/products.controller.ts:65:13)
+
+    console.log
+      User role: admin
+
+      at RolesGuard.log [as canActivate] (../src/auth/roles.guard.ts:86:13)
+
+    console.log
+      Required roles: [ 'admin' ]
+
+      at RolesGuard.log [as canActivate] (../src/auth/roles.guard.ts:87:13)
+
+    console.log
+      Product creation took: 13 ms
+
+      at ProductsController.log [as create] (../src/products/products.controller.ts:65:13)
+
+    console.log
+      User role: admin
+
+      at RolesGuard.log [as canActivate] (../src/auth/roles.guard.ts:86:13)
+
+    console.log
+      Required roles: [ 'admin' ]
+
+      at RolesGuard.log [as canActivate] (../src/auth/roles.guard.ts:87:13)
+
+    console.log
+      Product creation took: 10 ms
+
+      at ProductsController.log [as create] (../src/products/products.controller.ts:65:13)
+
+    console.log
+      User role: admin
+
+      at RolesGuard.log [as canActivate] (../src/auth/roles.guard.ts:86:13)
+
+    console.log
+      Required roles: [ 'admin' ]
+
+      at RolesGuard.log [as canActivate] (../src/auth/roles.guard.ts:87:13)
+
+    console.log
+      Product creation took: 10 ms
+
+      at ProductsController.log [as create] (../src/products/products.controller.ts:65:13)
+
+    console.log
+      User role: admin
+
+      at RolesGuard.log [as canActivate] (../src/auth/roles.guard.ts:86:13)
+
+    console.log
+      Required roles: [ 'admin' ]
+
+      at RolesGuard.log [as canActivate] (../src/auth/roles.guard.ts:87:13)
+
+    console.log
+      Product creation took: 12 ms
+
+      at ProductsController.log [as create] (../src/products/products.controller.ts:65:13)
+
+    console.log
+      reached hereee 1 1
+
+      at WishlistService.log [as toggle] (../src/wishlist/wishlist.service.ts:164:13)
+
+    console.log
+      User role: admin
+
+      at RolesGuard.log [as canActivate] (../src/auth/roles.guard.ts:86:13)
+
+    console.log
+      Required roles: [ 'admin' ]
+
+      at RolesGuard.log [as canActivate] (../src/auth/roles.guard.ts:87:13)
+
+    console.log
+      Product creation took: 10 ms
+
+      at ProductsController.log [as create] (../src/products/products.controller.ts:65:13)
+
+    console.log
+      reached hereee 1 1
+
+      at WishlistService.log [as toggle] (../src/wishlist/wishlist.service.ts:164:13)
+
+    console.log
+      reached hereee 1 1
+
+      at WishlistService.log [as toggle] (../src/wishlist/wishlist.service.ts:164:13)
+
+    console.log
+      User role: admin
+
+      at RolesGuard.log [as canActivate] (../src/auth/roles.guard.ts:86:13)
+
+    console.log
+      Required roles: [ 'admin' ]
+
+      at RolesGuard.log [as canActivate] (../src/auth/roles.guard.ts:87:13)
+
+    console.log
+      Product creation took: 12 ms
+
+      at ProductsController.log [as create] (../src/products/products.controller.ts:65:13)
+
+    console.log
+      User role: admin
+
+      at RolesGuard.log [as canActivate] (../src/auth/roles.guard.ts:86:13)
+
+    console.log
+      Required roles: [ 'admin' ]
+
+      at RolesGuard.log [as canActivate] (../src/auth/roles.guard.ts:87:13)
+
+    console.log
+      Product creation took: 11 ms
+
+      at ProductsController.log [as create] (../src/products/products.controller.ts:65:13)
+
+(node:31783) DeprecationWarning: Calling client.query() when the client is already executing a query is deprecated and will be removed in pg@9.0. Use asycn/await or an external async flow control mechanism instead.
+PASS test/cart.e2e-spec.ts (6.585 s)
+  ● Console
+
+    console.log
+      User role: admin
+
+      at RolesGuard.log [as canActivate] (../src/auth/roles.guard.ts:86:13)
+
+    console.log
+      Required roles: [ 'admin' ]
+
+      at RolesGuard.log [as canActivate] (../src/auth/roles.guard.ts:87:13)
+
+    console.log
+      Product creation took: 12 ms
+
+      at ProductsController.log [as create] (../src/products/products.controller.ts:65:13)
+
+    console.log
+      User role: admin
+
+      at RolesGuard.log [as canActivate] (../src/auth/roles.guard.ts:86:13)
+
+    console.log
+      Required roles: [ 'admin' ]
+
+      at RolesGuard.log [as canActivate] (../src/auth/roles.guard.ts:87:13)
+
+    console.log
+      Product creation took: 12 ms
+
+      at ProductsController.log [as create] (../src/products/products.controller.ts:65:13)
+
+    console.log
+      User role: admin
+
+      at RolesGuard.log [as canActivate] (../src/auth/roles.guard.ts:86:13)
+
+    console.log
+      Required roles: [ 'admin' ]
+
+      at RolesGuard.log [as canActivate] (../src/auth/roles.guard.ts:87:13)
+
+    console.log
+      Product creation took: 11 ms
+
+      at ProductsController.log [as create] (../src/products/products.controller.ts:65:13)
+
+    console.log
+      User role: admin
+
+      at RolesGuard.log [as canActivate] (../src/auth/roles.guard.ts:86:13)
+
+    console.log
+      Required roles: [ 'admin' ]
+
+      at RolesGuard.log [as canActivate] (../src/auth/roles.guard.ts:87:13)
+
+    console.log
+      Product creation took: 11 ms
+
+      at ProductsController.log [as create] (../src/products/products.controller.ts:65:13)
+
+    console.log
+      User role: admin
+
+      at RolesGuard.log [as canActivate] (../src/auth/roles.guard.ts:86:13)
+
+    console.log
+      Required roles: [ 'admin' ]
+
+      at RolesGuard.log [as canActivate] (../src/auth/roles.guard.ts:87:13)
+
+    console.log
+      Product creation took: 11 ms
+
+      at ProductsController.log [as create] (../src/products/products.controller.ts:65:13)
+
+    console.log
+      User role: admin
+
+      at RolesGuard.log [as canActivate] (../src/auth/roles.guard.ts:86:13)
+
+    console.log
+      Required roles: [ 'admin' ]
+
+      at RolesGuard.log [as canActivate] (../src/auth/roles.guard.ts:87:13)
+
+    console.log
+      Product creation took: 10 ms
+
+      at ProductsController.log [as create] (../src/products/products.controller.ts:65:13)
+
+    console.log
+      User role: admin
+
+      at RolesGuard.log [as canActivate] (../src/auth/roles.guard.ts:86:13)
+
+    console.log
+      Required roles: [ 'admin' ]
+
+      at RolesGuard.log [as canActivate] (../src/auth/roles.guard.ts:87:13)
+
+    console.log
+      Product creation took: 12 ms
+
+      at ProductsController.log [as create] (../src/products/products.controller.ts:65:13)
+
+(node:31783) DeprecationWarning: Calling client.query() when the client is already executing a query is deprecated and will be removed in pg@9.0. Use asycn/await or an external async flow control mechanism instead.
+PASS test/brands.e2e-spec.ts (6.692 s)
+  ● Console
+
+    console.log
+      User role: admin
+
+      at RolesGuard.log [as canActivate] (../src/auth/roles.guard.ts:86:13)
+
+    console.log
+      Required roles: [ 'admin' ]
+
+      at RolesGuard.log [as canActivate] (../src/auth/roles.guard.ts:87:13)
+
+    console.log
+      User role: customer
+
+      at RolesGuard.log [as canActivate] (../src/auth/roles.guard.ts:86:13)
+
+    console.log
+      Required roles: [ 'admin' ]
+
+      at RolesGuard.log [as canActivate] (../src/auth/roles.guard.ts:87:13)
+
+    console.log
+      User role: admin
+
+      at RolesGuard.log [as canActivate] (../src/auth/roles.guard.ts:86:13)
+
+    console.log
+      Required roles: [ 'admin' ]
+
+      at RolesGuard.log [as canActivate] (../src/auth/roles.guard.ts:87:13)
+
+    console.log
+      User role: admin
+
+      at RolesGuard.log [as canActivate] (../src/auth/roles.guard.ts:86:13)
+
+    console.log
+      Required roles: [ 'admin' ]
+
+      at RolesGuard.log [as canActivate] (../src/auth/roles.guard.ts:87:13)
+
+    console.log
+      User role: admin
+
+      at RolesGuard.log [as canActivate] (../src/auth/roles.guard.ts:86:13)
+
+    console.log
+      Required roles: [ 'admin' ]
+
+      at RolesGuard.log [as canActivate] (../src/auth/roles.guard.ts:87:13)
+
+    console.log
+      User role: admin
+
+      at RolesGuard.log [as canActivate] (../src/auth/roles.guard.ts:86:13)
+
+    console.log
+      Required roles: [ 'admin', 'brandOwner' ]
+
+      at RolesGuard.log [as canActivate] (../src/auth/roles.guard.ts:87:13)
+
+    console.log
+      Updating brand: {
+        user: { id: 1, role: 'admin', isGuest: false, brandIds: [] },
+        brandId: 1
+      }
+
+      at BrandsController.log [as update] (../src/brands/brands.controller.ts:95:13)
+
+    console.log
+      User role: admin
+
+      at RolesGuard.log [as canActivate] (../src/auth/roles.guard.ts:86:13)
+
+    console.log
+      Required roles: [ 'admin' ]
+
+      at RolesGuard.log [as canActivate] (../src/auth/roles.guard.ts:87:13)
+
+    console.log
+      User role: brandOwner
+
+      at RolesGuard.log [as canActivate] (../src/auth/roles.guard.ts:86:13)
+
+    console.log
+      Required roles: [ 'admin', 'brandOwner' ]
+
+      at RolesGuard.log [as canActivate] (../src/auth/roles.guard.ts:87:13)
+
+(node:31783) DeprecationWarning: Calling client.query() when the client is already executing a query is deprecated and will be removed in pg@9.0. Use asycn/await or an external async flow control mechanism instead.
+PASS test/reviews.e2e-spec.ts (6.433 s)
+  ● Console
+
+    console.log
+      User role: admin
+
+      at RolesGuard.log [as canActivate] (../src/auth/roles.guard.ts:86:13)
+
+    console.log
+      Required roles: [ 'admin' ]
+
+      at RolesGuard.log [as canActivate] (../src/auth/roles.guard.ts:87:13)
+
+    console.log
+      Product creation took: 13 ms
+
+      at ProductsController.log [as create] (../src/products/products.controller.ts:65:13)
+
+    console.log
+      User role: admin
+
+      at RolesGuard.log [as canActivate] (../src/auth/roles.guard.ts:86:13)
+
+    console.log
+      Required roles: [ 'admin' ]
+
+      at RolesGuard.log [as canActivate] (../src/auth/roles.guard.ts:87:13)
+
+    console.log
+      Product creation took: 12 ms
+
+      at ProductsController.log [as create] (../src/products/products.controller.ts:65:13)
+
+    console.log
+      User role: admin
+
+      at RolesGuard.log [as canActivate] (../src/auth/roles.guard.ts:86:13)
+
+    console.log
+      Required roles: [ 'admin' ]
+
+      at RolesGuard.log [as canActivate] (../src/auth/roles.guard.ts:87:13)
+
+    console.log
+      Product creation took: 12 ms
+
+      at ProductsController.log [as create] (../src/products/products.controller.ts:65:13)
+
+    console.log
+      User role: admin
+
+      at RolesGuard.log [as canActivate] (../src/auth/roles.guard.ts:86:13)
+
+    console.log
+      Required roles: [ 'admin' ]
+
+      at RolesGuard.log [as canActivate] (../src/auth/roles.guard.ts:87:13)
+
+    console.log
+      User role: admin
+
+      at RolesGuard.log [as canActivate] (../src/auth/roles.guard.ts:86:13)
+
+    console.log
+      Required roles: [ 'admin' ]
+
+      at RolesGuard.log [as canActivate] (../src/auth/roles.guard.ts:87:13)
+
+    console.log
+      Product creation took: 11 ms
+
+      at ProductsController.log [as create] (../src/products/products.controller.ts:65:13)
+
+    console.log
+      User role: admin
+
+      at RolesGuard.log [as canActivate] (../src/auth/roles.guard.ts:86:13)
+
+    console.log
+      Required roles: [ 'admin' ]
+
+      at RolesGuard.log [as canActivate] (../src/auth/roles.guard.ts:87:13)
+
+    console.log
+      User role: admin
+
+      at RolesGuard.log [as canActivate] (../src/auth/roles.guard.ts:86:13)
+
+    console.log
+      Required roles: [ 'admin' ]
+
+      at RolesGuard.log [as canActivate] (../src/auth/roles.guard.ts:87:13)
+
+    console.log
+      Product creation took: 10 ms
+
+      at ProductsController.log [as create] (../src/products/products.controller.ts:65:13)
+
+    console.log
+      User role: customer
+
+      at RolesGuard.log [as canActivate] (../src/auth/roles.guard.ts:86:13)
+
+    console.log
+      Required roles: [ 'admin' ]
+
+      at RolesGuard.log [as canActivate] (../src/auth/roles.guard.ts:87:13)
+
+    console.log
+      User role: admin
+
+      at RolesGuard.log [as canActivate] (../src/auth/roles.guard.ts:86:13)
+
+    console.log
+      Required roles: [ 'admin' ]
+
+      at RolesGuard.log [as canActivate] (../src/auth/roles.guard.ts:87:13)
+
+    console.log
+      Product creation took: 11 ms
+
+      at ProductsController.log [as create] (../src/products/products.controller.ts:65:13)
+
+    console.log
+      User role: admin
+
+      at RolesGuard.log [as canActivate] (../src/auth/roles.guard.ts:86:13)
+
+    console.log
+      Required roles: [ 'admin' ]
+
+      at RolesGuard.log [as canActivate] (../src/auth/roles.guard.ts:87:13)
+
+    console.log
+      Product creation took: 18 ms
+
+      at ProductsController.log [as create] (../src/products/products.controller.ts:65:13)
+
+    console.log
+      User role: admin
+
+      at RolesGuard.log [as canActivate] (../src/auth/roles.guard.ts:86:13)
+
+    console.log
+      Required roles: [ 'admin' ]
+
+      at RolesGuard.log [as canActivate] (../src/auth/roles.guard.ts:87:13)
+
+(node:31783) DeprecationWarning: Calling client.query() when the client is already executing a query is deprecated and will be removed in pg@9.0. Use asycn/await or an external async flow control mechanism instead.
+PASS test/orders.e2e-spec.ts (5.842 s)
+  ● Console
+
+    console.log
+      User role: admin
+
+      at RolesGuard.log [as canActivate] (../src/auth/roles.guard.ts:86:13)
+
+    console.log
+      Required roles: [ 'admin' ]
+
+      at RolesGuard.log [as canActivate] (../src/auth/roles.guard.ts:87:13)
+
+    console.log
+      Product creation took: 13 ms
+
+      at ProductsController.log [as create] (../src/products/products.controller.ts:65:13)
+
+    console.log
+      User role: admin
+
+      at RolesGuard.log [as canActivate] (../src/auth/roles.guard.ts:86:13)
+
+    console.log
+      Required roles: [ 'admin' ]
+
+      at RolesGuard.log [as canActivate] (../src/auth/roles.guard.ts:87:13)
+
+    console.log
+      Product creation took: 12 ms
+
+      at ProductsController.log [as create] (../src/products/products.controller.ts:65:13)
+
+    console.log
+      User role: admin
+
+      at RolesGuard.log [as canActivate] (../src/auth/roles.guard.ts:86:13)
+
+    console.log
+      Required roles: [ 'admin' ]
+
+      at RolesGuard.log [as canActivate] (../src/auth/roles.guard.ts:87:13)
+
+    console.log
+      Product creation took: 12 ms
+
+      at ProductsController.log [as create] (../src/products/products.controller.ts:65:13)
+
+    console.log
+      User role: admin
+
+      at RolesGuard.log [as canActivate] (../src/auth/roles.guard.ts:86:13)
+
+    console.log
+      Required roles: [ 'admin' ]
+
+      at RolesGuard.log [as canActivate] (../src/auth/roles.guard.ts:87:13)
+
+    console.log
+      User role: admin
+
+      at RolesGuard.log [as canActivate] (../src/auth/roles.guard.ts:86:13)
+
+    console.log
+      Required roles: [ 'admin' ]
+
+      at RolesGuard.log [as canActivate] (../src/auth/roles.guard.ts:87:13)
+
+    console.log
+      Product creation took: 10 ms
+
+      at ProductsController.log [as create] (../src/products/products.controller.ts:65:13)
+
+    console.log
+      User role: admin
+
+      at RolesGuard.log [as canActivate] (../src/auth/roles.guard.ts:86:13)
+
+    console.log
+      Required roles: [ 'admin' ]
+
+      at RolesGuard.log [as canActivate] (../src/auth/roles.guard.ts:87:13)
+
+    console.log
+      Product creation took: 14 ms
+
+      at ProductsController.log [as create] (../src/products/products.controller.ts:65:13)
+
+    console.log
+      User role: admin
+
+      at RolesGuard.log [as canActivate] (../src/auth/roles.guard.ts:86:13)
+
+    console.log
+      Required roles: [ 'admin' ]
+
+      at RolesGuard.log [as canActivate] (../src/auth/roles.guard.ts:87:13)
+
+    console.log
+      Product creation took: 11 ms
+
+      at ProductsController.log [as create] (../src/products/products.controller.ts:65:13)
+
+    console.log
+      User role: admin
+
+      at RolesGuard.log [as canActivate] (../src/auth/roles.guard.ts:86:13)
+
+    console.log
+      Required roles: [ 'admin' ]
+
+      at RolesGuard.log [as canActivate] (../src/auth/roles.guard.ts:87:13)
+
+(node:31783) DeprecationWarning: Calling client.query() when the client is already executing a query is deprecated and will be removed in pg@9.0. Use asycn/await or an external async flow control mechanism instead.
+PASS test/auth.e2e-spec.ts
+(node:31783) DeprecationWarning: Calling client.query() when the client is already executing a query is deprecated and will be removed in pg@9.0. Use asycn/await or an external async flow control mechanism instead.
+PASS test/products.e2e-spec.ts (5.028 s)
+  ● Console
+
+    console.log
+      User role: admin
+
+      at RolesGuard.log [as canActivate] (../src/auth/roles.guard.ts:86:13)
+
+    console.log
+      Required roles: [ 'admin' ]
+
+      at RolesGuard.log [as canActivate] (../src/auth/roles.guard.ts:87:13)
+
+    console.log
+      Product creation took: 14 ms
+
+      at ProductsController.log [as create] (../src/products/products.controller.ts:65:13)
+
+    console.log
+      User role: admin
+
+      at RolesGuard.log [as canActivate] (../src/auth/roles.guard.ts:86:13)
+
+    console.log
+      Required roles: [ 'admin' ]
+
+      at RolesGuard.log [as canActivate] (../src/auth/roles.guard.ts:87:13)
+
+    console.log
+      User role: admin
+
+      at RolesGuard.log [as canActivate] (../src/auth/roles.guard.ts:86:13)
+
+    console.log
+      Required roles: [ 'admin' ]
+
+      at RolesGuard.log [as canActivate] (../src/auth/roles.guard.ts:87:13)
+
+    console.log
+      Product creation took: 13 ms
+
+      at ProductsController.log [as create] (../src/products/products.controller.ts:65:13)
+
+    console.log
+      User role: admin
+
+      at RolesGuard.log [as canActivate] (../src/auth/roles.guard.ts:86:13)
+
+    console.log
+      Required roles: [ 'admin' ]
+
+      at RolesGuard.log [as canActivate] (../src/auth/roles.guard.ts:87:13)
+
+    console.log
+      Product creation took: 12 ms
+
+      at ProductsController.log [as create] (../src/products/products.controller.ts:65:13)
+
+    console.log
+      User role: admin
+
+      at RolesGuard.log [as canActivate] (../src/auth/roles.guard.ts:86:13)
+
+    console.log
+      Required roles: [ 'admin' ]
+
+      at RolesGuard.log [as canActivate] (../src/auth/roles.guard.ts:87:13)
+
+    console.log
+      Product creation took: 11 ms
+
+      at ProductsController.log [as create] (../src/products/products.controller.ts:65:13)
+
+    console.log
+      User role: admin
+
+      at RolesGuard.log [as canActivate] (../src/auth/roles.guard.ts:86:13)
+
+    console.log
+      Required roles: [ 'admin' ]
+
+      at RolesGuard.log [as canActivate] (../src/auth/roles.guard.ts:87:13)
+
+    console.log
+      Product creation took: 11 ms
+
+      at ProductsController.log [as create] (../src/products/products.controller.ts:65:13)
+
+(node:31783) DeprecationWarning: Calling client.query() when the client is already executing a query is deprecated and will be removed in pg@9.0. Use asycn/await or an external async flow control mechanism instead.
+PASS test/statistics.e2e-spec.ts (5.181 s)
+  ● Console
+
+    console.log
+      User role: admin
+
+      at RolesGuard.log [as canActivate] (../src/auth/roles.guard.ts:86:13)
+
+    console.log
+      Required roles: [ 'admin' ]
+
+      at RolesGuard.log [as canActivate] (../src/auth/roles.guard.ts:87:13)
+
+    console.log
+      User role: admin
+
+      at RolesGuard.log [as canActivate] (../src/auth/roles.guard.ts:86:13)
+
+    console.log
+      Required roles: [ 'admin' ]
+
+      at RolesGuard.log [as canActivate] (../src/auth/roles.guard.ts:87:13)
+
+    console.log
+      [DEBUG] Admin Stats: { brands: 1, products: 0, users: 3 }
+
+      at StatisticsController.log [as getStats] (../src/statistics/statistics.controller.ts:22:21)
+
+    console.log
+      User role: admin
+
+      at RolesGuard.log [as canActivate] (../src/auth/roles.guard.ts:86:13)
+
+    console.log
+      Required roles: [ 'admin' ]
+
+      at RolesGuard.log [as canActivate] (../src/auth/roles.guard.ts:87:13)
+
+    console.log
+      [DEBUG] Brand Owner Stats: { myProducts: 0, orders: 0, revenue: 0 }
+
+      at StatisticsController.log [as getStats] (../src/statistics/statistics.controller.ts:26:21)
+
+    console.log
+      User role: admin
+
+      at RolesGuard.log [as canActivate] (../src/auth/roles.guard.ts:86:13)
+
+    console.log
+      Required roles: [ 'admin' ]
+
+      at RolesGuard.log [as canActivate] (../src/auth/roles.guard.ts:87:13)
+
+    console.log
+      [DEBUG] Brand Owner Stats: { myProducts: 0, orders: 0, revenue: 0 }
+
+      at StatisticsController.log [as getStats] (../src/statistics/statistics.controller.ts:26:21)
+
+    console.log
+      User role: admin
+
+      at RolesGuard.log [as canActivate] (../src/auth/roles.guard.ts:86:13)
+
+    console.log
+      Required roles: [ 'admin' ]
+
+      at RolesGuard.log [as canActivate] (../src/auth/roles.guard.ts:87:13)
+
+    console.log
+      [DEBUG] Customer Stats: {
+        myOrders: 0,
+        wishlist: 0,
+        cartItems: 0,
+        totalSpent: 0,
+        pendingOrders: 0,
+        completedOrders: 0
+      }
+
+      at StatisticsController.log [as getStats] (../src/statistics/statistics.controller.ts:30:21)
+
+(node:31783) DeprecationWarning: Calling client.query() when the client is already executing a query is deprecated and will be removed in pg@9.0. Use asycn/await or an external async flow control mechanism instead.
+PASS test/app.e2e-spec.ts
+----------|---------|----------|---------|---------|-------------------
+File      | % Stmts | % Branch | % Funcs | % Lines | Uncovered Line #s 
+----------|---------|----------|---------|---------|-------------------
+All files |       0 |        0 |       0 |       0 |                   
+----------|---------|----------|---------|---------|-------------------
+
+Test Suites: 10 passed, 10 total
+Tests:       74 passed, 74 total
+Snapshots:   0 total
+Time:        71.642 s, estimated 310 s
+Ran all test suites.
+Jest did not exit one second after the test run has completed.
+
+'This usually means that there are asynchronous operations that weren't stopped in your tests. Consider running Jest with `--detectOpenHandles` to troubleshoot this issue.

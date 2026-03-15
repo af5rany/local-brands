@@ -1,5 +1,11 @@
 import React from "react";
-import { View, Text, StyleSheet, useWindowDimensions, ScrollView } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  useWindowDimensions,
+  ScrollView,
+} from "react-native";
 import StatsCard from "./StatsCard";
 import QuickActionCard from "./QuickActionCard";
 
@@ -28,17 +34,28 @@ const AdminDashboard = ({
   // Grid layout calculations
   const sidePadding = isTablet ? 32 : 20;
   const gridGap = isTablet ? 16 : 8;
-  const availableWidth = width - (sidePadding * 2) - 8;
+  const availableWidth = width - sidePadding * 2 - 8;
   const statsCols = isTablet ? 3 : 1; // On admin, stats are more prominent
-  const cardWidth = isTablet ? (availableWidth / statsCols) - (gridGap) : width * 0.8;
+  const cardWidth = isTablet
+    ? availableWidth / statsCols - gridGap
+    : width * 0.8;
 
   return (
     <>
       {/* Admin Stats Overview */}
       <View style={[styles.section, isTablet && styles.sectionTablet]}>
-        <Text style={[styles.sectionTitle, isTablet && styles.sectionTitleTablet]}>System Overview</Text>
+        <Text
+          style={[styles.sectionTitle, isTablet && styles.sectionTitleTablet]}
+        >
+          System Overview
+        </Text>
         {isTablet ? (
-          <View style={[styles.statsContainer, isTablet && styles.statsContainerTablet]}>
+          <View
+            style={[
+              styles.statsContainer,
+              isTablet && styles.statsContainerTablet,
+            ]}
+          >
             <StatsCard
               title="Total Brands"
               value={loadingStats ? "..." : stats.brands}
@@ -103,7 +120,11 @@ const AdminDashboard = ({
 
       {/* Admin Quick Actions */}
       <View style={[styles.section, isTablet && styles.sectionTablet]}>
-        <Text style={[styles.sectionTitle, isTablet && styles.sectionTitleTablet]}>Admin Actions</Text>
+        <Text
+          style={[styles.sectionTitle, isTablet && styles.sectionTitleTablet]}
+        >
+          Admin Actions
+        </Text>
         <View style={[styles.actionsContainer, isTablet && styles.actionsGrid]}>
           <QuickActionCard
             title="Manage Brands"

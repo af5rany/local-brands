@@ -20,14 +20,20 @@ export class Wishlist {
   @ManyToOne(() => User, (user) => user.wishlist, {
     onDelete: 'CASCADE',
   })
-  @JoinColumn()
+  @JoinColumn({ name: 'userId' })
   user: User;
+
+  @Column()
+  userId: number;
 
   @ManyToOne(() => Product, (product) => product.wishlist, {
     onDelete: 'CASCADE',
   })
-  @JoinColumn()
+  @JoinColumn({ name: 'productId' })
   product: Product;
+
+  @Column()
+  productId: number;
 
   @Column({ nullable: true })
   notes: string;

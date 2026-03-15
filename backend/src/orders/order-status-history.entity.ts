@@ -1,35 +1,47 @@
 import {
-    Entity,
-    PrimaryGeneratedColumn,
-    Column,
-    ManyToOne,
-    CreateDateColumn,
-    Index,
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  ManyToOne,
+  CreateDateColumn,
+  Index,
 } from 'typeorm';
 import { Order } from './order.entity';
 import { OrderStatus } from 'src/common/enums/order.enum';
 
 @Entity()
 export class OrderStatusHistory {
-    @PrimaryGeneratedColumn()
-    id: number;
+  @PrimaryGeneratedColumn()
+  id: number;
 
-    @Column({
-        type: 'enum',
-        enum: OrderStatus,
-    })
-    status: OrderStatus;
+  @Column({
+    type: 'enum',
+    enum: OrderStatus,
+    nullable: true,
+  })
+  oldStatus?: OrderStatus | null;
 
-    @Column({ nullable: true })
-    notes: string;
+  @Column({
+    type: 'enum',
+    enum: OrderStatus,
+  })
+  newStatus: OrderStatus;
 
-    @ManyToOne(() => Order, (order) => order.statusHistory, { onDelete: 'CASCADE' })
-    @Index()
-    order: Order;
+  @Column({ nullable: true })
+  changedByUserId: number;
 
-    @Column()
-    orderId: number;
+  @Column({ nullable: true })
+  notes: string;
 
-    @CreateDateColumn()
-    createdAt: Date;
+  @ManyToOne(() => Order, (order) => order.statusHistory, {
+    onDelete: 'CASCADE',
+  })
+  @Index()
+  order: Order;
+
+  @Column()
+  orderId: number;
+
+  @CreateDateColumn()
+  createdAt: Date;
 }

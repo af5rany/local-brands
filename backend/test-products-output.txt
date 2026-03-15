@@ -1,0 +1,110 @@
+
+> local-brands-backend@0.0.1 test:e2e
+> jest --config ./test/jest-e2e.json products.e2e-spec.ts
+
+(node:24766) DeprecationWarning: Calling client.query() when the client is already executing a query is deprecated and will be removed in pg@9.0. Use asycn/await or an external async flow control mechanism instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+  console.log
+    User role: admin
+
+      at RolesGuard.canActivate (../src/auth/roles.guard.ts:86:13)
+
+  console.log
+    Required roles: [ 'admin' ]
+
+      at RolesGuard.canActivate (../src/auth/roles.guard.ts:87:13)
+
+  console.log
+    Product creation took: 20 ms
+
+      at ProductsController.create (../src/products/products.controller.ts:65:13)
+
+  console.log
+    User role: admin
+
+      at RolesGuard.canActivate (../src/auth/roles.guard.ts:86:13)
+
+  console.log
+    Required roles: [ 'admin' ]
+
+      at RolesGuard.canActivate (../src/auth/roles.guard.ts:87:13)
+
+  console.log
+    User role: admin
+
+      at RolesGuard.canActivate (../src/auth/roles.guard.ts:86:13)
+
+  console.log
+    Required roles: [ 'admin' ]
+
+      at RolesGuard.canActivate (../src/auth/roles.guard.ts:87:13)
+
+  console.log
+    Product creation took: 13 ms
+
+      at ProductsController.create (../src/products/products.controller.ts:65:13)
+
+  console.log
+    User role: admin
+
+      at RolesGuard.canActivate (../src/auth/roles.guard.ts:86:13)
+
+  console.log
+    Required roles: [ 'admin' ]
+
+      at RolesGuard.canActivate (../src/auth/roles.guard.ts:87:13)
+
+  console.log
+    Product creation took: 15 ms
+
+      at ProductsController.create (../src/products/products.controller.ts:65:13)
+
+  console.log
+    User role: admin
+
+      at RolesGuard.canActivate (../src/auth/roles.guard.ts:86:13)
+
+  console.log
+    Required roles: [ 'admin' ]
+
+      at RolesGuard.canActivate (../src/auth/roles.guard.ts:87:13)
+
+  console.log
+    Product creation took: 11 ms
+
+      at ProductsController.create (../src/products/products.controller.ts:65:13)
+
+  console.log
+    User role: admin
+
+      at RolesGuard.canActivate (../src/auth/roles.guard.ts:86:13)
+
+  console.log
+    Required roles: [ 'admin' ]
+
+      at RolesGuard.canActivate (../src/auth/roles.guard.ts:87:13)
+
+  console.log
+    Product creation took: 12 ms
+
+      at ProductsController.create (../src/products/products.controller.ts:65:13)
+
+PASS test/products.e2e-spec.ts (8.223 s)
+  ProductsModule (e2e)
+    /products (POST)
+      ✓ should create a product (711 ms)
+      ✓ should fail if price is invalid (633 ms)
+    /products (GET)
+      ✓ should get search products (609 ms)
+    /products/:id (GET)
+      ✓ should get a product by ID (665 ms)
+    /products/:id (PUT)
+      ✓ should update a product (687 ms)
+    /products/:id (DELETE)
+      ✓ should delete a product (810 ms)
+
+Test Suites: 1 passed, 1 total
+Tests:       6 passed, 6 total
+Snapshots:   0 total
+Time:        8.491 s
+Ran all test suites matching /products.e2e-spec.ts/i.

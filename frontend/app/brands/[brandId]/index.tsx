@@ -22,7 +22,13 @@ import { useThemeColor } from "@/hooks/useThemeColor";
 import { Ionicons } from "@expo/vector-icons";
 import { Brand } from "@/types/brand";
 import { Product } from "@/types/product";
-import { Gender, ProductType, Season, BrandStatus, ProductStatus } from "@/types/enums";
+import {
+  Gender,
+  ProductType,
+  Season,
+  BrandStatus,
+  ProductStatus,
+} from "@/types/enums";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/context/ToastContext";
 
@@ -79,24 +85,26 @@ const BrandDetailScreen = () => {
   const textColor = useThemeColor({}, "text");
   const cardBackground = useThemeColor(
     { light: "#ffffff", dark: "#1c1c1e" },
-    "background"
+    "background",
   );
   const borderColor = useThemeColor(
     { light: "#e1e5e9", dark: "#38383a" },
-    "text"
+    "text",
   );
   const primaryColor = useThemeColor(
     { light: "#007AFF", dark: "#0A84FF" },
-    "tint"
+    "tint",
   );
   const secondaryTextColor = useThemeColor(
     { light: "#8E8E93", dark: "#8E8E93" },
-    "text"
+    "text",
   );
 
   // State management
   const [brand, setBrand] = useState<Brand | null>(null);
-  const isOwnerOrAdmin = userRole === "admin" || (user?.id && brand?.owner?.id && user.id === brand.owner.id);
+  const isOwnerOrAdmin =
+    userRole === "admin" ||
+    (user?.id && brand?.owner?.id && user.id === brand.owner.id);
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [productsLoading, setProductsLoading] = useState(false);
@@ -235,7 +243,7 @@ const BrandDetailScreen = () => {
             }
           },
         },
-      ]
+      ],
     );
   };
 
@@ -265,8 +273,7 @@ const BrandDetailScreen = () => {
           queryParams.append("minPrice", filters.minPrice.toString());
         if (filters.maxPrice)
           queryParams.append("maxPrice", filters.maxPrice.toString());
-        if (filters.status)
-          queryParams.append("status", filters.status);
+        if (filters.status) queryParams.append("status", filters.status);
 
         console.log("Fetching with params:", queryParams.toString()); // Debug log
 
@@ -277,7 +284,7 @@ const BrandDetailScreen = () => {
               ...(token && { Authorization: `Bearer ${token}` }),
               "Content-Type": "application/json",
             },
-          }
+          },
         );
 
         if (!response.ok) {
@@ -310,7 +317,7 @@ const BrandDetailScreen = () => {
         setRefreshing(false);
       }
     },
-    [brandId, filters, sortBy, sortOrder, pagination.limit, brand?.name]
+    [brandId, filters, sortBy, sortOrder, pagination.limit, brand?.name],
   );
 
   useEffect(() => {
@@ -761,17 +768,27 @@ const BrandDetailScreen = () => {
               </Text>
             </View>
           )}
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
             <Text style={styles.brandName}>{brand.name}</Text>
-            <View style={[
-              {
-                paddingHorizontal: 8,
-                paddingVertical: 2,
-                borderRadius: 6,
-                backgroundColor: brand.status === BrandStatus.ACTIVE ? '#10b981' : '#64748b'
-              }
-            ]}>
-              <Text style={{ color: '#fff', fontSize: 10, fontWeight: '700', textTransform: 'uppercase' }}>
+            <View
+              style={[
+                {
+                  paddingHorizontal: 8,
+                  paddingVertical: 2,
+                  borderRadius: 6,
+                  backgroundColor:
+                    brand.status === BrandStatus.ACTIVE ? "#10b981" : "#64748b",
+                },
+              ]}
+            >
+              <Text
+                style={{
+                  color: "#fff",
+                  fontSize: 10,
+                  fontWeight: "700",
+                  textTransform: "uppercase",
+                }}
+              >
                 {brand.status}
               </Text>
             </View>
@@ -794,7 +811,10 @@ const BrandDetailScreen = () => {
 
             {/* Delete Brand Button */}
             <TouchableOpacity
-              style={[styles.createButton, { backgroundColor: '#FF3B30', marginTop: 0 }]}
+              style={[
+                styles.createButton,
+                { backgroundColor: "#FF3B30", marginTop: 0 },
+              ]}
               onPress={handleDeleteBrand}
             >
               <Ionicons name="trash-outline" size={20} color="#ffffff" />
@@ -849,7 +869,7 @@ const BrandDetailScreen = () => {
               style={[
                 styles.sortButton,
                 selectedSortOption.key === option.key &&
-                styles.sortButtonActive,
+                  styles.sortButtonActive,
               ]}
               onPress={() => handleSortChange(option)}
             >
@@ -857,7 +877,7 @@ const BrandDetailScreen = () => {
                 style={[
                   styles.sortButtonText,
                   selectedSortOption.key === option.key &&
-                  styles.sortButtonTextActive,
+                    styles.sortButtonTextActive,
                 ]}
               >
                 {option.label}
@@ -952,12 +972,12 @@ const BrandDetailScreen = () => {
                       style={[
                         styles.filterOption,
                         filters.productType === type &&
-                        styles.filterOptionActive,
+                          styles.filterOptionActive,
                       ]}
                       onPress={() =>
                         handleFilterChange(
                           "productType",
-                          filters.productType === type ? undefined : type
+                          filters.productType === type ? undefined : type,
                         )
                       }
                     >
@@ -965,7 +985,7 @@ const BrandDetailScreen = () => {
                         style={[
                           styles.filterOptionText,
                           filters.productType === type &&
-                          styles.filterOptionTextActive,
+                            styles.filterOptionTextActive,
                         ]}
                       >
                         {type}
@@ -989,7 +1009,7 @@ const BrandDetailScreen = () => {
                       onPress={() =>
                         handleFilterChange(
                           "gender",
-                          filters.gender === gender ? undefined : gender
+                          filters.gender === gender ? undefined : gender,
                         )
                       }
                     >
@@ -997,7 +1017,7 @@ const BrandDetailScreen = () => {
                         style={[
                           styles.filterOptionText,
                           filters.gender === gender &&
-                          styles.filterOptionTextActive,
+                            styles.filterOptionTextActive,
                         ]}
                       >
                         {gender}
@@ -1021,7 +1041,7 @@ const BrandDetailScreen = () => {
                       onPress={() =>
                         handleFilterChange(
                           "season",
-                          filters.season === season ? undefined : season
+                          filters.season === season ? undefined : season,
                         )
                       }
                     >
@@ -1029,7 +1049,7 @@ const BrandDetailScreen = () => {
                         style={[
                           styles.filterOptionText,
                           filters.season === season &&
-                          styles.filterOptionTextActive,
+                            styles.filterOptionTextActive,
                         ]}
                       >
                         {season}
@@ -1053,7 +1073,7 @@ const BrandDetailScreen = () => {
                       onPress={() =>
                         handleFilterChange(
                           "status",
-                          filters.status === status ? undefined : status
+                          filters.status === status ? undefined : status,
                         )
                       }
                     >
@@ -1061,7 +1081,7 @@ const BrandDetailScreen = () => {
                         style={[
                           styles.filterOptionText,
                           filters.status === status &&
-                          styles.filterOptionTextActive,
+                            styles.filterOptionTextActive,
                         ]}
                       >
                         {status}
@@ -1084,7 +1104,7 @@ const BrandDetailScreen = () => {
                     onChangeText={(text) =>
                       handleFilterChange(
                         "minPrice",
-                        text ? parseFloat(text) : undefined
+                        text ? parseFloat(text) : undefined,
                       )
                     }
                   />
@@ -1097,7 +1117,7 @@ const BrandDetailScreen = () => {
                     onChangeText={(text) =>
                       handleFilterChange(
                         "maxPrice",
-                        text ? parseFloat(text) : undefined
+                        text ? parseFloat(text) : undefined,
                       )
                     }
                   />

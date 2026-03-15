@@ -1,5 +1,11 @@
 import React from "react";
-import { View, Text, StyleSheet, TouchableOpacity, useWindowDimensions } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  useWindowDimensions,
+} from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
 type Order = {
@@ -72,10 +78,7 @@ const RecentOrderCard = ({ order, onPress }: RecentOrderCardProps) => {
 
   return (
     <TouchableOpacity
-      style={[
-        styles.card,
-        isTablet && styles.tabletCard
-      ]}
+      style={[styles.card, isTablet && styles.tabletCard]}
       onPress={onPress}
       activeOpacity={0.7}
     >

@@ -50,23 +50,23 @@ const CreateBrandScreen = () => {
   const textColor = useThemeColor({}, "text");
   const buttonColor = useThemeColor(
     { light: "#007AFF", dark: "#0A84FF" },
-    "tint"
+    "tint",
   );
   const cardBackground = useThemeColor(
     { light: "#ffffff", dark: "#1c1c1e" },
-    "background"
+    "background",
   );
   const secondaryTextColor = useThemeColor(
     { light: "#8e8e93", dark: "#98989d" },
-    "text"
+    "text",
   );
   const inputBackground = useThemeColor(
     { light: "#f2f2f7", dark: "#2c2c2e" },
-    "background"
+    "background",
   );
   const inputBorderColor = useThemeColor(
     { light: "#e5e5ea", dark: "#3a3a3c" },
-    "background"
+    "background",
   );
 
   // Fetch users from backend
@@ -96,9 +96,13 @@ const CreateBrandScreen = () => {
 
   const handleImagePick = async () => {
     try {
-      const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      const permissionResult =
+        await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!permissionResult.granted) {
-        Alert.alert("Permission Required", "Permission to access photo library is required!");
+        Alert.alert(
+          "Permission Required",
+          "Permission to access photo library is required!",
+        );
         return;
       }
 
@@ -181,7 +185,7 @@ const CreateBrandScreen = () => {
       console.error("Error creating brand:", err);
       Alert.alert(
         "Error",
-        err.message || "An error occurred while creating the brand."
+        err.message || "An error occurred while creating the brand.",
       );
     } finally {
       setLoading(false);
@@ -193,7 +197,9 @@ const CreateBrandScreen = () => {
       style={{ flex: 1 }}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
-      <StatusBar barStyle={Platform.OS === "ios" ? "dark-content" : "default"} />
+      <StatusBar
+        barStyle={Platform.OS === "ios" ? "dark-content" : "default"}
+      />
       <ScrollView
         style={[styles.container, { backgroundColor }]}
         contentContainerStyle={styles.scrollContent}
@@ -234,14 +240,21 @@ const CreateBrandScreen = () => {
                 {
                   backgroundColor: inputBackground,
                   borderColor: logoUrl ? buttonColor : inputBorderColor,
-                  borderStyle: logoUrl ? 'solid' : 'dashed'
+                  borderStyle: logoUrl ? "solid" : "dashed",
                 },
               ]}
               onPress={handleImagePick}
             >
-              {uploads[Object.keys(uploads).reverse().find(k => !logoUrl.includes(k)) || ''] ? (
+              {uploads[
+                Object.keys(uploads)
+                  .reverse()
+                  .find((k) => !logoUrl.includes(k)) || ""
+              ] ? (
                 <View style={styles.uploadingContainer}>
-                  <ImageUploadProgress upload={uploads[Object.keys(uploads).reverse()[0]]} size={150} />
+                  <ImageUploadProgress
+                    upload={uploads[Object.keys(uploads).reverse()[0]]}
+                    size={150}
+                  />
                 </View>
               ) : logoUrl ? (
                 <View style={styles.logoPreviewContainer}>
@@ -252,13 +265,26 @@ const CreateBrandScreen = () => {
                 </View>
               ) : (
                 <View style={styles.logoPlaceholder}>
-                  <View style={[styles.iconCircle, { backgroundColor: cardBackground }]}>
-                    <Ionicons name="cloud-upload-outline" size={28} color={buttonColor} />
+                  <View
+                    style={[
+                      styles.iconCircle,
+                      { backgroundColor: cardBackground },
+                    ]}
+                  >
+                    <Ionicons
+                      name="cloud-upload-outline"
+                      size={28}
+                      color={buttonColor}
+                    />
                   </View>
-                  <Text style={[styles.logoPlaceholderText, { color: textColor }]}>
+                  <Text
+                    style={[styles.logoPlaceholderText, { color: textColor }]}
+                  >
                     Upload Brand Logo
                   </Text>
-                  <Text style={[styles.logoHintText, { color: secondaryTextColor }]}>
+                  <Text
+                    style={[styles.logoHintText, { color: secondaryTextColor }]}
+                  >
                     Square image recommended
                   </Text>
                 </View>
@@ -315,7 +341,7 @@ const CreateBrandScreen = () => {
                   styles.dropdownWrapper,
                   {
                     backgroundColor: inputBackground,
-                    borderColor: inputBorderColor
+                    borderColor: inputBorderColor,
                   },
                 ]}
               >
@@ -348,12 +374,15 @@ const CreateBrandScreen = () => {
                     {
                       backgroundColor: cardBackground,
                       color: textColor,
-                      borderColor: inputBorderColor
-                    }
+                      borderColor: inputBorderColor,
+                    },
                   ]}
                   containerStyle={[
                     styles.dropdownContainer,
-                    { backgroundColor: cardBackground, borderColor: inputBorderColor },
+                    {
+                      backgroundColor: cardBackground,
+                      borderColor: inputBorderColor,
+                    },
                   ]}
                   itemTextStyle={{ color: textColor }}
                   activeColor={inputBackground}
@@ -367,7 +396,10 @@ const CreateBrandScreen = () => {
         <TouchableOpacity
           style={[styles.createButton, loading && styles.buttonDisabled]}
           onPress={handleCreateBrand}
-          disabled={loading || Object.values(uploads).some(u => u.status === 'uploading')}
+          disabled={
+            loading ||
+            Object.values(uploads).some((u) => u.status === "uploading")
+          }
           activeOpacity={0.9}
         >
           <LinearGradient
@@ -381,7 +413,12 @@ const CreateBrandScreen = () => {
             ) : (
               <>
                 <Text style={styles.buttonText}>Publish Brand</Text>
-                <Ionicons name="arrow-forward" size={20} color="white" style={styles.buttonIcon} />
+                <Ionicons
+                  name="arrow-forward"
+                  size={20}
+                  color="white"
+                  style={styles.buttonIcon}
+                />
               </>
             )}
           </LinearGradient>
@@ -417,10 +454,15 @@ const InputField = ({
 }) => (
   <View style={styles.inputContainer}>
     <Text style={[styles.inputLabel, { color: textColor }]}>{label}</Text>
-    <View style={[styles.inputWrapper, {
-      borderColor: inputBorderColor,
-      backgroundColor: inputBackground
-    }]}>
+    <View
+      style={[
+        styles.inputWrapper,
+        {
+          borderColor: inputBorderColor,
+          backgroundColor: inputBackground,
+        },
+      ]}
+    >
       <Ionicons
         name={`${icon}-outline` as any}
         size={20}
@@ -438,7 +480,10 @@ const InputField = ({
         onChangeText={onChangeText}
         placeholderTextColor={secondaryTextColor}
         multiline={multiline}
-        selectionColor={useThemeColor({ light: "#007AFF", dark: "#0A84FF" }, "tint")}
+        selectionColor={useThemeColor(
+          { light: "#007AFF", dark: "#0A84FF" },
+          "tint",
+        )}
       />
     </View>
   </View>
@@ -495,8 +540,8 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginBottom: 16,
     gap: 8,
   },
@@ -513,23 +558,23 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     alignItems: "center",
     justifyContent: "center",
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   logoPreviewContainer: {
     width: "100%",
     height: "100%",
-    position: 'relative',
+    position: "relative",
   },
   logoPreview: {
     width: "100%",
     height: "100%",
-    resizeMode: 'cover',
+    resizeMode: "cover",
   },
   logoBadge: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 12,
     right: 12,
-    backgroundColor: 'rgba(0,0,0,0.6)',
+    backgroundColor: "rgba(0,0,0,0.6)",
     padding: 8,
     borderRadius: 12,
   },
@@ -541,8 +586,8 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 32,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     marginBottom: 12,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
@@ -562,7 +607,7 @@ const styles = StyleSheet.create({
     gap: 24,
   },
   inputContainer: {
-    width: '100%',
+    width: "100%",
   },
   inputLabel: {
     fontSize: 15,
@@ -584,7 +629,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 16,
     paddingHorizontal: 12,
-    fontWeight: '500',
+    fontWeight: "500",
   },
   dropdownWrapper: {
     flexDirection: "row",
@@ -601,7 +646,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
     marginTop: 8,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   placeholderStyle: {
     fontSize: 16,
@@ -645,13 +690,13 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
   uploadingContainer: {
-    alignItems: 'center',
+    alignItems: "center",
     gap: 12,
   },
   uploadingText: {
     fontSize: 15,
-    fontWeight: '600',
-  }
+    fontWeight: "600",
+  },
 });
 
 export default CreateBrandScreen;

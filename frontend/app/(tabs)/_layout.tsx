@@ -30,17 +30,18 @@ export default function TabLayout() {
             },
             default: {},
           }),
-          headerRight: () => token ? (
-            <Pressable
-              onPress={logout}
-              style={({ pressed }) => ({
-                opacity: pressed ? 0.5 : 1,
-                marginRight: 15,
-              })}
-            >
-              <IconSymbol name="power" size={24} color="red" />
-            </Pressable>
-          ) : null,
+          headerRight: () =>
+            token ? (
+              <Pressable
+                onPress={logout}
+                style={({ pressed }) => ({
+                  opacity: pressed ? 0.5 : 1,
+                  marginRight: 15,
+                })}
+              >
+                <IconSymbol name="power" size={24} color="red" />
+              </Pressable>
+            ) : null,
         }}
       >
         <Tabs.Screen

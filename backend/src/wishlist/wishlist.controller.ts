@@ -200,4 +200,16 @@ export class WishlistController {
     }
     return this.wishlistService.removeByUserAndProduct(userId, productId);
   }
+
+  @Post('toggle/:productId')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Toggle product in wishlist' })
+  @ApiParam({ name: 'productId', description: 'Product ID' })
+  @ApiResponse({ status: 200, description: 'Toggle successful' })
+  async toggle(
+    @Param('productId', ParseIntPipe) productId: number,
+    @Request() req,
+  ): Promise<{ added: boolean }> {
+    return this.wishlistService.toggle(req.user.id, productId);
+  }
 }

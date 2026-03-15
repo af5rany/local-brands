@@ -2,11 +2,18 @@ import { ProductType, Gender, Season, ProductStatus } from "./enums"; // Import 
 import { Brand } from "./brand"; // Import Brand interface
 
 export interface ProductVariant {
-  color: string;
-  colorHex?: string;
-  variantImages: string[]; // Added field for variant-specific image
+  id: number;
+  productId: number;
+  sku?: string;
+  attributes: Record<string, string>;
+  priceOverride?: number;
   stock: number;
-  createdAt?: string; // Using string for date representation (ISO format)
+  images: string[];
+  variantImages?: string[];
+  color?: string;
+  colorHex?: string;
+  isAvailable: boolean;
+  createdAt?: string;
   updatedAt?: string;
 }
 

@@ -18,26 +18,50 @@ const BrandCard: React.FC<BrandCardProps> = ({
 
   return (
     <TouchableOpacity
-      style={[styles.container, isSmall ? styles.containerSmall : styles.containerMedium]}
+      style={[
+        styles.container,
+        isSmall ? styles.containerSmall : styles.containerMedium,
+      ]}
       onPress={onPress}
       activeOpacity={0.7}
     >
-      <View style={[styles.logoContainer, isSmall ? styles.logoContainerSmall : styles.logoContainerMedium]}>
+      <View
+        style={[
+          styles.logoContainer,
+          isSmall ? styles.logoContainerSmall : styles.logoContainerMedium,
+        ]}
+      >
         {brand.logo ? (
           <Image
             source={{ uri: brand.logo }}
-            style={[styles.logo, isSmall ? styles.logoSmall : styles.logoMedium]}
+            style={[
+              styles.logo,
+              isSmall ? styles.logoSmall : styles.logoMedium,
+            ]}
             resizeMode="contain"
           />
         ) : (
-          <View style={[styles.placeholder, isSmall ? styles.logoSmall : styles.logoMedium]}>
-            <Ionicons name="business" size={isSmall ? 24 : 32} color="#64748b" />
+          <View
+            style={[
+              styles.placeholder,
+              isSmall ? styles.logoSmall : styles.logoMedium,
+            ]}
+          >
+            <Ionicons
+              name="business"
+              size={isSmall ? 24 : 32}
+              color="#64748b"
+            />
           </View>
         )}
       </View>
-      <Text style={styles.name} numberOfLines={1}>{brand.name}</Text>
+      <Text style={styles.name} numberOfLines={1}>
+        {brand.name}
+      </Text>
       {brand.location && !isSmall && (
-        <Text style={styles.location} numberOfLines={1}>{brand.location}</Text>
+        <Text style={styles.location} numberOfLines={1}>
+          {brand.location}
+        </Text>
       )}
     </TouchableOpacity>
   );

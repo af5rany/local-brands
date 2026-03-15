@@ -7,24 +7,40 @@ import {
   JoinColumn,
   CreateDateColumn,
   UpdateDateColumn,
+  Unique,
 } from 'typeorm';
 import { Cart } from './cart.entity';
 import { Product } from '../products/product.entity';
+import { ProductVariant } from '../products/product-variant.entity';
 
 @Entity()
+@Unique(['cart', 'product', 'variant'])
 export class CartItem {
   @PrimaryGeneratedColumn()
   id: number;
 
   @ManyToOne(() => Cart, (cart) => cart.cartItems, { onDelete: 'CASCADE' })
-  @JoinColumn()
+  @JoinColumn({ name: 'cartId' })
   cart: Cart;
+
+  @Column()
+  cartId: number;
 
   @ManyToOne(() => Product, (product) => product.cartItems, {
     onDelete: 'CASCADE',
   })
-  @JoinColumn()
+  @JoinColumn({ name: 'productId' })
   product: Product;
+
+  @Column()
+  productId: number;
+
+  @ManyToOne(() => ProductVariant, { nullable: true, onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'variantId' })
+  variant: ProductVariant;
+
+  @Column({ nullable: true })
+  variantId: number;
 
   @Column()
   quantity: number;
