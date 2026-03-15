@@ -132,7 +132,7 @@ const CartScreen = () => {
             </Text>
           )}
           <Text style={[styles.itemPrice, { color: textColor }]}>
-            ${item.unitPrice.toFixed(2)}
+            ${Number(item.unitPrice).toFixed(2)}
           </Text>
         </View>
         <View style={styles.quantityControls}>
@@ -263,7 +263,7 @@ const CartScreen = () => {
                 Subtotal
               </Text>
               <Text style={[styles.summaryValue, { color: textColor }]}>
-                ${cart.totalAmount.toFixed(2)}
+                ${Number(cart.totalAmount).toFixed(2)}
               </Text>
             </View>
             <View style={styles.summaryRow}>
@@ -281,7 +281,7 @@ const CartScreen = () => {
                 Total
               </Text>
               <Text style={[styles.totalValue, { color: textColor }]}>
-                ${cart.totalAmount.toFixed(2)}
+                ${Number(cart.totalAmount).toFixed(2)}
               </Text>
             </View>
             <TouchableOpacity

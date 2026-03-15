@@ -91,6 +91,21 @@ export class OrdersController {
     );
   }
 
+  // ✅ Get order status history (timeline)
+  @Get(':id/history')
+  async getOrderHistory(
+    @Param('id', ParseIntPipe) id: number,
+    @Request() req,
+  ) {
+    // First verify user can access this order
+    await this.ordersService.findOne(
+      id,
+      Number(req.user.id),
+      req.user.role as UserRole,
+    );
+    return this.ordersService.getStatusHistory(id);
+  }
+
   // ✅ Update order (Admin only, or customer for limited fields)
   @Put(':id')
   async updateOrder(

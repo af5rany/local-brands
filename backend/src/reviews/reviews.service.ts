@@ -9,6 +9,7 @@ import { Repository, DataSource } from 'typeorm';
 import { ProductReview, ReviewStatus } from './review.entity';
 import { Product } from '../products/product.entity';
 import { OrderItem } from '../orders/order-item.entity';
+import { Order } from '../orders/order.entity';
 import { OrderStatus } from 'src/common/enums/order.enum';
 
 @Injectable()
@@ -21,6 +22,8 @@ export class ReviewsService {
     private productRepository: Repository<Product>,
     @InjectRepository(OrderItem)
     private orderItemRepository: Repository<OrderItem>,
+    @InjectRepository(Order)
+    private orderRepository: Repository<Order>,
   ) {}
 
   async create(
@@ -126,5 +129,45 @@ export class ReviewsService {
 
     review.status = ReviewStatus.REJECTED;
     return this.reviewRepository.save(review);
+  }
+
+  async canReview(
+    userId: number,
+    productId: number,
+  ): Promise<{ canReview: boolean }> {
+    // Check if user has a delivered order containing this product
+    const deliveredOrderItem = await this.orderItemRepository
+      .createQueryBuilder('oi')
+      .innerJoin('oi.order', 'o')
+      .where('o.user.id = :userId', { userId })
+      .andWhere('oi.productId = :productId', { productId })
+      .andWhere('o.status = :status', { status: OrderStatus.DELIVERED })
+      .getOne();
+
+    if (!deliveredOrderItem) {
+      return { canReview: false };
+    }
+
+    // Check if user already reviewed this product
+    const existingReview = await this.reviewRepository.findOne({
+      where: { userId, productId },
+    });
+
+    return { canReview: !existingReview };
+  }
+
+  async findPending(page = 1, limit = 20) {
+    const [reviews, total] = await this.reviewRepository.findAndCount({
+      where: { status: ReviewStatus.PENDING },
+      relations: ['user', 'product'],
+      order: { createdAt: 'ASC' },
+      skip: (page - 1) * limit,
+      take: limit,
+    });
+
+    return {
+      data: reviews,
+      pagination: { total, page, limit, totalPages: Math.ceil(total / limit) },
+    };
   }
 }

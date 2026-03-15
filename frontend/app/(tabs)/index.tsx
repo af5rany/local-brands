@@ -58,6 +58,7 @@ const HomeScreen = () => {
   const [isSearching, setIsSearching] = useState(false);
   const [loadingStats, setLoadingStats] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [wishlistProductIds, setWishlistProductIds] = useState<number[]>([]);
 
   // Get user role from JWT token
   const userRole = user?.role || user?.userRole || "customer";
@@ -164,6 +165,46 @@ const HomeScreen = () => {
     }
   };
 
+  const fetchWishlist = useCallback(async () => {
+    if (!token) {
+      setWishlistProductIds([]);
+      return;
+    }
+    try {
+      const response = await fetch(`${getApiUrl()}/wishlist`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setWishlistProductIds(data.map((item: any) => item.product.id));
+      }
+    } catch (error) {
+      console.error("Error fetching wishlist:", error);
+    }
+  }, [token]);
+
+  const toggleWishlist = useCallback(async (productId: number) => {
+    if (!token) return;
+    try {
+      const response = await fetch(`${getApiUrl()}/wishlist/toggle/${productId}`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+      if (response.ok) {
+        setWishlistProductIds((prev) =>
+          prev.includes(productId)
+            ? prev.filter((id) => id !== productId)
+            : [...prev, productId]
+        );
+      }
+    } catch (error) {
+      console.error("Error toggling wishlist:", error);
+    }
+  }, [token]);
+
   const searchTimeout = React.useRef<any>(null);
 
   const handleSearchChange = (text: string) => {
@@ -222,6 +263,7 @@ const HomeScreen = () => {
   useFocusEffect(
     useCallback(() => {
       fetchStats();
+      fetchWishlist();
     }, [token, userRole, selectedBrandId]),
   );
 
@@ -313,6 +355,8 @@ const HomeScreen = () => {
             currentPage={page}
             totalPages={totalPages}
             onPageChange={handlePageChange}
+            wishlistProductIds={wishlistProductIds}
+            onToggleWishlist={toggleWishlist}
           />
         )}
 

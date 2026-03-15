@@ -88,7 +88,8 @@ const WishlistScreen = () => {
 
   const renderItem = ({ item }: { item: any }) => {
     const product = item.product;
-    const image = product.variants?.[0]?.images?.[0] || "";
+    const firstVariant = product.variants?.[0];
+    const image = firstVariant?.images?.[0] || firstVariant?.variantImages?.[0] || "";
 
     return (
       <TouchableOpacity
@@ -124,7 +125,7 @@ const WishlistScreen = () => {
             {product.name}
           </Text>
           <Text style={[styles.productPrice, { color: textColor }]}>
-            ${product.price.toFixed(2)}
+            ${Number(product.price).toFixed(2)}
           </Text>
         </View>
       </TouchableOpacity>

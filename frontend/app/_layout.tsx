@@ -1,16 +1,25 @@
-import { Stack, useRouter } from "expo-router";
+import { Stack, useRouter, useSegments } from "expo-router";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
 import { BrandProvider } from "@/context/BrandContext";
-import { Redirect } from "expo-router";
 import { ActivityIndicator, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { ToastProvider } from "@/context/ToastContext";
 import GlobalErrorBoundary from "@/components/GlobalErrorBoundary";
+import { useEffect } from "react";
+
+const PROTECTED_SEGMENTS = ['cart', 'checkout', 'orders', 'wishlist', 'profile', 'users'];
 
 // This component will handle the conditional routing
 function RootLayoutNav() {
   const { token, loading } = useAuth();
   const router = useRouter();
+  const segments = useSegments();
+
+  useEffect(() => {
+    if (!loading && !token && segments.length > 0 && PROTECTED_SEGMENTS.includes(segments[0])) {
+      router.replace('/auth/login');
+    }
+  }, [token, segments, loading]);
 
   if (loading) {
     return (
@@ -19,11 +28,6 @@ function RootLayoutNav() {
       </View>
     );
   }
-
-  // if (!token) {
-  // return <Redirect href="/auth/login" />;
-  // router.push("/auth/login");
-  // }
 
   return (
     <Stack>
@@ -56,6 +60,10 @@ function RootLayoutNav() {
       <Stack.Screen name="cart/index" options={{ title: "My Collection" }} />
       <Stack.Screen name="checkout/index" options={{ title: "Checkout" }} />
       <Stack.Screen name="orders/index" options={{ title: "My Orders" }} />
+      <Stack.Screen
+        name="orders/[orderId]"
+        options={{ title: "Order Details" }}
+      />
       <Stack.Screen name="wishlist/index" options={{ title: "Wishlist" }} />
       <Stack.Screen
         name="profile/addresses/index"
@@ -68,6 +76,10 @@ function RootLayoutNav() {
       <Stack.Screen
         name="profile/addresses/[id]"
         options={{ title: "Edit Address" }}
+      />
+      <Stack.Screen
+        name="profile/settings"
+        options={{ title: "Settings" }}
       />
       <Stack.Screen name="users/index" options={{ title: "User Management" }} />
     </Stack>

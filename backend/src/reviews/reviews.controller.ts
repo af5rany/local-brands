@@ -54,6 +54,27 @@ export class ReviewsController {
     return this.reviewsService.findByProduct(productId, page, limit);
   }
 
+  @Get('can-review/:productId')
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Check if user can review a product' })
+  async canReview(
+    @Param('productId', ParseIntPipe) productId: number,
+    @Request() req,
+  ) {
+    return this.reviewsService.canReview(req.user.id, productId);
+  }
+
+  @Get()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'Get pending reviews (Admin only)' })
+  async findPending(
+    @Query('page') page = 1,
+    @Query('limit') limit = 20,
+  ) {
+    return this.reviewsService.findPending(+page, +limit);
+  }
+
   @Patch(':id/approve')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)

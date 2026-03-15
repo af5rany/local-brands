@@ -65,7 +65,7 @@ const ProductReviews = ({ productId }: ProductReviewsProps) => {
       );
       if (response.ok) {
         const data = await response.json();
-        setReviews(data);
+        setReviews(data.data || data);
       }
     } catch (error) {
       console.error("Error fetching reviews:", error);

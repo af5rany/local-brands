@@ -4,8 +4,9 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Brackets } from 'typeorm';
+import { Repository, Brackets, DataSource } from 'typeorm';
 import { Product } from './product.entity';
+import { ProductVariant } from './product-variant.entity';
 import { Brand } from '../brands/brand.entity';
 import { GetProductsDto } from './dto/get-products.dto';
 import { CreateProductDto } from './dto/create-product.dto';
@@ -26,6 +27,9 @@ export class ProductsService {
     private productsRepository: Repository<Product>,
     @InjectRepository(Brand)
     private brandsRepository: Repository<Brand>,
+    @InjectRepository(ProductVariant)
+    private variantRepository: Repository<ProductVariant>,
+    private dataSource: DataSource,
   ) {}
 
   async findAll(
@@ -52,8 +56,9 @@ export class ProductsService {
 
     const qb = this.productsRepository.createQueryBuilder('product');
 
-    // Always join with brand table to ensure brand name is available
+    // Always join with brand and productVariants tables
     qb.leftJoinAndSelect('product.brand', 'brand');
+    qb.leftJoinAndSelect('product.productVariants', 'productVariants');
 
     // Search functionality
     if (search) {
@@ -119,23 +124,11 @@ export class ProductsService {
 
     if (inStock === true) {
       qb.andWhere(
-        `EXISTS (
-          SELECT 1 FROM json_array_elements(CASE 
-            WHEN json_typeof(product.variants) = 'array' THEN product.variants 
-            ELSE '[]'::json 
-          END) AS variant 
-          WHERE (variant->>'stock')::int > 0
-        )`,
+        `EXISTS (SELECT 1 FROM product_variant pv WHERE pv."productId" = product.id AND pv.stock > 0)`,
       );
     } else if (inStock === false) {
       qb.andWhere(
-        `NOT EXISTS (
-          SELECT 1 FROM json_array_elements(CASE 
-            WHEN json_typeof(product.variants) = 'array' THEN product.variants 
-            ELSE '[]'::json 
-          END) AS variant 
-          WHERE (variant->>'stock')::int > 0
-        )`,
+        `NOT EXISTS (SELECT 1 FROM product_variant pv WHERE pv."productId" = product.id AND pv.stock > 0)`,
       );
     }
 
@@ -217,7 +210,7 @@ export class ProductsService {
   async findOne(id: number): Promise<PublicProductDto> {
     const product = await this.productsRepository.findOne({
       where: { id },
-      relations: ['brand', 'brand.brandUsers'],
+      relations: ['brand', 'brand.brandUsers', 'productVariants'],
     });
     if (!product) {
       throw new NotFoundException(`Product #${id} not found`);
@@ -226,8 +219,15 @@ export class ProductsService {
   }
 
   private mapToPublicDto(product: Product): PublicProductDto {
-    const totalStock =
-      product.variants?.reduce((sum, v) => sum + (v.stock || 0), 0) || 0;
+    const pvs = product.productVariants || [];
+    const hasVariantRows = pvs.length > 0;
+    const totalStock = hasVariantRows
+      ? pvs.reduce((sum, pv) => sum + (pv.stock || 0), 0)
+      : product.variants?.reduce((sum, v) => sum + (v.stock || 0), 0) || 0;
+
+    const inStock = totalStock > 0;
+    const isLowStock =
+      inStock && totalStock <= (product.lowStockThreshold || 10);
 
     return {
       id: product.id,
@@ -249,13 +249,29 @@ export class ProductsService {
       category: product.subcategory || 'Uncategorized',
       productType: product.productType,
       isAvailable: product.isAvailable,
-      inStock: product.isInStock(),
-      isLowStock: product.isLowStock(),
-      variants: (product.variants || []).map((v: any) => ({
-        ...v,
-        images: v.images?.length ? v.images : v.variantImages || [],
-        attributes: v.attributes || (v.color ? { color: v.color } : {}),
-      })),
+      inStock,
+      isLowStock,
+      variants: hasVariantRows
+        ? pvs.map((pv) => ({
+            id: pv.id,
+            productId: pv.productId,
+            sku: pv.sku,
+            attributes: pv.attributes || {},
+            color: pv.attributes?.color,
+            size: pv.attributes?.size,
+            priceOverride: pv.priceOverride
+              ? Number(pv.priceOverride)
+              : undefined,
+            stock: pv.stock,
+            images: pv.images || [],
+            variantImages: pv.images || [],
+            isAvailable: pv.isAvailable,
+          }))
+        : (product.variants || []).map((v: any) => ({
+            ...v,
+            images: v.images?.length ? v.images : v.variantImages || [],
+            attributes: v.attributes || (v.color ? { color: v.color } : {}),
+          })),
       rating: Number(product.averageRating),
       reviewCount: product.reviewCount,
       isFeatured: product.isFeatured,
@@ -285,8 +301,12 @@ export class ProductsService {
       }
     }
 
-    if (productData.variants && Array.isArray(productData.variants)) {
-      productData.variants = productData.variants.map((variant: any) => {
+    // Extract variants before saving the product
+    const variantsInput = productData.variants;
+
+    // Dual-write: keep JSON column during transition (TODO: Remove after migration)
+    if (variantsInput && Array.isArray(variantsInput)) {
+      productData.variants = variantsInput.map((variant: any) => {
         const { variantImages, color, ...rest } = variant;
         return {
           ...rest,
@@ -301,9 +321,30 @@ export class ProductsService {
       });
     }
 
-    const product = this.productsRepository.create(productData);
-    const savedProduct = await this.productsRepository.save(product);
-    return this.findOne(savedProduct.id);
+    return this.dataSource.transaction(async (manager) => {
+      const product = this.productsRepository.create(productData);
+      const savedProduct = await manager.save(Product, product);
+
+      // Create ProductVariant rows
+      if (variantsInput && Array.isArray(variantsInput)) {
+        const variantEntities = variantsInput.map((v: any) =>
+          this.variantRepository.create({
+            productId: savedProduct.id,
+            attributes: {
+              ...(v.attributes ?? {}),
+              ...(v.color ? { color: v.color } : {}),
+              ...(v.size ? { size: v.size } : {}),
+            },
+            stock: v.stock || 0,
+            images: v.variantImages || v.images || [],
+            isAvailable: true,
+          }),
+        );
+        await manager.save(ProductVariant, variantEntities);
+      }
+
+      return this.findOne(savedProduct.id);
+    });
   }
 
   async update(
@@ -323,8 +364,11 @@ export class ProductsService {
       }
     }
 
-    if (updateData.variants && Array.isArray(updateData.variants)) {
-      updateData.variants = updateData.variants.map((variant) => ({
+    const variantsInput = updateData.variants;
+
+    // Dual-write: keep JSON column during transition (TODO: Remove after migration)
+    if (variantsInput && Array.isArray(variantsInput)) {
+      updateData.variants = variantsInput.map((variant) => ({
         ...variant,
         updatedAt: new Date(),
         createdAt: variant.createdAt || new Date(),
@@ -341,8 +385,30 @@ export class ProductsService {
       return this.findOne(id);
     }
 
-    await this.productsRepository.update(id, updatePayload);
-    return this.findOne(id);
+    return this.dataSource.transaction(async (manager) => {
+      await manager.update(Product, id, updatePayload);
+
+      // Sync ProductVariant rows when variants are provided
+      if (variantsInput && Array.isArray(variantsInput)) {
+        await manager.delete(ProductVariant, { productId: id });
+        const variantEntities = variantsInput.map((v: any) =>
+          this.variantRepository.create({
+            productId: id,
+            attributes: {
+              ...(v.attributes ?? {}),
+              ...(v.color ? { color: v.color } : {}),
+              ...(v.size ? { size: v.size } : {}),
+            },
+            stock: v.stock || 0,
+            images: v.variantImages || v.images || [],
+            isAvailable: true,
+          }),
+        );
+        await manager.save(ProductVariant, variantEntities);
+      }
+
+      return this.findOne(id);
+    });
   }
 
   async remove(id: number): Promise<void> {
@@ -402,14 +468,37 @@ export class ProductsService {
     console.log(
       `[ProductsService] Saving ${products.length} products to database...`,
     );
-    const savedProducts = await this.productsRepository.save(products as any);
-    console.log(
-      `[ProductsService] Successfully saved ${savedProducts.length} products`,
-    );
 
-    // Filter out duplicates and fetch full products to map to public DTOs
-    // Using simple approach: wait for all findOne calls
-    return Promise.all(savedProducts.map((p) => this.findOne(p.id)));
+    return this.dataSource.transaction(async (manager) => {
+      const savedProducts = await manager.save(Product, products as any);
+      console.log(
+        `[ProductsService] Successfully saved ${savedProducts.length} products`,
+      );
+
+      // Create ProductVariant rows for each saved product
+      for (let i = 0; i < savedProducts.length; i++) {
+        const data = productsData[i];
+        const savedProduct = savedProducts[i];
+        if (data.variants && Array.isArray(data.variants)) {
+          const variantEntities = (data.variants as any[]).map((v: any) =>
+            this.variantRepository.create({
+              productId: savedProduct.id,
+              attributes: {
+                ...(v.attributes ?? {}),
+                ...(v.color ? { color: v.color } : {}),
+                ...(v.size ? { size: v.size } : {}),
+              },
+              stock: v.stock || 0,
+              images: v.variantImages || v.images || [],
+              isAvailable: true,
+            }),
+          );
+          await manager.save(ProductVariant, variantEntities);
+        }
+      }
+
+      return Promise.all(savedProducts.map((p) => this.findOne(p.id)));
+    });
   }
 
   async deleteAll(): Promise<void> {

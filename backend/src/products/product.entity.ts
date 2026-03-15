@@ -293,8 +293,11 @@ export class Product {
 
   // ✅ Check if product is in stock (sum of all variant stocks)
   isInStock(): boolean {
-    if (!this.variants || this.variants.length === 0) return false;
-    const totalStock = this.variants.reduce(
+    const variants = this.productVariants?.length
+      ? this.productVariants
+      : this.variants;
+    if (!variants || variants.length === 0) return false;
+    const totalStock = variants.reduce(
       (sum, v) => sum + (v.stock || 0),
       0,
     );
@@ -303,8 +306,11 @@ export class Product {
 
   // ✅ Check if product is low stock
   isLowStock(): boolean {
-    if (!this.variants || this.variants.length === 0) return false;
-    const totalStock = this.variants.reduce(
+    const variants = this.productVariants?.length
+      ? this.productVariants
+      : this.variants;
+    if (!variants || variants.length === 0) return false;
+    const totalStock = variants.reduce(
       (sum, v) => sum + (v.stock || 0),
       0,
     );

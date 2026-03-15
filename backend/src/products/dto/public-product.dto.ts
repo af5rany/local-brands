@@ -1,7 +1,6 @@
 import {
   ProductType,
   ProductStatus,
-  ProductVariantData,
 } from 'src/common/enums/product.enum';
 
 export class PublicBrandDto {
@@ -9,6 +8,20 @@ export class PublicBrandDto {
   name: string;
   logo: string;
   slug?: string;
+}
+
+export class PublicVariantDto {
+  id?: number;
+  productId?: number;
+  sku?: string;
+  attributes?: Record<string, any>;
+  color?: string;
+  size?: string;
+  priceOverride?: number;
+  stock: number;
+  images: string[];
+  variantImages?: string[];
+  isAvailable?: boolean;
 }
 
 export class PublicProductDto {
@@ -28,7 +41,7 @@ export class PublicProductDto {
   isAvailable: boolean;
   inStock: boolean;
   isLowStock: boolean;
-  variants: ProductVariantData[];
+  variants: PublicVariantDto[];
   rating: number;
   reviewCount: number;
   isFeatured: boolean;

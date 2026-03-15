@@ -179,7 +179,7 @@ const ProductDetailScreen = () => {
 
     setCartLoading(true);
     try {
-      const response = await fetch(`${getApiUrl()}/cart/items`, {
+      const response = await fetch(`${getApiUrl()}/cart/add`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,

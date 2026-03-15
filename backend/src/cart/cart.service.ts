@@ -43,21 +43,33 @@ export class CartService {
     private variantRepository: Repository<ProductVariant>,
   ) {}
 
-  // Get cart summary (lightweight, no pagination needed)
-  async getCartSummary(userId: number): Promise<Cart> {
-    const cart = await this.cartRepository.findOne({
+  // Get cart with items and their product/variant relations
+  async getCartSummary(userId: number) {
+    let cart = await this.cartRepository.findOne({
       where: { user: { id: userId } },
-      select: ['id', 'totalAmount', 'totalItems', 'updatedAt'],
+      relations: [
+        'cartItems',
+        'cartItems.product',
+        'cartItems.product.brand',
+        'cartItems.variant',
+      ],
     });
     if (!cart) {
-      // Create cart if not found on summary request (optional, but safer)
-      return this.cartRepository.save({
+      cart = await this.cartRepository.save({
         user: { id: userId },
         totalAmount: 0,
         totalItems: 0,
       });
+      cart.cartItems = [];
     }
-    return cart;
+    // Frontend expects "items" key
+    return {
+      id: cart.id,
+      totalAmount: Number(cart.totalAmount),
+      totalItems: cart.totalItems,
+      items: cart.cartItems,
+      updatedAt: cart.updatedAt,
+    };
   }
 
   // Get paginated cart items with search and sorting

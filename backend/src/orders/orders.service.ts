@@ -20,11 +20,14 @@ import {
   ForbiddenException,
   ConflictException,
 } from '@nestjs/common';
+import { MailService } from '../common/mail/mail.service';
+import { User } from '../users/user.entity';
 
 @Injectable()
 export class OrdersService {
   constructor(
     private dataSource: DataSource,
+    private readonly mailService: MailService,
     @InjectRepository(Order)
     private orderRepository: Repository<Order>,
     @InjectRepository(OrderItem)
@@ -208,6 +211,19 @@ export class OrdersService {
       });
       await manager.save(OrderStatusHistory, history);
 
+      // Send order confirmation email (non-blocking)
+      const user = await manager.findOne(User, { where: { id: userId } });
+      if (user?.email) {
+        this.mailService
+          .sendOrderConfirmationEmail(
+            user.email,
+            savedOrder.orderNumber,
+            Number(savedOrder.totalAmount),
+            savedOrder.totalItems,
+          )
+          .catch(() => {}); // Fire-and-forget
+      }
+
       return savedOrder;
     });
   }
@@ -358,6 +374,20 @@ export class OrdersService {
           notes: `Status changed to ${updateOrderDto.status}`,
         });
         await manager.save(OrderStatusHistory, history);
+
+        // Send status update email (non-blocking)
+        const user = await manager.findOne(User, {
+          where: { id: order.user.id },
+        });
+        if (user?.email) {
+          this.mailService
+            .sendOrderStatusUpdateEmail(
+              user.email,
+              order.orderNumber,
+              updateOrderDto.status,
+            )
+            .catch(() => {});
+        }
       }
     });
 
@@ -406,6 +436,13 @@ export class OrdersService {
     });
 
     return this.findOne(id, userId, userRole);
+  }
+
+  async getStatusHistory(orderId: number): Promise<OrderStatusHistory[]> {
+    return this.statusHistoryRepository.find({
+      where: { order: { id: orderId } },
+      order: { createdAt: 'ASC' },
+    });
   }
 
   async getOrderStats(userId?: number) {

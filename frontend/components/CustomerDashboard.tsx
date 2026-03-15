@@ -41,6 +41,8 @@ type CustomerDashboardProps = {
   currentPage?: number;
   totalPages?: number;
   onPageChange?: (page: number) => void;
+  wishlistProductIds?: number[];
+  onToggleWishlist?: (productId: number) => void;
 };
 
 const CustomerDashboard = ({
@@ -58,6 +60,8 @@ const CustomerDashboard = ({
   currentPage = 1,
   totalPages = 1,
   onPageChange = () => {},
+  wishlistProductIds = [],
+  onToggleWishlist,
 }: CustomerDashboardProps) => {
   const { width } = useWindowDimensions();
   const [activeTab, setActiveTab] = React.useState<"products" | "brands">(
@@ -113,7 +117,14 @@ const CustomerDashboard = ({
         originalPrice: item.salePrice ? item.price : undefined,
       }}
       onPress={() => navigateTo(`/products/${item.id}`)}
-      onAddToWishlist={() => {}}
+      onAddToWishlist={() => {
+        if (isGuest) {
+          navigateTo("/auth/login");
+        } else {
+          onToggleWishlist?.(item.id);
+        }
+      }}
+      isInWishlist={!isGuest && wishlistProductIds.includes(item.id)}
       style={{ width: cardWidth, marginRight: 0, marginBottom: cardGap }}
     />
   );

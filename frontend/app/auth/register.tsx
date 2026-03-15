@@ -19,7 +19,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { NavigationProp, useNavigation } from "@react-navigation/native";
-
+import DateTimePicker from "@react-native-community/datetimepicker";
 import getApiUrl from "@/helpers/getApiUrl";
 import { useRouter } from "expo-router";
 import { useCloudinaryUpload } from "@/hooks/useCloudinaryUpload";
@@ -42,6 +42,7 @@ const RegisterScreen = () => {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<any>({});
   const { uploads, uploadImage } = useCloudinaryUpload();
+  const [showDatePicker, setShowDatePicker] = useState(false);
 
   const validateForm = () => {
     let valid = true;
@@ -278,16 +279,28 @@ const RegisterScreen = () => {
             </View>
           </View>
 
-          <View style={styles.inputContainer}>
+          <Pressable onPress={() => setShowDatePicker(true)}>
             <Text style={styles.label}>Birthday</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="YYYY-MM-DD"
-              value={formData.dateOfBirth}
-              onChangeText={(text) => handleChange("dateOfBirth", text)}
-              editable={!loading}
+            <Text style={styles.input}>
+              {formData.dateOfBirth || "Select date"}
+            </Text>
+          </Pressable>
+
+          {showDatePicker && (
+            <DateTimePicker
+              mode="date"
+              value={
+                formData.dateOfBirth
+                  ? new Date(formData.dateOfBirth)
+                  : new Date()
+              }
+              maximumDate={new Date()}
+              onChange={(event, date) => {
+                setShowDatePicker(false);
+                if (date) handleChange("dateOfBirth", date.toISOString());
+              }}
             />
-          </View>
+          )}
 
           <View style={styles.inputContainer}>
             <Text style={styles.label}>Email</Text>

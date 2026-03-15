@@ -118,6 +118,11 @@ export class AuthService {
     };
     const token = await this.jwtService.signAsync(payload);
 
+    // Send welcome email (non-blocking)
+    this.mailService
+      .sendWelcomeEmail(newUser.email, newUser.name)
+      .catch(() => {});
+
     return { user: newUser, token };
   }
 

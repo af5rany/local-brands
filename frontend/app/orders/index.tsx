@@ -40,12 +40,12 @@ const OrdersScreen = () => {
   const fetchOrders = useCallback(async () => {
     if (!token) return;
     try {
-      const response = await fetch(`${getApiUrl()}/orders`, {
+      const response = await fetch(`${getApiUrl()}/orders/my-orders`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (response.ok) {
         const data = await response.json();
-        setOrders(data);
+        setOrders(data.data || data);
       }
     } catch (error) {
       console.error("Error fetching orders:", error);
@@ -78,9 +78,7 @@ const OrdersScreen = () => {
   const renderItem = ({ item }: { item: any }) => (
     <TouchableOpacity
       style={[styles.orderCard, { backgroundColor: cardBackground }]}
-      onPress={() => {
-        /* Detail view could be implemented here */
-      }}
+      onPress={() => router.push(`/orders/${item.id}` as any)}
     >
       <View style={styles.orderHeader}>
         <View>
@@ -119,7 +117,10 @@ const OrdersScreen = () => {
         style={[styles.divider, { backgroundColor: secondaryTextColor + "20" }]}
       />
 
-      <TouchableOpacity style={styles.viewDetailsBtn}>
+      <TouchableOpacity
+        style={styles.viewDetailsBtn}
+        onPress={() => router.push(`/orders/${item.id}` as any)}
+      >
         <Text style={[styles.viewDetailsText, { color: textColor }]}>
           VIEW DETAILS
         </Text>

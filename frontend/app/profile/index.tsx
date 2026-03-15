@@ -250,7 +250,10 @@ const ProfileScreen = () => {
             <Ionicons name="chevron-forward" size={20} color="#cbd5e1" />
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.menuItem} onPress={() => {}}>
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={() => router.push("/profile/settings" as any)}
+          >
             <View style={[styles.iconBox, { backgroundColor: "#f3f4f6" }]}>
               <Ionicons name="settings-outline" size={22} color="#4b5563" />
             </View>
