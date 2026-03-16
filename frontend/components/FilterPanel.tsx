@@ -15,10 +15,11 @@ import { Ionicons } from "@expo/vector-icons";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
-  withSpring,
+  withTiming,
   runOnJS,
   interpolate,
   Extrapolation,
+  Easing,
 } from "react-native-reanimated";
 import {
   Gesture,
@@ -68,9 +69,11 @@ const FilterPanel: React.FC<FilterPanelProps> = ({
   const translateY = useSharedValue(0);
   const context = useSharedValue({ y: 0 });
 
+  const timingConfig = { duration: 300, easing: Easing.out(Easing.cubic) };
+
   const scrollTo = React.useCallback((destination: number) => {
     "worklet";
-    translateY.value = withSpring(destination, { damping: 50 });
+    translateY.value = withTiming(destination, { duration: 300, easing: Easing.out(Easing.cubic) });
   }, []);
 
   React.useEffect(() => {
@@ -83,9 +86,9 @@ const FilterPanel: React.FC<FilterPanelProps> = ({
       setShowModal(true);
       scrollTo(SNAP_HALF);
     } else {
-      translateY.value = withSpring(
+      translateY.value = withTiming(
         0,
-        { damping: 50 },
+        timingConfig,
         (finished) => {
           if (finished) runOnJS(setShowModal)(false);
         },
@@ -105,7 +108,9 @@ const FilterPanel: React.FC<FilterPanelProps> = ({
     })
     .onEnd(() => {
       if (translateY.value > -SCREEN_HEIGHT * 0.25) {
-        runOnJS(onClose)();
+        translateY.value = withTiming(0, { duration: 300, easing: Easing.out(Easing.cubic) }, (finished) => {
+          if (finished) runOnJS(onClose)();
+        });
       } else if (translateY.value < -SCREEN_HEIGHT * 0.75) {
         scrollTo(MAX_TRANSLATE_Y);
       } else {
@@ -196,6 +201,7 @@ const FilterPanel: React.FC<FilterPanelProps> = ({
             rSheetStyle,
           ]}
         >
+          <View style={styles.sheetInner}>
           {/* Drag handle + Header */}
           <GestureDetector gesture={gesture}>
             <View>
@@ -254,6 +260,7 @@ const FilterPanel: React.FC<FilterPanelProps> = ({
           </GestureDetector>
 
           <ScrollView
+            style={styles.scrollView}
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.scrollContent}
           >
@@ -566,6 +573,7 @@ const FilterPanel: React.FC<FilterPanelProps> = ({
               </Text>
             </TouchableOpacity>
           </View>
+          </View>
         </Animated.View>
       </GestureHandlerRootView>
     </Modal>
@@ -584,6 +592,10 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.12,
     shadowRadius: 16,
     elevation: 24,
+  },
+  sheetInner: {
+    height: SCREEN_HEIGHT * 0.65,
+    flexDirection: "column",
   },
   handleWrap: {
     width: "100%",
@@ -611,7 +623,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  scrollContent: { paddingBottom: 110 },
+  scrollView: { flex: 1 },
+  scrollContent: { paddingBottom: 16 },
   section: { paddingHorizontal: 16, paddingVertical: 18 },
   sectionLabel: {
     fontSize: 11,
@@ -686,10 +699,6 @@ const styles = StyleSheet.create({
   emptyText: { fontSize: 14, fontWeight: "500", paddingVertical: 8 },
   // Footer
   footer: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderTopWidth: 1,
