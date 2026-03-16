@@ -7,33 +7,25 @@ import {
   TouchableOpacity,
   ScrollView,
   Alert,
-  TextInput,
-  ActivityIndicator,
+  RefreshControl,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import * as ImagePicker from "expo-image-picker";
 import { useAuth } from "@/context/AuthContext";
-import getApiUrl from "@/helpers/getApiUrl";
-import { useCloudinaryUpload } from "@/hooks/useCloudinaryUpload";
-import { ImageUploadProgress } from "@/components/ImageUploadProgress";
-import * as ImageManipulator from "expo-image-manipulator";
+import { useThemeColors } from "@/hooks/useThemeColor";
 
 const ProfileScreen = () => {
   const router = useRouter();
-  const { user, logout, token, refreshUser } = useAuth();
+  const colors = useThemeColors();
+  const { user, logout, refreshUser } = useAuth();
+  const [refreshing, setRefreshing] = useState(false);
 
-  const [isEditing, setIsEditing] = useState(false);
-  const [name, setName] = useState(user?.name || "");
-  const [updating, setUpdating] = useState(false);
-  const { uploads, uploadImage } = useCloudinaryUpload();
-
-  useEffect(() => {
-    if (user) {
-      setName(user.name);
-    }
-  }, [user]);
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await refreshUser();
+    setRefreshing(false);
+  };
 
   const handleLogout = async () => {
     Alert.alert("Logout", "Are you sure you want to logout?", [
@@ -49,154 +41,92 @@ const ProfileScreen = () => {
     ]);
   };
 
-  const handleImagePick = async () => {
-    try {
-      const permissionResult =
-        await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (!permissionResult.granted) {
-        Alert.alert(
-          "Permission Required",
-          "Permission to access camera roll is required!",
-        );
-        return;
-      }
+  const initials = (user?.name || user?.email || "U")
+    .split(" ")
+    .map((n: string) => n[0])
+    .join("")
+    .toUpperCase()
+    .substring(0, 2);
 
-      let result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ["images"],
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 1,
-      });
-
-      if (!result.canceled && result.assets[0]) {
-        const uri = result.assets[0].uri;
-        const cloudUrl = await uploadImage(uri);
-        if (cloudUrl) {
-          await updateProfile({ avatar: cloudUrl });
-        }
-      }
-    } catch (error) {
-      console.error("Error picking image:", error);
-    }
-  };
-
-  const updateProfile = async (updateData: any) => {
-    try {
-      setUpdating(true);
-      const response = await fetch(`${getApiUrl()}/users/${user.id}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(updateData),
-      });
-
-      if (!response.ok) throw new Error("Failed to update profile");
-
-      await refreshUser();
-      setIsEditing(false);
-      Alert.alert("Success", "Profile updated successfully!");
-    } catch (error: any) {
-      Alert.alert("Error", error.message);
-    } finally {
-      setUpdating(false);
-    }
-  };
-
-  const InitialsAvatar = ({ name }: { name: string }) => {
-    const initials = name
-      ? name
-          .split(" ")
-          .map((n) => n[0])
-          .join("")
-          .toUpperCase()
-          .substring(0, 2)
-      : "U";
-
-    return (
-      <View style={styles.initialsAvatar}>
-        <Text style={styles.initialsText}>{initials}</Text>
-      </View>
-    );
-  };
+  const menuItems = [
+    {
+      icon: "person-outline",
+      label: "Edit Profile",
+      color: colors.info,
+      bg: colors.infoSoft,
+      onPress: () => router.push("/profile/edit" as any),
+    },
+    {
+      icon: "bag-handle-outline",
+      label: "My Orders",
+      color: colors.success,
+      bg: colors.successSoft,
+      onPress: () => router.push("/orders"),
+    },
+    {
+      icon: "heart-outline",
+      label: "Wishlist",
+      color: colors.danger,
+      bg: colors.dangerSoft,
+      onPress: () => router.push("/wishlist"),
+    },
+    {
+      icon: "location-outline",
+      label: "Shipping Addresses",
+      color: colors.warning,
+      bg: colors.warningSoft,
+      onPress: () => router.push("/profile/addresses"),
+    },
+    {
+      icon: "settings-outline",
+      label: "Settings",
+      color: colors.textSecondary,
+      bg: colors.surfaceRaised,
+      onPress: () => router.push("/profile/settings" as any),
+    },
+  ];
 
   return (
-    <SafeAreaView style={styles.container} edges={["bottom"]}>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+    <SafeAreaView
+      style={[styles.container, { backgroundColor: colors.background }]}
+      edges={["bottom"]}
+    >
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+      >
         {/* Profile Header */}
-        <View style={styles.header}>
+        <View style={[styles.header, { backgroundColor: colors.surface }]}>
           <View style={styles.avatarContainer}>
-            {uploads[
-              Object.keys(uploads)
-                .reverse()
-                .find((k) => !user?.avatar?.includes(k)) || ""
-            ] ? (
-              <View style={styles.avatarLoading}>
-                <ImageUploadProgress
-                  upload={uploads[Object.keys(uploads).reverse()[0]]}
-                  size={100}
-                />
-              </View>
-            ) : user?.avatar ? (
+            {user?.avatar ? (
               <Image source={{ uri: user.avatar }} style={styles.avatar} />
             ) : (
-              <InitialsAvatar name={user?.name || user?.email} />
+              <View
+                style={[
+                  styles.initialsAvatar,
+                  { backgroundColor: colors.primarySoft },
+                ]}
+              >
+                <Text style={[styles.initialsText, { color: colors.primary }]}>
+                  {initials}
+                </Text>
+              </View>
             )}
-            <TouchableOpacity
-              style={styles.editAvatarButton}
-              onPress={handleImagePick}
-              disabled={Object.values(uploads).some(
-                (u) => u.status === "uploading",
-              )}
-            >
-              <Ionicons name="camera" size={20} color="#fff" />
-            </TouchableOpacity>
           </View>
 
-          {isEditing ? (
-            <View style={styles.editNameContainer}>
-              <TextInput
-                style={styles.nameInput}
-                value={name}
-                onChangeText={setName}
-                placeholder="Enter your name"
-                autoFocus
-              />
-              <View style={styles.editActions}>
-                <TouchableOpacity
-                  style={[styles.smallButton, styles.cancelButton]}
-                  onPress={() => {
-                    setIsEditing(false);
-                    setName(user?.name || "");
-                  }}
-                >
-                  <Text style={styles.cancelButtonText}>Cancel</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.smallButton, styles.saveButton]}
-                  onPress={() => updateProfile({ name })}
-                  disabled={updating}
-                >
-                  {updating ? (
-                    <ActivityIndicator size="small" color="#fff" />
-                  ) : (
-                    <Text style={styles.saveButtonText}>Save</Text>
-                  )}
-                </TouchableOpacity>
-              </View>
-            </View>
-          ) : (
-            <>
-              <Text style={styles.name}>{user?.name || "User"}</Text>
-              <Text style={styles.email}>
-                {user?.email || "No email provided"}
-              </Text>
-            </>
-          )}
+          <Text style={[styles.name, { color: colors.text }]}>
+            {user?.name || "User"}
+          </Text>
+          <Text style={[styles.email, { color: colors.textTertiary }]}>
+            {user?.email || "No email provided"}
+          </Text>
 
-          <View style={styles.roleBadge}>
-            <Text style={styles.roleText}>
+          <View
+            style={[styles.roleBadge, { backgroundColor: colors.primarySoft }]}
+          >
+            <Text style={[styles.roleText, { color: colors.primary }]}>
               {user?.role
                 ? user.role.charAt(0).toUpperCase() + user.role.slice(1)
                 : "Customer"}
@@ -205,70 +135,65 @@ const ProfileScreen = () => {
         </View>
 
         {/* Menu Items */}
-        <View style={styles.menuContainer}>
-          <TouchableOpacity
-            style={styles.menuItem}
-            onPress={() => setIsEditing(true)}
-          >
-            <View style={[styles.iconBox, { backgroundColor: "#e0f2fe" }]}>
-              <Ionicons name="person-outline" size={22} color="#0284c7" />
-            </View>
-            <Text style={styles.menuText}>Update Personal Details</Text>
-            <Ionicons name="chevron-forward" size={20} color="#cbd5e1" />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.menuItem}
-            onPress={() => router.push("/orders")}
-          >
-            <View style={[styles.iconBox, { backgroundColor: "#f0fdf4" }]}>
-              <Ionicons name="bag-handle-outline" size={22} color="#16a34a" />
-            </View>
-            <Text style={styles.menuText}>My Orders</Text>
-            <Ionicons name="chevron-forward" size={20} color="#cbd5e1" />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.menuItem}
-            onPress={() => router.push("/wishlist")}
-          >
-            <View style={[styles.iconBox, { backgroundColor: "#fff1f2" }]}>
-              <Ionicons name="heart-outline" size={22} color="#e11d48" />
-            </View>
-            <Text style={styles.menuText}>Wishlist</Text>
-            <Ionicons name="chevron-forward" size={20} color="#cbd5e1" />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.menuItem}
-            onPress={() => router.push("/profile/addresses")}
-          >
-            <View style={[styles.iconBox, { backgroundColor: "#fefce8" }]}>
-              <Ionicons name="location-outline" size={22} color="#ca8a04" />
-            </View>
-            <Text style={styles.menuText}>Shipping Addresses</Text>
-            <Ionicons name="chevron-forward" size={20} color="#cbd5e1" />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.menuItem}
-            onPress={() => router.push("/profile/settings" as any)}
-          >
-            <View style={[styles.iconBox, { backgroundColor: "#f3f4f6" }]}>
-              <Ionicons name="settings-outline" size={22} color="#4b5563" />
-            </View>
-            <Text style={styles.menuText}>Settings</Text>
-            <Ionicons name="chevron-forward" size={20} color="#cbd5e1" />
-          </TouchableOpacity>
+        <View
+          style={[
+            styles.menuContainer,
+            {
+              backgroundColor: colors.surface,
+              borderColor: colors.borderLight,
+            },
+          ]}
+        >
+          {menuItems.map((item, index) => (
+            <TouchableOpacity
+              key={item.label}
+              style={[
+                styles.menuItem,
+                index < menuItems.length - 1 && {
+                  borderBottomWidth: 1,
+                  borderBottomColor: colors.borderLight,
+                },
+              ]}
+              onPress={item.onPress}
+              activeOpacity={0.7}
+            >
+              <View style={[styles.iconBox, { backgroundColor: item.bg }]}>
+                <Ionicons
+                  name={item.icon as any}
+                  size={20}
+                  color={item.color}
+                />
+              </View>
+              <Text style={[styles.menuText, { color: colors.text }]}>
+                {item.label}
+              </Text>
+              <Ionicons
+                name="chevron-forward"
+                size={18}
+                color={colors.textTertiary}
+              />
+            </TouchableOpacity>
+          ))}
         </View>
 
         {/* Logout Button */}
-        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-          <Ionicons name="log-out-outline" size={20} color="#ef4444" />
-          <Text style={styles.logoutText}>Log Out</Text>
+        <TouchableOpacity
+          style={[
+            styles.logoutButton,
+            { backgroundColor: colors.dangerSoft, borderColor: colors.danger },
+          ]}
+          onPress={handleLogout}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="log-out-outline" size={20} color={colors.danger} />
+          <Text style={[styles.logoutText, { color: colors.danger }]}>
+            Log Out
+          </Text>
         </TouchableOpacity>
 
-        <Text style={styles.versionText}>Version 1.0.0</Text>
+        <Text style={[styles.versionText, { color: colors.textTertiary }]}>
+          Version 1.0.0
+        </Text>
       </ScrollView>
     </SafeAreaView>
   );
@@ -277,7 +202,6 @@ const ProfileScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f8fafc",
   },
   scrollContent: {
     paddingBottom: 40,
@@ -285,13 +209,10 @@ const styles = StyleSheet.create({
   header: {
     alignItems: "center",
     paddingVertical: 32,
-    backgroundColor: "#fff",
+    paddingHorizontal: 20,
     marginBottom: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: "#f1f5f9",
   },
   avatarContainer: {
-    position: "relative",
     marginBottom: 16,
   },
   avatar: {
@@ -303,152 +224,78 @@ const styles = StyleSheet.create({
     width: 100,
     height: 100,
     borderRadius: 50,
-    backgroundColor: "#e2e8f0",
     justifyContent: "center",
     alignItems: "center",
   },
   initialsText: {
     fontSize: 36,
     fontWeight: "700",
-    color: "#64748b",
-  },
-  avatarLoading: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: "#e2e8f0",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  editAvatarButton: {
-    position: "absolute",
-    bottom: 0,
-    right: 0,
-    backgroundColor: "#346beb",
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    justifyContent: "center",
-    alignItems: "center",
-    borderWidth: 3,
-    borderColor: "#fff",
-  },
-  editNameContainer: {
-    width: "100%",
-    paddingHorizontal: 20,
-    alignItems: "center",
-  },
-  nameInput: {
-    fontSize: 22,
-    fontWeight: "700",
-    color: "#1e293b",
-    borderBottomWidth: 2,
-    borderBottomColor: "#346beb",
-    width: "100%",
-    textAlign: "center",
-    paddingVertical: 8,
-    marginBottom: 12,
-  },
-  editActions: {
-    flexDirection: "row",
-    gap: 12,
-    marginBottom: 16,
-  },
-  smallButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
-    minWidth: 80,
-    alignItems: "center",
-  },
-  saveButton: {
-    backgroundColor: "#059669",
-  },
-  saveButtonText: {
-    color: "#fff",
-    fontWeight: "600",
-    fontSize: 14,
-  },
-  cancelButton: {
-    backgroundColor: "#f1f5f9",
-  },
-  cancelButtonText: {
-    color: "#64748b",
-    fontWeight: "600",
-    fontSize: 14,
   },
   name: {
     fontSize: 24,
-    fontWeight: "700",
-    color: "#1e293b",
+    fontWeight: "800",
     marginBottom: 4,
+    letterSpacing: -0.3,
   },
   email: {
     fontSize: 14,
-    color: "#64748b",
-    marginBottom: 12,
+    marginBottom: 14,
   },
   roleBadge: {
-    backgroundColor: "#f1f5f9",
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 5,
+    borderRadius: 20,
   },
   roleText: {
     fontSize: 12,
-    fontWeight: "600",
-    color: "#475569",
+    fontWeight: "700",
+    letterSpacing: 0.3,
   },
   menuContainer: {
-    backgroundColor: "#fff",
-    borderTopWidth: 1,
-    borderBottomWidth: 1,
-    borderColor: "#f1f5f9",
-    marginBottom: 20,
+    marginHorizontal: 16,
+    borderRadius: 16,
+    overflow: "hidden",
+    marginBottom: 24,
+    borderWidth: 1,
   },
   menuItem: {
     flexDirection: "row",
     alignItems: "center",
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: "#f1f5f9",
+    paddingVertical: 14,
+    paddingHorizontal: 16,
   },
   iconBox: {
     width: 40,
     height: 40,
-    borderRadius: 10,
+    borderRadius: 12,
     justifyContent: "center",
     alignItems: "center",
-    marginRight: 16,
+    marginRight: 14,
   },
   menuText: {
     flex: 1,
-    fontSize: 16,
-    color: "#334155",
-    fontWeight: "500",
+    fontSize: 15,
+    fontWeight: "600",
   },
   logoutButton: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#fef2f2",
     marginHorizontal: 16,
     paddingVertical: 16,
-    borderRadius: 12,
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: "#fee2e2",
     marginBottom: 24,
+    gap: 8,
   },
   logoutText: {
-    marginLeft: 8,
     fontSize: 16,
-    fontWeight: "600",
-    color: "#ef4444",
+    fontWeight: "700",
   },
   versionText: {
     textAlign: "center",
-    color: "#94a3b8",
     fontSize: 12,
+    fontWeight: "500",
   },
 });
 

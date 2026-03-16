@@ -40,7 +40,7 @@ const WishlistScreen = () => {
   );
   const accentColor = useThemeColor(
     { light: "#DC2626", dark: "#EF4444" },
-    "tint",
+    "primary",
   );
 
   const fetchWishlist = useCallback(async () => {
@@ -89,7 +89,8 @@ const WishlistScreen = () => {
   const renderItem = ({ item }: { item: any }) => {
     const product = item.product;
     const firstVariant = product.variants?.[0];
-    const image = firstVariant?.images?.[0] || firstVariant?.variantImages?.[0] || "";
+    const image =
+      firstVariant?.images?.[0] || firstVariant?.variantImages?.[0] || "";
 
     return (
       <TouchableOpacity

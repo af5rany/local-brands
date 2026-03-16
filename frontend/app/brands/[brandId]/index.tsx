@@ -93,7 +93,7 @@ const BrandDetailScreen = () => {
   );
   const primaryColor = useThemeColor(
     { light: "#007AFF", dark: "#0A84FF" },
-    "tint",
+    "primary",
   );
   const secondaryTextColor = useThemeColor(
     { light: "#8E8E93", dark: "#8E8E93" },
@@ -878,7 +878,9 @@ const BrandDetailScreen = () => {
                         paddingVertical: 8,
                         borderRadius: 8,
                         borderWidth: 1.5,
-                        backgroundColor: isSelected ? statusColor : "transparent",
+                        backgroundColor: isSelected
+                          ? statusColor
+                          : "transparent",
                         borderColor: isSelected ? statusColor : borderColor,
                         opacity: changingStatus ? 0.6 : 1,
                       }}

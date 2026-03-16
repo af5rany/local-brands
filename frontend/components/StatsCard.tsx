@@ -5,8 +5,10 @@ import {
   StyleSheet,
   Pressable,
   useWindowDimensions,
+  ViewStyle,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useThemeColors } from "@/hooks/useThemeColor";
 
 type StatsCardProps = {
   title: string;
@@ -15,7 +17,7 @@ type StatsCardProps = {
   color: string;
   onPress?: () => void;
   size?: "normal" | "small";
-  style?: any;
+  style?: ViewStyle;
 };
 
 const StatsCard: React.FC<StatsCardProps> = ({
@@ -27,6 +29,7 @@ const StatsCard: React.FC<StatsCardProps> = ({
   size = "normal",
   style,
 }) => {
+  const colors = useThemeColors();
   const { width } = useWindowDimensions();
   const isTablet = width > 768;
   const isSmall = size === "small";
@@ -34,30 +37,36 @@ const StatsCard: React.FC<StatsCardProps> = ({
   return (
     <Pressable
       style={[
-        styles.statsCard,
-        { borderLeftColor: color },
-        isSmall && styles.smallCard,
-        isTablet && styles.tabletCard,
+        styles.card,
+        {
+          backgroundColor: colors.surface,
+          borderColor: colors.cardBorder,
+          shadowColor: colors.cardShadow,
+        },
+        isSmall && styles.cardSmall,
+        isTablet && styles.cardTablet,
         style,
       ]}
       onPress={onPress}
     >
-      <View style={styles.statsContent}>
+      <View style={styles.content}>
         <View style={styles.textContainer}>
           <Text
             style={[
-              styles.statsValue,
-              isSmall && styles.smallStatsValue,
-              isTablet && styles.tabletStatsValue,
+              styles.value,
+              { color: colors.text },
+              isSmall && styles.valueSmall,
+              isTablet && styles.valueTablet,
             ]}
           >
             {value}
           </Text>
           <Text
             style={[
-              styles.statsTitle,
-              isSmall && styles.smallStatsTitle,
-              isTablet && styles.tabletStatsTitle,
+              styles.title,
+              { color: colors.textTertiary },
+              isSmall && styles.titleSmall,
+              isTablet && styles.titleTablet,
             ]}
             numberOfLines={1}
           >
@@ -66,93 +75,102 @@ const StatsCard: React.FC<StatsCardProps> = ({
         </View>
         <View
           style={[
-            styles.statsIcon,
-            { backgroundColor: color + "20" },
-            isSmall && styles.smallStatsIcon,
-            isTablet && styles.tabletStatsIcon,
+            styles.iconBox,
+            { backgroundColor: color + "18" },
+            isSmall && styles.iconBoxSmall,
+            isTablet && styles.iconBoxTablet,
           ]}
         >
           <Ionicons
             name={icon}
-            size={isTablet ? 32 : isSmall ? 20 : 24}
+            size={isTablet ? 30 : isSmall ? 20 : 24}
             color={color}
           />
         </View>
       </View>
+
+      {/* Accent bar at bottom */}
+      <View style={[styles.accentBar, { backgroundColor: color }]} />
     </Pressable>
   );
 };
 
 const styles = StyleSheet.create({
-  statsCard: {
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 16,
-    marginHorizontal: 4,
+  card: {
+    borderRadius: 16,
+    padding: 18,
     marginBottom: 8,
-    borderLeftWidth: 4,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    borderWidth: 1,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 1,
+    shadowRadius: 12,
     elevation: 3,
+    overflow: "hidden",
   },
-  smallCard: {
-    padding: 12,
-    borderLeftWidth: 3,
+  cardSmall: {
+    padding: 14,
   },
-  tabletCard: {
+  cardTablet: {
     padding: 24,
-    borderLeftWidth: 6,
   },
-  statsContent: {
+  content: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
   },
   textContainer: {
     flex: 1,
-    marginRight: 8,
+    marginRight: 12,
   },
-  statsValue: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: "#1e293b",
+  value: {
+    fontSize: 26,
+    fontWeight: "800",
+    letterSpacing: -0.5,
   },
-  tabletStatsValue: {
-    fontSize: 32,
+  valueSmall: {
+    fontSize: 20,
   },
-  smallStatsValue: {
-    fontSize: 18,
+  valueTablet: {
+    fontSize: 34,
   },
-  statsTitle: {
-    fontSize: 12,
-    color: "#64748b",
+  title: {
+    fontSize: 13,
+    fontWeight: "600",
     marginTop: 4,
   },
-  tabletStatsTitle: {
-    fontSize: 14,
-  },
-  smallStatsTitle: {
+  titleSmall: {
     fontSize: 11,
     marginTop: 2,
   },
-  statsIcon: {
+  titleTablet: {
+    fontSize: 15,
+    marginTop: 6,
+  },
+  iconBox: {
     width: 48,
     height: 48,
-    borderRadius: 24,
+    borderRadius: 14,
     justifyContent: "center",
     alignItems: "center",
   },
-  tabletStatsIcon: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-  },
-  smallStatsIcon: {
+  iconBoxSmall: {
     width: 40,
     height: 40,
-    borderRadius: 20,
+    borderRadius: 12,
+  },
+  iconBoxTablet: {
+    width: 60,
+    height: 60,
+    borderRadius: 18,
+  },
+  accentBar: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 3,
+    borderBottomLeftRadius: 16,
+    borderBottomRightRadius: 16,
   },
 });
 

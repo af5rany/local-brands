@@ -51,7 +51,7 @@ const UsersListScreen = () => {
   const textColor = useThemeColor({}, "text");
   const buttonColor = useThemeColor(
     { light: "#007AFF", dark: "#0A84FF" },
-    "tint",
+    "primary",
   );
   const cardBackground = useThemeColor(
     { light: "#ffffff", dark: "#1c1c1e" },

@@ -50,7 +50,7 @@ const CreateBrandScreen = () => {
   const textColor = useThemeColor({}, "text");
   const buttonColor = useThemeColor(
     { light: "#007AFF", dark: "#0A84FF" },
-    "tint",
+    "primary",
   );
   const cardBackground = useThemeColor(
     { light: "#ffffff", dark: "#1c1c1e" },
@@ -466,7 +466,7 @@ const InputField = ({
       <Ionicons
         name={`${icon}-outline` as any}
         size={20}
-        color={useThemeColor({ light: "#007AFF", dark: "#0A84FF" }, "tint")}
+        color={useThemeColor({ light: "#007AFF", dark: "#0A84FF" }, "primary")}
         style={styles.inputIcon}
       />
       <TextInput
@@ -482,7 +482,7 @@ const InputField = ({
         multiline={multiline}
         selectionColor={useThemeColor(
           { light: "#007AFF", dark: "#0A84FF" },
-          "tint",
+          "primary",
         )}
       />
     </View>

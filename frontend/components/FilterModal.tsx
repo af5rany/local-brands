@@ -9,8 +9,6 @@ import {
   Pressable,
   SafeAreaView,
   TextInput,
-  KeyboardAvoidingView,
-  Platform,
   Dimensions,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
@@ -28,6 +26,7 @@ import {
   GestureDetector,
   GestureHandlerRootView,
 } from "react-native-gesture-handler";
+import { useThemeColors } from "@/hooks/useThemeColor";
 
 const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 const MAX_TRANSLATE_Y = -SCREEN_HEIGHT + 100;
@@ -47,9 +46,16 @@ interface FilterModalProps {
   onClose: () => void;
   title: string;
   options: FilterOption[];
-  onSelect: (id: string, label: string) => void;
-  activeId?: string;
   enableSearch?: boolean;
+
+  // Single-select (existing, e.g. sort)
+  onSelect?: (id: string, label: string) => void;
+  activeId?: string;
+
+  // Multi-select (new, e.g. category + brand)
+  multiSelect?: boolean;
+  activeIds?: string[];
+  onApply?: (ids: string[], labels: string[]) => void;
 }
 
 const FilterModal: React.FC<FilterModalProps> = ({
@@ -60,9 +66,14 @@ const FilterModal: React.FC<FilterModalProps> = ({
   onSelect,
   activeId,
   enableSearch = false,
+  multiSelect = false,
+  activeIds,
+  onApply,
 }) => {
+  const colors = useThemeColors();
   const [searchQuery, setSearchQuery] = React.useState("");
   const [showModal, setShowModal] = React.useState(visible);
+  const [pendingIds, setPendingIds] = React.useState<string[]>([]);
   const translateY = useSharedValue(0);
   const context = useSharedValue({ y: 0 });
 
@@ -74,6 +85,8 @@ const FilterModal: React.FC<FilterModalProps> = ({
   React.useEffect(() => {
     if (visible) {
       setShowModal(true);
+      if (multiSelect) setPendingIds(activeIds ?? []);
+      setSearchQuery("");
       scrollTo(SNAP_POINTS.HALF);
     } else {
       translateY.value = withSpring(
@@ -110,13 +123,14 @@ const FilterModal: React.FC<FilterModalProps> = ({
     const borderRadius = interpolate(
       translateY.value,
       [MAX_TRANSLATE_Y + 50, MAX_TRANSLATE_Y],
-      [32, 0],
+      [28, 0],
       Extrapolation.CLAMP,
     );
 
     return {
       transform: [{ translateY: translateY.value }],
-      borderRadius,
+      borderTopLeftRadius: borderRadius,
+      borderTopRightRadius: borderRadius,
     };
   });
 
@@ -136,6 +150,16 @@ const FilterModal: React.FC<FilterModalProps> = ({
     opt.label.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
+  const handleClear = () => {
+    if (multiSelect) {
+      setPendingIds([]);
+      onApply?.([], []);
+      onClose();
+    } else {
+      onSelect?.("", "");
+    }
+  };
+
   return (
     <Modal
       visible={showModal}
@@ -144,92 +168,265 @@ const FilterModal: React.FC<FilterModalProps> = ({
       onRequestClose={onClose}
     >
       <GestureHandlerRootView style={StyleSheet.absoluteFill}>
-        <Animated.View style={[styles.backdrop, rBackdropStyle]}>
+        <Animated.View
+          style={[
+            styles.backdrop,
+            { backgroundColor: colors.surfaceOverlay },
+            rBackdropStyle,
+          ]}
+        >
           <Pressable style={{ flex: 1 }} onPress={onClose} />
         </Animated.View>
-        <Animated.View style={[styles.modalContent, rBottomSheetStyle]}>
+
+        <Animated.View
+          style={[
+            styles.modalContent,
+            { backgroundColor: colors.surface },
+            rBottomSheetStyle,
+          ]}
+        >
+          {/* Drag Handle Area */}
           <GestureDetector gesture={gesture}>
             <View style={styles.dragHandleArea}>
               <View style={styles.dragHandleContainer}>
-                <View style={styles.dragHandle} />
+                <View
+                  style={[
+                    styles.dragHandle,
+                    { backgroundColor: colors.border },
+                  ]}
+                />
               </View>
-              <SafeAreaView style={styles.safeArea}>
-                <View style={styles.header}>
+
+              <SafeAreaView>
+                <View
+                  style={[
+                    styles.header,
+                    { borderBottomColor: colors.borderLight },
+                  ]}
+                >
                   <TouchableOpacity
-                    onPress={() => onSelect("", "")}
-                    style={styles.headerActionButton}
+                    onPress={handleClear}
+                    style={styles.headerAction}
+                    activeOpacity={0.7}
                   >
-                    <Ionicons name="trash-outline" size={22} color="#94a3b8" />
+                    <Text
+                      style={[
+                        styles.headerActionText,
+                        { color: colors.danger },
+                      ]}
+                    >
+                      Clear
+                    </Text>
                   </TouchableOpacity>
-                  <Text style={styles.title}>{title}</Text>
+
+                  <Text style={[styles.title, { color: colors.text }]}>
+                    {title}
+                  </Text>
+
                   <TouchableOpacity
                     onPress={onClose}
                     style={styles.closeButton}
+                    activeOpacity={0.7}
                   >
-                    <Ionicons name="close" size={24} color="#64748b" />
+                    <View
+                      style={[
+                        styles.closeButtonCircle,
+                        { backgroundColor: colors.surfaceRaised },
+                      ]}
+                    >
+                      <Ionicons
+                        name="close"
+                        size={18}
+                        color={colors.textSecondary}
+                      />
+                    </View>
                   </TouchableOpacity>
                 </View>
               </SafeAreaView>
             </View>
           </GestureDetector>
 
+          {/* Search Bar */}
           {enableSearch && (
-            <View style={styles.searchContainer}>
-              <Ionicons name="search-outline" size={18} color="#94a3b8" />
+            <View
+              style={[
+                styles.searchContainer,
+                {
+                  backgroundColor: colors.surfaceRaised,
+                  borderColor: colors.border,
+                },
+              ]}
+            >
+              <Ionicons
+                name="search-outline"
+                size={18}
+                color={colors.textTertiary}
+              />
               <TextInput
-                style={styles.searchInput}
-                placeholder="Search brands..."
-                placeholderTextColor="#94a3b8"
+                style={[styles.searchInput, { color: colors.text }]}
+                placeholder="Search..."
+                placeholderTextColor={colors.textTertiary}
                 value={searchQuery}
                 onChangeText={setSearchQuery}
                 autoCorrect={false}
               />
               {searchQuery.length > 0 && (
                 <TouchableOpacity onPress={() => setSearchQuery("")}>
-                  <Ionicons name="close-circle" size={18} color="#94a3b8" />
+                  <Ionicons
+                    name="close-circle"
+                    size={18}
+                    color={colors.textTertiary}
+                  />
                 </TouchableOpacity>
               )}
             </View>
           )}
 
+          {/* Options List */}
           <FlatList
             data={filteredOptions}
             keyExtractor={(item) => item.id}
             showsVerticalScrollIndicator={false}
             renderItem={({ item }) => {
-              const isActive = item.id === activeId;
+              const isActive = multiSelect
+                ? pendingIds.includes(item.id)
+                : item.id === activeId;
               return (
                 <TouchableOpacity
-                  style={[styles.optionItem, isActive && styles.activeOption]}
-                  onPress={() => onSelect(item.id, item.label)}
+                  style={[
+                    styles.optionItem,
+                    isActive && { backgroundColor: colors.primarySoft },
+                  ]}
+                  onPress={() => {
+                    if (multiSelect) {
+                      setPendingIds((prev) =>
+                        prev.includes(item.id)
+                          ? prev.filter((x) => x !== item.id)
+                          : [...prev, item.id],
+                      );
+                    } else {
+                      onSelect?.(item.id, item.label);
+                    }
+                  }}
                   activeOpacity={0.7}
                 >
                   <Text
                     style={[
                       styles.optionLabel,
-                      isActive && styles.activeOptionLabel,
+                      { color: isActive ? colors.primary : colors.text },
+                      isActive && styles.optionLabelActive,
                     ]}
                   >
                     {item.label}
                   </Text>
-                  {isActive && (
-                    <Ionicons
-                      name="checkmark-circle"
-                      size={20}
-                      color="#346beb"
-                    />
+                  {multiSelect ? (
+                    <View
+                      style={[
+                        styles.checkbox,
+                        {
+                          borderColor: isActive
+                            ? colors.primary
+                            : colors.border,
+                          backgroundColor: isActive
+                            ? colors.primary
+                            : "transparent",
+                        },
+                      ]}
+                    >
+                      {isActive && (
+                        <Ionicons
+                          name="checkmark"
+                          size={14}
+                          color={colors.primaryForeground}
+                        />
+                      )}
+                    </View>
+                  ) : (
+                    isActive && (
+                      <View
+                        style={[
+                          styles.checkCircle,
+                          { backgroundColor: colors.primary },
+                        ]}
+                      >
+                        <Ionicons
+                          name="checkmark"
+                          size={14}
+                          color={colors.primaryForeground}
+                        />
+                      </View>
+                    )
                   )}
                 </TouchableOpacity>
               );
             }}
             ListEmptyComponent={
               <View style={styles.emptyContainer}>
-                <Text style={styles.emptyText}>No options available</Text>
+                <Ionicons
+                  name="search-outline"
+                  size={32}
+                  color={colors.textTertiary}
+                />
+                <Text
+                  style={[styles.emptyText, { color: colors.textTertiary }]}
+                >
+                  No options found
+                </Text>
               </View>
             }
-            ItemSeparatorComponent={() => <View style={styles.separator} />}
-            contentContainerStyle={styles.listContent}
+            ItemSeparatorComponent={() => (
+              <View
+                style={[
+                  styles.separator,
+                  { backgroundColor: colors.borderLight },
+                ]}
+              />
+            )}
+            contentContainerStyle={[
+              styles.listContent,
+              multiSelect && { paddingBottom: 80 },
+            ]}
           />
+
+          {/* Apply Button (multi-select only) */}
+          {multiSelect && (
+            <View
+              style={[
+                styles.applyFooter,
+                {
+                  borderTopColor: colors.borderLight,
+                  backgroundColor: colors.surface,
+                },
+              ]}
+            >
+              <TouchableOpacity
+                style={[
+                  styles.applyButton,
+                  { backgroundColor: colors.primary },
+                ]}
+                onPress={() => {
+                  const labels = pendingIds.map(
+                    (id) =>
+                      options.find((o) => o.id === id)?.label ?? id,
+                  );
+                  onApply?.(pendingIds, labels);
+                  onClose();
+                }}
+                activeOpacity={0.8}
+              >
+                <Text
+                  style={[
+                    styles.applyButtonText,
+                    { color: colors.primaryForeground },
+                  ]}
+                >
+                  {pendingIds.length > 0
+                    ? `Apply (${pendingIds.length} selected)`
+                    : "Apply"}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </Animated.View>
       </GestureHandlerRootView>
     </Modal>
@@ -239,26 +436,21 @@ const FilterModal: React.FC<FilterModalProps> = ({
 const styles = StyleSheet.create({
   backdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0, 0, 0, 0.4)",
   },
   modalContent: {
     height: SCREEN_HEIGHT,
     width: "100%",
-    backgroundColor: "#fff",
     position: "absolute",
     top: SCREEN_HEIGHT,
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: -10 },
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
-    elevation: 20,
+    shadowOffset: { width: 0, height: -8 },
+    shadowOpacity: 0.12,
+    shadowRadius: 16,
+    elevation: 24,
   },
   dragHandleArea: {
     width: "100%",
-    paddingTop: 10,
-    backgroundColor: "transparent",
+    paddingTop: 8,
   },
   dragHandleContainer: {
     width: "100%",
@@ -267,99 +459,127 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   dragHandle: {
-    width: 40,
-    height: 5,
-    backgroundColor: "#e2e8f0",
-    borderRadius: 3,
-  },
-  safeArea: {
-    // Remove flex: 1 if it interferes
+    width: 36,
+    height: 4,
+    borderRadius: 2,
   },
   header: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 16,
-    paddingVertical: 18,
+    paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: "#f1f5f9",
   },
   title: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: "700",
-    color: "#1e293b",
     textAlign: "center",
     flex: 1,
   },
-  closeButton: {
-    padding: 8,
-    width: 40,
-    alignItems: "center",
+  headerAction: {
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    width: 56,
   },
-  headerActionButton: {
-    padding: 8,
-    width: 40,
+  headerActionText: {
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  closeButton: {
+    width: 56,
+    alignItems: "flex-end",
+  },
+  closeButtonCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: "center",
     alignItems: "center",
   },
   searchContainer: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#f8fafc",
     marginHorizontal: 16,
     marginTop: 16,
     marginBottom: 8,
-    paddingHorizontal: 12,
-    borderRadius: 12,
-    height: 48,
+    paddingHorizontal: 14,
+    borderRadius: 14,
+    height: 46,
     borderWidth: 1,
-    borderColor: "#e2e8f0",
   },
   searchInput: {
     flex: 1,
-    fontSize: 16,
-    color: "#1e293b",
-    marginLeft: 8,
+    fontSize: 15,
+    marginLeft: 10,
     paddingVertical: 10,
   },
   listContent: {
-    paddingHorizontal: 16,
+    paddingHorizontal: 12,
     paddingTop: 8,
     paddingBottom: 60,
   },
   separator: {
     height: 1,
-    backgroundColor: "#f1f5f9",
     marginHorizontal: 12,
   },
   optionItem: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingVertical: 18,
-    paddingHorizontal: 12,
+    paddingVertical: 16,
+    paddingHorizontal: 14,
     borderRadius: 14,
     marginVertical: 2,
   },
-  activeOption: {
-    backgroundColor: "#346beb10",
-  },
   optionLabel: {
     fontSize: 16,
-    color: "#1e293b",
-    fontWeight: "600",
+    fontWeight: "500",
   },
-  activeOptionLabel: {
-    color: "#346beb",
+  optionLabelActive: {
     fontWeight: "700",
   },
-  emptyContainer: {
-    paddingVertical: 60,
+  checkCircle: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    justifyContent: "center",
     alignItems: "center",
   },
+  checkbox: {
+    width: 22,
+    height: 22,
+    borderRadius: 6,
+    borderWidth: 2,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  emptyContainer: {
+    paddingVertical: 48,
+    alignItems: "center",
+    gap: 12,
+  },
   emptyText: {
-    color: "#94a3b8",
     fontSize: 15,
     fontWeight: "500",
+  },
+  applyFooter: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderTopWidth: 1,
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+  },
+  applyButton: {
+    borderRadius: 14,
+    paddingVertical: 16,
+    alignItems: "center",
+  },
+  applyButtonText: {
+    fontSize: 16,
+    fontWeight: "700",
   },
 });
 

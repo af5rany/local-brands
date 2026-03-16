@@ -49,7 +49,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onEdit }) => {
   );
   const buttonColor = useThemeColor(
     { light: "#007AFF", dark: "#0A84FF" },
-    "tint",
+    "primary",
   );
 
   const handlePress = () => {

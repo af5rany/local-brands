@@ -40,7 +40,7 @@ const CartScreen = () => {
   );
   const accentColor = useThemeColor(
     { light: "#DC2626", dark: "#EF4444" },
-    "tint",
+    "primary",
   );
 
   const fetchCart = useCallback(async () => {
@@ -114,7 +114,12 @@ const CartScreen = () => {
     const variant = item.variant;
     const product = item.product;
     const image =
-      variant?.images?.[0] || product?.variants?.[0]?.images?.[0] || "";
+      variant?.images?.[0] ||
+      product?.productVariants?.[0]?.images?.[0] ||
+      product?.images?.[0] ||
+      product?.variants?.[0]?.variantImages?.[0] ||
+      product?.variants?.[0]?.images?.[0] ||
+      "";
 
     return (
       <View style={[styles.cartItem, { backgroundColor: cardBackground }]}>

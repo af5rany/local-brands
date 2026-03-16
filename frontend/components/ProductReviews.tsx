@@ -46,7 +46,7 @@ const ProductReviews = ({ productId }: ProductReviewsProps) => {
   );
   const accentColor = useThemeColor(
     { light: "#DC2626", dark: "#EF4444" },
-    "tint",
+    "primary",
   );
   const cardBackground = useThemeColor(
     { light: "#FAFAFA", dark: "#1C1C1E" },

@@ -47,7 +47,7 @@ const EditBrandScreen = () => {
   const textColor = useThemeColor({}, "text");
   const buttonColor = useThemeColor(
     { light: "#007AFF", dark: "#0A84FF" },
-    "tint",
+    "primary",
   );
   const cardBackground = useThemeColor(
     { light: "#ffffff", dark: "#1c1c1e" },
@@ -338,7 +338,9 @@ const EditBrandScreen = () => {
                           backgroundColor: isSelected
                             ? statusColor
                             : inputBackground,
-                          borderColor: isSelected ? statusColor : inputBorderColor,
+                          borderColor: isSelected
+                            ? statusColor
+                            : inputBorderColor,
                         },
                       ]}
                     >
@@ -427,7 +429,7 @@ const InputField = ({
       <Ionicons
         name={`${icon}-outline` as any}
         size={20}
-        color={useThemeColor({ light: "#007AFF", dark: "#0A84FF" }, "tint")}
+        color={useThemeColor({ light: "#007AFF", dark: "#0A84FF" }, "primary")}
         style={styles.inputIcon}
       />
       <TextInput

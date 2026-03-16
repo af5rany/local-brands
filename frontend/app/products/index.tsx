@@ -119,7 +119,7 @@ const ProductsListScreen = () => {
   const textColor = useThemeColor({}, "text");
   const buttonColor = useThemeColor(
     { light: "#007AFF", dark: "#0A84FF" },
-    "tint",
+    "primary",
   );
   const cardBackground = useThemeColor(
     { light: "#ffffff", dark: "#1c1c1e" },
@@ -174,7 +174,7 @@ const ProductsListScreen = () => {
 
         const data: PaginatedResult<Product> = await response.json();
 
-        if (append && productsData) {
+        if (append) {
           setProductsData((prev) =>
             prev
               ? {
@@ -200,7 +200,7 @@ const ProductsListScreen = () => {
         setRefreshing(false);
       }
     },
-    [buildApiUrl, productsData],
+    [buildApiUrl],
   );
 
   // Fetch all brands for filter

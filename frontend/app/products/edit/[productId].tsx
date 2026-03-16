@@ -68,7 +68,7 @@ const EditProductScreen = () => {
   );
   const primaryColor = useThemeColor(
     { light: "#007AFF", dark: "#0A84FF" },
-    "tint",
+    "primary",
   );
   const placeholderColor = useThemeColor(
     { light: "#8e8e93", dark: "#8e8e93" },

@@ -51,6 +51,7 @@ export class CartService {
         'cartItems',
         'cartItems.product',
         'cartItems.product.brand',
+        'cartItems.product.productVariants',
         'cartItems.variant',
       ],
     });

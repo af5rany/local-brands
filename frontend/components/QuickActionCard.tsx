@@ -2,6 +2,7 @@ import React from "react";
 import { View, Text, StyleSheet, Pressable, Animated } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { Swipeable, RectButton } from "react-native-gesture-handler";
+import { useThemeColors } from "@/hooks/useThemeColor";
 
 type QuickActionCardProps = {
   title: string;
@@ -18,6 +19,8 @@ const QuickActionCard: React.FC<QuickActionCardProps> = ({
   color,
   onPress,
 }) => {
+  const colors = useThemeColors();
+
   const renderRightActions = (
     progress: Animated.AnimatedInterpolation<number>,
     dragX: Animated.AnimatedInterpolation<number>,
@@ -27,15 +30,14 @@ const QuickActionCard: React.FC<QuickActionCardProps> = ({
       outputRange: [1, 0],
       extrapolate: "clamp",
     });
-
     return (
       <RectButton
         style={[styles.rightAction, { backgroundColor: color }]}
         onPress={onPress}
       >
         <Animated.View style={{ transform: [{ scale: trans }] }}>
-          <Ionicons name="arrow-forward" size={30} color="#fff" />
-          <Text style={styles.actionText}>Go</Text>
+          <Ionicons name="arrow-forward" size={28} color="#fff" />
+          <Text style={styles.swipeText}>Go</Text>
         </Animated.View>
       </RectButton>
     );
@@ -47,67 +49,81 @@ const QuickActionCard: React.FC<QuickActionCardProps> = ({
       friction={2}
       rightThreshold={40}
     >
-      <Pressable style={styles.actionCard} onPress={onPress}>
-        <View style={[styles.actionIcon, { backgroundColor: color + "20" }]}>
-          <Ionicons name={icon} size={28} color={color} />
+      <Pressable
+        style={[
+          styles.card,
+          {
+            backgroundColor: colors.surface,
+            borderColor: colors.cardBorder,
+            shadowColor: colors.cardShadow,
+          },
+        ]}
+        onPress={onPress}
+      >
+        <View style={[styles.iconBox, { backgroundColor: color + "18" }]}>
+          <Ionicons name={icon} size={26} color={color} />
         </View>
-        <View style={styles.actionContent}>
-          <Text style={styles.actionTitle}>{title}</Text>
-          <Text style={styles.actionDescription}>{description}</Text>
+        <View style={styles.content}>
+          <Text style={[styles.title, { color: colors.text }]}>{title}</Text>
+          <Text style={[styles.description, { color: colors.textTertiary }]}>
+            {description}
+          </Text>
         </View>
-        <Ionicons name="chevron-forward" size={20} color="#666" />
+        <Ionicons
+          name="chevron-forward"
+          size={18}
+          color={colors.textTertiary}
+        />
       </Pressable>
     </Swipeable>
   );
 };
 
 const styles = StyleSheet.create({
-  actionCard: {
-    backgroundColor: "#fff",
-    borderRadius: 12,
+  card: {
+    borderRadius: 16,
     padding: 16,
     flexDirection: "row",
     alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    borderWidth: 1,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 1,
+    shadowRadius: 12,
     elevation: 3,
   },
-  actionIcon: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+  iconBox: {
+    width: 50,
+    height: 50,
+    borderRadius: 14,
     justifyContent: "center",
     alignItems: "center",
-    marginRight: 16,
+    marginRight: 14,
   },
-  actionContent: {
+  content: {
     flex: 1,
+    gap: 3,
   },
-  actionTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#1e293b",
-    marginBottom: 4,
+  title: {
+    fontSize: 15,
+    fontWeight: "700",
   },
-  actionDescription: {
-    fontSize: 14,
-    color: "#64748b",
+  description: {
+    fontSize: 13,
+    fontWeight: "400",
   },
   rightAction: {
     alignItems: "center",
     flex: 1,
     justifyContent: "center",
-    borderRadius: 12,
+    borderRadius: 16,
     width: 80,
     marginVertical: 4,
     marginRight: 4,
   },
-  actionText: {
+  swipeText: {
     color: "white",
-    fontSize: 12,
-    fontWeight: "600",
+    fontSize: 11,
+    fontWeight: "700",
     marginTop: 4,
   },
 });

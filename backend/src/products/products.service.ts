@@ -41,12 +41,12 @@ export class ProductsService {
       limit = 10,
       search,
       category,
-      productType,
+      productTypes,
       gender,
       season,
       minPrice,
       maxPrice,
-      brandId,
+      brandIds,
       status,
       isAvailable,
       inStock,
@@ -92,21 +92,25 @@ export class ProductsService {
 
     // Filters
     if (category) qb.andWhere('product.subcategory = :category', { category });
-    if (productType)
-      qb.andWhere('product.productType = :productType', { productType });
+    if (productTypes && productTypes.length > 0)
+      qb.andWhere('product.productType IN (:...productTypes)', {
+        productTypes,
+      });
     if (gender) qb.andWhere('product.gender = :gender', { gender });
     if (season) qb.andWhere('product.season = :season', { season });
     if (minPrice) qb.andWhere('product.price >= :minPrice', { minPrice });
     if (maxPrice) qb.andWhere('product.price <= :maxPrice', { maxPrice });
-    if (brandId) qb.andWhere('product.brandId = :brandId', { brandId });
+    if (brandIds && brandIds.length > 0)
+      qb.andWhere('product.brandId IN (:...brandIds)', { brandIds });
 
     // Role-based visibility logic
     const canSeeAll =
       currentUser &&
       (currentUser.role === UserRole.ADMIN ||
         (currentUser.role === UserRole.BRAND_OWNER &&
-          brandId &&
-          currentUser.brandIds?.includes(Number(brandId))));
+          brandIds &&
+          brandIds.length > 0 &&
+          brandIds.some((id) => currentUser.brandIds?.includes(Number(id)))));
 
     if (!canSeeAll) {
       // If not admin/owner, only show PUBLISHED products

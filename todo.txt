@@ -1,0 +1,6 @@
+fix filter and pagination in customer dashboard
+check stock and availableStock 
+check images and variant images
+get products faster on first load
+loading state
+wishlist optimistic update

@@ -40,7 +40,7 @@ const CheckoutScreen = () => {
   );
   const accentColor = useThemeColor(
     { light: "#DC2626", dark: "#EF4444" },
-    "tint",
+    "primary",
   );
 
   useEffect(() => {

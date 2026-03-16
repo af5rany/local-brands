@@ -3,20 +3,19 @@ import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
-  useWindowDimensions,
   TouchableOpacity,
   Image,
   FlatList,
+  ActivityIndicator,
 } from "react-native";
 import { Brand } from "@/types/brand";
 import { Product } from "@/types/product";
-import BrandCard from "./BrandCard";
 import RecommendationCard from "./RecommendationCard";
 import FilterChips from "./FilterChips";
-import FilterModal from "./FilterModal";
+import FilterPanel, { PanelFilters } from "./FilterPanel";
 import { Ionicons } from "@expo/vector-icons";
 import Pagination from "./Pagination";
+import { useThemeColors } from "@/hooks/useThemeColor";
 
 type CustomerDashboardProps = {
   navigateTo: (path: string) => void;
@@ -28,12 +27,16 @@ type CustomerDashboardProps = {
   searchQuery?: string;
   onSearchChange?: (text: string) => void;
   activeFilters?: {
-    category?: string;
-    type?: string;
-    brand?: string;
+    categories?: string[];
+    brands?: string[];
     sort?: string;
   };
-  onFilterPress?: (type: string, value?: string) => void;
+  onFilterPress?: (type: string, values: string[], labels?: string[]) => void;
+  onFiltersApply?: (
+    filters: { categories: string[]; brandIds: string[]; sortOrder: "ASC" | "DESC" },
+    brandLabels: Record<string, string>,
+  ) => void;
+  filterLabels?: { brands?: Record<string, string>; sort?: string };
   filterOptions?: {
     categories: string[];
     productTypes: string[];
@@ -60,6 +63,8 @@ const CustomerDashboard = ({
   onSearchChange,
   activeFilters = {},
   onFilterPress,
+  onFiltersApply,
+  filterLabels = {},
   filterOptions = { categories: [], productTypes: [] },
   currentPage = 1,
   totalPages = 1,
@@ -71,137 +76,244 @@ const CustomerDashboard = ({
   onToggleWishlist,
   onAddToCart,
 }: CustomerDashboardProps) => {
-  const { width } = useWindowDimensions();
+  const colors = useThemeColors();
   const [activeTab, setActiveTab] = React.useState<"products" | "brands">(
     "products",
   );
-  const [isFilterModalVisible, setFilterModalVisible] = React.useState(false);
-  const [currentFilterType, setCurrentFilterType] = React.useState<string>("");
+  const [isPanelVisible, setIsPanelVisible] = React.useState(false);
 
-  const handleChipPress = (type: string) => {
-    setCurrentFilterType(type);
-    setFilterModalVisible(true);
+  const panelActiveFilters: PanelFilters = {
+    categories: activeFilters.categories ?? [],
+    brands: activeFilters.brands ?? [],
+    sortOrder: (activeFilters.sort ?? "DESC") as "ASC" | "DESC",
   };
 
-  const getModalOptions = () => {
-    switch (currentFilterType) {
-      case "category":
-        return filterOptions.categories.map((c) => ({ id: c, label: c }));
-      case "type":
-        return filterOptions.productTypes.map((t) => ({ id: t, label: t }));
-      case "brand":
-        return featuredBrands.map((b) => ({
-          id: b.id.toString(),
-          label: b.name,
-        }));
-      case "sort":
-        return [
-          { id: "DESC", label: "Newest First" },
-          { id: "ASC", label: "Oldest First" },
-        ];
-      default:
-        return [];
+  const handlePanelApply = (filters: PanelFilters) => {
+    // Call onFilterPress for each type — React batches these state updates
+    onFilterPress?.("category", filters.categories, filters.categories);
+
+    const brandLabels = filters.brands.map((id) => {
+      const brand = featuredBrands.find((b) => b.id.toString() === id);
+      return brand?.name ?? id;
+    });
+    onFilterPress?.("brand", filters.brands, brandLabels);
+
+    const sortLabel =
+      filters.sortOrder === "DESC" ? "Newest First" : "Oldest First";
+    onFilterPress?.("sort", [filters.sortOrder], [sortLabel]);
+  };
+
+  const handleClearFilter = (type: "category" | "brand" | "sort") => {
+    if (type === "sort") {
+      onFilterPress?.("sort", [], []);
+    } else if (type === "category") {
+      onFilterPress?.("category", [], []);
+    } else {
+      onFilterPress?.("brand", [], []);
     }
   };
 
-  const handleSelectOption = (id: string, label: string) => {
-    onFilterPress?.(currentFilterType, id);
-    setFilterModalVisible(false);
-  };
-  const isTablet = width > 768;
-  const numColumns = isTablet ? 3 : 2;
+  // Responsive grid
+  const numColumns = 2;
   const cardGap = 12;
-  const cardWidth = (width - 16 * 2 - cardGap * (numColumns - 1)) / numColumns;
 
-  const renderProductItem = ({ item }: { item: Product }) => (
-    <RecommendationCard
-      product={{
-        id: item.id.toString(),
-        name: item.name,
-        price: item.salePrice ?? item.price,
-        image: item.variants?.[0]?.images?.[0] || "",
-        brand: item.brand?.name || "Global Brand",
-        rating: 4.8,
-        originalPrice: item.salePrice ? item.price : undefined,
-      }}
-      onPress={() => navigateTo(`/products/${item.id}`)}
-      onAddToWishlist={() => {
-        if (isGuest) {
-          navigateTo("/auth/login");
-        } else {
-          onToggleWishlist?.(item.id);
-        }
-      }}
-      onAddToCart={() => {
-        if (isGuest) {
-          navigateTo("/auth/login");
-          return Promise.resolve();
-        }
-        return onAddToCart?.(item.id) ?? Promise.resolve();
-      }}
-      isInWishlist={!isGuest && wishlistProductIds.includes(item.id)}
-      style={{ width: cardWidth, marginRight: 0, marginBottom: cardGap }}
-    />
-  );
-
-  const renderBrandItem = ({ item }: { item: Brand }) => (
-    <TouchableOpacity
-      style={[styles.brandCard, { width: cardWidth, marginRight: 0 }]}
-      onPress={() => navigateTo(`/brands/${item.id}`)}
-      activeOpacity={0.7}
+  const renderProductItem = ({
+    item,
+    index,
+  }: {
+    item: Product;
+    index: number;
+  }) => (
+    <View
+      style={[
+        styles.gridItem,
+        index % 2 === 0
+          ? { marginRight: cardGap / 2 }
+          : { marginLeft: cardGap / 2 },
+      ]}
     >
-      <View style={styles.brandLogoBox}>
-        {item.logo ? (
-          <Image
-            source={{ uri: item.logo }}
-            style={styles.brandLogo}
-            resizeMode="contain"
-          />
-        ) : (
-          <Ionicons name="business" size={32} color="#64748b" />
-        )}
-      </View>
-      <View style={styles.brandInfo}>
-        <Text style={styles.brandName} numberOfLines={1}>
-          {item.name}
-        </Text>
-        <Text style={styles.brandTagline} numberOfLines={1}>
-          {item.location || "Global"}
-        </Text>
-        <View style={styles.productCountBadge}>
-          <Text style={styles.productCountText}>
-            {item.products?.length || 0} Products
-          </Text>
-        </View>
-      </View>
-    </TouchableOpacity>
+      <RecommendationCard
+        product={{
+          id: item.id.toString(),
+          name: item.name,
+          price: item.salePrice ?? item.price,
+          image: item.variants?.[0]?.images?.[0] || "",
+          brand: item.brand?.name || "Local Brand",
+          rating: 4.8,
+          originalPrice: item.salePrice ? item.price : undefined,
+        }}
+        onPress={() => navigateTo(`/products/${item.id}`)}
+        onAddToWishlist={() => {
+          if (isGuest) {
+            navigateTo("/auth/login");
+          } else {
+            onToggleWishlist?.(item.id);
+          }
+        }}
+        onAddToCart={() => {
+          if (isGuest) {
+            navigateTo("/auth/login");
+            return Promise.resolve();
+          }
+          return onAddToCart?.(item.id) ?? Promise.resolve();
+        }}
+        isInWishlist={!isGuest && wishlistProductIds.includes(item.id)}
+        style={{ width: "100%", marginRight: 0, marginBottom: 0 }}
+      />
+    </View>
   );
+
+  const renderBrandItem = ({ item, index }: { item: Brand; index: number }) => (
+    <View
+      style={[
+        styles.gridItem,
+        index % 2 === 0
+          ? { marginRight: cardGap / 2 }
+          : { marginLeft: cardGap / 2 },
+      ]}
+    >
+      <TouchableOpacity
+        style={[
+          styles.brandCard,
+          {
+            backgroundColor: colors.surface,
+            borderColor: colors.cardBorder,
+            shadowColor: colors.cardShadow,
+          },
+        ]}
+        onPress={() => navigateTo(`/brands/${item.id}`)}
+        activeOpacity={0.8}
+      >
+        <View
+          style={[styles.brandLogoBox, { backgroundColor: colors.primarySoft }]}
+        >
+          {item.logo ? (
+            <Image
+              source={{ uri: item.logo }}
+              style={styles.brandLogo}
+              resizeMode="contain"
+            />
+          ) : (
+            <Ionicons name="storefront" size={28} color={colors.primary} />
+          )}
+        </View>
+        <View style={styles.brandInfo}>
+          <Text
+            style={[styles.brandName, { color: colors.text }]}
+            numberOfLines={1}
+          >
+            {item.name}
+          </Text>
+          <Text
+            style={[styles.brandLocation, { color: colors.textTertiary }]}
+            numberOfLines={1}
+          >
+            {item.location || "Global"}
+          </Text>
+          <View
+            style={[
+              styles.productCountBadge,
+              { backgroundColor: colors.primarySoft },
+            ]}
+          >
+            <Text style={[styles.productCountText, { color: colors.primary }]}>
+              {item.products?.length || 0} Products
+            </Text>
+          </View>
+        </View>
+      </TouchableOpacity>
+    </View>
+  );
+
+  if (loadingStats) {
+    return (
+      <View
+        style={[
+          styles.container,
+          styles.loadingContainer,
+          { backgroundColor: colors.background },
+        ]}
+      >
+        <ActivityIndicator size="large" color={colors.primary} />
+        <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
+          Loading...
+        </Text>
+      </View>
+    );
+  }
 
   return (
-    <View style={styles.container}>
-      {/* 2) Primary CTAs - Segmented Switch */}
-      <View style={styles.tabContainer}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      {/* Tab Switcher */}
+      <View
+        style={[styles.tabContainer, { backgroundColor: colors.surfaceRaised }]}
+      >
         <TouchableOpacity
-          style={[styles.tab, activeTab === "products" && styles.activeTab]}
+          style={[
+            styles.tab,
+            activeTab === "products"
+              ? { backgroundColor: colors.tabActiveBackground }
+              : { backgroundColor: "transparent" },
+          ]}
           onPress={() => setActiveTab("products")}
+          activeOpacity={0.8}
         >
+          <Ionicons
+            name="cube-outline"
+            size={16}
+            color={
+              activeTab === "products"
+                ? colors.primaryForeground
+                : colors.tabInactive
+            }
+            style={styles.tabIcon}
+          />
           <Text
             style={[
               styles.tabText,
-              activeTab === "products" && styles.activeTabText,
+              {
+                color:
+                  activeTab === "products"
+                    ? colors.primaryForeground
+                    : colors.tabInactive,
+              },
+              activeTab === "products" && styles.tabTextActive,
             ]}
           >
             Products
           </Text>
         </TouchableOpacity>
+
         <TouchableOpacity
-          style={[styles.tab, activeTab === "brands" && styles.activeTab]}
+          style={[
+            styles.tab,
+            activeTab === "brands"
+              ? { backgroundColor: colors.tabActiveBackground }
+              : { backgroundColor: "transparent" },
+          ]}
           onPress={() => setActiveTab("brands")}
+          activeOpacity={0.8}
         >
+          <Ionicons
+            name="storefront-outline"
+            size={16}
+            color={
+              activeTab === "brands"
+                ? colors.primaryForeground
+                : colors.tabInactive
+            }
+            style={styles.tabIcon}
+          />
           <Text
             style={[
               styles.tabText,
-              activeTab === "brands" && styles.activeTabText,
+              {
+                color:
+                  activeTab === "brands"
+                    ? colors.primaryForeground
+                    : colors.tabInactive,
+              },
+              activeTab === "brands" && styles.tabTextActive,
             ]}
           >
             Brands
@@ -209,56 +321,46 @@ const CustomerDashboard = ({
         </TouchableOpacity>
       </View>
 
-      {/* 3) Quick Filter Chips */}
+      {/* Filter Chips */}
       <FilterChips
-        activeFilters={activeFilters}
-        onFilterPress={handleChipPress}
+        onOpenFilters={() => setIsPanelVisible(true)}
+        activeFilters={panelActiveFilters}
+        filterLabels={{ brands: filterLabels.brands }}
+        onClearFilter={handleClearFilter}
       />
 
-      {/* Filter Selection Modal */}
-      <FilterModal
-        visible={isFilterModalVisible}
-        onClose={() => setFilterModalVisible(false)}
-        title={`Filter by ${currentFilterType.charAt(0).toUpperCase() + currentFilterType.slice(1)}`}
-        options={getModalOptions()}
-        onSelect={handleSelectOption}
-        activeId={
-          activeFilters[currentFilterType as keyof typeof activeFilters]
-        }
-        enableSearch={currentFilterType === "brand"}
+      {/* Unified Filter Panel */}
+      <FilterPanel
+        visible={isPanelVisible}
+        onClose={() => setIsPanelVisible(false)}
+        activeFilters={panelActiveFilters}
+        categoryOptions={filterOptions.productTypes}
+        brandOptions={featuredBrands.map((b) => ({
+          id: b.id.toString(),
+          name: b.name,
+        }))}
+        onApply={handlePanelApply}
       />
 
-      {/* 4) Featured Strip (Curation Layer) - Only show for Product tab or as a global entry */}
-      {/* {featuredBrands.length > 0 && activeTab === "products" && (
-        <View style={styles.featuredSection}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Featured Brands</Text>
-            <TouchableOpacity onPress={() => navigateTo("/brands")}>
-              <Text style={styles.seeAll}>See All</Text>
-            </TouchableOpacity>
-          </View>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.featuredList}
-          >
-            {featuredBrands.map((brand) => (
-              <BrandCard
-                key={brand.id}
-                brand={brand}
-                size="small"
-                onPress={() => navigateTo(`/brands/${brand.id}`)}
-              />
-            ))}
-          </ScrollView>
-        </View>
-      )} */}
-
-      {/* 5) Main Content Grid */}
-      <View style={styles.gridContainer}>
-        <Text style={styles.discoveryTitle}>
-          {activeTab === "products" ? "Latest Arrivals" : "All Brands"}
+      {/* Section Header */}
+      <View style={styles.sectionHeader}>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>
+          {activeTab === "products" ? "products" : "Discover Brands"}
         </Text>
+        {/* <TouchableOpacity
+          onPress={() =>
+            navigateTo(activeTab === "products" ? "/products" : "/brands")
+          }
+          activeOpacity={0.7}
+        >
+          <Text style={[styles.seeAll, { color: colors.primary }]}>
+            See All
+          </Text>
+        </TouchableOpacity> */}
+      </View>
+
+      {/* Grid */}
+      <View style={styles.gridContainer}>
         <FlatList
           data={
             activeTab === "products"
@@ -275,12 +377,32 @@ const CustomerDashboard = ({
           scrollEnabled={false}
           columnWrapperStyle={styles.gridRow}
           ListEmptyComponent={
-            <Text style={styles.emptyText}>Nothing found in this section</Text>
+            <View style={styles.emptyContainer}>
+              <Ionicons
+                name={
+                  activeTab === "products"
+                    ? "cube-outline"
+                    : "storefront-outline"
+                }
+                size={48}
+                color={colors.textTertiary}
+              />
+              <Text
+                style={[styles.emptyTitle, { color: colors.textSecondary }]}
+              >
+                {activeTab === "products" ? "No products yet" : "No brands yet"}
+              </Text>
+              <Text
+                style={[styles.emptySubtitle, { color: colors.textTertiary }]}
+              >
+                Check back soon for new arrivals
+              </Text>
+            </View>
           }
-          key={activeTab === "products" ? "h-grid" : "v-grid"} // Force re-render on tab change for grid layout
+          key={activeTab}
         />
 
-        {/* Pagination Controls */}
+        {/* Pagination */}
         <Pagination
           currentPage={activeTab === "brands" ? brandsCurrentPage : currentPage}
           totalPages={activeTab === "brands" ? brandsTotalPages : totalPages}
@@ -289,101 +411,119 @@ const CustomerDashboard = ({
           }
         />
       </View>
+
+      {/* End of content indicator */}
+      <View
+        style={[styles.endOfContent, { borderTopColor: colors.borderLight }]}
+      >
+        <View
+          style={[styles.endDot, { backgroundColor: colors.textTertiary }]}
+        />
+        <Text style={[styles.endText, { color: colors.textTertiary }]}>
+          You've seen it all
+        </Text>
+        <View
+          style={[styles.endDot, { backgroundColor: colors.textTertiary }]}
+        />
+      </View>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: "#fff",
     flex: 1,
   },
+  loadingContainer: {
+    justifyContent: "center",
+    alignItems: "center",
+    paddingVertical: 64,
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 15,
+    fontWeight: "500",
+  },
+
+  // ── Tab Switcher ──────────────────────────
   tabContainer: {
     flexDirection: "row",
-    paddingHorizontal: 16,
-    paddingTop: 8,
-    gap: 12,
+    marginHorizontal: 16,
+    marginTop: 12,
+    borderRadius: 14,
+    padding: 4,
+    gap: 4,
   },
   tab: {
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 20,
-    backgroundColor: "#f1f5f9",
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 10,
+    borderRadius: 11,
+    gap: 6,
   },
-  activeTab: {
-    backgroundColor: "#1e293b",
+  tabIcon: {
+    marginRight: 2,
   },
   tabText: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: "#64748b",
+    fontSize: 14,
+    fontWeight: "500",
   },
-  activeTabText: {
-    color: "#fff",
+  tabTextActive: {
+    fontWeight: "700",
   },
-  featuredSection: {
-    paddingVertical: 16,
-    borderTopWidth: 1,
-    borderBottomWidth: 1,
-    borderColor: "#f1f5f9",
-    backgroundColor: "#f8fafc",
-    marginVertical: 12,
-  },
+
+  // ── Section Header ────────────────────────
   sectionHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: 16,
-    marginBottom: 12,
+    paddingTop: 4,
+    paddingBottom: 12,
   },
   sectionTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#1e293b",
+    fontSize: 20,
+    fontWeight: "800",
+    letterSpacing: -0.3,
   },
   seeAll: {
     fontSize: 14,
-    color: "#346beb",
     fontWeight: "600",
   },
-  featuredList: {
-    paddingHorizontal: 16,
-    gap: 12,
-  },
+
+  // ── Grid ──────────────────────────────────
   gridContainer: {
-    padding: 16,
+    paddingHorizontal: 16,
   },
-  discoveryTitle: {
-    fontSize: 20,
-    fontWeight: "800",
-    color: "#0f172a",
-    marginBottom: 16,
+  gridItem: {
+    flex: 1,
+    marginBottom: 12,
   },
   gridRow: {
     justifyContent: "flex-start",
-    gap: 12,
-    marginBottom: 4,
   },
+
+  // ── Brand Card ────────────────────────────
   brandCard: {
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 12,
+    borderRadius: 16,
+    padding: 16,
     borderWidth: 1,
-    borderColor: "#e2e8f0",
     alignItems: "center",
-    marginBottom: 12,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 1,
+    shadowRadius: 12,
+    elevation: 4,
   },
   brandLogoBox: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: "#f8fafc",
+    width: 56,
+    height: 56,
+    borderRadius: 16,
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: 10,
+    marginBottom: 12,
     overflow: "hidden",
-    borderWidth: 1,
-    borderColor: "#f1f5f9",
   },
   brandLogo: {
     width: "100%",
@@ -392,35 +532,61 @@ const styles = StyleSheet.create({
   brandInfo: {
     alignItems: "center",
     width: "100%",
+    gap: 3,
   },
   brandName: {
     fontSize: 14,
     fontWeight: "700",
-    color: "#1e293b",
-    marginBottom: 2,
     textAlign: "center",
   },
-  brandTagline: {
+  brandLocation: {
     fontSize: 12,
-    color: "#94a3b8",
-    marginBottom: 6,
     textAlign: "center",
   },
   productCountBadge: {
-    backgroundColor: "#346beb10",
-    paddingHorizontal: 8,
-    paddingVertical: 2,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
     borderRadius: 10,
+    marginTop: 4,
   },
   productCountText: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: "700",
-    color: "#346beb",
   },
-  emptyText: {
-    textAlign: "center",
-    color: "#64748b",
-    marginTop: 20,
+
+  // ── Empty State ───────────────────────────
+  emptyContainer: {
+    alignItems: "center",
+    paddingVertical: 48,
+    gap: 8,
+  },
+  emptyTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  emptySubtitle: {
+    fontSize: 14,
+  },
+  endOfContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 32,
+    paddingBottom: 16,
+    gap: 12,
+    borderTopWidth: 1,
+    marginHorizontal: 16,
+    marginTop: 8,
+  },
+  endDot: {
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+  },
+  endText: {
+    fontSize: 13,
+    fontWeight: "500",
+    letterSpacing: 0.3,
   },
 });
 

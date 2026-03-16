@@ -12,22 +12,12 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/context/AuthContext";
-import { useThemeColor } from "@/hooks/useThemeColor";
+import { useThemeColors } from "@/hooks/useThemeColor";
 
 const SettingsScreen = () => {
   const router = useRouter();
+  const colors = useThemeColors();
   const { user, logout } = useAuth();
-
-  const backgroundColor = useThemeColor({}, "background");
-  const textColor = useThemeColor({}, "text");
-  const cardBackground = useThemeColor(
-    { light: "#ffffff", dark: "#1c1c1e" },
-    "background",
-  );
-  const secondaryTextColor = useThemeColor(
-    { light: "#737373", dark: "#A3A3A3" },
-    "text",
-  );
 
   const [pushNotifications, setPushNotifications] = useState(true);
   const [emailNotifications, setEmailNotifications] = useState(true);
@@ -53,123 +43,216 @@ const SettingsScreen = () => {
     );
   };
 
-  const renderSettingItem = (
-    icon: string,
-    label: string,
-    value: boolean,
-    onToggle: (val: boolean) => void,
-  ) => (
-    <View style={[styles.settingItem, { backgroundColor: cardBackground }]}>
-      <View style={styles.settingLeft}>
-        <Ionicons name={icon as any} size={20} color={secondaryTextColor} />
-        <Text style={[styles.settingLabel, { color: textColor }]}>{label}</Text>
-      </View>
-      <Switch
-        value={value}
-        onValueChange={onToggle}
-        trackColor={{ false: "#d1d5db", true: "#346beb" }}
-        thumbColor="#fff"
-      />
-    </View>
-  );
+  const notificationSettings = [
+    {
+      icon: "notifications-outline",
+      label: "Push Notifications",
+      value: pushNotifications,
+      onToggle: setPushNotifications,
+    },
+    {
+      icon: "mail-outline",
+      label: "Email Notifications",
+      value: emailNotifications,
+      onToggle: setEmailNotifications,
+    },
+    {
+      icon: "cube-outline",
+      label: "Order Updates",
+      value: orderUpdates,
+      onToggle: setOrderUpdates,
+    },
+  ];
 
-  const renderMenuItem = (
-    icon: string,
-    label: string,
-    onPress: () => void,
-    color?: string,
-  ) => (
-    <TouchableOpacity
-      style={[styles.menuItem, { backgroundColor: cardBackground }]}
-      onPress={onPress}
-    >
-      <View style={styles.settingLeft}>
-        <Ionicons
-          name={icon as any}
-          size={20}
-          color={color || secondaryTextColor}
-        />
-        <Text
-          style={[styles.settingLabel, { color: color || textColor }]}
-        >
-          {label}
-        </Text>
-      </View>
-      <Ionicons name="chevron-forward" size={18} color={secondaryTextColor} />
-    </TouchableOpacity>
-  );
+  const accountItems = [
+    {
+      icon: "lock-closed-outline",
+      label: "Change Password",
+      onPress: () => router.push("/auth/forgot-password" as any),
+    },
+    {
+      icon: "shield-outline",
+      label: "Privacy Policy",
+      onPress: () => Alert.alert("Privacy Policy", "Coming soon."),
+    },
+    {
+      icon: "document-text-outline",
+      label: "Terms of Service",
+      onPress: () => Alert.alert("Terms of Service", "Coming soon."),
+    },
+  ];
 
   return (
     <SafeAreaView
-      style={[styles.container, { backgroundColor }]}
+      style={[styles.container, { backgroundColor: colors.background }]}
       edges={["top"]}
     >
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <Ionicons name="chevron-back" size={28} color={textColor} />
+      {/* Header */}
+      <View style={[styles.header, { borderBottomColor: colors.borderLight }]}>
+        <TouchableOpacity
+          onPress={() => router.back()}
+          style={styles.backBtn}
+          activeOpacity={0.7}
+        >
+          <View
+            style={[
+              styles.backCircle,
+              { backgroundColor: colors.surfaceRaised },
+            ]}
+          >
+            <Ionicons name="chevron-back" size={22} color={colors.text} />
+          </View>
         </TouchableOpacity>
-        <Text style={[styles.title, { color: textColor }]}>SETTINGS</Text>
-        <View style={{ width: 28 }} />
+        <Text style={[styles.title, { color: colors.text }]}>Settings</Text>
+        <View style={{ width: 40 }} />
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        {/* Notifications */}
-        <Text style={[styles.sectionTitle, { color: secondaryTextColor }]}>
+        {/* Notifications Section */}
+        <Text style={[styles.sectionTitle, { color: colors.textTertiary }]}>
           NOTIFICATIONS
         </Text>
-        <View style={styles.section}>
-          {renderSettingItem(
-            "notifications-outline",
-            "Push Notifications",
-            pushNotifications,
-            setPushNotifications,
-          )}
-          {renderSettingItem(
-            "mail-outline",
-            "Email Notifications",
-            emailNotifications,
-            setEmailNotifications,
-          )}
-          {renderSettingItem(
-            "cube-outline",
-            "Order Updates",
-            orderUpdates,
-            setOrderUpdates,
-          )}
+        <View
+          style={[
+            styles.section,
+            {
+              backgroundColor: colors.surface,
+              borderColor: colors.borderLight,
+            },
+          ]}
+        >
+          {notificationSettings.map((item, index) => (
+            <View
+              key={item.label}
+              style={[
+                styles.settingItem,
+                index < notificationSettings.length - 1 && {
+                  borderBottomWidth: 1,
+                  borderBottomColor: colors.borderLight,
+                },
+              ]}
+            >
+              <View style={styles.settingLeft}>
+                <View
+                  style={[
+                    styles.settingIcon,
+                    { backgroundColor: colors.primarySoft },
+                  ]}
+                >
+                  <Ionicons
+                    name={item.icon as any}
+                    size={18}
+                    color={colors.primary}
+                  />
+                </View>
+                <Text style={[styles.settingLabel, { color: colors.text }]}>
+                  {item.label}
+                </Text>
+              </View>
+              <Switch
+                value={item.value}
+                onValueChange={item.onToggle}
+                trackColor={{ false: colors.border, true: colors.primary }}
+                thumbColor={colors.primaryForeground}
+              />
+            </View>
+          ))}
         </View>
 
-        {/* Account */}
-        <Text style={[styles.sectionTitle, { color: secondaryTextColor }]}>
+        {/* Account Section */}
+        <Text style={[styles.sectionTitle, { color: colors.textTertiary }]}>
           ACCOUNT
         </Text>
-        <View style={styles.section}>
-          {renderMenuItem("lock-closed-outline", "Change Password", () =>
-            router.push("/auth/forgot-password" as any),
-          )}
-          {renderMenuItem("shield-outline", "Privacy Policy", () =>
-            Alert.alert("Privacy Policy", "Coming soon."),
-          )}
-          {renderMenuItem("document-text-outline", "Terms of Service", () =>
-            Alert.alert("Terms of Service", "Coming soon."),
-          )}
+        <View
+          style={[
+            styles.section,
+            {
+              backgroundColor: colors.surface,
+              borderColor: colors.borderLight,
+            },
+          ]}
+        >
+          {accountItems.map((item, index) => (
+            <TouchableOpacity
+              key={item.label}
+              style={[
+                styles.menuItem,
+                index < accountItems.length - 1 && {
+                  borderBottomWidth: 1,
+                  borderBottomColor: colors.borderLight,
+                },
+              ]}
+              onPress={item.onPress}
+              activeOpacity={0.7}
+            >
+              <View style={styles.settingLeft}>
+                <View
+                  style={[
+                    styles.settingIcon,
+                    { backgroundColor: colors.surfaceRaised },
+                  ]}
+                >
+                  <Ionicons
+                    name={item.icon as any}
+                    size={18}
+                    color={colors.textSecondary}
+                  />
+                </View>
+                <Text style={[styles.settingLabel, { color: colors.text }]}>
+                  {item.label}
+                </Text>
+              </View>
+              <Ionicons
+                name="chevron-forward"
+                size={18}
+                color={colors.textTertiary}
+              />
+            </TouchableOpacity>
+          ))}
         </View>
 
         {/* Danger Zone */}
-        <Text style={[styles.sectionTitle, { color: secondaryTextColor }]}>
+        <Text style={[styles.sectionTitle, { color: colors.textTertiary }]}>
           DANGER ZONE
         </Text>
-        <View style={styles.section}>
-          {renderMenuItem(
-            "trash-outline",
-            "Delete Account",
-            handleDeleteAccount,
-            "#EF4444",
-          )}
+        <View
+          style={[
+            styles.section,
+            {
+              backgroundColor: colors.surface,
+              borderColor: colors.borderLight,
+            },
+          ]}
+        >
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={handleDeleteAccount}
+            activeOpacity={0.7}
+          >
+            <View style={styles.settingLeft}>
+              <View
+                style={[
+                  styles.settingIcon,
+                  { backgroundColor: colors.dangerSoft },
+                ]}
+              >
+                <Ionicons
+                  name="trash-outline"
+                  size={18}
+                  color={colors.danger}
+                />
+              </View>
+              <Text style={[styles.settingLabel, { color: colors.danger }]}>
+                Delete Account
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={colors.danger} />
+          </TouchableOpacity>
         </View>
 
         {/* App Info */}
         <View style={styles.appInfo}>
-          <Text style={[styles.appVersion, { color: secondaryTextColor }]}>
+          <Text style={[styles.appVersion, { color: colors.textTertiary }]}>
             Local Brands v1.0.0
           </Text>
         </View>
@@ -182,21 +265,32 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+
+  // ── Header ────────────────────────────────
   header: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 16,
     paddingVertical: 12,
+    borderBottomWidth: 1,
   },
   backBtn: {
-    padding: 4,
+    padding: 2,
+  },
+  backCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    justifyContent: "center",
+    alignItems: "center",
   },
   title: {
-    fontSize: 14,
+    fontSize: 17,
     fontWeight: "700",
-    letterSpacing: 2,
   },
+
+  // ── Content ───────────────────────────────
   scrollContent: {
     padding: 16,
     paddingBottom: 40,
@@ -210,39 +304,52 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   section: {
-    borderRadius: 12,
+    borderRadius: 16,
     overflow: "hidden",
-    gap: 1,
+    borderWidth: 1,
   },
+
+  // ── Setting Items ─────────────────────────
   settingItem: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingVertical: 14,
-    paddingHorizontal: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
   },
   menuItem: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingVertical: 14,
-    paddingHorizontal: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
   },
   settingLeft: {
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
+    flex: 1,
+  },
+  settingIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    justifyContent: "center",
+    alignItems: "center",
   },
   settingLabel: {
     fontSize: 15,
-    fontWeight: "500",
+    fontWeight: "600",
   },
+
+  // ── Footer ────────────────────────────────
   appInfo: {
     alignItems: "center",
     marginTop: 40,
   },
   appVersion: {
     fontSize: 12,
+    fontWeight: "500",
   },
 });
 

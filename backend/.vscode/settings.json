@@ -1,0 +1,6 @@
+{
+  "typescript.preferences.quoteStyle": "single",
+  "editor.formatOnSave": true,
+  "eslint.validate": ["typescript"],
+  "typescript.tsdk": "node_modules/typescript/lib"
+}

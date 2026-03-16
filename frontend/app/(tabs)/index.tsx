@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   View,
   StyleSheet,
@@ -19,9 +19,11 @@ import getApiUrl from "@/helpers/getApiUrl";
 import { RefreshControl } from "react-native";
 import { Brand } from "@/types/brand";
 import { Product } from "@/types/product";
+import { useThemeColors } from "@/hooks/useThemeColor";
 
 const HomeScreen = () => {
   const router = useRouter();
+  const colors = useThemeColors();
   const { token, loading, user } = useAuth();
   const { selectedBrandId, isManagementMode, setIsManagementMode } = useBrand();
   const { showToast } = useToast();
@@ -42,9 +44,8 @@ const HomeScreen = () => {
   // Search & Filter State
   const [searchQuery, setSearchQuery] = useState("");
   const [activeFilters, setActiveFilters] = useState({
-    category: "",
-    productType: "",
-    brandId: "",
+    categories: [] as string[],
+    brandIds: [] as string[],
     sortBy: "createdAt",
     sortOrder: "DESC" as "ASC" | "DESC",
   });
@@ -63,6 +64,10 @@ const HomeScreen = () => {
   const [loadingStats, setLoadingStats] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [wishlistProductIds, setWishlistProductIds] = useState<number[]>([]);
+  const [filterLabels, setFilterLabels] = useState<{
+    brands: Record<string, string>;
+    sort?: string;
+  }>({ brands: {} });
 
   // Get user role from JWT token
   const userRole = user?.role || user?.userRole || "customer";
@@ -91,7 +96,9 @@ const HomeScreen = () => {
 
   // Fetch dashboard stats based on user role
   const fetchStats = async () => {
-    setLoadingStats(true);
+    if (!hasLoadedOnce.current) {
+      setLoadingStats(true);
+    }
 
     // Fetch Statistics (Only for authenticated users)
     const apiUrl = getApiUrl();
@@ -119,17 +126,19 @@ const HomeScreen = () => {
     }
 
     // Build Products Query Params
-    const productsParams = new URLSearchParams({
-      limit: "12",
-      page: page.toString(),
-      status: "published",
-      ...(searchQuery && { search: searchQuery }),
-      ...(activeFilters.category && { category: activeFilters.category }),
-      ...(activeFilters.productType && { type: activeFilters.productType }),
-      ...(activeFilters.brandId && { brandId: activeFilters.brandId }),
-      sortBy: activeFilters.sortBy,
-      sortOrder: activeFilters.sortOrder,
-    }).toString();
+    const productsParams = new URLSearchParams();
+    productsParams.set("limit", "12");
+    productsParams.set("page", page.toString());
+    productsParams.set("status", "published");
+    if (searchQuery) productsParams.set("search", searchQuery);
+    activeFilters.categories.forEach((c) =>
+      productsParams.append("productTypes", c),
+    );
+    activeFilters.brandIds.forEach((id) =>
+      productsParams.append("brandIds", id),
+    );
+    productsParams.set("sortBy", activeFilters.sortBy);
+    productsParams.set("sortOrder", activeFilters.sortOrder);
 
     // Build Brands Query Params (separate page state, no product-specific filters)
     const brandsParams = new URLSearchParams({
@@ -146,7 +155,7 @@ const HomeScreen = () => {
         fetch(`${getApiUrl()}/brands?${brandsParams}`, {
           headers: { ...(token && { Authorization: `Bearer ${token}` }) },
         }),
-        fetch(`${getApiUrl()}/products?${productsParams}`, {
+        fetch(`${getApiUrl()}/products?${productsParams.toString()}`, {
           headers: { ...(token && { Authorization: `Bearer ${token}` }) },
         }),
       ]);
@@ -171,6 +180,7 @@ const HomeScreen = () => {
     } catch (error) {
       console.error("Error fetching discovery data:", error);
     } finally {
+      hasLoadedOnce.current = true;
       setLoadingStats(false);
       setRefreshing(false);
     }
@@ -194,48 +204,57 @@ const HomeScreen = () => {
     }
   }, [token]);
 
-  const toggleWishlist = useCallback(async (productId: number) => {
-    if (!token) return;
-    try {
-      const response = await fetch(`${getApiUrl()}/wishlist/toggle/${productId}`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-      });
-      if (response.ok) {
-        setWishlistProductIds((prev) =>
-          prev.includes(productId)
-            ? prev.filter((id) => id !== productId)
-            : [...prev, productId]
+  const toggleWishlist = useCallback(
+    async (productId: number) => {
+      if (!token) return;
+      try {
+        const response = await fetch(
+          `${getApiUrl()}/wishlist/toggle/${productId}`,
+          {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+          },
         );
+        if (response.ok) {
+          setWishlistProductIds((prev) =>
+            prev.includes(productId)
+              ? prev.filter((id) => id !== productId)
+              : [...prev, productId],
+          );
+        }
+      } catch (error) {
+        console.error("Error toggling wishlist:", error);
       }
-    } catch (error) {
-      console.error("Error toggling wishlist:", error);
-    }
-  }, [token]);
+    },
+    [token],
+  );
 
-  const addToCart = useCallback(async (productId: number) => {
-    if (!token) return;
-    try {
-      const response = await fetch(`${getApiUrl()}/cart/add`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ productId, quantity: 1 }),
-      });
-      if (!response.ok) {
-        const data = await response.json().catch(() => ({}));
-        throw new Error(data.message || "Failed to add to cart");
+  const addToCart = useCallback(
+    async (productId: number) => {
+      if (!token) return;
+      try {
+        const response = await fetch(`${getApiUrl()}/cart/add`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ productId, quantity: 1 }),
+        });
+        if (!response.ok) {
+          const data = await response.json().catch(() => ({}));
+          throw new Error(data.message || "Failed to add to cart");
+        }
+        showToast("Added to cart", "success");
+      } catch (err: any) {
+        showToast(err.message || "Failed to add to cart", "error");
       }
-      showToast("Added to cart", "success");
-    } catch (err: any) {
-      showToast(err.message || "Failed to add to cart", "error");
-    }
-  }, [token]);
+    },
+    [token],
+  );
 
   const searchTimeout = React.useRef<any>(null);
 
@@ -274,32 +293,64 @@ const HomeScreen = () => {
     setBrandsPage(newPage);
   };
 
-  const handleFilterPress = (type: string, value?: string) => {
-    setActiveFilters((prev) => {
-      const next = { ...prev };
-      // Reset page on filter change
-      setPage(1);
-      if (type === "category") {
-        next.category = value || "";
-      } else if (type === "type") {
-        next.productType = value || "";
-      } else if (type === "brand") {
-        next.brandId = value || "";
-      } else if (type === "sort") {
-        next.sortOrder = (value as "ASC" | "DESC") || "DESC";
-      }
-      return next;
-    });
+  const handleFilterPress = (
+    type: string,
+    values: string[],
+    labels?: string[],
+  ) => {
+    setPage(1);
+    if (type === "category") {
+      setActiveFilters((prev) => ({ ...prev, categories: values }));
+    } else if (type === "brand") {
+      setActiveFilters((prev) => ({ ...prev, brandIds: values }));
+      const map: Record<string, string> = {};
+      values.forEach((id, i) => {
+        map[id] = labels?.[i] ?? id;
+      });
+      setFilterLabels((l) => ({ ...l, brands: map }));
+    } else if (type === "sort") {
+      setActiveFilters((prev) => ({
+        ...prev,
+        sortOrder: (values[0] as "ASC" | "DESC") || "DESC",
+      }));
+      setFilterLabels((l) => ({ ...l, sort: labels?.[0] }));
+    }
   };
-
+  // Fetch when filters/pagination change (debounced for search)
+  const isFirstMount = useRef(true);
+  const hasLoadedOnce = useRef(false);
   useEffect(() => {
-    fetchStats();
-  }, [token, userRole, searchQuery, activeFilters, selectedBrandId, page, brandsPage]);
+    if (isFirstMount.current) {
+      isFirstMount.current = false;
+      fetchStats(); // Full load on first mount
+      return;
+    }
+    const timeout = setTimeout(
+      () => {
+        fetchStats();
+      },
+      searchQuery ? 300 : 0,
+    );
+    return () => clearTimeout(timeout);
+  }, [searchQuery, activeFilters, page, brandsPage]);
 
+  // Light refresh on focus — just wishlist + stats (cheap calls)
   useFocusEffect(
     useCallback(() => {
-      fetchStats();
       fetchWishlist();
+      if (token) {
+        const apiUrl = getApiUrl();
+        const statsUrl =
+          userRole === "brandOwner" && selectedBrandId
+            ? `${apiUrl}/statistics?brandId=${selectedBrandId}`
+            : `${apiUrl}/statistics`;
+        fetch(statsUrl, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+          .then((res) => res.ok && res.json())
+          .then((data) => data && setStats((prev) => ({ ...prev, ...data })))
+          .catch(console.error);
+      }
     }, [token, userRole, selectedBrandId]),
   );
 
@@ -325,9 +376,12 @@ const HomeScreen = () => {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView
+      style={[styles.safeArea, { backgroundColor: colors.background }]}
+    >
       <ScrollView
-        style={styles.container}
+        style={[styles.container, { backgroundColor: colors.background }]}
+        contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
@@ -381,12 +435,12 @@ const HomeScreen = () => {
             searchQuery={searchQuery}
             onSearchChange={handleSearchChange}
             activeFilters={{
-              category: activeFilters.category,
-              type: activeFilters.productType,
-              brand: activeFilters.brandId,
+              categories: activeFilters.categories,
+              brands: activeFilters.brandIds,
               sort: activeFilters.sortOrder,
             }}
             onFilterPress={handleFilterPress}
+            filterLabels={filterLabels}
             filterOptions={filterOptions}
             currentPage={page}
             totalPages={totalPages}
@@ -420,6 +474,9 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
   },
   loadingContainer: {
     flex: 1,

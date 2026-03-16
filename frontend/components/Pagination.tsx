@@ -1,6 +1,7 @@
 import React from "react";
 import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useThemeColors } from "@/hooks/useThemeColor";
 
 interface PaginationProps {
   currentPage: number;
@@ -13,54 +14,130 @@ const Pagination: React.FC<PaginationProps> = ({
   totalPages,
   onPageChange,
 }) => {
+  const colors = useThemeColors();
+
   if (totalPages <= 1) return null;
 
+  // Build visible page numbers: always show first, last, and neighbors of current
+  const getPageNumbers = (): (number | "ellipsis")[] => {
+    if (totalPages <= 5) {
+      return Array.from({ length: totalPages }, (_, i) => i + 1);
+    }
+
+    const pages: (number | "ellipsis")[] = [];
+    const showStart = currentPage > 3;
+    const showEnd = currentPage < totalPages - 2;
+
+    pages.push(1);
+
+    if (showStart) pages.push("ellipsis");
+
+    const rangeStart = Math.max(2, currentPage - 1);
+    const rangeEnd = Math.min(totalPages - 1, currentPage + 1);
+    for (let i = rangeStart; i <= rangeEnd; i++) {
+      pages.push(i);
+    }
+
+    if (showEnd) pages.push("ellipsis");
+
+    if (totalPages > 1) pages.push(totalPages);
+
+    return pages;
+  };
+
+  const isFirst = currentPage === 1;
+  const isLast = currentPage === totalPages;
+
   return (
-    <View style={styles.container}>
+    <View
+      style={[
+        styles.container,
+        {
+          backgroundColor: colors.surface,
+          borderColor: colors.cardBorder,
+        },
+      ]}
+    >
+      {/* Previous Arrow */}
       <TouchableOpacity
-        style={[styles.button, currentPage === 1 && styles.disabledButton]}
+        style={[
+          styles.arrowButton,
+          {
+            backgroundColor: isFirst
+              ? colors.surfaceRaised
+              : colors.primarySoft,
+          },
+        ]}
         onPress={() => onPageChange(currentPage - 1)}
-        disabled={currentPage === 1}
+        disabled={isFirst}
+        activeOpacity={0.7}
       >
         <Ionicons
           name="chevron-back"
-          size={20}
-          color={currentPage === 1 ? "#94a3b8" : "#1e293b"}
+          size={18}
+          color={isFirst ? colors.textTertiary : colors.primary}
         />
-        <Text
-          style={[styles.buttonText, currentPage === 1 && styles.disabledText]}
-        >
-          Prev
-        </Text>
       </TouchableOpacity>
 
-      <View style={styles.pageInfo}>
-        <Text style={styles.pageText}>
-          Page <Text style={styles.boldText}>{currentPage}</Text> of{" "}
-          <Text style={styles.boldText}>{totalPages}</Text>
-        </Text>
+      {/* Page Number Pills */}
+      <View style={styles.pageNumbers}>
+        {getPageNumbers().map((page, index) => {
+          if (page === "ellipsis") {
+            return (
+              <View key={`ellipsis-${index}`} style={styles.ellipsis}>
+                <Text
+                  style={[styles.ellipsisText, { color: colors.textTertiary }]}
+                >
+                  ···
+                </Text>
+              </View>
+            );
+          }
+
+          const isActive = page === currentPage;
+          return (
+            <TouchableOpacity
+              key={page}
+              style={[
+                styles.pageButton,
+                isActive
+                  ? { backgroundColor: colors.primary }
+                  : { backgroundColor: "transparent" },
+              ]}
+              onPress={() => onPageChange(page)}
+              activeOpacity={0.7}
+            >
+              <Text
+                style={[
+                  styles.pageText,
+                  isActive
+                    ? { color: colors.primaryForeground, fontWeight: "700" }
+                    : { color: colors.textSecondary, fontWeight: "500" },
+                ]}
+              >
+                {page}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
       </View>
 
+      {/* Next Arrow */}
       <TouchableOpacity
         style={[
-          styles.button,
-          currentPage === totalPages && styles.disabledButton,
+          styles.arrowButton,
+          {
+            backgroundColor: isLast ? colors.surfaceRaised : colors.primarySoft,
+          },
         ]}
         onPress={() => onPageChange(currentPage + 1)}
-        disabled={currentPage === totalPages}
+        disabled={isLast}
+        activeOpacity={0.7}
       >
-        <Text
-          style={[
-            styles.buttonText,
-            currentPage === totalPages && styles.disabledText,
-          ]}
-        >
-          Next
-        </Text>
         <Ionicons
           name="chevron-forward"
-          size={20}
-          color={currentPage === totalPages ? "#94a3b8" : "#1e293b"}
+          size={18}
+          color={isLast ? colors.textTertiary : colors.primary}
         />
       </TouchableOpacity>
     </View>
@@ -71,53 +148,47 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    paddingVertical: 16,
-    paddingHorizontal: 20,
-    backgroundColor: "#fff",
-    marginHorizontal: 16,
-    marginVertical: 12,
-    borderRadius: 12,
+    justifyContent: "center",
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    marginVertical: 16,
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: "#f1f5f9",
-    // Shadow for premium feel
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 2,
+    gap: 6,
   },
-  button: {
+  arrowButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  pageNumbers: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    backgroundColor: "#f8fafc",
+    gap: 2,
+    marginHorizontal: 8,
   },
-  disabledButton: {
-    backgroundColor: "#f1f5f9",
-  },
-  buttonText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#1e293b",
-    marginHorizontal: 4,
-  },
-  disabledText: {
-    color: "#94a3b8",
-  },
-  pageInfo: {
-    flex: 1,
+  pageButton: {
+    minWidth: 36,
+    height: 36,
+    borderRadius: 12,
+    justifyContent: "center",
     alignItems: "center",
+    paddingHorizontal: 4,
   },
   pageText: {
     fontSize: 14,
-    color: "#64748b",
   },
-  boldText: {
-    fontWeight: "700",
-    color: "#1e293b",
+  ellipsis: {
+    width: 28,
+    height: 36,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  ellipsisText: {
+    fontSize: 14,
+    letterSpacing: 2,
   },
 });
 

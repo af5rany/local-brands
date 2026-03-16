@@ -17,9 +17,11 @@ import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/context/AuthContext";
 import getApiUrl from "@/helpers/getApiUrl";
 import { AddressType } from "@/types/address";
+import { useThemeColors } from "@/hooks/useThemeColor";
 
 const EditAddressScreen = () => {
   const router = useRouter();
+  const colors = useThemeColors();
   const { id } = useLocalSearchParams();
   const { token, refreshUser } = useAuth();
 
@@ -44,15 +46,11 @@ const EditAddressScreen = () => {
 
   const fetchAddress = async () => {
     try {
-      const response = await fetch(`${getApiUrl()}/addresses/${id}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+      const res = await fetch(`${getApiUrl()}/addresses/${id}`, {
+        headers: { Authorization: `Bearer ${token}` },
       });
-
-      if (!response.ok) throw new Error("Failed to fetch address");
-
-      const data = await response.json();
+      if (!res.ok) throw new Error("Failed to fetch address");
+      const data = await res.json();
       setFormData({
         fullName: data.fullName,
         addressLine1: data.addressLine1,
@@ -74,7 +72,6 @@ const EditAddressScreen = () => {
   };
 
   const handleSave = async () => {
-    // Basic validation
     if (
       !formData.fullName ||
       !formData.addressLine1 ||
@@ -82,13 +79,13 @@ const EditAddressScreen = () => {
       !formData.state ||
       !formData.zipCode
     ) {
-      Alert.alert("Incomplete Form", "Please fill in all required fields.");
+      Alert.alert("Incomplete", "Please fill in all required fields.");
       return;
     }
 
     try {
       setSaving(true);
-      const response = await fetch(`${getApiUrl()}/addresses/${id}`, {
+      const res = await fetch(`${getApiUrl()}/addresses/${id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -96,13 +93,11 @@ const EditAddressScreen = () => {
         },
         body: JSON.stringify(formData),
       });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to update address");
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.message || "Failed to update address");
       }
-
-      Alert.alert("Success", "Address updated successfully", [
+      Alert.alert("Success", "Address updated!", [
         {
           text: "OK",
           onPress: () => {
@@ -126,17 +121,24 @@ const EditAddressScreen = () => {
     required = true,
     keyboardType: any = "default",
   ) => (
-    <View style={styles.inputContainer}>
-      <Text style={styles.label}>
+    <View style={styles.fieldGroup}>
+      <Text style={[styles.label, { color: colors.textSecondary }]}>
         {label}
-        {required && <Text style={{ color: "#ef4444" }}> *</Text>}
+        {required && <Text style={{ color: colors.danger }}> *</Text>}
       </Text>
       <TextInput
-        style={styles.input}
+        style={[
+          styles.input,
+          {
+            backgroundColor: colors.surfaceRaised,
+            borderColor: colors.border,
+            color: colors.text,
+          },
+        ]}
         value={value}
         onChangeText={(text) => setFormData({ ...formData, [key]: text })}
         placeholder={placeholder}
-        placeholderTextColor="#94a3b8"
+        placeholderTextColor={colors.textTertiary}
         keyboardType={keyboardType}
       />
     </View>
@@ -144,22 +146,32 @@ const EditAddressScreen = () => {
 
   if (loading) {
     return (
-      <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color="#346beb" />
+      <View
+        style={[styles.centerContainer, { backgroundColor: colors.background }]}
+      >
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={["top"]}>
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => router.back()}
-          style={styles.backButton}
-        >
-          <Ionicons name="arrow-back" size={24} color="#1e293b" />
+    <SafeAreaView
+      style={[styles.container, { backgroundColor: colors.background }]}
+      edges={["top"]}
+    >
+      {/* Header */}
+      <View style={[styles.header, { borderBottomColor: colors.borderLight }]}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+          <View
+            style={[
+              styles.backCircle,
+              { backgroundColor: colors.surfaceRaised },
+            ]}
+          >
+            <Ionicons name="chevron-back" size={22} color={colors.text} />
+          </View>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Edit Address</Text>
+        <Text style={[styles.title, { color: colors.text }]}>Edit Address</Text>
         <View style={{ width: 40 }} />
       </View>
 
@@ -168,88 +180,129 @@ const EditAddressScreen = () => {
         style={{ flex: 1 }}
       >
         <ScrollView contentContainerStyle={styles.scrollContent}>
-          {renderInput("Full Name", formData.fullName, "fullName", "John Doe")}
-          {renderInput(
-            "Address Line 1",
-            formData.addressLine1,
-            "addressLine1",
-            "123 Luxury St",
-          )}
-          {renderInput(
-            "Address Line 2 (Optional)",
-            formData.addressLine2,
-            "addressLine2",
-            "Apt 4B",
-            false,
-          )}
-
-          <View style={styles.row}>
-            <View style={{ flex: 1, marginRight: 12 }}>
-              {renderInput("City", formData.city, "city", "New York")}
-            </View>
-            <View style={{ flex: 1 }}>
-              {renderInput("State", formData.state, "state", "NY")}
-            </View>
-          </View>
-
-          <View style={styles.row}>
-            <View style={{ flex: 1, marginRight: 12 }}>
-              {renderInput(
-                "Zip Code",
-                formData.zipCode,
-                "zipCode",
-                "10001",
-                true,
-                "number-pad",
-              )}
-            </View>
-            <View style={{ flex: 1 }}>
-              {renderInput("Country", formData.country, "country", "USA")}
-            </View>
-          </View>
-
-          {renderInput(
-            "Phone Number",
-            formData.phone,
-            "phone",
-            "+1 234 567 890",
-            false,
-            "phone-pad",
-          )}
-
-          <TouchableOpacity
-            style={styles.checkboxContainer}
-            onPress={() =>
-              setFormData({ ...formData, isDefault: !formData.isDefault })
-            }
+          <View
+            style={[
+              styles.formCard,
+              {
+                backgroundColor: colors.surface,
+                borderColor: colors.borderLight,
+              },
+            ]}
           >
-            <View
-              style={[
-                styles.checkbox,
-                formData.isDefault && styles.checkboxChecked,
-              ]}
-            >
-              {formData.isDefault && (
-                <Ionicons name="checkmark" size={16} color="#fff" />
-              )}
+            {renderInput(
+              "Full Name",
+              formData.fullName,
+              "fullName",
+              "John Doe",
+            )}
+            {renderInput(
+              "Address Line 1",
+              formData.addressLine1,
+              "addressLine1",
+              "123 Main St",
+            )}
+            {renderInput(
+              "Address Line 2",
+              formData.addressLine2,
+              "addressLine2",
+              "Apt 4B",
+              false,
+            )}
+
+            <View style={styles.row}>
+              <View style={{ flex: 1, marginRight: 10 }}>
+                {renderInput("City", formData.city, "city", "New York")}
+              </View>
+              <View style={{ flex: 1 }}>
+                {renderInput("State", formData.state, "state", "NY")}
+              </View>
             </View>
-            <Text style={styles.checkboxLabel}>
-              Set as default shipping address
-            </Text>
-          </TouchableOpacity>
+
+            <View style={styles.row}>
+              <View style={{ flex: 1, marginRight: 10 }}>
+                {renderInput(
+                  "Zip Code",
+                  formData.zipCode,
+                  "zipCode",
+                  "10001",
+                  true,
+                  "number-pad",
+                )}
+              </View>
+              <View style={{ flex: 1 }}>
+                {renderInput("Country", formData.country, "country", "USA")}
+              </View>
+            </View>
+
+            {renderInput(
+              "Phone",
+              formData.phone,
+              "phone",
+              "+1 234 567 890",
+              false,
+              "phone-pad",
+            )}
+
+            {/* Default Checkbox */}
+            <TouchableOpacity
+              style={styles.checkboxRow}
+              onPress={() =>
+                setFormData({ ...formData, isDefault: !formData.isDefault })
+              }
+              activeOpacity={0.7}
+            >
+              <View
+                style={[
+                  styles.checkbox,
+                  {
+                    borderColor: formData.isDefault
+                      ? colors.primary
+                      : colors.border,
+                    backgroundColor: formData.isDefault
+                      ? colors.primary
+                      : "transparent",
+                  },
+                ]}
+              >
+                {formData.isDefault && (
+                  <Ionicons
+                    name="checkmark"
+                    size={15}
+                    color={colors.primaryForeground}
+                  />
+                )}
+              </View>
+              <Text style={[styles.checkboxLabel, { color: colors.text }]}>
+                Set as default shipping address
+              </Text>
+            </TouchableOpacity>
+          </View>
         </ScrollView>
       </KeyboardAvoidingView>
 
-      <View style={styles.footer}>
+      {/* Footer */}
+      <View style={[styles.footer, { borderTopColor: colors.borderLight }]}>
         <TouchableOpacity
-          style={[styles.saveButton, saving && styles.saveButtonDisabled]}
+          style={[
+            styles.saveButton,
+            { backgroundColor: colors.primary },
+            saving && { opacity: 0.7 },
+          ]}
           onPress={handleSave}
           disabled={saving}
+          activeOpacity={0.8}
         >
           {saving ? (
-            <ActivityIndicator size="small" color="#fff" />
+            <ActivityIndicator size="small" color={colors.primaryForeground} />
           ) : (
-            <Text style={styles.saveButtonText}>Update Address</Text>
+            <Text
+              style={[
+                styles.saveButtonText,
+                { color: colors.primaryForeground },
+              ]}
+            >
+              Update Address
+            </Text>
           )}
         </TouchableOpacity>
       </View>
@@ -258,10 +311,7 @@ const EditAddressScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#fff",
-  },
+  container: { flex: 1 },
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -269,90 +319,60 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: "#f1f5f9",
   },
-  backButton: {
-    padding: 8,
+  backBtn: { padding: 2 },
+  backCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    justifyContent: "center",
+    alignItems: "center",
   },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#1e293b",
-  },
-  scrollContent: {
+  title: { fontSize: 17, fontWeight: "700" },
+  scrollContent: { padding: 16, paddingBottom: 40 },
+  formCard: {
+    borderRadius: 16,
     padding: 20,
-    paddingBottom: 40,
-  },
-  inputContainer: {
-    marginBottom: 20,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#64748b",
-    marginBottom: 8,
-  },
-  input: {
-    backgroundColor: "#f8fafc",
     borderWidth: 1,
-    borderColor: "#e2e8f0",
-    borderRadius: 10,
+    gap: 18,
+  },
+  fieldGroup: { gap: 6 },
+  label: { fontSize: 13, fontWeight: "600", letterSpacing: 0.2 },
+  input: {
+    borderWidth: 1,
+    borderRadius: 12,
     paddingHorizontal: 16,
-    paddingVertical: 12,
-    fontSize: 16,
-    color: "#1e293b",
+    paddingVertical: 13,
+    fontSize: 15,
+    fontWeight: "500",
   },
-  row: {
-    flexDirection: "row",
-  },
-  checkboxContainer: {
+  row: { flexDirection: "row" },
+  checkboxRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginTop: 10,
+    marginTop: 4,
+    gap: 12,
   },
   checkbox: {
     width: 24,
     height: 24,
-    borderRadius: 6,
+    borderRadius: 7,
     borderWidth: 2,
-    borderColor: "#cbd5e1",
-    marginRight: 12,
     justifyContent: "center",
     alignItems: "center",
   },
-  checkboxChecked: {
-    backgroundColor: "#346beb",
-    borderColor: "#346beb",
-  },
-  checkboxLabel: {
-    fontSize: 15,
-    color: "#475569",
-    fontWeight: "500",
-  },
-  footer: {
-    padding: 20,
-    borderTopWidth: 1,
-    borderTopColor: "#f1f5f9",
-  },
+  checkboxLabel: { fontSize: 15, fontWeight: "500" },
+  footer: { padding: 16, borderTopWidth: 1 },
   saveButton: {
-    backgroundColor: "#346beb",
-    paddingVertical: 14,
-    borderRadius: 12,
+    paddingVertical: 15,
+    borderRadius: 14,
     alignItems: "center",
   },
-  saveButtonDisabled: {
-    opacity: 0.7,
-  },
-  saveButtonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "700",
-  },
+  saveButtonText: { fontSize: 16, fontWeight: "700" },
   centerContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#fff",
   },
 });
 

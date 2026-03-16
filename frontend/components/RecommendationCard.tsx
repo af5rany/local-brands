@@ -8,6 +8,7 @@ import {
   useWindowDimensions,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useThemeColors } from "@/hooks/useThemeColor";
 
 type Product = {
   id: string;
@@ -23,7 +24,7 @@ type RecommendationCardProps = {
   product: Product;
   onPress: () => void;
   onAddToWishlist: () => void;
-  onAddToCart?: () => void;
+  onAddToCart?: () => Promise<void>;
   isInWishlist?: boolean;
   style?: any;
 };
@@ -36,16 +37,16 @@ const RecommendationCard = ({
   isInWishlist = false,
   style,
 }: RecommendationCardProps) => {
+  const colors = useThemeColors();
   const [imageError, setImageError] = useState(false);
   const [wishlistLoading, setWishlistLoading] = useState(false);
   const [cartLoading, setCartLoading] = useState(false);
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("en-US", {
+  const formatCurrency = (amount: number) =>
+    new Intl.NumberFormat("en-US", {
       style: "currency",
       currency: "USD",
     }).format(amount);
-  };
 
   const handleWishlistPress = async () => {
     setWishlistLoading(true);
@@ -56,34 +57,14 @@ const RecommendationCard = ({
     }
   };
 
-  const renderStars = (rating: number) => {
-    const stars = [];
-    const fullStars = Math.floor(rating);
-    const hasHalfStar = rating % 1 !== 0;
-
-    for (let i = 0; i < fullStars; i++) {
-      stars.push(<Ionicons key={i} name="star" size={12} color="#f59e0b" />);
+  const handleCartPress = async () => {
+    if (!onAddToCart) return;
+    setCartLoading(true);
+    try {
+      await onAddToCart();
+    } finally {
+      setCartLoading(false);
     }
-
-    if (hasHalfStar) {
-      stars.push(
-        <Ionicons key="half" name="star-half" size={12} color="#f59e0b" />,
-      );
-    }
-
-    const remainingStars = 5 - Math.ceil(rating);
-    for (let i = 0; i < remainingStars; i++) {
-      stars.push(
-        <Ionicons
-          key={`empty-${i}`}
-          name="star-outline"
-          size={12}
-          color="#d1d5db"
-        />,
-      );
-    }
-
-    return stars;
   };
 
   const hasDiscount =
@@ -100,14 +81,28 @@ const RecommendationCard = ({
 
   return (
     <TouchableOpacity
-      style={[styles.card, isTablet && styles.tabletCard, style]}
+      style={[
+        styles.card,
+        {
+          backgroundColor: colors.surface,
+          borderColor: colors.cardBorder,
+          shadowColor: colors.cardShadow,
+        },
+        isTablet && styles.tabletCard,
+        style,
+      ]}
       onPress={onPress}
-      activeOpacity={0.8}
+      activeOpacity={0.85}
     >
+      {/* Image */}
       <View
-        style={[styles.imageContainer, isTablet && styles.tabletImageContainer]}
+        style={[
+          styles.imageContainer,
+          { backgroundColor: colors.surfaceRaised },
+          isTablet && styles.tabletImageContainer,
+        ]}
       >
-        {!imageError ? (
+        {!imageError && product.image ? (
           <Image
             source={{ uri: product.image }}
             style={styles.productImage}
@@ -115,91 +110,115 @@ const RecommendationCard = ({
             resizeMode="cover"
           />
         ) : (
-          <View style={styles.placeholderImage}>
-            <Ionicons name="image-outline" size={40} color="#9ca3af" />
+          <View
+            style={[
+              styles.placeholderImage,
+              { backgroundColor: colors.surfaceRaised },
+            ]}
+          >
+            <Ionicons
+              name="image-outline"
+              size={36}
+              color={colors.textTertiary}
+            />
           </View>
         )}
 
-        {/* Wishlist Button */}
+        {/* Wishlist Heart */}
         <TouchableOpacity
-          style={styles.wishlistButton}
+          style={[
+            styles.wishlistButton,
+            {
+              backgroundColor: isInWishlist
+                ? colors.dangerSoft
+                : colors.surface,
+            },
+          ]}
           onPress={handleWishlistPress}
           disabled={wishlistLoading}
           activeOpacity={0.7}
         >
-          {wishlistLoading ? (
-            <Ionicons name="refresh" size={16} color="#ef4444" />
-          ) : (
-            <Ionicons
-              name={isInWishlist ? "heart" : "heart-outline"}
-              size={16}
-              color="#ef4444"
-            />
-          )}
+          <Ionicons
+            name={isInWishlist ? "heart" : "heart-outline"}
+            size={16}
+            color={colors.wishlistHeart}
+          />
         </TouchableOpacity>
 
         {/* Discount Badge */}
         {hasDiscount && (
-          <View style={styles.discountBadge}>
+          <View
+            style={[
+              styles.discountBadge,
+              { backgroundColor: colors.discountBadge },
+            ]}
+          >
             <Text style={styles.discountText}>-{discountPercentage}%</Text>
           </View>
         )}
       </View>
 
+      {/* Content */}
       <View style={styles.content}>
-        {/* Brand */}
-        <Text style={styles.brandName} numberOfLines={1}>
+        <Text
+          style={[styles.brandName, { color: colors.textTertiary }]}
+          numberOfLines={1}
+        >
           {product.brand}
         </Text>
 
-        {/* Product Name */}
-        <Text style={styles.productName} numberOfLines={2}>
+        <Text
+          style={[styles.productName, { color: colors.text }]}
+          numberOfLines={2}
+        >
           {product.name}
         </Text>
 
         {/* Rating */}
-        {product.rating && (
-          <View style={styles.ratingContainer}>
-            <View style={styles.starsContainer}>
-              {renderStars(product.rating)}
-            </View>
-            <Text style={styles.ratingText}>({product.rating})</Text>
+        {product.rating != null && (
+          <View style={styles.ratingRow}>
+            <Ionicons name="star" size={12} color={colors.accent} />
+            <Text style={[styles.ratingText, { color: colors.textSecondary }]}>
+              {product.rating.toFixed(1)}
+            </Text>
           </View>
         )}
 
-        {/* Price Section */}
-        <View style={styles.priceContainer}>
-          <Text style={styles.currentPrice}>
+        {/* Price */}
+        <View style={styles.priceRow}>
+          <Text style={[styles.currentPrice, { color: colors.priceCurrent }]}>
             {formatCurrency(product.price)}
           </Text>
           {hasDiscount && (
-            <Text style={styles.originalPrice}>
+            <Text
+              style={[styles.originalPrice, { color: colors.priceOriginal }]}
+            >
               {formatCurrency(product.originalPrice!)}
             </Text>
           )}
         </View>
 
-        {/* Add to Cart Button */}
+        {/* Add to Cart */}
         <TouchableOpacity
-          style={[styles.addToCartButton, cartLoading && { opacity: 0.7 }]}
+          style={[
+            styles.addToCartButton,
+            { backgroundColor: colors.primary },
+            cartLoading && { opacity: 0.7 },
+          ]}
           activeOpacity={0.8}
           disabled={cartLoading}
-          onPress={async () => {
-            if (!onAddToCart) return;
-            setCartLoading(true);
-            try {
-              await onAddToCart();
-            } finally {
-              setCartLoading(false);
-            }
-          }}
+          onPress={handleCartPress}
         >
-          {cartLoading ? (
-            <Ionicons name="refresh" size={16} color="white" />
-          ) : (
-            <Ionicons name="cart-outline" size={16} color="white" />
-          )}
-          <Text style={styles.addToCartText}>Add to Cart</Text>
+          <Ionicons
+            name={cartLoading ? "hourglass-outline" : "bag-add-outline"}
+            size={15}
+            color={colors.primaryForeground}
+          />
+          <Text
+            style={[styles.addToCartText, { color: colors.primaryForeground }]}
+          >
+            {cartLoading ? "Adding…" : "Add to Cart"}
+          </Text>
         </TouchableOpacity>
       </View>
     </TouchableOpacity>
@@ -208,32 +227,24 @@ const RecommendationCard = ({
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: "#ffffff",
-    borderRadius: 12,
-    marginRight: 16,
+    borderRadius: 16,
     width: 180,
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
     borderWidth: 1,
-    borderColor: "#f1f5f9",
     overflow: "hidden",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 1,
+    shadowRadius: 12,
+    elevation: 4,
   },
   tabletCard: {
     width: 240,
   },
   imageContainer: {
     position: "relative",
-    height: 140,
-    backgroundColor: "#f8fafc",
+    height: 150,
   },
   tabletImageContainer: {
-    height: 180,
+    height: 190,
   },
   productImage: {
     width: "100%",
@@ -244,99 +255,86 @@ const styles = StyleSheet.create({
     height: "100%",
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#f1f5f9",
   },
   wishlistButton: {
     position: "absolute",
-    top: 8,
-    right: 8,
-    backgroundColor: "rgba(255, 255, 255, 0.9)",
-    borderRadius: 16,
+    top: 10,
+    right: 10,
+    borderRadius: 14,
     width: 32,
     height: 32,
     justifyContent: "center",
     alignItems: "center",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 2,
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
     elevation: 2,
   },
   discountBadge: {
     position: "absolute",
-    top: 8,
-    left: 8,
-    backgroundColor: "#ef4444",
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 6,
+    top: 10,
+    left: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
   },
   discountText: {
-    fontSize: 10,
-    fontWeight: "bold",
-    color: "white",
+    fontSize: 11,
+    fontWeight: "800",
+    color: "#FFFFFF",
   },
   content: {
     padding: 12,
+    gap: 4,
   },
   brandName: {
-    fontSize: 12,
-    color: "#64748b",
+    fontSize: 11,
     textTransform: "uppercase",
-    letterSpacing: 0.5,
-    marginBottom: 4,
+    letterSpacing: 0.8,
     fontWeight: "600",
   },
   productName: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#1e293b",
     lineHeight: 18,
-    marginBottom: 6,
   },
-  ratingContainer: {
+  ratingRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 8,
-  },
-  starsContainer: {
-    flexDirection: "row",
-    marginRight: 4,
+    gap: 3,
+    marginTop: 2,
   },
   ratingText: {
     fontSize: 12,
-    color: "#64748b",
-    fontWeight: "500",
+    fontWeight: "600",
   },
-  priceContainer: {
+  priceRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 12,
+    gap: 6,
+    marginTop: 4,
   },
   currentPrice: {
     fontSize: 16,
-    fontWeight: "bold",
-    color: "#10b981",
-    marginRight: 6,
+    fontWeight: "800",
   },
   originalPrice: {
     fontSize: 12,
-    color: "#9ca3af",
     textDecorationLine: "line-through",
   },
   addToCartButton: {
-    backgroundColor: "#346beb",
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 8,
-    borderRadius: 8,
+    paddingVertical: 9,
+    borderRadius: 10,
+    marginTop: 8,
+    gap: 5,
   },
   addToCartText: {
     fontSize: 12,
-    fontWeight: "600",
-    color: "white",
-    marginLeft: 4,
+    fontWeight: "700",
   },
 });
 

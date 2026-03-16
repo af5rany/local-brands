@@ -1,4 +1,11 @@
-import { IsOptional, IsString, Min, Max, IsEnum } from 'class-validator';
+import {
+  IsOptional,
+  IsString,
+  Min,
+  Max,
+  IsEnum,
+  IsArray,
+} from 'class-validator';
 import { Type, Transform } from 'class-transformer';
 import {
   ProductType,
@@ -30,8 +37,13 @@ export class GetProductsDto {
   category?: string;
 
   @IsOptional()
-  @IsEnum(ProductType)
-  productType?: ProductType;
+  @Transform(({ value }) => {
+    if (!value) return undefined;
+    return Array.isArray(value) ? value : [value];
+  })
+  @IsArray()
+  @IsEnum(ProductType, { each: true })
+  productTypes?: ProductType[];
 
   @IsOptional()
   @IsEnum(Gender)
@@ -50,8 +62,13 @@ export class GetProductsDto {
   maxPrice?: number;
 
   @IsOptional()
-  @Type(() => Number)
-  brandId?: number;
+  @Transform(({ value }) => {
+    if (!value) return undefined;
+    const arr = Array.isArray(value) ? value : [value];
+    return arr.map(Number);
+  })
+  @IsArray()
+  brandIds?: number[];
 
   @IsOptional()
   @IsEnum(SortBy)
