@@ -1,3 +1,4 @@
+fix buttom alignment and rounded card
 fix filter and pagination in customer dashboard
 check stock and availableStock 
 check images and variant images

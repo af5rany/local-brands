@@ -102,9 +102,22 @@ const RegisterScreen = () => {
       });
 
       const data = await response.json();
+
+      // if (response.status === 409) {
+      //   const msg: string = data.message || "";
+      //   if (msg.toLowerCase().includes("email")) {
+      //     setErrors((prev: any) => ({ ...prev, email: "This email is already registered." }));
+      //   } else if (msg.toLowerCase().includes("username")) {
+      //     setErrors((prev: any) => ({ ...prev, username: "This username is already taken." }));
+      //   } else {
+      //     setErrors((prev: any) => ({ ...prev, email: msg || "Email or username already exists." }));
+      //   }
+      //   return;
+      // }
+
       if (!response.ok) throw new Error(data.message || "Registration failed");
 
-      Alert.alert("Success", "Account created! Please check your email.", [
+      Alert.alert("Success", "Account created! Please check your email to verify your account.", [
         { text: "OK", onPress: () => router.push("/auth/login") },
       ]);
     } catch (error: any) {

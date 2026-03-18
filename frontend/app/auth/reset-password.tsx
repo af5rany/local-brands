@@ -6,94 +6,137 @@ import {
   TextInput,
   StyleSheet,
   Pressable,
-  Alert,
+  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
   Image,
-  ActivityIndicator,
   Keyboard,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import getApiUrl from "@/helpers/getApiUrl";
 import { useRouter, useLocalSearchParams } from "expo-router";
 
+type Status = "idle" | "loading" | "success" | "error";
+
 const ResetPasswordScreen = () => {
   const router = useRouter();
-  const { token } = useLocalSearchParams();
+  const { token } = useLocalSearchParams<{ token: string }>();
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [showNew, setShowNew] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [status, setStatus] = useState<Status>("idle");
+  const [errorMessage, setErrorMessage] = useState("");
 
-  const handleResetPassword = async () => {
+  const handleReset = async () => {
     Keyboard.dismiss();
 
     if (!token) {
-      Alert.alert("Error", "Invalid or missing reset token");
+      setStatus("error");
+      setErrorMessage("Invalid or missing reset token.");
       return;
     }
-
     if (!newPassword || !confirmPassword) {
-      Alert.alert("Error", "Please fill in all fields");
+      setStatus("error");
+      setErrorMessage("Please fill in all fields.");
       return;
     }
-
     if (newPassword !== confirmPassword) {
-      Alert.alert("Error", "Passwords do not match");
+      setStatus("error");
+      setErrorMessage("Passwords do not match.");
       return;
     }
-
     if (newPassword.length < 6) {
-      Alert.alert("Error", "Password must be at least 6 characters long");
+      setStatus("error");
+      setErrorMessage("Password must be at least 6 characters.");
       return;
     }
 
-    setLoading(true);
-    const url = `${getApiUrl()}/auth/reset-password`;
+    setStatus("loading");
+    setErrorMessage("");
 
     try {
-      const res = await fetch(url, {
+      const res = await fetch(`${getApiUrl()}/auth/reset-password`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ token, newPassword }),
       });
-
-      const responseData = await res.json();
+      const data = await res.json();
 
       if (res.ok) {
-        Alert.alert(
-          "Success",
-          "Your password has been reset successfully. Please login with your new password.",
-          [{ text: "Login", onPress: () => router.replace("/auth/login") }],
-        );
+        setStatus("success");
       } else {
-        throw new Error(responseData.message || "Failed to reset password");
+        setStatus("error");
+        setErrorMessage(data.message || "Failed to reset password.");
       }
-    } catch (err: any) {
-      Alert.alert("Error", err.message || "Something went wrong");
-    } finally {
-      setLoading(false);
+    } catch {
+      setStatus("error");
+      setErrorMessage("Something went wrong. Please try again.");
     }
   };
 
+  // ── Success state ──────────────────────────────────────────────────────────
+  if (status === "success") {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.centeredContainer}>
+          <Image
+            source={require("@/assets/images/local-sooq.png")}
+            style={styles.logo}
+            resizeMode="contain"
+          />
+          <View style={[styles.iconCircle, { backgroundColor: "#d1fae5" }]}>
+            <Ionicons name="checkmark-circle" size={48} color="#10b981" />
+          </View>
+          <Text style={styles.title}>Password Reset!</Text>
+          <Text style={styles.subtitle}>
+            Your password has been updated. You can now log in with your new
+            password.
+          </Text>
+          <Pressable
+            style={styles.button}
+            onPress={() => router.replace("/auth/login")}
+          >
+            <Text style={styles.buttonText}>Continue to Login</Text>
+          </Pressable>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  // ── Form state ─────────────────────────────────────────────────────────────
   return (
     <SafeAreaView style={styles.safeArea}>
       <KeyboardAvoidingView
-        style={styles.container}
+        style={styles.flex}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
         <ScrollView
           contentContainerStyle={styles.scroll}
           keyboardShouldPersistTaps="handled"
         >
+          <Pressable style={styles.backButton} onPress={() => router.back()}>
+            <Ionicons name="arrow-back" size={24} color="#1e293b" />
+          </Pressable>
+
           <Image
             source={require("@/assets/images/local-sooq.png")}
             style={styles.logo}
             resizeMode="contain"
           />
           <Text style={styles.title}>Reset Password</Text>
-          <Text style={styles.subtitle}>Enter your new password below</Text>
+          <Text style={styles.subtitle}>Enter your new password below.</Text>
 
+          {/* Error banner */}
+          {status === "error" && (
+            <View style={styles.errorBanner}>
+              <Ionicons name="alert-circle-outline" size={18} color="#ef4444" />
+              <Text style={styles.errorText}>{errorMessage}</Text>
+            </View>
+          )}
+
+          {/* New password */}
           <View style={styles.inputContainer}>
             <Text style={styles.label}>New Password</Text>
             <View style={styles.inputWrapper}>
@@ -106,15 +149,26 @@ const ResetPasswordScreen = () => {
               <TextInput
                 style={styles.input}
                 placeholder="••••••••"
-                secureTextEntry
+                secureTextEntry={!showNew}
                 value={newPassword}
-                onChangeText={setNewPassword}
-                editable={!loading}
+                onChangeText={(t) => {
+                  setNewPassword(t);
+                  if (status === "error") setStatus("idle");
+                }}
+                editable={status !== "loading"}
                 placeholderTextColor="#94a3b8"
               />
+              <Pressable onPress={() => setShowNew((p) => !p)} style={styles.eyeBtn}>
+                <Ionicons
+                  name={showNew ? "eye-off-outline" : "eye-outline"}
+                  size={20}
+                  color="#94a3b8"
+                />
+              </Pressable>
             </View>
           </View>
 
+          {/* Confirm password */}
           <View style={styles.inputContainer}>
             <Text style={styles.label}>Confirm Password</Text>
             <View style={styles.inputWrapper}>
@@ -127,21 +181,34 @@ const ResetPasswordScreen = () => {
               <TextInput
                 style={styles.input}
                 placeholder="••••••••"
-                secureTextEntry
+                secureTextEntry={!showConfirm}
                 value={confirmPassword}
-                onChangeText={setConfirmPassword}
-                editable={!loading}
+                onChangeText={(t) => {
+                  setConfirmPassword(t);
+                  if (status === "error") setStatus("idle");
+                }}
+                editable={status !== "loading"}
                 placeholderTextColor="#94a3b8"
               />
+              <Pressable
+                onPress={() => setShowConfirm((p) => !p)}
+                style={styles.eyeBtn}
+              >
+                <Ionicons
+                  name={showConfirm ? "eye-off-outline" : "eye-outline"}
+                  size={20}
+                  color="#94a3b8"
+                />
+              </Pressable>
             </View>
           </View>
 
           <Pressable
-            style={[styles.button, loading && styles.buttonDisabled]}
-            onPress={handleResetPassword}
-            disabled={loading}
+            style={[styles.button, status === "loading" && styles.buttonDisabled]}
+            onPress={handleReset}
+            disabled={status === "loading"}
           >
-            {loading ? (
+            {status === "loading" ? (
               <ActivityIndicator color="#fff" />
             ) : (
               <Text style={styles.buttonText}>Reset Password</Text>
@@ -155,21 +222,70 @@ const ResetPasswordScreen = () => {
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: "#fff" },
-  container: { flex: 1 },
+  flex: { flex: 1 },
+
+  // Centered (success) layout
+  centeredContainer: {
+    flex: 1,
+    padding: 24,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  iconCircle: {
+    width: 88,
+    height: 88,
+    borderRadius: 44,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 20,
+  },
+
+  // Form layout
   scroll: {
     flexGrow: 1,
     padding: 24,
     justifyContent: "center",
     alignItems: "center",
   },
+  backButton: {
+    position: "absolute",
+    top: 20,
+    left: 20,
+    zIndex: 1,
+    padding: 8,
+  },
   logo: { width: 140, height: 80, marginBottom: 24 },
-  title: { fontSize: 24, fontWeight: "700", color: "#1e293b", marginBottom: 8 },
-  subtitle: {
-    fontSize: 16,
-    color: "#64748b",
-    marginBottom: 32,
+  title: {
+    fontSize: 24,
+    fontWeight: "700",
+    color: "#1e293b",
+    marginBottom: 8,
     textAlign: "center",
   },
+  subtitle: {
+    fontSize: 15,
+    color: "#64748b",
+    marginBottom: 28,
+    textAlign: "center",
+    lineHeight: 22,
+  },
+
+  // Error banner
+  errorBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#fef2f2",
+    borderWidth: 1,
+    borderColor: "#fecaca",
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 16,
+    width: "100%",
+    gap: 8,
+  },
+  errorText: { flex: 1, color: "#ef4444", fontSize: 14 },
+
+  // Inputs
   inputContainer: { width: "100%", marginBottom: 16 },
   label: { fontSize: 14, fontWeight: "500", color: "#475569", marginBottom: 8 },
   inputWrapper: {
@@ -183,17 +299,15 @@ const styles = StyleSheet.create({
     height: 48,
   },
   inputIcon: { marginRight: 10 },
-  input: {
-    flex: 1,
-    fontSize: 16,
-    color: "#1e293b",
-    height: "100%",
-  },
+  input: { flex: 1, fontSize: 16, color: "#1e293b", height: "100%" },
+  eyeBtn: { padding: 4 },
+
+  // Button
   button: {
     backgroundColor: "#346beb",
     paddingVertical: 14,
     borderRadius: 12,
-    marginTop: 24,
+    marginTop: 8,
     width: "100%",
     alignItems: "center",
     justifyContent: "center",
@@ -203,11 +317,7 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 4,
   },
-  buttonDisabled: {
-    backgroundColor: "#94a3b8",
-    shadowOpacity: 0,
-    elevation: 0,
-  },
+  buttonDisabled: { backgroundColor: "#94a3b8", shadowOpacity: 0, elevation: 0 },
   buttonText: { color: "#fff", fontSize: 16, fontWeight: "600" },
 });
 

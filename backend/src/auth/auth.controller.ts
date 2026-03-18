@@ -81,4 +81,9 @@ export class AuthController {
   ) {
     return this.authService.resetPassword(token, newPass);
   }
+
+  // @Post('verify-email')
+  // async verifyEmail(@Body('token') token: string) {
+  //   return this.authService.verifyEmail(token);
+  // }
 }

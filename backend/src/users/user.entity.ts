@@ -11,7 +11,7 @@ import {
   Index,
   DeleteDateColumn,
 } from 'typeorm';
-import { Brand } from '../brands/brand.entity';
+
 import { BrandUser } from '../brands/brand-user.entity';
 import { Cart } from '../cart/cart.entity';
 import { Order } from '../orders/order.entity';

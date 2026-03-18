@@ -426,6 +426,17 @@ const CustomerDashboard = ({
           style={[styles.endDot, { backgroundColor: colors.textTertiary }]}
         />
       </View>
+
+      {/* Wishlist FAB */}
+      {!isGuest && (
+        <TouchableOpacity
+          style={[styles.fab, { backgroundColor: colors.primary }]}
+          onPress={() => navigateTo("/wishlist")}
+          activeOpacity={0.85}
+        >
+          <Ionicons name="heart" size={22} color={colors.primaryForeground} />
+        </TouchableOpacity>
+      )}
     </View>
   );
 };
@@ -587,6 +598,23 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "500",
     letterSpacing: 0.3,
+  },
+
+  // ── Wishlist FAB ──────────────────────────
+  fab: {
+    position: "absolute",
+    bottom: 50,
+    right: 20,
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 6,
   },
 });
 
