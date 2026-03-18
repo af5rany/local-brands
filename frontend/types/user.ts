@@ -9,6 +9,11 @@ export interface BrandUser {
     id: number;
     name: string;
   };
+  user?: {
+    id: number;
+    name: string;
+    email: string;
+  };
 }
 
 // User Interface

@@ -7,7 +7,9 @@ import { ToastProvider } from "@/context/ToastContext";
 import GlobalErrorBoundary from "@/components/GlobalErrorBoundary";
 import { useEffect } from "react";
 
-const PROTECTED_SEGMENTS = ['cart', 'checkout', 'orders', 'wishlist', 'profile', 'users'];
+// Orders, wishlist, and profile are now tabs — they handle guest state internally.
+// Only standalone stack routes that hard-require auth are listed here.
+const PROTECTED_SEGMENTS = ['cart', 'checkout', 'users', 'manage'];
 
 // This component will handle the conditional routing
 function RootLayoutNav() {
@@ -31,57 +33,47 @@ function RootLayoutNav() {
 
   return (
     <Stack>
-      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-      <Stack.Screen name="auth/login" options={{ headerShown: false }} />
-      <Stack.Screen name="auth/register" options={{ headerShown: false }} />
-      <Stack.Screen
-        name="auth/forgot-password"
-        options={{ headerShown: false }}
-      />
-      <Stack.Screen
-        name="auth/reset-password"
-        options={{ headerShown: false }}
-      />
-      <Stack.Screen name="brands/index" options={{ title: "Local Brands" }} />
-      <Stack.Screen name="brands/create" options={{ title: "Create Brand" }} />
-      <Stack.Screen
-        name="brands/[brandId]/index"
-        options={{ title: "Brand Details" }}
-      />
-      <Stack.Screen
-        name="products/create/[brandId]"
-        options={{ title: "Create Product" }}
-      />
-      <Stack.Screen
-        name="products/[productId]"
-        options={{ title: "Product Details" }}
-      />
-      <Stack.Screen name="profile/index" options={{ title: "My Profile" }} />
-      <Stack.Screen name="cart/index" options={{ title: "My Collection" }} />
-      <Stack.Screen name="checkout/index" options={{ title: "Checkout" }} />
-      <Stack.Screen name="orders/index" options={{ title: "My Orders" }} />
-      <Stack.Screen
-        name="orders/[orderId]"
-        options={{ title: "Order Details" }}
-      />
-      <Stack.Screen name="wishlist/index" options={{ title: "Wishlist" }} />
-      <Stack.Screen
-        name="profile/addresses/index"
-        options={{ title: "My Addresses" }}
-      />
-      <Stack.Screen
-        name="profile/addresses/new"
-        options={{ title: "Add New Address" }}
-      />
-      <Stack.Screen
-        name="profile/addresses/[id]"
-        options={{ title: "Edit Address" }}
-      />
-      <Stack.Screen
-        name="profile/settings"
-        options={{ title: "Settings" }}
-      />
-      <Stack.Screen name="users/index" options={{ title: "User Management" }} />
+      {/* Tabs & Auth — custom layouts */}
+      <Stack.Screen name="(tabs)" options={{ headerShown: false, title: "Home" }} />
+      <Stack.Screen name="auth/login" options={{ headerShown: false, title: "Login" }} />
+      <Stack.Screen name="auth/register" options={{ headerShown: false, title: "Register" }} />
+      <Stack.Screen name="auth/forgot-password" options={{ headerShown: false, title: "Forgot Password" }} />
+      <Stack.Screen name="auth/reset-password" options={{ headerShown: false, title: "Reset Password" }} />
+
+      {/* Brands */}
+      <Stack.Screen name="brands/index" options={{ title: "Browse Brands", headerBackTitle: "Home" }} />
+      <Stack.Screen name="brands/create" options={{ headerShown: false, title: "Create Brand" }} />
+      <Stack.Screen name="brands/select" options={{ headerShown: false, title: "Select Brand" }} />
+      <Stack.Screen name="brands/[brandId]/index" options={{ headerShown: false, title: "Brand" }} />
+      <Stack.Screen name="brands/[brandId]/edit" options={{ headerShown: false, title: "Edit Brand" }} />
+      <Stack.Screen name="brands/[brandId]/products" options={{ title: "Brand Products", headerBackTitle: "Brand" }} />
+
+      {/* Products */}
+      <Stack.Screen name="products/index" options={{ title: "Browse Products", headerBackTitle: "Home" }} />
+      <Stack.Screen name="products/create/[brandId]" options={{ title: "Create Product", headerBackTitle: "Brand" }} />
+      <Stack.Screen name="products/[productId]" options={{ headerShown: false, title: "Product" }} />
+      <Stack.Screen name="products/edit/[productId]" options={{ title: "Edit Product", headerBackTitle: "Product" }} />
+      <Stack.Screen name="products/draft_[productId]" options={{ headerShown: false, title: "Draft" }} />
+
+      {/* Profile */}
+      <Stack.Screen name="profile/index" options={{ title: "My Profile", headerBackTitle: "Home" }} />
+      <Stack.Screen name="profile/edit" options={{ headerShown: false, title: "Edit Profile" }} />
+      <Stack.Screen name="profile/addresses/index" options={{ headerShown: false, title: "Addresses" }} />
+      <Stack.Screen name="profile/addresses/new" options={{ headerShown: false, title: "New Address" }} />
+      <Stack.Screen name="profile/addresses/[id]" options={{ headerShown: false, title: "Edit Address" }} />
+      <Stack.Screen name="profile/settings" options={{ headerShown: false, title: "Settings" }} />
+
+      {/* Cart & Checkout */}
+      <Stack.Screen name="cart/index" options={{ headerShown: false, title: "Cart" }} />
+      <Stack.Screen name="checkout/index" options={{ headerShown: false, title: "Checkout" }} />
+
+      {/* Orders */}
+      <Stack.Screen name="orders/index" options={{ title: "My Orders", headerBackTitle: "Home" }} />
+      <Stack.Screen name="orders/[orderId]" options={{ headerShown: false, title: "Order Details" }} />
+
+      <Stack.Screen name="wishlist/index" options={{ title: "Wishlist", headerBackTitle: "Home" }} />
+      <Stack.Screen name="users/index" options={{ headerShown: false, title: "Users" }} />
+      <Stack.Screen name="manage/index" options={{ headerShown: false, title: "Management", presentation: "modal" }} />
     </Stack>
   );
 }

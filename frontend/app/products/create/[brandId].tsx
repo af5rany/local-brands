@@ -325,12 +325,7 @@ const CreateProductScreen = () => {
 
       if (response.status === 201) {
         Alert.alert("Success", "Product created successfully!");
-        // router.replace({
-        //   pathname: `..`,
-        //   params: { refresh: "true" },
-        // });
         router.replace(`/brands/${brandId}`);
-        router.replace(`..`);
       } else {
         throw new Error(responseData?.message || "Failed to create product");
       }

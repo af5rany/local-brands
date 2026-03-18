@@ -431,7 +431,7 @@ const CustomerDashboard = ({
       {!isGuest && (
         <TouchableOpacity
           style={[styles.fab, { backgroundColor: colors.primary }]}
-          onPress={() => navigateTo("/wishlist")}
+          onPress={() => navigateTo("/(tabs)/wishlist")}
           activeOpacity={0.85}
         >
           <Ionicons name="heart" size={22} color={colors.primaryForeground} />

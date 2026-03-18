@@ -1,22 +1,23 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   View,
+  Text,
   StyleSheet,
   ActivityIndicator,
   ScrollView,
-  Alert,
+  TouchableOpacity,
+  Image,
+  FlatList,
+  useWindowDimensions,
+  RefreshControl,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect, useRouter } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/context/AuthContext";
-import { useBrand } from "@/context/BrandContext";
 import { useToast } from "@/context/ToastContext";
-import AdminDashboard from "@/components/AdminDashboard";
-import BrandOwnerDashboard from "@/components/BrandOwnerDashboard";
-import CustomerDashboard from "@/components/CustomerDashboard";
 import Header from "@/components/Header";
 import getApiUrl from "@/helpers/getApiUrl";
-import { RefreshControl } from "react-native";
 import { Brand } from "@/types/brand";
 import { Product } from "@/types/product";
 import { useThemeColors } from "@/hooks/useThemeColor";
@@ -25,96 +26,31 @@ const HomeScreen = () => {
   const router = useRouter();
   const colors = useThemeColors();
   const { token, loading, user } = useAuth();
-  const { selectedBrandId, isManagementMode, setIsManagementMode } = useBrand();
   const { showToast } = useToast();
+  const { width } = useWindowDimensions();
+  const isTablet = width > 768;
+
   const [stats, setStats] = useState({
-    brands: 0,
-    products: 0,
-    users: 0,
-    myProducts: 0,
-    orders: 0,
-    revenue: 0,
     myOrders: 0,
     wishlist: 0,
     cartItems: 0,
   });
   const [featuredBrands, setFeaturedBrands] = useState<Brand[]>([]);
   const [newArrivals, setNewArrivals] = useState<Product[]>([]);
-
-  // Search & Filter State
-  const [searchQuery, setSearchQuery] = useState("");
-  const [activeFilters, setActiveFilters] = useState({
-    categories: [] as string[],
-    brandIds: [] as string[],
-    sortBy: "createdAt",
-    sortOrder: "DESC" as "ASC" | "DESC",
-  });
-  const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [brandsPage, setBrandsPage] = useState(1);
-  const [brandsTotalPages, setBrandsTotalPages] = useState(1);
-  const [filterOptions, setFilterOptions] = useState({
-    categories: [] as string[],
-    productTypes: [] as string[],
-  });
-  const [suggestions, setSuggestions] = useState<
-    { text: string; type: "Product" | "Brand" }[]
-  >([]);
-  const [isSearching, setIsSearching] = useState(false);
-  const [loadingStats, setLoadingStats] = useState(true);
+  const [loadingData, setLoadingData] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [wishlistProductIds, setWishlistProductIds] = useState<number[]>([]);
-  const [filterLabels, setFilterLabels] = useState<{
-    brands: Record<string, string>;
-    sort?: string;
-  }>({ brands: {} });
+  const hasLoadedOnce = useRef(false);
 
-  // Get user role from JWT token
-  const userRole = user?.role || user?.userRole || "customer";
-  // console.log(JSON.stringify(user));
-  // No longer redirecting to login automatically
-  useEffect(() => {
-    // We can still log if token changed, but no redirect
-    console.log("[DEBUG] Token state:", token ? "Logged in" : "Guest");
-  }, [token, loading]);
+  const fetchHomeData = async () => {
+    if (!hasLoadedOnce.current) setLoadingData(true);
 
-  // Fetch Filter Options
-  useEffect(() => {
-    const fetchFilters = async () => {
-      try {
-        const response = await fetch(`${getApiUrl()}/products/filters`);
-        if (response.ok) {
-          const data = await response.json();
-          setFilterOptions(data);
-        }
-      } catch (error) {
-        console.error("Error fetching filter options:", error);
-      }
-    };
-    fetchFilters();
-  }, []);
-
-  // Fetch dashboard stats based on user role
-  const fetchStats = async () => {
-    if (!hasLoadedOnce.current) {
-      setLoadingStats(true);
-    }
-
-    // Fetch Statistics (Only for authenticated users)
     const apiUrl = getApiUrl();
-    // console.log('[DEBUG] GLOBAL API URL used in fetchStats (v2):', apiUrl);
 
+    // Fetch stats for authenticated users
     if (token) {
       try {
-        const statsUrl =
-          userRole === "brandOwner" && selectedBrandId
-            ? `${apiUrl}/statistics?brandId=${selectedBrandId}`
-            : `${apiUrl}/statistics`;
-
-        const response = await fetch(statsUrl, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+        const response = await fetch(`${apiUrl}/statistics`, {
+          headers: { Authorization: `Bearer ${token}` },
         });
         if (response.ok) {
           const data = await response.json();
@@ -125,342 +61,332 @@ const HomeScreen = () => {
       }
     }
 
-    // Build Products Query Params
-    const productsParams = new URLSearchParams();
-    productsParams.set("limit", "12");
-    productsParams.set("page", page.toString());
-    productsParams.set("status", "published");
-    if (searchQuery) productsParams.set("search", searchQuery);
-    activeFilters.categories.forEach((c) =>
-      productsParams.append("productTypes", c),
-    );
-    activeFilters.brandIds.forEach((id) =>
-      productsParams.append("brandIds", id),
-    );
-    productsParams.set("sortBy", activeFilters.sortBy);
-    productsParams.set("sortOrder", activeFilters.sortOrder);
-
-    // Build Brands Query Params (separate page state, no product-specific filters)
-    const brandsParams = new URLSearchParams({
-      limit: "12",
-      page: brandsPage.toString(),
-      ...(searchQuery && { search: searchQuery }),
-      sortBy: "createdAt",
-      sortOrder: activeFilters.sortOrder,
-    }).toString();
-
-    // Fetch Discovery Data (Products & Brands) - For Everyone
+    // Fetch featured brands and new arrivals
     try {
       const [brandsRes, productsRes] = await Promise.all([
-        fetch(`${getApiUrl()}/brands?${brandsParams}`, {
+        fetch(`${apiUrl}/brands?limit=6&sortBy=createdAt&sortOrder=DESC`, {
           headers: { ...(token && { Authorization: `Bearer ${token}` }) },
         }),
-        fetch(`${getApiUrl()}/products?${productsParams.toString()}`, {
-          headers: { ...(token && { Authorization: `Bearer ${token}` }) },
-        }),
+        fetch(
+          `${apiUrl}/products?limit=8&status=published&sortBy=createdAt&sortOrder=DESC`,
+          {
+            headers: { ...(token && { Authorization: `Bearer ${token}` }) },
+          },
+        ),
       ]);
 
       if (brandsRes.ok) {
         const brandsData = await brandsRes.json();
         setFeaturedBrands(brandsData.items || []);
-        setBrandsTotalPages(brandsData.totalPages || 1);
       }
-
       if (productsRes.ok) {
         const productsData = await productsRes.json();
         setNewArrivals(productsData.items || []);
-        setTotalPages(productsData.totalPages || 1);
-      } else {
-        console.error(
-          "[DEBUG] Products API Error:",
-          productsRes.status,
-          await productsRes.text(),
-        );
       }
     } catch (error) {
-      console.error("Error fetching discovery data:", error);
+      console.error("Error fetching home data:", error);
     } finally {
       hasLoadedOnce.current = true;
-      setLoadingStats(false);
+      setLoadingData(false);
       setRefreshing(false);
     }
   };
 
-  const fetchWishlist = useCallback(async () => {
-    if (!token) {
-      setWishlistProductIds([]);
-      return;
-    }
-    try {
-      const response = await fetch(`${getApiUrl()}/wishlist`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setWishlistProductIds(data.map((item: any) => item.product.id));
-      }
-    } catch (error) {
-      console.error("Error fetching wishlist:", error);
-    }
+  useEffect(() => {
+    fetchHomeData();
   }, [token]);
 
-  const toggleWishlist = useCallback(
-    async (productId: number) => {
-      if (!token) return;
-      try {
-        const response = await fetch(
-          `${getApiUrl()}/wishlist/toggle/${productId}`,
-          {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${token}`,
-              "Content-Type": "application/json",
-            },
-          },
-        );
-        if (response.ok) {
-          setWishlistProductIds((prev) =>
-            prev.includes(productId)
-              ? prev.filter((id) => id !== productId)
-              : [...prev, productId],
-          );
-        }
-      } catch (error) {
-        console.error("Error toggling wishlist:", error);
-      }
-    },
-    [token],
-  );
-
-  const addToCart = useCallback(
-    async (productId: number) => {
-      if (!token) return;
-      try {
-        const response = await fetch(`${getApiUrl()}/cart/add`, {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ productId, quantity: 1 }),
-        });
-        if (!response.ok) {
-          const data = await response.json().catch(() => ({}));
-          throw new Error(data.message || "Failed to add to cart");
-        }
-        showToast("Added to cart", "success");
-      } catch (err: any) {
-        showToast(err.message || "Failed to add to cart", "error");
-      }
-    },
-    [token],
-  );
-
-  const searchTimeout = React.useRef<any>(null);
-
-  const handleSearchChange = (text: string) => {
-    setSearchQuery(text);
-
-    // Autocomplete Logic
-    if (text.length > 1) {
-      const productSuggestions = newArrivals
-        .filter((p) => p.name.toLowerCase().includes(text.toLowerCase()))
-        .slice(0, 3)
-        .map((p) => ({ text: p.name, type: "Product" }));
-
-      const brandSuggestions = featuredBrands
-        .filter((b) => b.name.toLowerCase().includes(text.toLowerCase()))
-        .slice(0, 2)
-        .map((b) => ({ text: b.name, type: "Brand" }));
-
-      setSuggestions([...productSuggestions, ...brandSuggestions] as any);
-    } else {
-      setSuggestions([]);
-    }
-
-    // Debounce API Call
-    if (searchTimeout.current) clearTimeout(searchTimeout.current);
-    searchTimeout.current = setTimeout(() => {
-      // fetchStats will be triggered by useEffect dependency on searchQuery
-    }, 500);
-  };
-
-  const handlePageChange = (newPage: number) => {
-    setPage(newPage);
-  };
-
-  const handleBrandsPageChange = (newPage: number) => {
-    setBrandsPage(newPage);
-  };
-
-  const handleFilterPress = (
-    type: string,
-    values: string[],
-    labels?: string[],
-  ) => {
-    setPage(1);
-    if (type === "category") {
-      setActiveFilters((prev) => ({ ...prev, categories: values }));
-    } else if (type === "brand") {
-      setActiveFilters((prev) => ({ ...prev, brandIds: values }));
-      const map: Record<string, string> = {};
-      values.forEach((id, i) => {
-        map[id] = labels?.[i] ?? id;
-      });
-      setFilterLabels((l) => ({ ...l, brands: map }));
-    } else if (type === "sort") {
-      setActiveFilters((prev) => ({
-        ...prev,
-        sortOrder: (values[0] as "ASC" | "DESC") || "DESC",
-      }));
-      setFilterLabels((l) => ({ ...l, sort: labels?.[0] }));
-    }
-  };
-  // Fetch when filters/pagination change (debounced for search)
-  const isFirstMount = useRef(true);
-  const hasLoadedOnce = useRef(false);
-  useEffect(() => {
-    if (isFirstMount.current) {
-      isFirstMount.current = false;
-      fetchStats(); // Full load on first mount
-      return;
-    }
-    const timeout = setTimeout(
-      () => {
-        fetchStats();
-      },
-      searchQuery ? 300 : 0,
-    );
-    return () => clearTimeout(timeout);
-  }, [searchQuery, activeFilters, page, brandsPage]);
-
-  // Light refresh on focus — just wishlist + stats (cheap calls)
   useFocusEffect(
     useCallback(() => {
-      fetchWishlist();
-      if (token) {
-        const apiUrl = getApiUrl();
-        const statsUrl =
-          userRole === "brandOwner" && selectedBrandId
-            ? `${apiUrl}/statistics?brandId=${selectedBrandId}`
-            : `${apiUrl}/statistics`;
-        fetch(statsUrl, {
-          headers: { Authorization: `Bearer ${token}` },
-        })
-          .then((res) => res.ok && res.json())
-          .then((data) => data && setStats((prev) => ({ ...prev, ...data })))
-          .catch(console.error);
-      }
-    }, [token, userRole, selectedBrandId]),
+      if (hasLoadedOnce.current) fetchHomeData();
+    }, [token]),
   );
 
-  const onRefresh = React.useCallback(() => {
+  const onRefresh = () => {
     setRefreshing(true);
-    fetchStats();
-  }, [token, userRole, selectedBrandId]);
+    fetchHomeData();
+  };
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#346beb" />
+      <View
+        style={[
+          styles.loadingContainer,
+          { backgroundColor: colors.background },
+        ]}
+      >
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
 
-  const navigateTo = (route: any) => {
-    router.push(route);
-  };
-
-  const showComingSoon = () => {
-    Alert.alert("Coming Soon", "This feature is under development!");
-  };
+  const productCardWidth = isTablet ? 180 : 150;
 
   return (
     <SafeAreaView
       style={[styles.safeArea, { backgroundColor: colors.background }]}
     >
       <ScrollView
-        style={[styles.container, { backgroundColor: colors.background }]}
+        style={styles.container}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
-        {/* Header */}
+        {/* Header — no search bar (search lives in Shop tab) */}
         <Header
           userName={user?.name || user?.email?.split("@")[0]}
-          userRole={userRole}
+          userRole={user?.role || user?.userRole || "customer"}
           isGuest={!token}
-          onDashboardPress={() => {
-            if (userRole === "admin" || userRole === "brandOwner") {
-              setIsManagementMode(!isManagementMode);
-            }
-          }}
-          searchQuery={searchQuery}
-          onSearchChange={handleSearchChange}
-          suggestions={suggestions}
-          onSuggestionPress={(text) => {
-            setSearchQuery(text);
-            handleSearchChange(text); // Trigger search
-            setSuggestions([]);
-          }}
+          showSearch={false}
         />
 
-        {/* Role-based Dashboard */}
-        {userRole === "admin" && isManagementMode ? (
-          <AdminDashboard
-            navigateTo={navigateTo}
-            stats={stats}
-            loadingStats={loadingStats}
-            showComingSoon={showComingSoon}
-            setIsManagementMode={setIsManagementMode}
-          />
-        ) : userRole === "brandOwner" && isManagementMode ? (
-          <BrandOwnerDashboard
-            navigateTo={navigateTo}
-            stats={stats}
-            loadingStats={loadingStats}
-            showComingSoon={showComingSoon}
-            setIsManagementMode={setIsManagementMode}
-          />
-        ) : (
-          <CustomerDashboard
-            navigateTo={navigateTo}
-            stats={stats}
-            loadingStats={loadingStats}
-            isGuest={!token}
-            featuredBrands={featuredBrands}
-            newArrivals={newArrivals}
-            searchQuery={searchQuery}
-            onSearchChange={handleSearchChange}
-            activeFilters={{
-              categories: activeFilters.categories,
-              brands: activeFilters.brandIds,
-              sort: activeFilters.sortOrder,
-            }}
-            onFilterPress={handleFilterPress}
-            filterLabels={filterLabels}
-            filterOptions={filterOptions}
-            currentPage={page}
-            totalPages={totalPages}
-            onPageChange={handlePageChange}
-            brandsCurrentPage={brandsPage}
-            brandsTotalPages={brandsTotalPages}
-            onBrandsPageChange={handleBrandsPageChange}
-            wishlistProductIds={wishlistProductIds}
-            onToggleWishlist={toggleWishlist}
-            onAddToCart={addToCart}
-          />
+        {/* Quick Stats for authenticated users */}
+        {token && (
+          <View style={styles.quickStats}>
+            <TouchableOpacity
+              style={[styles.statCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
+              onPress={() => router.push("/(tabs)/orders" as any)}
+            >
+              <View style={[styles.statIconBox, { backgroundColor: colors.primarySoft }]}>
+                <Ionicons name="receipt-outline" size={20} color={colors.primary} />
+              </View>
+              <Text style={[styles.statValue, { color: colors.text }]}>
+                {stats.myOrders || 0}
+              </Text>
+              <Text style={[styles.statLabel, { color: colors.textTertiary }]}>
+                Orders
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.statCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
+              onPress={() => router.push("/(tabs)/wishlist" as any)}
+            >
+              <View style={[styles.statIconBox, { backgroundColor: colors.dangerSoft }]}>
+                <Ionicons name="heart-outline" size={20} color={colors.danger} />
+              </View>
+              <Text style={[styles.statValue, { color: colors.text }]}>
+                {stats.wishlist || 0}
+              </Text>
+              <Text style={[styles.statLabel, { color: colors.textTertiary }]}>
+                Wishlist
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.statCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
+              onPress={() => router.push("/cart" as any)}
+            >
+              <View style={[styles.statIconBox, { backgroundColor: colors.successSoft }]}>
+                <Ionicons name="bag-handle-outline" size={20} color={colors.success} />
+              </View>
+              <Text style={[styles.statValue, { color: colors.text }]}>
+                {stats.cartItems || 0}
+              </Text>
+              <Text style={[styles.statLabel, { color: colors.textTertiary }]}>
+                Cart
+              </Text>
+            </TouchableOpacity>
+          </View>
         )}
 
-        {/* Recent Activity */}
-        {/* <RecentActivity
-          activities={getRecentActivity(userRole)}
-          showComingSoon={showComingSoon}
-        /> */}
+        {/* Featured Brands */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>
+              Featured Brands
+            </Text>
+            <TouchableOpacity onPress={() => router.push("/(tabs)/shop" as any)}>
+              <Text style={[styles.seeAll, { color: colors.primary }]}>
+                See All
+              </Text>
+            </TouchableOpacity>
+          </View>
 
-        {/* Bottom Spacing */}
+          {loadingData && !hasLoadedOnce.current ? (
+            <ActivityIndicator
+              size="small"
+              color={colors.primary}
+              style={styles.sectionLoader}
+            />
+          ) : featuredBrands.length === 0 ? (
+            <Text style={[styles.emptyText, { color: colors.textTertiary }]}>
+              No brands available
+            </Text>
+          ) : (
+            <FlatList
+              data={featuredBrands}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.horizontalList}
+              keyExtractor={(item) => item.id.toString()}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={[
+                    styles.brandCard,
+                    { backgroundColor: colors.surface, borderColor: colors.border },
+                  ]}
+                  onPress={() =>
+                    router.push(`/brands/${item.id}` as any)
+                  }
+                >
+                  {item.logo ? (
+                    <Image
+                      source={{ uri: item.logo }}
+                      style={styles.brandLogo}
+                    />
+                  ) : (
+                    <View
+                      style={[
+                        styles.brandLogoPlaceholder,
+                        { backgroundColor: colors.surfaceRaised },
+                      ]}
+                    >
+                      <Ionicons
+                        name="storefront-outline"
+                        size={24}
+                        color={colors.textTertiary}
+                      />
+                    </View>
+                  )}
+                  <Text
+                    style={[styles.brandName, { color: colors.text }]}
+                    numberOfLines={1}
+                  >
+                    {item.name}
+                  </Text>
+                  {item.location && (
+                    <Text
+                      style={[styles.brandLocation, { color: colors.textTertiary }]}
+                      numberOfLines={1}
+                    >
+                      {item.location}
+                    </Text>
+                  )}
+                </TouchableOpacity>
+              )}
+            />
+          )}
+        </View>
+
+        {/* New Arrivals */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>
+              New Arrivals
+            </Text>
+            <TouchableOpacity onPress={() => router.push("/(tabs)/shop" as any)}>
+              <Text style={[styles.seeAll, { color: colors.primary }]}>
+                See All
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {loadingData && !hasLoadedOnce.current ? (
+            <ActivityIndicator
+              size="small"
+              color={colors.primary}
+              style={styles.sectionLoader}
+            />
+          ) : newArrivals.length === 0 ? (
+            <Text style={[styles.emptyText, { color: colors.textTertiary }]}>
+              No products available
+            </Text>
+          ) : (
+            <FlatList
+              data={newArrivals}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.horizontalList}
+              keyExtractor={(item) => item.id.toString()}
+              renderItem={({ item }) => {
+                const firstVariant = item.variants?.[0];
+                const image =
+                  firstVariant?.images?.[0] ||
+                  firstVariant?.variantImages?.[0] ||
+                  "";
+                const hasDiscount =
+                  item.salePrice && item.salePrice < item.price;
+
+                return (
+                  <TouchableOpacity
+                    style={[
+                      styles.productCard,
+                      {
+                        width: productCardWidth,
+                        backgroundColor: colors.surface,
+                        borderColor: colors.border,
+                      },
+                    ]}
+                    onPress={() =>
+                      router.push(`/products/${item.id}` as any)
+                    }
+                  >
+                    <Image
+                      source={{ uri: image }}
+                      style={styles.productImage}
+                    />
+                    {hasDiscount && (
+                      <View
+                        style={[
+                          styles.discountBadge,
+                          { backgroundColor: colors.danger },
+                        ]}
+                      >
+                        <Text style={styles.discountText}>
+                          {Math.round(
+                            ((item.price - item.salePrice!) / item.price) * 100,
+                          )}
+                          % OFF
+                        </Text>
+                      </View>
+                    )}
+                    <View style={styles.productInfo}>
+                      <Text
+                        style={[
+                          styles.productBrand,
+                          { color: colors.textTertiary },
+                        ]}
+                        numberOfLines={1}
+                      >
+                        {item.brand?.name || item.brandName || "Brand"}
+                      </Text>
+                      <Text
+                        style={[styles.productName, { color: colors.text }]}
+                        numberOfLines={2}
+                      >
+                        {item.name}
+                      </Text>
+                      <View style={styles.priceRow}>
+                        <Text
+                          style={[
+                            styles.productPrice,
+                            { color: colors.priceCurrent },
+                          ]}
+                        >
+                          ${(item.salePrice || item.price).toFixed(2)}
+                        </Text>
+                        {hasDiscount && (
+                          <Text
+                            style={[
+                              styles.originalPrice,
+                              { color: colors.textTertiary },
+                            ]}
+                          >
+                            ${item.price.toFixed(2)}
+                          </Text>
+                        )}
+                      </View>
+                    </View>
+                  </TouchableOpacity>
+                );
+              }}
+            />
+          )}
+        </View>
+
         <View style={styles.bottomSpacing} />
       </ScrollView>
     </SafeAreaView>
@@ -470,7 +396,6 @@ const HomeScreen = () => {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "#f8fafc",
   },
   container: {
     flex: 1,
@@ -482,10 +407,167 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#f8fafc",
   },
+
+  // Quick Stats
+  quickStats: {
+    flexDirection: "row",
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    gap: 12,
+  },
+  statCard: {
+    flex: 1,
+    alignItems: "center",
+    paddingVertical: 16,
+    borderRadius: 16,
+    borderWidth: 1,
+  },
+  statIconBox: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  statValue: {
+    fontSize: 20,
+    fontWeight: "800",
+    letterSpacing: -0.3,
+  },
+  statLabel: {
+    fontSize: 11,
+    fontWeight: "600",
+    marginTop: 2,
+    letterSpacing: 0.3,
+    textTransform: "uppercase",
+  },
+
+  // Sections
+  section: {
+    marginTop: 28,
+  },
+  sectionHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 20,
+    marginBottom: 14,
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: "800",
+    letterSpacing: -0.3,
+  },
+  seeAll: {
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  sectionLoader: {
+    paddingVertical: 32,
+  },
+  emptyText: {
+    textAlign: "center",
+    fontSize: 14,
+    paddingVertical: 24,
+  },
+  horizontalList: {
+    paddingHorizontal: 20,
+    gap: 12,
+  },
+
+  // Brand Card
+  brandCard: {
+    width: 110,
+    alignItems: "center",
+    paddingVertical: 16,
+    paddingHorizontal: 8,
+    borderRadius: 16,
+    borderWidth: 1,
+  },
+  brandLogo: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    marginBottom: 10,
+  },
+  brandLogoPlaceholder: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 10,
+  },
+  brandName: {
+    fontSize: 12,
+    fontWeight: "700",
+    textAlign: "center",
+  },
+  brandLocation: {
+    fontSize: 10,
+    marginTop: 2,
+    textAlign: "center",
+  },
+
+  // Product Card
+  productCard: {
+    borderRadius: 14,
+    overflow: "hidden",
+    borderWidth: 1,
+  },
+  productImage: {
+    width: "100%",
+    height: 160,
+    backgroundColor: "#f5f5f5",
+  },
+  discountBadge: {
+    position: "absolute",
+    top: 8,
+    right: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  discountText: {
+    color: "#FFF",
+    fontSize: 10,
+    fontWeight: "800",
+    letterSpacing: 0.3,
+  },
+  productInfo: {
+    padding: 10,
+  },
+  productBrand: {
+    fontSize: 10,
+    fontWeight: "600",
+    textTransform: "uppercase",
+    letterSpacing: 0.8,
+    marginBottom: 2,
+  },
+  productName: {
+    fontSize: 13,
+    fontWeight: "600",
+    marginBottom: 6,
+    lineHeight: 17,
+  },
+  priceRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  productPrice: {
+    fontSize: 14,
+    fontWeight: "800",
+  },
+  originalPrice: {
+    fontSize: 12,
+    textDecorationLine: "line-through",
+  },
+
   bottomSpacing: {
-    height: 20,
+    height: 40,
   },
 });
 

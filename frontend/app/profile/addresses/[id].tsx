@@ -102,7 +102,7 @@ const EditAddressScreen = () => {
           text: "OK",
           onPress: () => {
             refreshUser();
-            router.back();
+            router.replace("/profile/addresses");
           },
         },
       ]);

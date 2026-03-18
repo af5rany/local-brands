@@ -1,7 +1,12 @@
-fix buttom alignment and rounded card
-fix filter and pagination in customer dashboard
+update the docs
+fix the filter and add sort by price and review and name and date
+add way too much dummy data like brands and products for them
+fix rating later /Users/f5rany/Documents/Work/local-brands/frontend/components/CustomerDashboard.tsx
+fix this order checkout process /Users/f5rany/Documents/Work/local-brands/frontend/app/checkout/index.tsx
+fix header style
+improve screen products managment 
+fix buttom image style in product details page
+add loading states and place holders in case no data and handle no internet case
+wishlist optimistic update
 check stock and availableStock 
 check images and variant images
-get products faster on first load
-loading state
-wishlist optimistic update

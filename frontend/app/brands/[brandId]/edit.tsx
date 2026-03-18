@@ -16,6 +16,7 @@ import {
   KeyboardAvoidingView,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
+import { Dropdown } from "react-native-element-dropdown";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter, useLocalSearchParams } from "expo-router";
@@ -23,7 +24,8 @@ import getApiUrl from "@/helpers/getApiUrl";
 import { useThemeColor } from "@/hooks/useThemeColor";
 import { useAuth } from "@/context/AuthContext";
 import { Brand } from "@/types/brand";
-import { BrandStatus } from "@/types/enums";
+import { BrandUser } from "@/types/user";
+import { BrandStatus, BrandRole } from "@/types/enums";
 import { useCloudinaryUpload } from "@/hooks/useCloudinaryUpload";
 import { ImageUploadProgress } from "@/components/ImageUploadProgress";
 import * as ImageManipulator from "expo-image-manipulator";
@@ -38,6 +40,10 @@ const EditBrandScreen = () => {
   const [logoUrl, setLogoUrl] = useState<string>("");
   const [location, setLocation] = useState<string>("");
   const [status, setStatus] = useState<BrandStatus>(BrandStatus.DRAFT);
+  const [brandMembers, setBrandMembers] = useState<BrandUser[]>([]);
+  const [allUsers, setAllUsers] = useState<{ label: string; value: number }[]>([]);
+  const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
+  const [selectedRole, setSelectedRole] = useState<BrandRole>(BrandRole.STAFF);
   const [loading, setLoading] = useState<boolean>(true);
   const [submitting, setSubmitting] = useState<boolean>(false);
   const { uploads, uploadImage } = useCloudinaryUpload();
@@ -82,6 +88,7 @@ const EditBrandScreen = () => {
       setLogoUrl(data.logo || "");
       setLocation(data.location || "");
       setStatus(data.status || BrandStatus.DRAFT);
+      setBrandMembers(data.brandUsers || []);
     } catch (error) {
       console.error("Error fetching brand:", error);
       Alert.alert("Error", "Failed to fetch brand details.");
@@ -91,11 +98,81 @@ const EditBrandScreen = () => {
     }
   }, [brandId, token, router]);
 
+  const fetchUsers = useCallback(async () => {
+    try {
+      const response = await fetch(`${getApiUrl()}/users`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await response.json();
+      setAllUsers(
+        data.map((u: any) => ({
+          label: u.name ? `${u.name} (${u.email})` : u.email || "Unknown",
+          value: u.id,
+        })),
+      );
+    } catch (error) {
+      console.error("Error fetching users:", error);
+    }
+  }, [token]);
+
   useEffect(() => {
     if (brandId && token) {
       fetchBrandData();
+      fetchUsers();
     }
-  }, [brandId, token, fetchBrandData]);
+  }, [brandId, token, fetchBrandData, fetchUsers]);
+
+  const handleAssignUser = async () => {
+    if (!selectedUserId) return;
+    try {
+      const res = await fetch(`${getApiUrl()}/brands/${brandId}/assign-user`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ userId: selectedUserId, role: selectedRole }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.message || "Failed to assign user");
+      }
+      setSelectedUserId(null);
+      setSelectedRole(BrandRole.STAFF);
+      await fetchBrandData();
+    } catch (error: any) {
+      Alert.alert("Error", error.message);
+    }
+  };
+
+  const handleRemoveMember = (member: BrandUser) => {
+    const memberName = member.user?.name || member.user?.email || "this user";
+    Alert.alert("Remove Member", `Remove ${memberName} from this brand?`, [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Remove",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            const res = await fetch(
+              `${getApiUrl()}/brands/${brandId}/remove-user/${member.user?.id}`,
+              {
+                method: "DELETE",
+                headers: { Authorization: `Bearer ${token}` },
+              },
+            );
+            if (!res.ok) {
+              const err = await res.json().catch(() => ({}));
+              throw new Error(err.message || "Failed to remove user");
+            }
+            await fetchBrandData();
+          } catch (error: any) {
+            Alert.alert("Error", error.message);
+          }
+        },
+      },
+    ]);
+  };
 
   const handleImagePick = async () => {
     try {
@@ -158,7 +235,7 @@ const EditBrandScreen = () => {
 
       if (response.ok) {
         Alert.alert("Success", "Brand updated successfully!", [
-          { text: "OK", onPress: () => router.back() },
+          { text: "OK", onPress: () => router.replace(`/brands/${brandId}`) },
         ]);
       } else {
         const data = await response.json();
@@ -199,7 +276,7 @@ const EditBrandScreen = () => {
         <View style={styles.headerContainer}>
           <TouchableOpacity
             style={[styles.backButton, { backgroundColor: cardBackground }]}
-            onPress={() => router.back()}
+            onPress={() => router.replace(`/brands/${brandId}`)}
           >
             <Ionicons name="chevron-back" size={24} color={textColor} />
           </TouchableOpacity>
@@ -356,6 +433,209 @@ const EditBrandScreen = () => {
                   );
                 })}
               </View>
+            </View>
+          </View>
+        </View>
+
+        {/* Team Management */}
+        <View style={[styles.card, { backgroundColor: cardBackground }]}>
+          <View style={styles.sectionHeader}>
+            <Ionicons name="people-outline" size={20} color={buttonColor} />
+            <Text style={[styles.sectionTitle, { color: textColor }]}>
+              Team Members
+            </Text>
+          </View>
+
+          {/* Current Members */}
+          {brandMembers.map((member) => {
+            const roleColor =
+              member.role === BrandRole.OWNER
+                ? "#10b981"
+                : member.role === BrandRole.MANAGER
+                  ? "#3b82f6"
+                  : member.role === BrandRole.STAFF
+                    ? "#f59e0b"
+                    : "#6b7280";
+            return (
+              <View
+                key={member.id}
+                style={[
+                  styles.memberCard,
+                  {
+                    backgroundColor: inputBackground,
+                    borderColor: inputBorderColor,
+                  },
+                ]}
+              >
+                <View style={styles.memberInfo}>
+                  <View
+                    style={[styles.memberAvatar, { backgroundColor: roleColor + "20" }]}
+                  >
+                    <Ionicons
+                      name="person"
+                      size={18}
+                      color={roleColor}
+                    />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text
+                      style={[styles.memberName, { color: textColor }]}
+                      numberOfLines={1}
+                    >
+                      {member.user?.name || "Unknown"}
+                    </Text>
+                    <Text
+                      style={[styles.memberEmail, { color: secondaryTextColor }]}
+                      numberOfLines={1}
+                    >
+                      {member.user?.email || ""}
+                    </Text>
+                  </View>
+                  <View
+                    style={[
+                      styles.roleBadge,
+                      { backgroundColor: roleColor + "20" },
+                    ]}
+                  >
+                    <Text style={[styles.roleBadgeText, { color: roleColor }]}>
+                      {member.role.toUpperCase()}
+                    </Text>
+                  </View>
+                  {member.role !== BrandRole.OWNER && (
+                    <TouchableOpacity
+                      onPress={() => handleRemoveMember(member)}
+                      style={styles.removeMemberBtn}
+                    >
+                      <Ionicons
+                        name="close-circle"
+                        size={22}
+                        color="#ef4444"
+                      />
+                    </TouchableOpacity>
+                  )}
+                </View>
+              </View>
+            );
+          })}
+
+          {/* Add Member */}
+          <View style={styles.addMemberSection}>
+            <Text
+              style={[
+                styles.inputLabel,
+                { color: textColor, marginBottom: 8 },
+              ]}
+            >
+              Add Member
+            </Text>
+            <View
+              style={[
+                styles.addMemberRow,
+              ]}
+            >
+              <View style={{ flex: 1 }}>
+                <View
+                  style={[
+                    styles.dropdownWrapper,
+                    {
+                      backgroundColor: inputBackground,
+                      borderColor: inputBorderColor,
+                    },
+                  ]}
+                >
+                  <Dropdown
+                    labelField="label"
+                    valueField="value"
+                    data={allUsers.filter(
+                      (u) => !brandMembers.some((m) => m.user?.id === u.value),
+                    )}
+                    value={selectedUserId}
+                    onChange={(item) => setSelectedUserId(item.value)}
+                    placeholder="Select user"
+                    search={true}
+                    searchPlaceholder="Search..."
+                    style={styles.dropdown}
+                    placeholderStyle={[
+                      styles.placeholderStyle,
+                      { color: secondaryTextColor },
+                    ]}
+                    selectedTextStyle={[
+                      styles.selectedTextStyle,
+                      { color: textColor },
+                    ]}
+                    inputSearchStyle={[
+                      styles.inputSearchStyle,
+                      {
+                        backgroundColor: cardBackground,
+                        color: textColor,
+                        borderColor: inputBorderColor,
+                      },
+                    ]}
+                    containerStyle={[
+                      styles.dropdownContainer,
+                      {
+                        backgroundColor: cardBackground,
+                        borderColor: inputBorderColor,
+                      },
+                    ]}
+                    itemTextStyle={{ color: textColor, fontSize: 14 }}
+                    activeColor={inputBackground}
+                  />
+                </View>
+              </View>
+            </View>
+            <View style={[styles.roleAndAddRow, { marginTop: 10 }]}>
+              <View style={styles.roleChips}>
+                {Object.values(BrandRole).map((r) => {
+                  const isSelected = selectedRole === r;
+                  return (
+                    <TouchableOpacity
+                      key={r}
+                      onPress={() => setSelectedRole(r)}
+                      style={[
+                        styles.roleChip,
+                        {
+                          backgroundColor: isSelected
+                            ? buttonColor
+                            : inputBackground,
+                          borderColor: isSelected
+                            ? buttonColor
+                            : inputBorderColor,
+                        },
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.roleChipText,
+                          {
+                            color: isSelected ? "#fff" : secondaryTextColor,
+                          },
+                        ]}
+                      >
+                        {r.charAt(0).toUpperCase() + r.slice(1)}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+              <TouchableOpacity
+                onPress={handleAssignUser}
+                disabled={!selectedUserId}
+                style={[
+                  styles.addMemberBtn,
+                  {
+                    backgroundColor: selectedUserId
+                      ? buttonColor
+                      : inputBackground,
+                  },
+                ]}
+              >
+                <Ionicons
+                  name="add"
+                  size={20}
+                  color={selectedUserId ? "#fff" : secondaryTextColor}
+                />
+              </TouchableOpacity>
             </View>
           </View>
         </View>
@@ -579,6 +859,111 @@ const styles = StyleSheet.create({
   statusChipText: {
     fontSize: 14,
     fontWeight: "600",
+  },
+  memberCard: {
+    borderRadius: 14,
+    padding: 12,
+    marginBottom: 10,
+    borderWidth: 1,
+  },
+  memberInfo: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  memberAvatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  memberName: {
+    fontSize: 15,
+    fontWeight: "600",
+  },
+  memberEmail: {
+    fontSize: 12,
+    marginTop: 1,
+  },
+  roleBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+  },
+  roleBadgeText: {
+    fontSize: 10,
+    fontWeight: "800",
+    letterSpacing: 0.5,
+  },
+  removeMemberBtn: {
+    padding: 2,
+  },
+  addMemberSection: {
+    marginTop: 16,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: "rgba(0,0,0,0.06)",
+  },
+  addMemberRow: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  roleAndAddRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  roleChips: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    flex: 1,
+  },
+  roleChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 10,
+    borderWidth: 1.5,
+  },
+  roleChipText: {
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  addMemberBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  dropdownWrapper: {
+    borderWidth: 1.5,
+    borderRadius: 16,
+  },
+  dropdown: {
+    height: 48,
+    paddingHorizontal: 14,
+  },
+  dropdownContainer: {
+    borderRadius: 16,
+    borderWidth: 1,
+    marginTop: 8,
+    overflow: "hidden",
+    maxHeight: 250,
+  },
+  placeholderStyle: {
+    fontSize: 15,
+    color: "#999",
+  },
+  selectedTextStyle: {
+    fontSize: 15,
+  },
+  inputSearchStyle: {
+    height: 40,
+    fontSize: 14,
+    borderRadius: 10,
+    margin: 8,
   },
 });
 

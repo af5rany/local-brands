@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -9,7 +9,7 @@ import {
   FlatList,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/context/AuthContext";
 import getApiUrl from "@/helpers/getApiUrl";
@@ -25,13 +25,9 @@ const ShippingAddressesScreen = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  useEffect(() => {
-    fetchAddresses();
-  }, []);
-
-  const fetchAddresses = async () => {
+  const fetchAddresses = useCallback(async (showLoader = true) => {
     try {
-      setLoading(true);
+      if (showLoader) setLoading(true);
       const response = await fetch(`${getApiUrl()}/addresses`, {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -44,7 +40,14 @@ const ShippingAddressesScreen = () => {
       setLoading(false);
       setRefreshing(false);
     }
-  };
+  }, [token]);
+
+  // Refresh addresses every time screen gains focus (e.g. after adding a new one)
+  useFocusEffect(
+    useCallback(() => {
+      fetchAddresses(addresses.length === 0);
+    }, [fetchAddresses]),
+  );
 
   const handleDelete = (id: number) => {
     Alert.alert("Delete Address", "Are you sure?", [

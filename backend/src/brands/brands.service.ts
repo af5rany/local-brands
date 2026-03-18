@@ -148,6 +148,7 @@ export class BrandsService {
         description: true,
         logo: true,
         location: true,
+        status: true,
         createdAt: true,
         updatedAt: true,
         brandUsers: {
@@ -259,6 +260,23 @@ export class BrandsService {
   async create(brandData: Partial<Brand>): Promise<Brand> {
     const brand = this.brandsRepository.create(brandData);
     return this.brandsRepository.save(brand);
+  }
+
+  async createWithOwner(
+    brandData: Partial<Brand>,
+    ownerId: number,
+  ): Promise<Brand> {
+    const brand = this.brandsRepository.create(brandData);
+    const savedBrand = await this.brandsRepository.save(brand);
+
+    // Automatically assign the owner as OWNER role
+    await this.assignUserToBrand(
+      savedBrand.id,
+      ownerId,
+      BrandUserRole.OWNER,
+    );
+
+    return this.findOne(savedBrand.id);
   }
 
   async update(id: number, updateData: Partial<Brand>): Promise<Brand> {

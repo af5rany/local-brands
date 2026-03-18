@@ -2,7 +2,7 @@
 
 > **Platform:** Mobile-first (iOS & Android) with web support
 > **Framework:** React Native / Expo
-> **Date:** March 18, 2026
+> **Date:** March 18, 2026 (updated March 18, 2026)
 
 ---
 
@@ -59,23 +59,26 @@ A brand owner can assign team members with granular roles:
 
 ## 3. Navigation Architecture
 
-### Bottom Tab Bar (2 tabs)
+### Bottom Tab Bar (5 tabs)
 ```
-┌─────────────────────────────────────┐
-│          App Content Area           │
-├──────────────┬──────────────────────┤
-│   🏠 Home    │   ✈️ Explore         │
-└──────────────┴──────────────────────┘
+┌──────────────────────────────────────────────────────────────┐
+│                      App Content Area                        │
+├──────────┬──────────┬──────────┬──────────┬──────────────────┤
+│ 🏠 Home  │ 🏪 Shop  │ ♡ Wishlist│ 🧾 Orders│ 👤 Profile      │
+└──────────┴──────────┴──────────┴──────────┴──────────────────┘
 ```
 
-- **Home tab** — The main screen; content changes based on user role
-- **Explore tab** — Currently a placeholder/documentation screen (not functional)
+- **Home tab** — Role-based landing; shows Customer dashboard (with search) or redirects based on role
+- **Shop tab** — Full product & brand browsing with search, filters, sort, and pagination
+- **Wishlist tab** — Saved products grid; shows sign-in prompt for guests
+- **Orders tab** — Order history list; shows sign-in prompt for guests
+- **Profile tab** — User profile, menu navigation, and logout; shows sign-in/register for guests
 
-### Header (persistent on Home screen)
+### Header (shown on Home and Shop screens)
 - Logo (tappable → home)
 - Time-based greeting ("Good morning", "Good afternoon", "Good evening")
 - Search bar with autocomplete suggestions (products & brands)
-- Dashboard toggle button (speedometer icon) — switches between management mode and customer browsing mode
+- Dashboard toggle button (speedometer icon) — navigates to `/manage` (management dashboard); only shown for admin/brand owner
 - Cart button (bag icon) with navigation to cart
 - Profile avatar button (circular, shows user initial with gradient ring) → navigates to profile
 
@@ -84,7 +87,13 @@ A brand owner can assign team members with granular roles:
 /                         → Root redirect
 /(tabs)/                  → Tab navigation container
   ├── index               → Home (role-based dashboard)
-  └── explore             → Explore (placeholder)
+  ├── shop                → Shop (product & brand browsing)
+  ├── wishlist            → Wishlist tab
+  ├── orders              → Orders tab
+  └── profile             → Profile tab
+
+/manage/
+  └── index               → Management dashboard (admin & brand owner only)
 
 /auth/
   ├── login               → Login screen
@@ -148,9 +157,9 @@ Unauthenticated users attempting to access these are redirected to `/auth/login`
 
 ### 4.1 Home Screen — `/(tabs)/index`
 
-This is the most complex screen. It renders entirely different content based on the user's role and whether "management mode" is active.
+The home screen renders the Customer/Guest browsing view by default. Admin and brand owner dashboards have moved to the dedicated `/manage` screen.
 
-#### 4.1a Customer/Guest View (default)
+#### 4.1a Customer/Guest View
 **Layout:**
 - Header (greeting, search, cart, avatar)
 - Tab switcher: "Products" | "Brands"
@@ -170,11 +179,28 @@ This is the most complex screen. It renders entirely different content based on 
 - Each card shows: circular logo, brand name, location (on medium size)
 - Same pagination as products
 
-**Data fetched:** Dashboard statistics, filter options (categories, product types), featured brands (paginated, 12/page), new arrivals (paginated, 12/page), wishlist items
+**Data fetched:** Filter options (categories, product types), featured brands (paginated, 12/page), new arrivals (paginated, 12/page), wishlist items
 
-#### 4.1b Admin Dashboard
+---
+
+### 4.1b Shop Screen — `/(tabs)/shop`
+
+Dedicated shopping tab with the same product/brand browsing experience as the Home screen customer view, but accessible to all users directly via the bottom tab bar.
+
 **Layout:**
-- Header (same as above)
+- Header (greeting, search, cart, avatar)
+- CustomerDashboard component (identical to Home customer view)
+- Full search, filter, and pagination controls
+
+---
+
+### 4.1c Management Screen — `/manage/index`
+
+Accessible to admins and brand owners via the speedometer icon in the Header or via "Management Dashboard" in the Profile tab menu. Initializes with management mode active; pressing back/close returns to browsing mode.
+
+#### Admin Dashboard
+**Layout:**
+- Header with back button, "Management" title (speedometer icon), and close button
 - System Overview section:
   - StatsCards in a horizontal scrollable row (or grid on tablet):
     - Total Brands (count)
@@ -186,18 +212,21 @@ This is the most complex screen. It renders entirely different content based on 
   - **User Management** — navigates to `/users`
   - **System Analytics** — coming soon
   - **Settings** — coming soon
-  - **Continue as Customer** — switches to customer view
+  - **Continue as Customer** — exits management mode and goes back
 
 Each QuickActionCard has: colored icon, title, description, chevron arrow, swipeable "Go" action
 
-#### 4.1c Brand Owner Dashboard
+#### Brand Owner Dashboard
 **Layout:**
-- Header (same as above)
+- Same header as Admin
+- Stats section: My Products count, Orders count, Revenue
 - Quick Actions section:
   - **My Products** — navigates to `/brands/select` (pick a brand first)
   - **Order Management** — coming soon
   - **Brand Analytics** — coming soon
-  - **Continue as Customer** — switches to customer view
+  - **Continue as Customer** — exits management mode and goes back
+
+**Data fetched:** Statistics from `/statistics` (brand-scoped for brand owners via `?brandId=`); supports pull-to-refresh.
 
 ---
 
@@ -286,7 +315,7 @@ Each QuickActionCard has: colored icon, title, description, chevron arrow, swipe
   - Brand name (required)
   - Description (required, multiline)
   - Location (required)
-  - Owner dropdown (selects from users list, fetched from API)
+  - Owner dropdown (selects from users list, fetched from API — displays user name + email for clarity)
 - **Publish Brand** button (gradient styled)
 
 #### 4.3c Brand Selection — `/brands/select`
@@ -523,22 +552,35 @@ View for draft (unpublished) products, likely with "Publish" action.
 
 ### 4.9 Profile Screens
 
-#### 4.9a Profile Overview — `/profile/index`
-**Elements:**
+#### 4.9a Profile Tab — `/(tabs)/profile`
+
+The Profile is now a dedicated bottom tab (replacing the old `/profile/index` route as the primary entry point).
+
+**Guest state:**
+- Person icon placeholder
+- "Welcome to Local Brands" heading
+- Sign In button (primary) → `/auth/login`
+- Create Account button (outlined) → `/auth/register`
+
+**Authenticated state:**
 - Profile header card:
-  - Avatar (circular — shows image if uploaded, or initials with background color)
+  - Avatar (circular — shows image if uploaded, or initials on primary-soft background)
   - Full name
   - Email
-  - Edit button (pencil icon)
-  - Settings button (gear icon)
+  - Role badge (e.g. "Admin", "BrandOwner", "Customer")
 - Menu list:
+  - **Management Dashboard** (admin/brand owner only) → `/manage` — sets management mode active
   - **Edit Profile** → `/profile/edit`
-  - **My Orders** → `/orders`
-  - **Wishlist** → `/wishlist`
   - **Shipping Addresses** → `/profile/addresses`
   - **Settings** → `/profile/settings`
-- **Logout** button (red, at bottom)
+- **Log Out** button (danger-soft background, red text/icon)
+- Version number display at bottom
 - Pull-to-refresh (refreshes user data)
+
+> Note: "My Orders" and "Wishlist" are no longer in the profile menu — they are dedicated bottom tabs.
+
+#### 4.9a-2 Profile Overview (legacy route) — `/profile/index`
+Still accessible for deep links. Content may overlap with the Profile tab.
 
 #### 4.9b Edit Profile — `/profile/edit`
 **Elements:**
@@ -772,15 +814,17 @@ Home → Browse/Search products → Tap product
 
 ### 7.3 Wishlist Flow
 ```
-Home → Browse products → Tap heart on product card
+Shop tab → Browse products → Tap heart on product card
   → Item added to wishlist (toast confirmation)
-    → Access wishlist via FAB on home or Profile → Wishlist
+    → Access wishlist via Wishlist tab (bottom bar) or FAB on home/shop
       → Tap product → Product Detail → Add to Cart
 ```
 
 ### 7.4 Brand Owner — Product Management
 ```
-Home (management mode) → "My Products"
+Profile tab → "Management Dashboard" (or speedometer icon in Header)
+  → Management screen (/manage)
+    → "My Products"
   → Brand Selection (if multiple brands)
     → Brand Detail page (own brand)
       → View products list (with filters/search)
@@ -792,7 +836,9 @@ Home (management mode) → "My Products"
 
 ### 7.5 Admin — User Management
 ```
-Home (admin dashboard) → "User Management"
+Profile tab → "Management Dashboard" (or speedometer icon in Header)
+  → Management screen (/manage)
+    → "User Management"
   → Users list (search, filter by role/status)
     → Assign role to user
     → Assign user to brand
@@ -800,7 +846,9 @@ Home (admin dashboard) → "User Management"
 
 ### 7.6 Admin — Brand Management
 ```
-Home (admin dashboard) → "Manage Brands"
+Profile tab → "Management Dashboard" (or speedometer icon in Header)
+  → Management screen (/manage)
+    → "Manage Brands"
   → Brands list (search, filter, sort)
     → Create new brand
     → Or tap brand → Brand Detail
@@ -941,6 +989,10 @@ Home → Avatar button → Profile
 - [x] Haptic feedback on tab bar
 - [x] Search with debounced input
 - [x] Time-based greeting in header
+- [x] 5-tab bottom navigation (Home, Shop, Wishlist, Orders, Profile)
+- [x] Guest-friendly tabs with sign-in prompts (Wishlist, Orders, Profile)
+- [x] Dedicated management screen for admin/brand owner (`/manage`)
+- [x] Management Dashboard entry point in Profile tab menu
 
 ---
 
@@ -950,7 +1002,6 @@ These are referenced in the UI but not yet implemented:
 
 | Feature | Location | Current State |
 |---------|----------|---------------|
-| **Explore tab** | Bottom tab #2 | Placeholder/documentation screen |
 | **System Analytics** | Admin dashboard quick action | "Coming soon" |
 | **Admin Settings** | Admin dashboard quick action | "Coming soon" |
 | **Order Management** (brand owner) | Brand owner dashboard | "Coming soon" |

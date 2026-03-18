@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsEnum } from 'class-validator';
+import { IsString, IsOptional, IsEnum, IsNumber } from 'class-validator';
 import { BrandStatus } from 'src/common/enums/brand.enum';
 
 export class CreateBrandDto {
@@ -16,6 +16,9 @@ export class CreateBrandDto {
   @IsOptional()
   @IsString()
   location?: string;
+
+  @IsNumber()
+  ownerId: number;
 
   @IsOptional()
   @IsEnum(BrandStatus)

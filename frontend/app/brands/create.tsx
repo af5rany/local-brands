@@ -80,7 +80,7 @@ const CreateBrandScreen = () => {
       });
       const data = await response.json();
       const formattedUsers = data.map((user: User) => ({
-        label: user.name || user.email,
+        label: user.name ? `${user.name} (${user.email})` : user.email || "Unknown",
         value: user.id,
       }));
       setUsers(formattedUsers);
@@ -156,7 +156,7 @@ const CreateBrandScreen = () => {
         name: name.trim(),
         description: description.trim(),
         logo: logoUrl,
-        owner,
+        ownerId: Number(owner),
         location: location.trim(),
       };
 
@@ -306,31 +306,6 @@ const CreateBrandScreen = () => {
               inputBackground={inputBackground}
             />
 
-            <InputField
-              label="Description"
-              value={description}
-              onChangeText={setDescription}
-              placeholder="Tell us about your brand"
-              multiline={true}
-              icon="document-text"
-              textColor={textColor}
-              secondaryTextColor={secondaryTextColor}
-              inputBorderColor={inputBorderColor}
-              inputBackground={inputBackground}
-            />
-
-            <InputField
-              label="Location"
-              value={location}
-              onChangeText={setLocation}
-              placeholder="Headquarters location"
-              icon="location"
-              textColor={textColor}
-              secondaryTextColor={secondaryTextColor}
-              inputBorderColor={inputBorderColor}
-              inputBackground={inputBackground}
-            />
-
             {/* Owner Dropdown */}
             <View style={styles.inputContainer}>
               <Text style={[styles.inputLabel, { color: textColor }]}>
@@ -357,9 +332,9 @@ const CreateBrandScreen = () => {
                   data={users}
                   value={owner}
                   onChange={(item) => setOwner(item.value)}
-                  placeholder="Select a user"
+                  placeholder="Select owner"
                   search={true}
-                  searchPlaceholder="Search users..."
+                  searchPlaceholder="Search by name or email..."
                   style={styles.dropdown}
                   placeholderStyle={[
                     styles.placeholderStyle,
@@ -384,11 +359,53 @@ const CreateBrandScreen = () => {
                       borderColor: inputBorderColor,
                     },
                   ]}
-                  itemTextStyle={{ color: textColor }}
+                  itemTextStyle={{ color: textColor, fontSize: 15 }}
                   activeColor={inputBackground}
+                  renderItem={(item) => (
+                    <View style={styles.dropdownItem}>
+                      <Ionicons
+                        name="person-circle-outline"
+                        size={24}
+                        color={buttonColor}
+                      />
+                      <View style={{ flex: 1 }}>
+                        <Text
+                          style={[styles.dropdownItemName, { color: textColor }]}
+                          numberOfLines={1}
+                        >
+                          {item.label}
+                        </Text>
+                      </View>
+                    </View>
+                  )}
                 />
               </View>
             </View>
+
+            <InputField
+              label="Description"
+              value={description}
+              onChangeText={setDescription}
+              placeholder="Tell us about your brand"
+              multiline={true}
+              icon="document-text"
+              textColor={textColor}
+              secondaryTextColor={secondaryTextColor}
+              inputBorderColor={inputBorderColor}
+              inputBackground={inputBackground}
+            />
+
+            <InputField
+              label="Location"
+              value={location}
+              onChangeText={setLocation}
+              placeholder="Headquarters location"
+              icon="location"
+              textColor={textColor}
+              secondaryTextColor={secondaryTextColor}
+              inputBorderColor={inputBorderColor}
+              inputBackground={inputBackground}
+            />
           </View>
         </View>
 
@@ -636,7 +653,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     borderWidth: 1.5,
     borderRadius: 16,
-    paddingHorizontal: 4,
   },
   dropdown: {
     flex: 1,
@@ -647,6 +663,18 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     marginTop: 8,
     overflow: "hidden",
+    maxHeight: 300,
+  },
+  dropdownItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    gap: 12,
+  },
+  dropdownItemName: {
+    fontSize: 15,
+    fontWeight: "500",
   },
   placeholderStyle: {
     fontSize: 16,

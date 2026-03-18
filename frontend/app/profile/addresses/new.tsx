@@ -32,7 +32,7 @@ const NewAddressScreen = () => {
     city: "",
     state: "",
     zipCode: "",
-    country: "",
+    country: "Egypt",
     phone: "",
     type: AddressType.SHIPPING,
     isDefault: false,
@@ -44,7 +44,8 @@ const NewAddressScreen = () => {
       !formData.addressLine1 ||
       !formData.city ||
       !formData.state ||
-      !formData.zipCode
+      !formData.zipCode ||
+      !formData.phone
     ) {
       Alert.alert("Incomplete", "Please fill in all required fields.");
       return;
@@ -71,7 +72,7 @@ const NewAddressScreen = () => {
           text: "OK",
           onPress: () => {
             refreshUser();
-            router.back();
+            router.replace("/profile/addresses");
           },
         },
       ]);
@@ -152,55 +153,59 @@ const NewAddressScreen = () => {
               "Full Name",
               formData.fullName,
               "fullName",
-              "John Doe",
+              "Ahmed Mohamed",
+            )}
+            {renderInput(
+              "Phone Number",
+              formData.phone,
+              "phone",
+              "+20 10 1234 5678",
+              true,
+              "phone-pad",
             )}
             {renderInput(
               "Address Line 1",
               formData.addressLine1,
               "addressLine1",
-              "123 Main St",
+              "15 Tahrir Street",
             )}
             {renderInput(
               "Address Line 2",
               formData.addressLine2,
               "addressLine2",
-              "Apt 4B",
+              "Building 3, Floor 2",
               false,
             )}
 
             <View style={styles.row}>
               <View style={{ flex: 1, marginRight: 10 }}>
-                {renderInput("City", formData.city, "city", "New York")}
+                {renderInput("City", formData.city, "city", "Cairo")}
               </View>
               <View style={{ flex: 1 }}>
-                {renderInput("State", formData.state, "state", "NY")}
+                {renderInput(
+                  "Governorate",
+                  formData.state,
+                  "state",
+                  "Cairo",
+                )}
               </View>
             </View>
 
             <View style={styles.row}>
               <View style={{ flex: 1, marginRight: 10 }}>
                 {renderInput(
-                  "Zip Code",
+                  "Postal Code",
                   formData.zipCode,
                   "zipCode",
-                  "10001",
+                  "11511",
                   true,
                   "number-pad",
                 )}
               </View>
               <View style={{ flex: 1 }}>
-                {renderInput("Country", formData.country, "country", "USA")}
+                {renderInput("Country", formData.country, "country", "Egypt")}
               </View>
             </View>
-
-            {renderInput(
-              "Phone",
-              formData.phone,
-              "phone",
-              "+1 234 567 890",
-              false,
-              "phone-pad",
-            )}
 
             {/* Default Checkbox */}
             <TouchableOpacity

@@ -11,7 +11,7 @@ const BrandContext = createContext<BrandContextType | undefined>(undefined);
 
 export const BrandProvider = ({ children }: { children: ReactNode }) => {
   const [selectedBrandId, setSelectedBrandId] = useState<number | null>(null);
-  const [isManagementMode, setIsManagementMode] = useState<boolean>(true);
+  const [isManagementMode, setIsManagementMode] = useState<boolean>(false);
 
   return (
     <BrandContext.Provider

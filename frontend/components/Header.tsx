@@ -8,12 +8,10 @@ import {
   TextInput,
   Image,
   Animated,
-  Platform,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { useBrand } from "@/context/BrandContext";
 import { useThemeColors } from "@/hooks/useThemeColor";
 
 const LOGO_IMAGE = require("@/assets/images/local-sooq.png");
@@ -29,7 +27,7 @@ interface HeaderProps {
   userName?: string;
   userRole?: string;
   isGuest?: boolean;
-  onDashboardPress?: () => void;
+  showSearch?: boolean;
   searchQuery?: string;
   onSearchChange?: (text: string) => void;
   suggestions?: { text: string; type: "Product" | "Brand" }[];
@@ -40,7 +38,7 @@ const Header: React.FC<HeaderProps> = ({
   userName,
   userRole,
   isGuest = false,
-  onDashboardPress,
+  showSearch = false,
   searchQuery = "",
   onSearchChange,
   suggestions = [],
@@ -49,9 +47,7 @@ const Header: React.FC<HeaderProps> = ({
   const colors = useThemeColors();
   const { width } = useWindowDimensions();
   const router = useRouter();
-  const { isManagementMode } = useBrand();
   const isTablet = width > 768;
-  const isAdminOrOwner = userRole === "admin" || userRole === "brandOwner";
 
   const searchFocusAnim = useRef(new Animated.Value(0)).current;
 
@@ -85,7 +81,7 @@ const Header: React.FC<HeaderProps> = ({
 
   return (
     <View style={[styles.headerWrapper, { backgroundColor: colors.surface }]}>
-      {/* ── Gradient Accent Strip ──────────────────── */}
+      {/* Gradient Accent Strip */}
       <LinearGradient
         colors={[colors.primary, colors.accent]}
         start={{ x: 0, y: 0 }}
@@ -93,7 +89,7 @@ const Header: React.FC<HeaderProps> = ({
         style={styles.accentStrip}
       />
 
-      {/* ── Top Row: Logo + Actions ────────────────── */}
+      {/* Top Row: Logo + Actions */}
       <View style={[styles.topRow, isTablet && styles.topRowTablet]}>
         <Pressable
           onPress={() => router.push("/(tabs)")}
@@ -117,30 +113,6 @@ const Header: React.FC<HeaderProps> = ({
             </Pressable>
           ) : (
             <View style={styles.authActions}>
-              {isAdminOrOwner && (
-                <Pressable
-                  style={[
-                    styles.iconBtn,
-                    {
-                      backgroundColor: isManagementMode
-                        ? colors.primarySoft
-                        : colors.surfaceRaised,
-                    },
-                  ]}
-                  onPress={onDashboardPress}
-                >
-                  <Ionicons
-                    name={
-                      isManagementMode ? "speedometer" : "speedometer-outline"
-                    }
-                    size={18}
-                    color={
-                      isManagementMode ? colors.primary : colors.textSecondary
-                    }
-                  />
-                </Pressable>
-              )}
-
               <Pressable
                 style={[
                   styles.iconBtn,
@@ -157,7 +129,7 @@ const Header: React.FC<HeaderProps> = ({
 
               <Pressable
                 style={styles.avatarBtn}
-                onPress={() => router.push("/profile" as any)}
+                onPress={() => router.push("/(tabs)/profile" as any)}
               >
                 <LinearGradient
                   colors={[colors.primary, colors.accent]}
@@ -184,8 +156,8 @@ const Header: React.FC<HeaderProps> = ({
         </View>
       </View>
 
-      {/* ── Greeting Row ───────────────────────────── */}
-      {!isGuest && userName && (
+      {/* Greeting Row */}
+      {!isGuest && userName && !showSearch && (
         <View style={styles.greetingRow}>
           <Text style={[styles.greetingText, { color: colors.textTertiary }]}>
             {getGreeting()},{" "}
@@ -196,125 +168,127 @@ const Header: React.FC<HeaderProps> = ({
         </View>
       )}
 
-      {/* ── Search Section ─────────────────────────── */}
-      <View style={styles.searchSection}>
-        <Animated.View
-          style={[
-            styles.searchContainer,
-            {
-              backgroundColor: colors.surfaceRaised,
-              borderColor: searchBorderColor,
-              shadowColor: colors.primary,
-              shadowOpacity: searchShadowOpacity,
-            },
-          ]}
-        >
-          <View
+      {/* Search Section — only shown when showSearch is true */}
+      {showSearch && (
+        <View style={styles.searchSection}>
+          <Animated.View
             style={[
-              styles.searchIconWrap,
-              { backgroundColor: colors.primarySoft },
-            ]}
-          >
-            <Ionicons name="search" size={14} color={colors.primary} />
-          </View>
-          <TextInput
-            placeholder="Search products, brands..."
-            placeholderTextColor={colors.textTertiary}
-            style={[styles.searchInput, { color: colors.text }]}
-            value={searchQuery}
-            onChangeText={onSearchChange}
-            onFocus={handleSearchFocus}
-            onBlur={handleSearchBlur}
-            returnKeyType="search"
-          />
-          {searchQuery.length > 0 && (
-            <Pressable
-              onPress={() => onSearchChange?.("")}
-              style={[styles.clearBtn, { backgroundColor: colors.border }]}
-            >
-              <Ionicons name="close" size={12} color={colors.textSecondary} />
-            </Pressable>
-          )}
-        </Animated.View>
-
-        {/* ── Autocomplete Suggestions ────────────── */}
-        {suggestions.length > 0 && searchQuery.length > 0 && (
-          <View
-            style={[
-              styles.suggestionBox,
+              styles.searchContainer,
               {
-                backgroundColor: colors.surface,
-                borderColor: colors.border,
-                shadowColor: colors.cardShadow,
+                backgroundColor: colors.surfaceRaised,
+                borderColor: searchBorderColor,
+                shadowColor: colors.primary,
+                shadowOpacity: searchShadowOpacity,
               },
             ]}
           >
-            {suggestions.map((item, index) => (
+            <View
+              style={[
+                styles.searchIconWrap,
+                { backgroundColor: colors.primarySoft },
+              ]}
+            >
+              <Ionicons name="search" size={14} color={colors.primary} />
+            </View>
+            <TextInput
+              placeholder="Search products, brands..."
+              placeholderTextColor={colors.textTertiary}
+              style={[styles.searchInput, { color: colors.text }]}
+              value={searchQuery}
+              onChangeText={onSearchChange}
+              onFocus={handleSearchFocus}
+              onBlur={handleSearchBlur}
+              returnKeyType="search"
+            />
+            {searchQuery.length > 0 && (
               <Pressable
-                key={index}
-                style={({ pressed }) => [
-                  styles.suggestionItem,
-                  { borderBottomColor: colors.borderLight },
-                  pressed && { backgroundColor: colors.surfaceRaised },
-                ]}
-                onPress={() => onSuggestionPress?.(item.text)}
+                onPress={() => onSearchChange?.("")}
+                style={[styles.clearBtn, { backgroundColor: colors.border }]}
               >
-                <View style={styles.suggestionLeft}>
-                  <LinearGradient
-                    colors={
-                      item.type === "Brand"
-                        ? [colors.primary, colors.primaryMuted]
-                        : [colors.success, "#10B981"]
-                    }
-                    style={styles.suggestionIconCircle}
-                  >
-                    <Ionicons
-                      name={
-                        item.type === "Product"
-                          ? "cube-outline"
-                          : "storefront-outline"
-                      }
-                      size={13}
-                      color="#FFF"
-                    />
-                  </LinearGradient>
-                  <Text
-                    style={[styles.suggestionText, { color: colors.text }]}
-                    numberOfLines={1}
-                  >
-                    {item.text}
-                  </Text>
-                </View>
-                <View
-                  style={[
-                    styles.typeBadge,
-                    {
-                      backgroundColor:
-                        item.type === "Brand"
-                          ? colors.primarySoft
-                          : colors.successSoft,
-                    },
+                <Ionicons name="close" size={12} color={colors.textSecondary} />
+              </Pressable>
+            )}
+          </Animated.View>
+
+          {/* Autocomplete Suggestions */}
+          {suggestions.length > 0 && searchQuery.length > 0 && (
+            <View
+              style={[
+                styles.suggestionBox,
+                {
+                  backgroundColor: colors.surface,
+                  borderColor: colors.border,
+                  shadowColor: colors.cardShadow,
+                },
+              ]}
+            >
+              {suggestions.map((item, index) => (
+                <Pressable
+                  key={index}
+                  style={({ pressed }) => [
+                    styles.suggestionItem,
+                    { borderBottomColor: colors.borderLight },
+                    pressed && { backgroundColor: colors.surfaceRaised },
                   ]}
+                  onPress={() => onSuggestionPress?.(item.text)}
                 >
-                  <Text
+                  <View style={styles.suggestionLeft}>
+                    <LinearGradient
+                      colors={
+                        item.type === "Brand"
+                          ? [colors.primary, colors.primaryMuted]
+                          : [colors.success, "#10B981"]
+                      }
+                      style={styles.suggestionIconCircle}
+                    >
+                      <Ionicons
+                        name={
+                          item.type === "Product"
+                            ? "cube-outline"
+                            : "storefront-outline"
+                        }
+                        size={13}
+                        color="#FFF"
+                      />
+                    </LinearGradient>
+                    <Text
+                      style={[styles.suggestionText, { color: colors.text }]}
+                      numberOfLines={1}
+                    >
+                      {item.text}
+                    </Text>
+                  </View>
+                  <View
                     style={[
-                      styles.typeText,
+                      styles.typeBadge,
                       {
-                        color:
+                        backgroundColor:
                           item.type === "Brand"
-                            ? colors.primary
-                            : colors.success,
+                            ? colors.primarySoft
+                            : colors.successSoft,
                       },
                     ]}
                   >
-                    {item.type}
-                  </Text>
-                </View>
-              </Pressable>
-            ))}
-          </View>
-        )}
-      </View>
+                    <Text
+                      style={[
+                        styles.typeText,
+                        {
+                          color:
+                            item.type === "Brand"
+                              ? colors.primary
+                              : colors.success,
+                        },
+                      ]}
+                    >
+                      {item.type}
+                    </Text>
+                  </View>
+                </Pressable>
+              ))}
+            </View>
+          )}
+        </View>
+      )}
     </View>
   );
 };
@@ -324,14 +298,10 @@ const styles = StyleSheet.create({
     zIndex: 100,
     overflow: "visible",
   },
-
-  // ── Gradient Accent Strip ───────────────
   accentStrip: {
     height: 3,
     width: "100%",
   },
-
-  // ── Top Row ─────────────────────────────
   topRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -343,8 +313,6 @@ const styles = StyleSheet.create({
   topRowTablet: {
     paddingHorizontal: 28,
   },
-
-  // ── Logo ────────────────────────────────
   logoContainer: {
     width: 56,
     height: 40,
@@ -355,8 +323,6 @@ const styles = StyleSheet.create({
     width: "100%",
     height: "100%",
   },
-
-  // ── Right Actions ───────────────────────
   headerActions: {
     flexDirection: "row",
     alignItems: "center",
@@ -412,8 +378,6 @@ const styles = StyleSheet.create({
     color: "#FFF",
     letterSpacing: 0.3,
   },
-
-  // ── Greeting ────────────────────────────
   greetingRow: {
     paddingHorizontal: 20,
     paddingBottom: 2,
@@ -426,8 +390,6 @@ const styles = StyleSheet.create({
   greetingName: {
     fontWeight: "700",
   },
-
-  // ── Search Section ──────────────────────
   searchSection: {
     paddingHorizontal: 20,
     paddingTop: 10,
@@ -468,8 +430,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-
-  // ── Suggestions ─────────────────────────
   suggestionBox: {
     position: "absolute",
     top: 66,

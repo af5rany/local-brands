@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -10,7 +10,7 @@ import {
   Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/context/AuthContext";
 import getApiUrl from "@/helpers/getApiUrl";
@@ -43,38 +43,42 @@ const CheckoutScreen = () => {
     "primary",
   );
 
-  useEffect(() => {
-    const fetchData = async () => {
-      if (!token) return;
-      try {
-        const [cartRes, addrRes] = await Promise.all([
-          fetch(`${getApiUrl()}/cart`, {
-            headers: { Authorization: `Bearer ${token}` },
-          }),
-          fetch(`${getApiUrl()}/addresses`, {
-            headers: { Authorization: `Bearer ${token}` },
-          }),
-        ]);
+  const fetchData = useCallback(async () => {
+    if (!token) return;
+    try {
+      setLoading(true);
+      const [cartRes, addrRes] = await Promise.all([
+        fetch(`${getApiUrl()}/cart`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+        fetch(`${getApiUrl()}/addresses`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+      ]);
 
-        if (cartRes.ok) {
-          const cartData = await cartRes.json();
-          setCart(cartData);
-        }
-        if (addrRes.ok) {
-          const addrData = await addrRes.json();
-          setAddresses(addrData);
-          const defaultAddr = addrData.find((a: any) => a.isDefault);
-          if (defaultAddr) setSelectedAddressId(defaultAddr.id);
-          else if (addrData.length > 0) setSelectedAddressId(addrData[0].id);
-        }
-      } catch (error) {
-        console.error("Error fetching checkout data:", error);
-      } finally {
-        setLoading(false);
+      if (cartRes.ok) {
+        const cartData = await cartRes.json();
+        setCart(cartData);
       }
-    };
-    fetchData();
+      if (addrRes.ok) {
+        const addrData = await addrRes.json();
+        setAddresses(addrData);
+        const defaultAddr = addrData.find((a: any) => a.isDefault);
+        if (defaultAddr) setSelectedAddressId(defaultAddr.id);
+        else if (addrData.length > 0) setSelectedAddressId(addrData[0].id);
+      }
+    } catch (error) {
+      console.error("Error fetching checkout data:", error);
+    } finally {
+      setLoading(false);
+    }
   }, [token]);
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchData();
+    }, [fetchData]),
+  );
 
   const generateIdempotencyKey = () => {
     return "key_" + Math.random().toString(36).substr(2, 9) + "_" + Date.now();
