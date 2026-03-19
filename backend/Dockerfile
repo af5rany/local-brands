@@ -1,18 +1,26 @@
-# Development Dockerfile
-FROM node:22-alpine
+# ─── Stage 1: Build ───────────────────────────────────────────────────────────
+FROM node:22-alpine AS builder
 
-# Set working directory
 WORKDIR /usr/src/app
 
-# Copy package files and install dependencies
 COPY package*.json ./
-RUN npm install
+RUN npm ci
 
-# Copy the rest of the application code
 COPY . .
+RUN npm run build
 
-# Expose the application port
+# ─── Stage 2: Production ──────────────────────────────────────────────────────
+FROM node:22-alpine AS production
+
+WORKDIR /usr/src/app
+
+# Only copy production deps
+COPY package*.json ./
+RUN npm ci --only=production && npm cache clean --force
+
+# Copy compiled output from builder
+COPY --from=builder /usr/src/app/dist ./dist
+
 EXPOSE 5000
 
-# Start the application in development mode with hot reload
-CMD ["npm", "run", "start:dev"]
+CMD ["node", "dist/main"]

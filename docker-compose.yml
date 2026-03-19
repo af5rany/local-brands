@@ -10,14 +10,20 @@ services:
       POSTGRES_DB: ${DB_DATABASE}
     volumes:
       - pgdata:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
     networks:
       - app-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME} -d ${DB_DATABASE}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   backend:
     build:
       context: ./backend
+      dockerfile: Dockerfile          # the new production Dockerfile
+      target: production
+    restart: always
     env_file:
       - .env
       - ./backend/.env
@@ -25,14 +31,11 @@ services:
       - "5000:5000"
     depends_on:
       db:
-        condition: service_started
+        condition: service_healthy    # wait until Postgres is actually ready
     networks:
       - app-network
-    volumes:
-      - ./backend:/usr/src/app
-      - /usr/src/app/node_modules
     environment:
-      - NODE_ENV=development
+      - NODE_ENV=production
 
 networks:
   app-network:
