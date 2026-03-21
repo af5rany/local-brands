@@ -25,7 +25,7 @@ export class BrandsService {
     dto: GetBrandsDto,
     isAdmin: boolean = false,
   ): Promise<PaginatedResult<Brand>> {
-    const { page = 1, limit = 10, search, status } = dto;
+    const { page = 1, limit = 10, search, status, isSponsored, isNew } = dto;
 
     const queryBuilder = this.brandsRepository
       .createQueryBuilder('brand')
@@ -39,6 +39,8 @@ export class BrandsService {
         'brand.logo',
         'brand.location',
         'brand.status',
+        'brand.isSponsored',
+        'brand.isNew',
         'brand.createdAt',
         'brand.updatedAt',
         'brandUsers.id',
@@ -67,6 +69,14 @@ export class BrandsService {
       condition('brand.status = :defaultStatus', {
         defaultStatus: BrandStatus.ACTIVE,
       });
+    }
+
+    if (isSponsored !== undefined) {
+      queryBuilder.andWhere('brand.isSponsored = :isSponsored', { isSponsored });
+    }
+
+    if (isNew !== undefined) {
+      queryBuilder.andWhere('brand.isNew = :isNew', { isNew });
     }
 
     const [items, total] = await queryBuilder

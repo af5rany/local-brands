@@ -30,6 +30,9 @@ type CustomerDashboardProps = {
     categories?: string[];
     brands?: string[];
     sort?: string;
+    sortBy?: string;
+    priceMin?: number;
+    priceMax?: number;
   };
   onFilterPress?: (type: string, values: string[], labels?: string[]) => void;
   onFiltersApply?: (
@@ -85,7 +88,10 @@ const CustomerDashboard = ({
   const panelActiveFilters: PanelFilters = {
     categories: activeFilters.categories ?? [],
     brands: activeFilters.brands ?? [],
+    sortBy: activeFilters.sortBy ?? "createdAt",
     sortOrder: (activeFilters.sort ?? "DESC") as "ASC" | "DESC",
+    priceMin: activeFilters.priceMin ?? 0,
+    priceMax: activeFilters.priceMax ?? 500,
   };
 
   const handlePanelApply = (filters: PanelFilters) => {

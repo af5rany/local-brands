@@ -2,7 +2,6 @@ import React from "react";
 import {
   View,
   Text,
-  Image,
   StyleSheet,
   TouchableOpacity,
   Dimensions,
@@ -12,6 +11,7 @@ import { useThemeColor } from "@/hooks/useThemeColor";
 import { Ionicons } from "@expo/vector-icons";
 import { Product } from "@/types/product";
 import { ProductStatus } from "@/types/enums";
+import AutoSwipeImages from "@/components/AutoSwipeImages";
 
 // Full width for the card
 const { width } = Dimensions.get("window");
@@ -19,9 +19,11 @@ const { width } = Dimensions.get("window");
 interface ProductCardProps {
   product: Product;
   onEdit?: (productId: number) => void;
+  isWishlisted?: boolean;
+  onToggleWishlist?: (productId: number) => void;
 }
 
-const ProductCard: React.FC<ProductCardProps> = ({ product, onEdit }) => {
+const ProductCard: React.FC<ProductCardProps> = ({ product, onEdit, isWishlisted = false, onToggleWishlist }) => {
   const router = useRouter();
   // console.log("ProductCard rendered with product:", JSON.stringify(product));
   // Theme colors
@@ -56,15 +58,17 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onEdit }) => {
     router.push(`/products/${product.id}`);
   };
 
-  // Get the first variant's first image or fallback
-  const getProductImage = () => {
+  // Collect all images from all variants for the carousel
+  const getAllProductImages = (): string[] => {
+    const images: string[] = [];
     if (product.variants && product.variants.length > 0) {
-      const firstVariant = product.variants[0];
-      if (firstVariant.variantImages && firstVariant.variantImages.length > 0) {
-        return firstVariant.variantImages[0];
+      for (const variant of product.variants) {
+        if (variant.variantImages && variant.variantImages.length > 0) {
+          images.push(...variant.variantImages);
+        }
       }
     }
-    return null;
+    return images;
   };
 
   // Calculate discount percentage
@@ -87,7 +91,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onEdit }) => {
   const hasDiscount = product.salePrice && product.salePrice < product.price;
   const discountPercentage = getDiscountPercentage();
   const displayPrice = getDisplayPrice();
-  const productImage = getProductImage();
+  const productImages = getAllProductImages();
 
   const styles = StyleSheet.create({
     cardContainer: {
@@ -115,18 +119,6 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onEdit }) => {
       marginBottom: 16,
       overflow: "hidden",
       position: "relative",
-    },
-    productImage: {
-      width: "100%",
-      height: "100%",
-      resizeMode: "cover",
-    },
-    placeholderContainer: {
-      width: "100%",
-      height: "100%",
-      justifyContent: "center",
-      alignItems: "center",
-      backgroundColor: imageBackgroundColor,
     },
     typeTag: {
       position: "absolute",
@@ -337,19 +329,14 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onEdit }) => {
         <View style={styles.wave} />
       </View>
 
-      {/* Product Image */}
+      {/* Product Image Carousel */}
       <View style={styles.imageContainer}>
-        {productImage ? (
-          <Image source={{ uri: productImage }} style={styles.productImage} />
-        ) : (
-          <View style={styles.placeholderContainer}>
-            <Ionicons
-              name="image-outline"
-              size={40}
-              color={secondaryTextColor}
-            />
-          </View>
-        )}
+        <AutoSwipeImages
+          images={productImages}
+          width={width - 32 - 32}
+          height={width - 32 - 32}
+          borderRadius={16}
+        />
 
         {/* Product Type Tag */}
         {product.productType && (
@@ -385,8 +372,18 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onEdit }) => {
         </View>
 
         {/* Favorite Button */}
-        <TouchableOpacity style={styles.favoriteButton}>
-          <Ionicons name="heart-outline" size={16} color={textColor} />
+        <TouchableOpacity
+          style={styles.favoriteButton}
+          onPress={(e) => {
+            e.stopPropagation();
+            onToggleWishlist?.(product.id);
+          }}
+        >
+          <Ionicons
+            name={isWishlisted ? "heart" : "heart-outline"}
+            size={16}
+            color={isWishlisted ? "#ff4444" : textColor}
+          />
         </TouchableOpacity>
 
         {/* Edit Button for Management */}

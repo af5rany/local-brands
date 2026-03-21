@@ -478,6 +478,79 @@ const RegisterScreen = () => {
             )}
           </Pressable>
 
+          {/* Social Auth Divider */}
+          <View style={styles.socialDivider}>
+            <View
+              style={[
+                styles.socialDividerLine,
+                { backgroundColor: colors.border },
+              ]}
+            />
+            <Text
+              style={[
+                styles.socialDividerText,
+                { color: colors.textTertiary },
+              ]}
+            >
+              Or continue with
+            </Text>
+            <View
+              style={[
+                styles.socialDividerLine,
+                { backgroundColor: colors.border },
+              ]}
+            />
+          </View>
+
+          {/* Social Auth Buttons */}
+          <Pressable
+            style={[
+              styles.socialButton,
+              {
+                backgroundColor: colors.surfaceRaised,
+                borderColor: colors.border,
+              },
+            ]}
+            onPress={() =>
+              Alert.alert("Coming Soon", "Google sign-in coming soon")
+            }
+            disabled={loading}
+          >
+            <Ionicons
+              name="logo-google"
+              size={20}
+              color="#DB4437"
+              style={styles.socialIcon}
+            />
+            <Text style={[styles.socialButtonText, { color: colors.text }]}>
+              Continue with Google
+            </Text>
+          </Pressable>
+
+          <Pressable
+            style={[
+              styles.socialButton,
+              {
+                backgroundColor: "#1877F2",
+                borderColor: "#1877F2",
+              },
+            ]}
+            onPress={() =>
+              Alert.alert("Coming Soon", "Facebook sign-in coming soon")
+            }
+            disabled={loading}
+          >
+            <Ionicons
+              name="logo-facebook"
+              size={20}
+              color="#ffffff"
+              style={styles.socialIcon}
+            />
+            <Text style={[styles.socialButtonText, { color: "#ffffff" }]}>
+              Continue with Facebook
+            </Text>
+          </Pressable>
+
           {/* Footer */}
           <View style={styles.footer}>
             <Text style={[styles.footerText, { color: colors.textTertiary }]}>
@@ -589,6 +662,31 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   buttonText: { fontSize: 16, fontWeight: "700" },
+
+  // ── Social Auth ────────────────────────────
+  socialDivider: {
+    flexDirection: "row",
+    alignItems: "center",
+    width: "100%",
+    marginVertical: 24,
+  },
+  socialDividerLine: { flex: 1, height: 1 },
+  socialDividerText: { marginHorizontal: 16, fontSize: 13, fontWeight: "500" },
+  socialButton: {
+    paddingVertical: 15,
+    borderRadius: 14,
+    borderWidth: 1,
+    width: "100%",
+    alignItems: "center",
+    justifyContent: "center",
+    flexDirection: "row",
+    marginBottom: 12,
+  },
+  socialIcon: {
+    position: "absolute",
+    left: 16,
+  },
+  socialButtonText: { fontSize: 15, fontWeight: "600" },
 
   // ── Footer ────────────────────────────────
   footer: {

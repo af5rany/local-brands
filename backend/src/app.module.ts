@@ -14,6 +14,8 @@ import { StatisticsModule } from './statistics/statistics.module';
 import { MailModule } from './common/mail/mail.module';
 import { ReviewsModule } from './reviews/reviews.module';
 import { AddressesModule } from './addresses/addresses.module';
+import { ReferralsModule } from './referrals/referrals.module';
+import { NotificationsModule } from './notifications/notifications.module';
 
 @Module({
   imports: [
@@ -43,6 +45,8 @@ import { AddressesModule } from './addresses/addresses.module';
     MailModule,
     ReviewsModule,
     AddressesModule,
+    ReferralsModule,
+    NotificationsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

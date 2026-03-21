@@ -1044,3 +1044,27 @@ Pending, Approved, Rejected, Suspended, Inactive, Blocked, Active
 
 ### Address Types
 Shipping, Billing, Both
+
+
+add these
+feat(Header): Implement side menu with navigation and user actions
+
+- Added a side menu modal to the Header component with navigation options.
+- Integrated user authentication actions (login/logout) in the menu.
+- Included cart and notification counts in the Header.
+- Refactored Header styles for better layout and responsiveness.
+
+feat(ProductCard): Enhance product display with image carousel and wishlist functionality
+
+- Replaced static product image with an AutoSwipeImages component for better UX.
+- Added wishlist toggle functionality to the ProductCard.
+- Improved product image handling to support multiple images from variants.
+
+feat(hooks): Introduce useCartCount and useInfiniteScroll hooks
+
+- Created useCartCount hook to fetch and manage cart item count based on user authentication.
+- Developed useInfiniteScroll hook for handling pagination and data fetching in a more efficient manner.
+
+fix(useThemeColor): Hardcode theme to 'light' for consistent styling
+
+- Temporarily set theme color scheme to 'light' to avoid issues with dynamic color changes.

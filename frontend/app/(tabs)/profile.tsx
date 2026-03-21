@@ -130,6 +130,20 @@ const ProfileTab = () => {
       onPress: () => router.push("/profile/addresses"),
     },
     {
+      icon: "gift-outline",
+      label: "Invite Friends",
+      color: colors.success,
+      bg: colors.successSoft,
+      onPress: () => router.push("/referral" as any),
+    },
+    {
+      icon: "notifications-outline",
+      label: "Notifications",
+      color: colors.accent,
+      bg: colors.accentSoft,
+      onPress: () => router.push("/notifications" as any),
+    },
+    {
       icon: "settings-outline",
       label: "Settings",
       color: colors.textSecondary,

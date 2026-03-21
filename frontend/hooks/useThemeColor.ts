@@ -17,7 +17,8 @@ import { Colors, type ThemeColors, type ColorKey } from "@/constants/Colors";
  * This is the primary hook most components should use.
  */
 export function useThemeColors(): ThemeColors {
-  const scheme = useColorScheme() ?? "light";
+  // const scheme = useColorScheme() ?? "light";
+  const scheme = "light";
   return Colors[scheme];
 }
 
@@ -29,7 +30,8 @@ export function useThemeColor(
   props: { light?: string; dark?: string },
   colorName: ColorKey,
 ): string {
-  const scheme = useColorScheme() ?? "light";
+  // const scheme = useColorScheme() ?? "light";
+  const scheme = "light";
   const colorFromProps = props[scheme];
 
   if (colorFromProps) {

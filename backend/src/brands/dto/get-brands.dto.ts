@@ -2,11 +2,12 @@ import {
   IsOptional,
   IsString,
   IsNumber,
+  IsBoolean,
   Min,
   Max,
   IsEnum,
 } from 'class-validator';
-import { Type } from 'class-transformer';
+import { Type, Transform } from 'class-transformer';
 import { BrandStatus } from 'src/common/enums/brand.enum';
 
 export class GetBrandsDto {
@@ -48,4 +49,14 @@ export class GetBrandsDto {
   @IsOptional()
   @IsEnum(BrandStatus)
   status?: BrandStatus;
+
+  @IsOptional()
+  @Transform(({ value }) => value === 'true' || value === true)
+  @IsBoolean()
+  isSponsored?: boolean;
+
+  @IsOptional()
+  @Transform(({ value }) => value === 'true' || value === true)
+  @IsBoolean()
+  isNew?: boolean;
 }

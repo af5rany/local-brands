@@ -266,6 +266,68 @@ const LoginScreen = () => {
             )}
           </Pressable>
 
+          {/* Social Auth Divider */}
+          <View style={styles.divider}>
+            <View
+              style={[styles.dividerLine, { backgroundColor: colors.border }]}
+            />
+            <Text style={[styles.dividerText, { color: colors.textTertiary }]}>
+              Or continue with
+            </Text>
+            <View
+              style={[styles.dividerLine, { backgroundColor: colors.border }]}
+            />
+          </View>
+
+          {/* Social Auth Buttons */}
+          <Pressable
+            style={[
+              styles.socialButton,
+              {
+                backgroundColor: colors.surfaceRaised,
+                borderColor: colors.border,
+              },
+            ]}
+            onPress={() =>
+              Alert.alert("Coming Soon", "Google sign-in coming soon")
+            }
+            disabled={isAnyLoading}
+          >
+            <Ionicons
+              name="logo-google"
+              size={20}
+              color="#DB4437"
+              style={styles.socialIcon}
+            />
+            <Text style={[styles.socialButtonText, { color: colors.text }]}>
+              Continue with Google
+            </Text>
+          </Pressable>
+
+          <Pressable
+            style={[
+              styles.socialButton,
+              {
+                backgroundColor: "#1877F2",
+                borderColor: "#1877F2",
+              },
+            ]}
+            onPress={() =>
+              Alert.alert("Coming Soon", "Facebook sign-in coming soon")
+            }
+            disabled={isAnyLoading}
+          >
+            <Ionicons
+              name="logo-facebook"
+              size={20}
+              color="#ffffff"
+              style={styles.socialIcon}
+            />
+            <Text style={[styles.socialButtonText, { color: "#ffffff" }]}>
+              Continue with Facebook
+            </Text>
+          </Pressable>
+
           {/* Footer */}
           <View style={styles.footer}>
             <Text style={[styles.footerText, { color: colors.textTertiary }]}>
@@ -363,6 +425,23 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   guestButtonText: { fontSize: 15, fontWeight: "600" },
+
+  // ── Social Auth ────────────────────────────
+  socialButton: {
+    paddingVertical: 15,
+    borderRadius: 14,
+    borderWidth: 1,
+    width: "100%",
+    alignItems: "center",
+    justifyContent: "center",
+    flexDirection: "row",
+    marginBottom: 12,
+  },
+  socialIcon: {
+    position: "absolute",
+    left: 16,
+  },
+  socialButtonText: { fontSize: 15, fontWeight: "600" },
 
   // ── Footer ────────────────────────────────
   footer: {

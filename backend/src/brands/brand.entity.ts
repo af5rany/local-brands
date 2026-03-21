@@ -42,6 +42,12 @@ export class Brand {
   @Column({ unique: true, nullable: true })
   slug: string;
 
+  @Column('boolean', { default: false })
+  isSponsored: boolean;
+
+  @Column('boolean', { default: false })
+  isNew: boolean;
+
   @OneToMany(() => BrandUser, (brandUser) => brandUser.brand)
   brandUsers: BrandUser[];
 

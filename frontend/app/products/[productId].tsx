@@ -20,6 +20,7 @@ import { Ionicons } from "@expo/vector-icons";
 import getApiUrl from "@/helpers/getApiUrl";
 import { Product } from "@/types/product";
 import { useAuth } from "@/context/AuthContext";
+import { useToast } from "@/context/ToastContext";
 import ProductReviews from "@/components/ProductReviews";
 import { useThemeColors } from "@/hooks/useThemeColor";
 
@@ -32,6 +33,7 @@ const ProductDetailScreen = () => {
   const colors = useThemeColors();
   const { productId } = useLocalSearchParams();
   const { token, user } = useAuth();
+  const { showToast } = useToast();
   const userRole = user?.role || user?.userRole;
 
   const [product, setProduct] = useState<Product | null>(null);
@@ -41,6 +43,9 @@ const ProductDetailScreen = () => {
   const [isInWishlist, setIsInWishlist] = useState(false);
   const [wishlistLoading, setWishlistLoading] = useState(false);
   const [cartLoading, setCartLoading] = useState(false);
+  const [buyNowLoading, setBuyNowLoading] = useState(false);
+  const [notifyMeLoading, setNotifyMeLoading] = useState(false);
+  const [isSubscribedNotify, setIsSubscribedNotify] = useState(false);
 
   const scrollY = useRef(new Animated.Value(0)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -73,6 +78,20 @@ const ProductDetailScreen = () => {
               setIsInWishlist(
                 items.some((i: any) => i.product.id === Number(productId)),
               );
+            }
+          } catch (_) {}
+
+          // Check notify-me subscription status
+          try {
+            const nRes = await fetch(
+              `${getApiUrl()}/notifications/notify-me/check/${productId}`,
+              {
+                headers: { Authorization: `Bearer ${token}` },
+              },
+            );
+            if (nRes.ok) {
+              const nData = await nRes.json();
+              setIsSubscribedNotify(nData.subscribed === true);
             }
           } catch (_) {}
         }
@@ -167,6 +186,72 @@ const ProductDetailScreen = () => {
     }
   };
 
+  const buyNow = async () => {
+    if (!token) {
+      router.push("/auth/login");
+      return;
+    }
+    const v = product?.variants?.[selectedVariant];
+    if (!v || v.stock <= 0) {
+      Alert.alert("Unavailable", "This item is out of stock.");
+      return;
+    }
+    setBuyNowLoading(true);
+    try {
+      const res = await fetch(`${getApiUrl()}/cart/add`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          productId: Number(productId),
+          variantId: v.id,
+          quantity: 1,
+        }),
+      });
+      if (!res.ok) {
+        const d = await res.json();
+        throw new Error(d.message || "Failed");
+      }
+      router.push("/checkout");
+    } catch (e: any) {
+      Alert.alert("Error", e.message);
+    } finally {
+      setBuyNowLoading(false);
+    }
+  };
+
+  const handleNotifyMe = async () => {
+    if (!token) {
+      router.push("/auth/login");
+      return;
+    }
+    setNotifyMeLoading(true);
+    try {
+      const res = await fetch(
+        `${getApiUrl()}/notifications/notify-me/${productId}`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        },
+      );
+      if (!res.ok) throw new Error("Failed to subscribe");
+      setIsSubscribedNotify(true);
+      showToast(
+        "You'll be notified when this product is back in stock",
+        "success",
+      );
+    } catch (e: any) {
+      Alert.alert("Error", e.message);
+    } finally {
+      setNotifyMeLoading(false);
+    }
+  };
+
   const handleDelete = () => {
     Alert.alert("Delete Product", "This cannot be undone.", [
       { text: "Cancel", style: "cancel" },
@@ -242,6 +327,10 @@ const ProductDetailScreen = () => {
   const price =
     variant?.priceOverride || (hasDiscount ? product.salePrice : product.price);
   const inStock = (variant?.stock || 0) > 0;
+  const allOutOfStock =
+    product.stock === 0 ||
+    (product.variants.length > 0 &&
+      product.variants.every((v) => v.stock <= 0));
   const isOwnerOrAdmin =
     userRole === "admin" ||
     (user?.id &&
@@ -671,36 +760,142 @@ const ProductDetailScreen = () => {
           )}
         </TouchableOpacity>
 
-        <TouchableOpacity
-          style={[
-            styles.cartBtn,
-            { backgroundColor: inStock ? colors.primary : colors.textTertiary },
-          ]}
-          onPress={addToCart}
-          disabled={cartLoading || !inStock}
-          activeOpacity={0.85}
-        >
-          {cartLoading ? (
-            <ActivityIndicator size="small" color={colors.primaryForeground} />
-          ) : (
-            <>
-              <Ionicons
-                name="bag-add-outline"
-                size={18}
-                color={colors.primaryForeground}
-                style={{ marginRight: 8 }}
+        {allOutOfStock ? (
+          <TouchableOpacity
+            style={[
+              styles.notifyBtn,
+              {
+                backgroundColor: isSubscribedNotify
+                  ? colors.successSoft
+                  : colors.accent,
+                borderColor: isSubscribedNotify
+                  ? colors.success
+                  : colors.accent,
+              },
+            ]}
+            onPress={handleNotifyMe}
+            disabled={notifyMeLoading || isSubscribedNotify}
+            activeOpacity={0.85}
+          >
+            {notifyMeLoading ? (
+              <ActivityIndicator
+                size="small"
+                color={
+                  isSubscribedNotify
+                    ? colors.success
+                    : colors.accentForeground
+                }
               />
-              <Text
-                style={[
-                  styles.cartBtnText,
-                  { color: colors.primaryForeground },
-                ]}
-              >
-                {inStock ? "Add to Bag" : "Out of Stock"}
-              </Text>
-            </>
-          )}
-        </TouchableOpacity>
+            ) : (
+              <>
+                <Ionicons
+                  name={
+                    isSubscribedNotify
+                      ? "checkmark-circle"
+                      : "notifications-outline"
+                  }
+                  size={18}
+                  color={
+                    isSubscribedNotify
+                      ? colors.success
+                      : colors.accentForeground
+                  }
+                  style={{ marginRight: 8 }}
+                />
+                <Text
+                  style={[
+                    styles.cartBtnText,
+                    {
+                      color: isSubscribedNotify
+                        ? colors.success
+                        : colors.accentForeground,
+                    },
+                  ]}
+                >
+                  {isSubscribedNotify ? "Subscribed" : "Notify Me"}
+                </Text>
+              </>
+            )}
+          </TouchableOpacity>
+        ) : (
+          <View style={styles.buyRow}>
+            <TouchableOpacity
+              style={[
+                styles.cartBtn,
+                {
+                  backgroundColor: inStock
+                    ? colors.primary
+                    : colors.textTertiary,
+                },
+              ]}
+              onPress={addToCart}
+              disabled={cartLoading || !inStock}
+              activeOpacity={0.85}
+            >
+              {cartLoading ? (
+                <ActivityIndicator
+                  size="small"
+                  color={colors.primaryForeground}
+                />
+              ) : (
+                <>
+                  <Ionicons
+                    name="bag-add-outline"
+                    size={18}
+                    color={colors.primaryForeground}
+                    style={{ marginRight: 8 }}
+                  />
+                  <Text
+                    style={[
+                      styles.cartBtnText,
+                      { color: colors.primaryForeground },
+                    ]}
+                  >
+                    Add to Bag
+                  </Text>
+                </>
+              )}
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.buyNowBtn,
+                {
+                  backgroundColor: inStock
+                    ? colors.accent
+                    : colors.textTertiary,
+                },
+              ]}
+              onPress={buyNow}
+              disabled={buyNowLoading || !inStock}
+              activeOpacity={0.85}
+            >
+              {buyNowLoading ? (
+                <ActivityIndicator
+                  size="small"
+                  color={colors.accentForeground}
+                />
+              ) : (
+                <>
+                  <Ionicons
+                    name="flash"
+                    size={18}
+                    color={colors.accentForeground}
+                    style={{ marginRight: 8 }}
+                  />
+                  <Text
+                    style={[
+                      styles.cartBtnText,
+                      { color: colors.accentForeground },
+                    ]}
+                  >
+                    Buy Now
+                  </Text>
+                </>
+              )}
+            </TouchableOpacity>
+          </View>
+        )}
       </View>
     </View>
   );
@@ -971,6 +1166,28 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   cartBtnText: { fontSize: 15, fontWeight: "700", letterSpacing: 0.3 },
+  buyRow: {
+    flex: 1,
+    flexDirection: "row",
+    gap: 10,
+  },
+  buyNowBtn: {
+    flex: 1,
+    height: 54,
+    borderRadius: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  notifyBtn: {
+    flex: 1,
+    height: 54,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+  },
 });
 
 export default ProductDetailScreen;

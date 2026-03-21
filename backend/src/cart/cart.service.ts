@@ -259,11 +259,11 @@ export class CartService {
     const newQuantity = cartItem ? cartItem.quantity + quantity : quantity;
 
     // Validate stock
-    const availableStock = variant
-      ? variant.stock
-      : product.isInStock()
-        ? 999
-        : 0; // Fallback if no variants
+    // const availableStock = variant
+    //   ? variant.stock
+    //   : product.isInStock()
+    //     ? 999
+    //     : 0; // Fallback if no variants
     // Note: product.isInStock() logic in entity might need update to support table variants
 
     if (variant && variant.stock < newQuantity) {

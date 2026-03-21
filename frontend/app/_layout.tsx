@@ -9,7 +9,7 @@ import { useEffect } from "react";
 
 // Orders, wishlist, and profile are now tabs — they handle guest state internally.
 // Only standalone stack routes that hard-require auth are listed here.
-const PROTECTED_SEGMENTS = ['cart', 'checkout', 'users', 'manage'];
+const PROTECTED_SEGMENTS = ['checkout', 'users', 'manage', 'orders', 'wishlist', 'referral'];
 
 // This component will handle the conditional routing
 function RootLayoutNav() {
@@ -70,6 +70,11 @@ function RootLayoutNav() {
       {/* Orders */}
       <Stack.Screen name="orders/index" options={{ title: "My Orders", headerBackTitle: "Home" }} />
       <Stack.Screen name="orders/[orderId]" options={{ headerShown: false, title: "Order Details" }} />
+
+      <Stack.Screen name="category/[type]" options={{ headerShown: false, title: "Category" }} />
+
+      <Stack.Screen name="referral/index" options={{ headerShown: false, title: "Invite Friends" }} />
+      <Stack.Screen name="notifications/index" options={{ headerShown: false, title: "Notifications" }} />
 
       <Stack.Screen name="wishlist/index" options={{ title: "Wishlist", headerBackTitle: "Home" }} />
       <Stack.Screen name="users/index" options={{ headerShown: false, title: "Users" }} />
