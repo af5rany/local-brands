@@ -28,6 +28,8 @@ import {
   GestureHandlerRootView,
 } from "react-native-gesture-handler";
 import { useThemeColors } from "@/hooks/useThemeColor";
+import { useAuth } from "@/context/AuthContext";
+import getApiUrl from "@/helpers/getApiUrl";
 
 const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 const MAX_TRANSLATE_Y = -SCREEN_HEIGHT + 60;
@@ -44,6 +46,8 @@ export interface PanelFilters {
   sortOrder: "ASC" | "DESC";
   priceMin: number;
   priceMax: number;
+  inStockOnly: boolean;
+  followedBrandsOnly: boolean;
 }
 
 interface FilterPanelProps {
@@ -113,7 +117,7 @@ const PriceRangeSlider = ({
   onValuesChange: (low: number, high: number) => void;
   colors: any;
 }) => {
-  const [trackWidth, setTrackWidth] = React.useState(0);
+  const trackWidth = useSharedValue(0);
 
   const lowValue = useSharedValue(min);
   const highValue = useSharedValue(max);
@@ -126,13 +130,15 @@ const PriceRangeSlider = ({
   }, [min, max]);
 
   const valueToPosition = (value: number) => {
-    if (trackWidth === 0) return 0;
-    return ((value - PRICE_MIN) / (PRICE_MAX - PRICE_MIN)) * trackWidth;
+    'worklet';
+    if (trackWidth.value === 0) return 0;
+    return ((value - PRICE_MIN) / (PRICE_MAX - PRICE_MIN)) * trackWidth.value;
   };
 
   const positionToValue = (pos: number) => {
-    if (trackWidth === 0) return PRICE_MIN;
-    const raw = PRICE_MIN + (pos / trackWidth) * (PRICE_MAX - PRICE_MIN);
+    'worklet';
+    if (trackWidth.value === 0) return PRICE_MIN;
+    const raw = PRICE_MIN + (pos / trackWidth.value) * (PRICE_MAX - PRICE_MIN);
     return Math.round(Math.max(PRICE_MIN, Math.min(PRICE_MAX, raw)));
   };
 
@@ -158,7 +164,7 @@ const PriceRangeSlider = ({
     })
     .onUpdate((e) => {
       const newPos = Math.min(
-        trackWidth,
+        trackWidth.value,
         Math.max(highContext.value + e.translationX, valueToPosition(lowValue.value) + 10),
       );
       const newVal = positionToValue(newPos);
@@ -169,17 +175,17 @@ const PriceRangeSlider = ({
     });
 
   const fillStyle = useAnimatedStyle(() => ({
-    left: ((lowValue.value - PRICE_MIN) / (PRICE_MAX - PRICE_MIN)) * trackWidth,
+    left: ((lowValue.value - PRICE_MIN) / (PRICE_MAX - PRICE_MIN)) * trackWidth.value,
     right:
-      trackWidth -
-      ((highValue.value - PRICE_MIN) / (PRICE_MAX - PRICE_MIN)) * trackWidth,
+      trackWidth.value -
+      ((highValue.value - PRICE_MIN) / (PRICE_MAX - PRICE_MIN)) * trackWidth.value,
   }));
 
   const lowThumbStyle = useAnimatedStyle(() => ({
     transform: [
       {
         translateX:
-          ((lowValue.value - PRICE_MIN) / (PRICE_MAX - PRICE_MIN)) * trackWidth -
+          ((lowValue.value - PRICE_MIN) / (PRICE_MAX - PRICE_MIN)) * trackWidth.value -
           THUMB_SIZE / 2,
       },
     ],
@@ -189,18 +195,14 @@ const PriceRangeSlider = ({
     transform: [
       {
         translateX:
-          ((highValue.value - PRICE_MIN) / (PRICE_MAX - PRICE_MIN)) * trackWidth -
+          ((highValue.value - PRICE_MIN) / (PRICE_MAX - PRICE_MIN)) * trackWidth.value -
           THUMB_SIZE / 2,
       },
     ],
   }));
 
-  const lowLabelStyle = useAnimatedStyle(() => ({
-    opacity: 1,
-  }));
-
   const onLayout = (e: LayoutChangeEvent) => {
-    setTrackWidth(e.nativeEvent.layout.width);
+    trackWidth.value = e.nativeEvent.layout.width;
   };
 
   return (
@@ -322,6 +324,8 @@ const FilterPanel: React.FC<FilterPanelProps> = ({
   onApply,
 }) => {
   const colors = useThemeColors();
+  const { token } = useAuth();
+  const [followedBrandIds, setFollowedBrandIds] = React.useState<string[]>([]);
   const [pendingCategories, setPendingCategories] = React.useState<string[]>(
     [],
   );
@@ -330,6 +334,8 @@ const FilterPanel: React.FC<FilterPanelProps> = ({
     React.useState<SortOptionKey>("newest");
   const [pendingPriceMin, setPendingPriceMin] = React.useState(PRICE_MIN);
   const [pendingPriceMax, setPendingPriceMax] = React.useState(PRICE_MAX);
+  const [pendingInStockOnly, setPendingInStockOnly] = React.useState(false);
+  const [pendingFollowedOnly, setPendingFollowedOnly] = React.useState(false);
   const [brandSearch, setBrandSearch] = React.useState("");
   const [showModal, setShowModal] = React.useState(false);
 
@@ -355,9 +361,25 @@ const FilterPanel: React.FC<FilterPanelProps> = ({
       );
       setPendingPriceMin(activeFilters.priceMin);
       setPendingPriceMax(activeFilters.priceMax);
+      setPendingInStockOnly(activeFilters.inStockOnly);
+      setPendingFollowedOnly(activeFilters.followedBrandsOnly);
       setBrandSearch("");
       setShowModal(true);
       scrollTo(SNAP_HALF);
+
+      // Fetch fresh followed brand IDs every time panel opens
+      if (token) {
+        fetch(`${getApiUrl()}/brands/user/followed`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+          .then((res) => res.ok ? res.json() : [])
+          .then((data) => {
+            setFollowedBrandIds(Array.isArray(data) ? data.map((b: any) => String(b.id)) : []);
+          })
+          .catch(() => setFollowedBrandIds([]));
+      } else {
+        setFollowedBrandIds([]);
+      }
     } else {
       translateY.value = withTiming(0, timingConfig, (finished) => {
         if (finished) runOnJS(setShowModal)(false);
@@ -419,7 +441,9 @@ const FilterPanel: React.FC<FilterPanelProps> = ({
     (pendingCategories.length > 0 ? 1 : 0) +
     (pendingBrands.length > 0 ? 1 : 0) +
     (pendingSortKey !== "newest" ? 1 : 0) +
-    (pendingPriceMin > PRICE_MIN || pendingPriceMax < PRICE_MAX ? 1 : 0);
+    (pendingPriceMin > PRICE_MIN || pendingPriceMax < PRICE_MAX ? 1 : 0) +
+    (pendingInStockOnly ? 1 : 0) +
+    (pendingFollowedOnly ? 1 : 0);
 
   const filteredBrands = brandOptions.filter((b) =>
     b.name.toLowerCase().includes(brandSearch.toLowerCase()),
@@ -429,11 +453,13 @@ const FilterPanel: React.FC<FilterPanelProps> = ({
     const sortOpt = SORT_OPTIONS.find((o) => o.key === pendingSortKey)!;
     onApply({
       categories: pendingCategories,
-      brands: pendingBrands,
+      brands: pendingFollowedOnly ? followedBrandIds : pendingBrands,
       sortBy: sortOpt.sortBy,
       sortOrder: sortOpt.sortOrder,
       priceMin: pendingPriceMin,
       priceMax: pendingPriceMax,
+      inStockOnly: pendingInStockOnly,
+      followedBrandsOnly: pendingFollowedOnly,
     });
     onClose();
   };
@@ -444,6 +470,8 @@ const FilterPanel: React.FC<FilterPanelProps> = ({
     setPendingSortKey("newest");
     setPendingPriceMin(PRICE_MIN);
     setPendingPriceMax(PRICE_MAX);
+    setPendingInStockOnly(false);
+    setPendingFollowedOnly(false);
   };
 
   const toggleCategory = (cat: string) =>
@@ -661,6 +689,112 @@ const FilterPanel: React.FC<FilterPanelProps> = ({
                   colors={colors}
                 />
               </View>
+
+              <View
+                style={[
+                  styles.divider,
+                  { backgroundColor: colors.borderLight },
+                ]}
+              />
+
+              {/* ── Available only ── */}
+              <TouchableOpacity
+                style={styles.section}
+                onPress={() => setPendingInStockOnly((prev) => !prev)}
+                activeOpacity={0.7}
+              >
+                <View style={styles.toggleRow}>
+                  <View style={styles.toggleRowLeft}>
+                    <Ionicons
+                      name="cube-outline"
+                      size={18}
+                      color={pendingInStockOnly ? colors.primary : colors.textSecondary}
+                    />
+                    <Text
+                      style={[
+                        styles.toggleRowLabel,
+                        { color: pendingInStockOnly ? colors.primary : colors.text },
+                        pendingInStockOnly && styles.boldText,
+                      ]}
+                    >
+                      Available products only
+                    </Text>
+                  </View>
+                  <View
+                    style={[
+                      styles.toggle,
+                      {
+                        backgroundColor: pendingInStockOnly
+                          ? colors.primary
+                          : colors.borderLight,
+                      },
+                    ]}
+                  >
+                    <View
+                      style={[
+                        styles.toggleKnob,
+                        {
+                          backgroundColor: colors.surface,
+                          transform: [{ translateX: pendingInStockOnly ? 16 : 0 }],
+                        },
+                      ]}
+                    />
+                  </View>
+                </View>
+              </TouchableOpacity>
+
+              <View
+                style={[
+                  styles.divider,
+                  { backgroundColor: colors.borderLight },
+                ]}
+              />
+
+              {/* ── Followed Brands Only ── */}
+              <TouchableOpacity
+                style={styles.section}
+                onPress={() => setPendingFollowedOnly((prev) => !prev)}
+                activeOpacity={0.7}
+              >
+                <View style={styles.toggleRow}>
+                  <View style={styles.toggleRowLeft}>
+                    <Ionicons
+                      name="heart-outline"
+                      size={18}
+                      color={pendingFollowedOnly ? colors.primary : colors.textSecondary}
+                    />
+                    <Text
+                      style={[
+                        styles.toggleRowLabel,
+                        { color: pendingFollowedOnly ? colors.primary : colors.text },
+                        pendingFollowedOnly && styles.boldText,
+                      ]}
+                    >
+                      Followed brands only
+                    </Text>
+                  </View>
+                  <View
+                    style={[
+                      styles.toggle,
+                      {
+                        backgroundColor: pendingFollowedOnly
+                          ? colors.primary
+                          : colors.borderLight,
+                      },
+                    ]}
+                  >
+                    <View
+                      style={[
+                        styles.toggleKnob,
+                        {
+                          backgroundColor: colors.surface,
+                          transform: [{ translateX: pendingFollowedOnly ? 16 : 0 }],
+                        },
+                      ]}
+                    />
+                  </View>
+                </View>
+              </TouchableOpacity>
 
               <View
                 style={[
@@ -932,6 +1066,34 @@ const styles = StyleSheet.create({
   },
   divider: { height: 0.5, marginHorizontal: 16 },
   boldText: { fontWeight: "700" },
+  // Toggle row
+  toggleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  toggleRowLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  toggleRowLabel: { fontSize: 14, fontWeight: "500" },
+  toggle: {
+    width: 44,
+    height: 28,
+    borderRadius: 14,
+    padding: 4,
+  },
+  toggleKnob: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.15,
+    shadowRadius: 2,
+    elevation: 2,
+  },
   // Sort — 2x2 grid
   sortGrid: { flexDirection: "row", gap: 10 },
   sortCard: {

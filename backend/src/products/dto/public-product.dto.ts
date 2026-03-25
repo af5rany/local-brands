@@ -41,6 +41,7 @@ export class PublicProductDto {
   isAvailable: boolean;
   inStock: boolean;
   isLowStock: boolean;
+  hasVariants: boolean;
   variants: PublicVariantDto[];
   rating: number;
   reviewCount: number;

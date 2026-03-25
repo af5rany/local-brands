@@ -40,6 +40,10 @@ export class CreateProductVariantDto {
   @IsNumber()
   @Min(0)
   stock: number;
+
+  @IsOptional()
+  @IsNumber()
+  priceOverride?: number;
 }
 
 export class CreateProductDto {
@@ -134,10 +138,20 @@ export class CreateProductDto {
   @IsNumber()
   brandId: number;
 
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  stock?: number;
+
+  @IsOptional()
   @IsArray()
-  @ArrayMinSize(1)
-  @ArrayMaxSize(5)
+  @IsString({ each: true })
+  images?: string[];
+
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(20)
   @ValidateNested({ each: true })
   @Type(() => CreateProductVariantDto)
-  variants: CreateProductVariantDto[];
+  variants?: CreateProductVariantDto[];
 }

@@ -12,30 +12,27 @@ import {
   RefreshControl,
   Pressable,
   ViewToken,
+  Animated,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { LinearGradient } from "expo-linear-gradient";
 import { useFocusEffect, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/context/ToastContext";
-import Header from "@/components/Header";
 import getApiUrl from "@/helpers/getApiUrl";
 import { Brand } from "@/types/brand";
 import { Product } from "@/types/product";
 import { useThemeColors } from "@/hooks/useThemeColor";
-import { useCartCount } from "@/hooks/useCartCount";
 
 // ── Categories ──────────────────────────────────────────────
 const CATEGORIES = [
-  { label: "Shoes", type: "Shoes", icon: "footsteps-outline", colors: ["#667eea", "#764ba2"] as [string, string] },
-  { label: "Shirts", type: "Shirts", icon: "shirt-outline", colors: ["#4facfe", "#00f2fe"] as [string, string] },
-  { label: "Hoodies", type: "Hoodies", icon: "shirt-outline", colors: ["#f093fb", "#f5576c"] as [string, string] },
-  { label: "Pants", type: "Pants", icon: "cut-outline", colors: ["#43e97b", "#38f9d7"] as [string, string] },
-  { label: "Jackets", type: "Jackets", icon: "rainy-outline", colors: ["#a18cd1", "#fbc2eb"] as [string, string] },
-  { label: "Bags", type: "Bags", icon: "bag-handle-outline", colors: ["#fa709a", "#fee140"] as [string, string] },
-  { label: "Accessories", type: "Accessories", icon: "watch-outline", colors: ["#ff9a9e", "#fecfef"] as [string, string] },
-  { label: "Hats", type: "Hats", icon: "sunny-outline", colors: ["#fbc2eb", "#a6c1ee"] as [string, string] },
+  { label: "Shoes", type: "Shoes", icon: "footsteps-outline" },
+  { label: "Shirts", type: "Shirts", icon: "shirt-outline" },
+  { label: "Hoodies", type: "Hoodies", icon: "shirt-outline" },
+  { label: "Pants", type: "Pants", icon: "cut-outline" },
+  { label: "Jackets", type: "Jackets", icon: "rainy-outline" },
+  { label: "Bags", type: "Bags", icon: "bag-handle-outline" },
+  { label: "Accessories", type: "Accessories", icon: "watch-outline" },
+  { label: "Hats", type: "Hats", icon: "sunny-outline" },
 ];
 
 // ── Promotional Banners ─────────────────────────────────────
@@ -45,7 +42,6 @@ const PROMO_BANNERS = [
     title: "New Season\nCollection",
     subtitle: "Up to 40% off on selected brands",
     buttonText: "Shop Now",
-    colors: ["#4338CA", "#6366F1"] as [string, string],
     icon: "sparkles",
   },
   {
@@ -53,7 +49,6 @@ const PROMO_BANNERS = [
     title: "Flash Sale\nThis Weekend",
     subtitle: "Don't miss exclusive deals",
     buttonText: "View Deals",
-    colors: ["#DC2626", "#F97316"] as [string, string],
     icon: "flash",
   },
   {
@@ -61,7 +56,6 @@ const PROMO_BANNERS = [
     title: "Free Shipping\nOrders $50+",
     subtitle: "Limited time offer",
     buttonText: "Start Shopping",
-    colors: ["#059669", "#10B981"] as [string, string],
     icon: "car",
   },
 ];
@@ -75,7 +69,6 @@ const HomeScreen = () => {
   const { width } = useWindowDimensions();
   const isTablet = width > 768;
 
-  const { count: cartItemCount, refresh: refreshCartCount } = useCartCount();
 
   // Banner auto-scroll
   const bannerRef = useRef<FlatList>(null);
@@ -85,9 +78,11 @@ const HomeScreen = () => {
   const [stats, setStats] = useState<Record<string, number>>({});
   const [newBrands, setNewBrands] = useState<Brand[]>([]);
   const [sponsoredBrands, setSponsoredBrands] = useState<Brand[]>([]);
+  const [featuredBrands, setFeaturedBrands] = useState<Brand[]>([]);
   const [dealProducts, setDealProducts] = useState<Product[]>([]);
   const [newArrivals, setNewArrivals] = useState<Product[]>([]);
-  const [notificationCount, setNotificationCount] = useState(0);
+  const [trendingProducts, setTrendingProducts] = useState<Product[]>([]);
+  const [bestsellers, setBestsellers] = useState<Product[]>([]);
   const [loadingData, setLoadingData] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const hasLoadedOnce = useRef(false);
@@ -120,23 +115,6 @@ const HomeScreen = () => {
   }, []);
 
   // ── Data fetching ──────────────────────────────────────────
-  const fetchNotificationCount = async () => {
-    if (!token) {
-      setNotificationCount(0);
-      return;
-    }
-    try {
-      const res = await fetch(`${getApiUrl()}/notifications/unread-count`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setNotificationCount(data.count || 0);
-      }
-    } catch {
-      setNotificationCount(0);
-    }
-  };
 
   const fetchHomeData = async () => {
     if (!hasLoadedOnce.current) setLoadingData(true);
@@ -161,25 +139,31 @@ const HomeScreen = () => {
     try {
       const headers = { ...(token && { Authorization: `Bearer ${token}` }) };
 
-      const [newBrandsRes, sponsoredBrandsRes, productsRes, dealsRes] =
-        await Promise.all([
-          fetch(
-            `${apiUrl}/brands?limit=8&sortBy=createdAt&sortOrder=DESC`,
-            { headers },
-          ),
-          fetch(
-            `${apiUrl}/brands?limit=8&isSponsored=true`,
-            { headers },
-          ),
-          fetch(
-            `${apiUrl}/products?limit=8&status=published&sortBy=createdAt&sortOrder=DESC`,
-            { headers },
-          ),
-          fetch(
-            `${apiUrl}/products?limit=20&status=published&sortBy=price&sortOrder=ASC`,
-            { headers },
-          ),
-        ]);
+      const [
+        newBrandsRes,
+        sponsoredBrandsRes,
+        featuredBrandsRes,
+        productsRes,
+        dealsRes,
+        trendingRes,
+        bestsellersRes,
+      ] = await Promise.all([
+        fetch(`${apiUrl}/brands?limit=8&sortBy=createdAt&sortOrder=DESC`, {
+          headers,
+        }),
+        fetch(`${apiUrl}/brands?limit=8&isSponsored=true`, { headers }),
+        fetch(`${apiUrl}/brands?limit=8&isFeatured=true`, { headers }),
+        fetch(
+          `${apiUrl}/products?limit=8&status=published&sortBy=createdAt&sortOrder=DESC`,
+          { headers },
+        ),
+        fetch(
+          `${apiUrl}/products?limit=20&status=published&sortBy=price&sortOrder=ASC`,
+          { headers },
+        ),
+        fetch(`${apiUrl}/products/trending?limit=10`, { headers }),
+        fetch(`${apiUrl}/products/bestsellers?limit=10`, { headers }),
+      ]);
 
       if (newBrandsRes.ok) {
         const data = await newBrandsRes.json();
@@ -188,6 +172,10 @@ const HomeScreen = () => {
       if (sponsoredBrandsRes.ok) {
         const data = await sponsoredBrandsRes.json();
         setSponsoredBrands(data.items || []);
+      }
+      if (featuredBrandsRes.ok) {
+        const data = await featuredBrandsRes.json();
+        setFeaturedBrands(data.items || []);
       }
       if (productsRes.ok) {
         const data = await productsRes.json();
@@ -201,6 +189,14 @@ const HomeScreen = () => {
         );
         setDealProducts(discounted.slice(0, 10));
       }
+      if (trendingRes.ok) {
+        const data = await trendingRes.json();
+        setTrendingProducts(Array.isArray(data) ? data : []);
+      }
+      if (bestsellersRes.ok) {
+        const data = await bestsellersRes.json();
+        setBestsellers(Array.isArray(data) ? data : []);
+      }
     } catch (error) {
       console.error("Error fetching home data:", error);
     } finally {
@@ -212,16 +208,12 @@ const HomeScreen = () => {
 
   useEffect(() => {
     fetchHomeData();
-    fetchNotificationCount();
-    refreshCartCount();
   }, [token]);
 
   useFocusEffect(
     useCallback(() => {
       if (hasLoadedOnce.current) {
         fetchHomeData();
-        fetchNotificationCount();
-        refreshCartCount();
       }
     }, [token]),
   );
@@ -229,8 +221,6 @@ const HomeScreen = () => {
   const onRefresh = () => {
     setRefreshing(true);
     fetchHomeData();
-    fetchNotificationCount();
-    refreshCartCount();
   };
 
   // ── Loading state ──────────────────────────────────────────
@@ -253,25 +243,18 @@ const HomeScreen = () => {
 
   const renderBrandCard = (
     item: Brand,
-    badgeType?: "NEW" | "SPONSORED",
+    badgeType?: "NEW" | "SPONSORED" | "FEATURED",
   ) => {
-    const gradientColors: [string, string] =
-      badgeType === "SPONSORED"
-        ? [colors.accent, "#FF9500"]
-        : [colors.primary, colors.primaryMuted];
-
     return (
       <TouchableOpacity
-        style={[styles.brandCard, { backgroundColor: colors.surface }]}
+        style={[
+          styles.brandCard,
+          { backgroundColor: colors.surface, borderColor: colors.border },
+        ]}
         onPress={() => router.push(`/brands/${item.id}` as any)}
         activeOpacity={0.7}
       >
-        <LinearGradient
-          colors={gradientColors}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.brandLogoRing}
-        >
+        <View style={[styles.brandLogoRing, { borderColor: colors.text }]}>
           {item.logo ? (
             <Image
               source={{ uri: item.logo }}
@@ -291,19 +274,15 @@ const HomeScreen = () => {
               />
             </View>
           )}
-        </LinearGradient>
+        </View>
 
         {badgeType && (
-          <View
-            style={[
-              styles.brandBadge,
-              {
-                backgroundColor:
-                  badgeType === "NEW" ? colors.success : colors.accent,
-              },
-            ]}
-          >
-            <Text style={styles.brandBadgeText}>{badgeType}</Text>
+          <View style={[styles.brandBadge, { backgroundColor: colors.text }]}>
+            <Text
+              style={[styles.brandBadgeText, { color: colors.textInverse }]}
+            >
+              {badgeType}
+            </Text>
           </View>
         )}
 
@@ -336,7 +315,7 @@ const HomeScreen = () => {
   const renderProductCard = (item: Product, showDealBadge = false) => {
     const firstVariant = item.variants?.[0];
     const image =
-      firstVariant?.images?.[0] || firstVariant?.variantImages?.[0] || "";
+      item.mainImage || firstVariant?.images?.[0] || firstVariant?.variantImages?.[0] || item.images?.[0] || "";
     const hasDiscount = item.salePrice && item.salePrice < item.price;
     const discountPercent = hasDiscount
       ? Math.round(((item.price - item.salePrice!) / item.price) * 100)
@@ -355,22 +334,42 @@ const HomeScreen = () => {
         activeOpacity={0.7}
       >
         <View style={styles.productImageWrapper}>
-          <Image
-            source={{ uri: image }}
-            style={[
-              styles.productImage,
-              { backgroundColor: colors.surfaceRaised },
-            ]}
-          />
-          {hasDiscount && (
-            <LinearGradient
-              colors={["#E11D48", "#F43F5E"]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.discountBadge}
+          {image ? (
+            <Image
+              source={{ uri: image }}
+              style={[
+                styles.productImage,
+                { backgroundColor: colors.surfaceRaised },
+              ]}
+            />
+          ) : (
+            <View
+              style={[
+                styles.productImage,
+                {
+                  backgroundColor: colors.surfaceRaised,
+                  alignItems: "center",
+                  justifyContent: "center",
+                },
+              ]}
             >
-              <Text style={styles.discountText}>{discountPercent}% OFF</Text>
-            </LinearGradient>
+              <Ionicons
+                name="image-outline"
+                size={32}
+                color={colors.textTertiary}
+              />
+            </View>
+          )}
+          {hasDiscount && (
+            <View
+              style={[styles.discountBadge, { backgroundColor: colors.text }]}
+            >
+              <Text
+                style={[styles.discountText, { color: colors.textInverse }]}
+              >
+                {discountPercent}% OFF
+              </Text>
+            </View>
           )}
           {showDealBadge && hasDiscount && (
             <View style={styles.dealTag}>
@@ -416,40 +415,48 @@ const HomeScreen = () => {
 
   const renderSectionHeader = (
     title: string,
-    iconName: string,
-    iconGradient: [string, string],
+    _iconName: string,
+    _iconGradient: [string, string],
     onSeeAll: () => void,
   ) => (
     <View style={styles.sectionHeader}>
-      <View style={styles.sectionTitleRow}>
-        <LinearGradient
-          colors={iconGradient}
-          style={styles.sectionIconBadge}
+      <Text style={[styles.sectionTitle, { color: colors.text }]}>{title}</Text>
+      <TouchableOpacity onPress={onSeeAll} activeOpacity={0.7}>
+        <Text
+          style={[
+            styles.seeAllText,
+            { color: colors.text, textDecorationLine: "underline" },
+          ]}
         >
-          <Ionicons name={iconName as any} size={13} color="#FFF" />
-        </LinearGradient>
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>
-          {title}
-        </Text>
-      </View>
-      <TouchableOpacity
-        style={[styles.seeAllButton, { backgroundColor: colors.primarySoft }]}
-        onPress={onSeeAll}
-        activeOpacity={0.7}
-      >
-        <Text style={[styles.seeAllText, { color: colors.primary }]}>
           See All
         </Text>
-        <Ionicons name="chevron-forward" size={14} color={colors.primary} />
       </TouchableOpacity>
     </View>
   );
 
-  const navigateToShop = () => router.push("/(tabs)/shop" as any);
+  const searchBarScale = useRef(new Animated.Value(1)).current;
+
+  const navigateToShop = () => {
+    Animated.sequence([
+      Animated.timing(searchBarScale, {
+        toValue: 0.95,
+        duration: 100,
+        useNativeDriver: true,
+      }),
+      Animated.timing(searchBarScale, {
+        toValue: 1.02,
+        duration: 120,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      searchBarScale.setValue(1);
+      router.push("/(tabs)/shop" as any);
+    });
+  };
 
   // ── JSX ────────────────────────────────────────────────────
   return (
-    <SafeAreaView
+    <View
       style={[styles.safeArea, { backgroundColor: colors.background }]}
     >
       <ScrollView
@@ -460,47 +467,34 @@ const HomeScreen = () => {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
-        {/* ── Header ─────────────────────────────────────────── */}
-        <Header
-          userName={user?.name || user?.email?.split("@")[0]}
-          userRole={user?.role || user?.userRole || "customer"}
-          isGuest={!token}
-          showSearch={false}
-          cartItemCount={cartItemCount}
-          notificationCount={notificationCount}
-        />
-
         {/* ── Search Bar (tappable → navigates to Shop) ──────── */}
-        <Pressable
-          style={[
-            styles.searchBar,
-            {
-              backgroundColor: colors.surfaceRaised,
-              borderColor: colors.border,
-            },
-          ]}
-          onPress={navigateToShop}
-        >
-          <View
+        <Animated.View style={{ transform: [{ scale: searchBarScale }] }}>
+          <Pressable
             style={[
-              styles.searchBarIcon,
-              { backgroundColor: colors.primarySoft },
+              styles.searchBar,
+              {
+                backgroundColor: colors.surfaceRaised,
+                borderColor: colors.border,
+              },
             ]}
+            onPress={navigateToShop}
           >
-            <Ionicons name="search" size={15} color={colors.primary} />
-          </View>
-          <Text style={[styles.searchBarText, { color: colors.textTertiary }]}>
-            Search products, brands...
-          </Text>
-          <Ionicons
-            name="options-outline"
-            size={18}
-            color={colors.textTertiary}
-          />
-        </Pressable>
+            <View style={styles.searchBarIcon}>
+              <Ionicons name="search" size={18} color={colors.text} />
+            </View>
+            <Text style={[styles.searchBarText, { color: colors.textTertiary }]}>
+              Search products, brands...
+            </Text>
+            <Ionicons
+              name="options-outline"
+              size={18}
+              color={colors.textTertiary}
+            />
+          </Pressable>
+        </Animated.View>
 
         {/* ── Quick Stats (authenticated users) ──────────────── */}
-        {token && (
+        {/* {token && (
           <View style={styles.quickStats}>
             {Object.keys(stats).filter((k) => ({
               brands: 1, products: 1, users: 1, myProducts: 1, orders: 1, revenue: 1, myOrders: 1, wishlist: 1, cartItems: 1,
@@ -508,13 +502,13 @@ const HomeScreen = () => {
               key,
               value: stats[key] || 0,
               ...({
-                brands:     { label: "Brands",   icon: "storefront-outline" as const, iconColor: colors.accent,  iconBg: colors.accentSoft,  route: "/brands" },
+                brands:     { label: "Brands",   icon: "storefront-outline" as const, iconColor: colors.accent,  iconBg: colors.accentSoft,  route: "/(tabs)/brands" },
                 products:   { label: "Products", icon: "cube-outline" as const,       iconColor: colors.primary, iconBg: colors.primarySoft, route: "/products" },
                 users:      { label: "Users",    icon: "people-outline" as const,     iconColor: colors.info,    iconBg: colors.infoSoft,    route: "/users" },
                 myProducts: { label: "Products", icon: "cube-outline" as const,       iconColor: colors.primary, iconBg: colors.primarySoft, route: "/products" },
-                orders:     { label: "Orders",   icon: "receipt-outline" as const,    iconColor: colors.primary, iconBg: colors.primarySoft, route: "/(tabs)/orders" },
-                revenue:    { label: "Revenue",  icon: "cash-outline" as const,       iconColor: colors.success, iconBg: colors.successSoft, route: "/(tabs)/orders" },
-                myOrders:   { label: "Orders",   icon: "receipt-outline" as const,    iconColor: colors.primary, iconBg: colors.primarySoft, route: "/(tabs)/orders" },
+                orders:     { label: "Orders",   icon: "receipt-outline" as const,    iconColor: colors.primary, iconBg: colors.primarySoft, route: "/orders" },
+                revenue:    { label: "Revenue",  icon: "cash-outline" as const,       iconColor: colors.success, iconBg: colors.successSoft, route: "/orders" },
+                myOrders:   { label: "Orders",   icon: "receipt-outline" as const,    iconColor: colors.primary, iconBg: colors.primarySoft, route: "/orders" },
                 wishlist:   { label: "Wishlist",  icon: "heart-outline" as const,     iconColor: colors.danger,  iconBg: colors.dangerSoft,  route: "/(tabs)/wishlist" },
                 cartItems:  { label: "Cart",     icon: "bag-handle-outline" as const, iconColor: colors.success, iconBg: colors.successSoft, route: "/cart" },
               } as Record<string, { label: string; icon: any; iconColor: string; iconBg: string; route: string }>)[key],
@@ -552,7 +546,7 @@ const HomeScreen = () => {
               </TouchableOpacity>
             ))}
           </View>
-        )}
+        )} */}
 
         {/* ── Promotional Banners ────────────────────────────── */}
         <View style={styles.bannerSection}>
@@ -575,41 +569,50 @@ const HomeScreen = () => {
                 style={{ width, paddingHorizontal: 20 }}
                 onPress={navigateToShop}
               >
-                <LinearGradient
-                  colors={item.colors}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={styles.promoBanner}
+                <View
+                  style={[styles.promoBanner, { backgroundColor: colors.text }]}
                 >
-                  {/* Decorative circles */}
-                  <View style={styles.promoCircle1} />
-                  <View style={styles.promoCircle2} />
-                  <View style={styles.promoCircle3} />
-
-                  {/* Large decorative icon */}
-                  <Ionicons
-                    name={item.icon as any}
-                    size={90}
-                    color="rgba(255,255,255,0.12)"
-                    style={styles.promoDecoIcon}
-                  />
-
                   {/* Content */}
                   <View style={styles.promoContent}>
-                    <Text style={styles.promoTitle}>{item.title}</Text>
-                    <Text style={styles.promoSubtitle}>{item.subtitle}</Text>
-                    <View style={styles.promoButton}>
-                      <Text style={styles.promoButtonText}>
+                    <Text
+                      style={[styles.promoTitle, { color: colors.textInverse }]}
+                    >
+                      {item.title}
+                    </Text>
+                    <Text
+                      style={[
+                        styles.promoSubtitle,
+                        { color: "rgba(255,255,255,0.6)" },
+                      ]}
+                    >
+                      {item.subtitle}
+                    </Text>
+                    <View
+                      style={[
+                        styles.promoButton,
+                        {
+                          borderColor: "rgba(255,255,255,0.3)",
+                          borderWidth: 1,
+                          backgroundColor: "transparent",
+                        },
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.promoButtonText,
+                          { color: colors.textInverse },
+                        ]}
+                      >
                         {item.buttonText}
                       </Text>
                       <Ionicons
                         name="arrow-forward"
                         size={14}
-                        color="#FFF"
+                        color={colors.textInverse}
                       />
                     </View>
                   </View>
-                </LinearGradient>
+                </View>
               </Pressable>
             )}
           />
@@ -647,28 +650,23 @@ const HomeScreen = () => {
               <TouchableOpacity
                 key={index}
                 style={styles.categoryItem}
-                onPress={() =>
-                  router.push(`/category/${cat.type}` as any)
-                }
+                onPress={() => router.push({ pathname: "/(tabs)/shop", params: { category: cat.type } } as any)}
                 activeOpacity={0.7}
               >
-                <LinearGradient
-                  colors={cat.colors}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={styles.categoryIcon}
+                <View
+                  style={[
+                    styles.categoryIcon,
+                    { backgroundColor: colors.text },
+                  ]}
                 >
                   <Ionicons
                     name={cat.icon as any}
                     size={22}
-                    color="#FFF"
+                    color={colors.textInverse}
                   />
-                </LinearGradient>
+                </View>
                 <Text
-                  style={[
-                    styles.categoryLabel,
-                    { color: colors.textSecondary },
-                  ]}
+                  style={[styles.categoryLabel, { color: colors.text }]}
                   numberOfLines={1}
                 >
                   {cat.label}
@@ -709,36 +707,67 @@ const HomeScreen = () => {
           </View>
         )}
 
-        {/* ── New Brands ─────────────────────────────────────── */}
-        <View style={styles.section}>
-          {renderSectionHeader(
-            "New Brands",
-            "sparkles",
-            [colors.success, "#10B981"],
-            navigateToShop,
-          )}
+        {/* ── Trending Now ──────────────────────────────────── */}
+        {(loadingData && !hasLoadedOnce.current
+          ? true
+          : trendingProducts.length > 0) && (
+          <View style={styles.section}>
+            {renderSectionHeader(
+              "Trending Now",
+              "trending-up",
+              ["#000", "#333"],
+              navigateToShop,
+            )}
 
-          {loadingData && !hasLoadedOnce.current ? (
-            <ActivityIndicator
-              size="small"
-              color={colors.primary}
-              style={styles.sectionLoader}
-            />
-          ) : newBrands.length === 0 ? (
-            <Text style={[styles.emptyText, { color: colors.textTertiary }]}>
-              No brands available
-            </Text>
-          ) : (
-            <FlatList
-              data={newBrands}
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.horizontalList}
-              keyExtractor={(item) => `new-brand-${item.id}`}
-              renderItem={({ item }) => renderBrandCard(item, "NEW")}
-            />
-          )}
-        </View>
+            {loadingData && !hasLoadedOnce.current ? (
+              <ActivityIndicator
+                size="small"
+                color={colors.primary}
+                style={styles.sectionLoader}
+              />
+            ) : (
+              <FlatList
+                data={trendingProducts}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.horizontalList}
+                keyExtractor={(item) => `trending-${item.id}`}
+                renderItem={({ item }) => renderProductCard(item)}
+              />
+            )}
+          </View>
+        )}
+
+        {/* ── Featured Brands ─────────────────────────────── */}
+        {(loadingData && !hasLoadedOnce.current
+          ? true
+          : featuredBrands.length > 0) && (
+          <View style={styles.section}>
+            {renderSectionHeader(
+              "Featured Brands",
+              "star",
+              ["#000", "#333"],
+              () => router.push("/(tabs)/brands" as any),
+            )}
+
+            {loadingData && !hasLoadedOnce.current ? (
+              <ActivityIndicator
+                size="small"
+                color={colors.primary}
+                style={styles.sectionLoader}
+              />
+            ) : (
+              <FlatList
+                data={featuredBrands}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.horizontalList}
+                keyExtractor={(item) => `featured-brand-${item.id}`}
+                renderItem={({ item }) => renderBrandCard(item, "FEATURED")}
+              />
+            )}
+          </View>
+        )}
 
         {/* ── New Arrivals ───────────────────────────────────── */}
         <View style={styles.section}>
@@ -771,6 +800,68 @@ const HomeScreen = () => {
           )}
         </View>
 
+        {/* ── New Brands ─────────────────────────────────────── */}
+        <View style={styles.section}>
+          {renderSectionHeader(
+            "New Brands",
+            "sparkles",
+            [colors.success, "#10B981"],
+            navigateToShop,
+          )}
+
+          {loadingData && !hasLoadedOnce.current ? (
+            <ActivityIndicator
+              size="small"
+              color={colors.primary}
+              style={styles.sectionLoader}
+            />
+          ) : newBrands.length === 0 ? (
+            <Text style={[styles.emptyText, { color: colors.textTertiary }]}>
+              No brands available
+            </Text>
+          ) : (
+            <FlatList
+              data={newBrands}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.horizontalList}
+              keyExtractor={(item) => `new-brand-${item.id}`}
+              renderItem={({ item }) => renderBrandCard(item, "NEW")}
+            />
+          )}
+        </View>
+
+        {/* ── Bestsellers ──────────────────────────────────── */}
+        {(loadingData && !hasLoadedOnce.current
+          ? true
+          : bestsellers.length > 0) && (
+          <View style={styles.section}>
+            {renderSectionHeader(
+              "Bestsellers",
+              "trophy",
+              ["#000", "#333"],
+              navigateToShop,
+            )}
+
+            {loadingData && !hasLoadedOnce.current ? (
+              <ActivityIndicator
+                size="small"
+                color={colors.primary}
+                style={styles.sectionLoader}
+              />
+            ) : (
+              <FlatList
+                data={bestsellers}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.horizontalList}
+                keyExtractor={(item) => `bestseller-${item.id}`}
+                renderItem={({ item }) => renderProductCard(item)}
+              />
+            )}
+          </View>
+        )}
+
         {/* ── Sponsored Brands ───────────────────────────────── */}
         {(loadingData && !hasLoadedOnce.current
           ? true
@@ -796,9 +887,7 @@ const HomeScreen = () => {
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.horizontalList}
                 keyExtractor={(item) => `sponsored-brand-${item.id}`}
-                renderItem={({ item }) =>
-                  renderBrandCard(item, "SPONSORED")
-                }
+                renderItem={({ item }) => renderBrandCard(item, "SPONSORED")}
               />
             )}
           </View>
@@ -806,7 +895,7 @@ const HomeScreen = () => {
 
         <View style={styles.bottomSpacing} />
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 };
 
@@ -835,15 +924,14 @@ const styles = StyleSheet.create({
     marginHorizontal: 20,
     marginTop: 12,
     height: 48,
-    borderRadius: 16,
+    borderRadius: 0,
     borderWidth: 1,
-    paddingLeft: 6,
+    paddingLeft: 14,
     paddingRight: 14,
   },
   searchBarIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 12,
+    width: 28,
+    height: 28,
     justifyContent: "center",
     alignItems: "center",
     marginRight: 10,
@@ -868,14 +956,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingVertical: 12,
     paddingHorizontal: 12,
-    borderRadius: 14,
+    borderRadius: 0,
     borderWidth: 1,
     gap: 10,
   },
   statIconBox: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
+    width: 32,
+    height: 32,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -898,42 +985,10 @@ const styles = StyleSheet.create({
   },
   promoBanner: {
     height: 180,
-    borderRadius: 20,
+    borderRadius: 0,
     overflow: "hidden",
     padding: 24,
     justifyContent: "center",
-  },
-  promoCircle1: {
-    position: "absolute",
-    top: -30,
-    right: -30,
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: "rgba(255,255,255,0.1)",
-  },
-  promoCircle2: {
-    position: "absolute",
-    bottom: -20,
-    right: 60,
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: "rgba(255,255,255,0.08)",
-  },
-  promoCircle3: {
-    position: "absolute",
-    top: 30,
-    right: 30,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "rgba(255,255,255,0.06)",
-  },
-  promoDecoIcon: {
-    position: "absolute",
-    bottom: -5,
-    right: 15,
   },
   promoContent: {
     zIndex: 1,
@@ -1001,15 +1056,10 @@ const styles = StyleSheet.create({
   categoryIcon: {
     width: 56,
     height: 56,
-    borderRadius: 18,
+    borderRadius: 28,
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 8,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 4,
   },
   categoryLabel: {
     fontSize: 11,
@@ -1028,34 +1078,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     marginBottom: 14,
   },
-  sectionTitleRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  sectionIconBadge: {
-    width: 28,
-    height: 28,
-    borderRadius: 9,
-    justifyContent: "center",
-    alignItems: "center",
-  },
   sectionTitle: {
-    fontSize: 20,
-    fontWeight: "800",
+    fontSize: 18,
+    fontWeight: "700",
     letterSpacing: -0.3,
-  },
-  seeAllButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-    gap: 2,
+    textTransform: "uppercase",
   },
   seeAllText: {
     fontSize: 13,
-    fontWeight: "600",
+    fontWeight: "500",
+    letterSpacing: 0.5,
   },
   sectionLoader: {
     paddingVertical: 32,
@@ -1076,18 +1108,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingVertical: 16,
     paddingHorizontal: 8,
-    borderRadius: 18,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 2,
+    borderRadius: 0,
   },
   brandLogoRing: {
     width: 60,
     height: 60,
     borderRadius: 30,
-    padding: 3,
+    borderWidth: 1.5,
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 10,
@@ -1134,13 +1161,8 @@ const styles = StyleSheet.create({
 
   // ── Product Card ────────────────────────────────────────
   productCard: {
-    borderRadius: 18,
+    borderRadius: 0,
     overflow: "hidden",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 3,
   },
   productImageWrapper: {
     position: "relative",
@@ -1155,7 +1177,7 @@ const styles = StyleSheet.create({
     right: 10,
     paddingHorizontal: 8,
     paddingVertical: 4,
-    borderRadius: 8,
+    borderRadius: 0,
   },
   discountText: {
     color: "#FFF",
@@ -1169,17 +1191,17 @@ const styles = StyleSheet.create({
     left: 10,
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#FF6B00",
+    backgroundColor: "#000000",
     paddingHorizontal: 8,
     paddingVertical: 4,
-    borderRadius: 8,
+    borderRadius: 0,
     gap: 3,
   },
   dealTagText: {
-    color: "#FFF",
+    color: "#FFFFFF",
     fontSize: 9,
     fontWeight: "900",
-    letterSpacing: 0.5,
+    letterSpacing: 1,
   },
   productInfo: {
     padding: 12,

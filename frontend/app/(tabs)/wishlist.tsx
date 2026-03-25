@@ -10,20 +10,35 @@ import {
   Alert,
   useWindowDimensions,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/context/AuthContext";
 import getApiUrl from "@/helpers/getApiUrl";
 import { useThemeColors } from "@/hooks/useThemeColor";
 
+type Tab = "products" | "brands";
+
+interface FollowedBrand {
+  id: number;
+  name: string;
+  logo: string | null;
+  description: string | null;
+  location: string | null;
+  productCount: number;
+  followedAt: string;
+}
+
 const WishlistTab = () => {
   const router = useRouter();
   const { token } = useAuth();
   const colors = useThemeColors();
+  const [activeTab, setActiveTab] = useState<Tab>("products");
   const [wishlist, setWishlist] = useState<any[]>([]);
+  const [followedBrands, setFollowedBrands] = useState<FollowedBrand[]>([]);
   const [loading, setLoading] = useState(true);
+  const [brandsLoading, setBrandsLoading] = useState(true);
   const [removingId, setRemovingId] = useState<number | null>(null);
+  const [unfollowingId, setUnfollowingId] = useState<number | null>(null);
 
   const { width } = useWindowDimensions();
   const columnCount = width > 600 ? 3 : 2;
@@ -49,14 +64,37 @@ const WishlistTab = () => {
     }
   }, [token]);
 
+  const fetchFollowedBrands = useCallback(async () => {
+    if (!token) {
+      setBrandsLoading(false);
+      return;
+    }
+    try {
+      const response = await fetch(`${getApiUrl()}/brands/user/followed`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setFollowedBrands(data);
+      }
+    } catch (error) {
+      console.error("Error fetching followed brands:", error);
+    } finally {
+      setBrandsLoading(false);
+    }
+  }, [token]);
+
   useEffect(() => {
     fetchWishlist();
-  }, [fetchWishlist]);
+    fetchFollowedBrands();
+  }, [fetchWishlist, fetchFollowedBrands]);
 
-  // Refresh on tab focus
   useFocusEffect(
     useCallback(() => {
-      if (token) fetchWishlist();
+      if (token) {
+        fetchWishlist();
+        fetchFollowedBrands();
+      }
     }, [token]),
   );
 
@@ -82,11 +120,30 @@ const WishlistTab = () => {
     }
   };
 
-  const renderItem = ({ item }: { item: any }) => {
+  const unfollowBrand = async (brandId: number) => {
+    setUnfollowingId(brandId);
+    try {
+      const response = await fetch(
+        `${getApiUrl()}/brands/follow/${brandId}`,
+        {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
+      if (!response.ok) throw new Error("Failed to unfollow brand");
+      setFollowedBrands((prev) => prev.filter((b) => b.id !== brandId));
+    } catch (error: any) {
+      Alert.alert("Error", error.message);
+    } finally {
+      setUnfollowingId(null);
+    }
+  };
+
+  const renderProductItem = ({ item }: { item: any }) => {
     const product = item.product;
     const firstVariant = product.variants?.[0];
     const image =
-      firstVariant?.images?.[0] || firstVariant?.variantImages?.[0] || "";
+      product.mainImage || firstVariant?.images?.[0] || firstVariant?.variantImages?.[0] || product.images?.[0] || "";
 
     return (
       <TouchableOpacity
@@ -96,16 +153,16 @@ const WishlistTab = () => {
         ]}
         onPress={() => router.push(`/products/${product.id}`)}
       >
-        <Image source={{ uri: image }} style={styles.productImage} />
+        <Image source={{ uri: image ? image: "" }} style={styles.productImage} />
         <TouchableOpacity
           style={[styles.removeIcon, { backgroundColor: colors.surface }]}
           onPress={() => toggleWishlist(product.id)}
           disabled={removingId === product.id}
         >
           {removingId === product.id ? (
-            <ActivityIndicator size="small" color={colors.danger} />
+            <ActivityIndicator size="small" color={colors.text} />
           ) : (
-            <Ionicons name="heart" size={20} color={colors.danger} />
+            <Ionicons name="heart" size={20} color={colors.text} />
           )}
         </TouchableOpacity>
         <View style={styles.cardContent}>
@@ -129,9 +186,55 @@ const WishlistTab = () => {
     );
   };
 
+  const renderBrandItem = ({ item }: { item: FollowedBrand }) => (
+    <TouchableOpacity
+      style={[styles.brandCard, { backgroundColor: colors.surface }]}
+      onPress={() => router.push(`/brands/${item.id}` as any)}
+    >
+      <View style={styles.brandCardLeft}>
+        {item.logo ? (
+          <Image source={{ uri: item.logo }} style={styles.brandLogo} />
+        ) : (
+          <View style={[styles.brandLogo, styles.brandLogoPlaceholder]}>
+            <Text style={styles.brandLogoLetter}>
+              {item.name.charAt(0).toUpperCase()}
+            </Text>
+          </View>
+        )}
+        <View style={styles.brandCardInfo}>
+          <Text
+            style={[styles.brandCardName, { color: colors.text }]}
+            numberOfLines={1}
+          >
+            {item.name}
+          </Text>
+          <Text
+            style={[styles.brandCardMeta, { color: colors.textTertiary }]}
+          >
+            {item.productCount} {item.productCount === 1 ? "product" : "products"}
+            {item.location ? ` · ${item.location}` : ""}
+          </Text>
+        </View>
+      </View>
+      <TouchableOpacity
+        style={[styles.unfollowBtn, { borderColor: colors.textTertiary + "40" }]}
+        onPress={() => unfollowBrand(item.id)}
+        disabled={unfollowingId === item.id}
+      >
+        {unfollowingId === item.id ? (
+          <ActivityIndicator size="small" color={colors.text} />
+        ) : (
+          <Text style={[styles.unfollowText, { color: colors.text }]}>
+            FOLLOWING
+          </Text>
+        )}
+      </TouchableOpacity>
+    </TouchableOpacity>
+  );
+
   if (!token) {
     return (
-      <SafeAreaView
+      <View
         style={[styles.container, { backgroundColor: colors.background }]}
       >
         <View style={styles.centeredContent}>
@@ -149,53 +252,137 @@ const WishlistTab = () => {
             <Text style={styles.authBtnText}>SIGN IN</Text>
           </TouchableOpacity>
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
   return (
-    <SafeAreaView
+    <View
       style={[styles.container, { backgroundColor: colors.background }]}
     >
       <View style={styles.header}>
-        <Text style={[styles.title, { color: colors.text }]}>WISHLIST</Text>
+        <Text style={[styles.title, { color: colors.text }]}>SAVED</Text>
       </View>
 
-      {loading ? (
-        <View style={styles.center}>
-          <ActivityIndicator size="large" color={colors.primary} />
-        </View>
-      ) : wishlist.length === 0 ? (
-        <View style={styles.centeredContent}>
-          <Ionicons
-            name="heart-dislike-outline"
-            size={64}
-            color={colors.textTertiary}
-          />
-          <Text style={[styles.emptyTitle, { color: colors.text }]}>
-            No favorites yet
-          </Text>
-          <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
-            Tap the heart on any product to save it for later.
-          </Text>
-          <TouchableOpacity
-            style={[styles.shopBtn, { backgroundColor: colors.primary }]}
-            onPress={() => router.push("/(tabs)/shop" as any)}
+      {/* Sub-tabs */}
+      <View style={[styles.tabRow, { borderBottomColor: colors.textTertiary + "20" }]}>
+        <TouchableOpacity
+          style={[
+            styles.tab,
+            activeTab === "products" && [styles.tabActive, { borderBottomColor: colors.text }],
+          ]}
+          onPress={() => setActiveTab("products")}
+        >
+          <Text
+            style={[
+              styles.tabText,
+              { color: activeTab === "products" ? colors.text : colors.textTertiary },
+            ]}
           >
-            <Text style={styles.shopBtnText}>BROWSE SHOP</Text>
-          </TouchableOpacity>
-        </View>
-      ) : (
-        <FlatList
-          data={wishlist}
-          renderItem={renderItem}
-          keyExtractor={(item) => item.id.toString()}
-          numColumns={columnCount}
-          contentContainerStyle={styles.listContent}
-          showsVerticalScrollIndicator={false}
-        />
+            PRODUCTS
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[
+            styles.tab,
+            activeTab === "brands" && [styles.tabActive, { borderBottomColor: colors.text }],
+          ]}
+          onPress={() => setActiveTab("brands")}
+        >
+          <Text
+            style={[
+              styles.tabText,
+              { color: activeTab === "brands" ? colors.text : colors.textTertiary },
+            ]}
+          >
+            BRANDS
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Products Tab */}
+      {activeTab === "products" && (
+        <>
+          {loading ? (
+            <View style={styles.center}>
+              <ActivityIndicator size="large" color={colors.primary} />
+            </View>
+          ) : wishlist.length === 0 ? (
+            <View style={styles.centeredContent}>
+              <Ionicons
+                name="heart-dislike-outline"
+                size={64}
+                color={colors.textTertiary}
+              />
+              <Text style={[styles.emptyTitle, { color: colors.text }]}>
+                No favorites yet
+              </Text>
+              <Text
+                style={[styles.emptySubtitle, { color: colors.textSecondary }]}
+              >
+                Tap the heart on any product to save it for later.
+              </Text>
+              <TouchableOpacity
+                style={[styles.shopBtn, { backgroundColor: colors.primary }]}
+                onPress={() => router.push("/(tabs)/shop" as any)}
+              >
+                <Text style={styles.shopBtnText}>BROWSE SHOP</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <FlatList
+              data={wishlist}
+              renderItem={renderProductItem}
+              keyExtractor={(item) => item.id.toString()}
+              numColumns={columnCount}
+              contentContainerStyle={styles.listContent}
+              showsVerticalScrollIndicator={false}
+            />
+          )}
+        </>
       )}
-    </SafeAreaView>
+
+      {/* Brands Tab */}
+      {activeTab === "brands" && (
+        <>
+          {brandsLoading ? (
+            <View style={styles.center}>
+              <ActivityIndicator size="large" color={colors.primary} />
+            </View>
+          ) : followedBrands.length === 0 ? (
+            <View style={styles.centeredContent}>
+              <Ionicons
+                name="storefront-outline"
+                size={64}
+                color={colors.textTertiary}
+              />
+              <Text style={[styles.emptyTitle, { color: colors.text }]}>
+                No brands followed
+              </Text>
+              <Text
+                style={[styles.emptySubtitle, { color: colors.textSecondary }]}
+              >
+                Follow brands to stay updated on new releases and drops.
+              </Text>
+              <TouchableOpacity
+                style={[styles.shopBtn, { backgroundColor: colors.primary }]}
+                onPress={() => router.push("/(tabs)/brands" as any)}
+              >
+                <Text style={styles.shopBtnText}>DISCOVER BRANDS</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <FlatList
+              data={followedBrands}
+              renderItem={renderBrandItem}
+              keyExtractor={(item) => item.id.toString()}
+              contentContainerStyle={styles.brandsListContent}
+              showsVerticalScrollIndicator={false}
+            />
+          )}
+        </>
+      )}
+    </View>
   );
 };
 
@@ -224,20 +411,37 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     letterSpacing: 2,
   },
+  tabRow: {
+    flexDirection: "row",
+    borderBottomWidth: 1,
+    paddingHorizontal: 16,
+  },
+  tab: {
+    flex: 1,
+    alignItems: "center",
+    paddingVertical: 12,
+    borderBottomWidth: 2,
+    borderBottomColor: "transparent",
+  },
+  tabActive: {
+    borderBottomWidth: 2,
+  },
+  tabText: {
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 1.5,
+  },
   listContent: {
     padding: 16,
     gap: 16,
   },
+  brandsListContent: {
+    padding: 16,
+  },
   productCard: {
-    borderRadius: 12,
     overflow: "hidden",
     marginBottom: 16,
     marginHorizontal: 4,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
   },
   productImage: {
     width: "100%",
@@ -249,7 +453,6 @@ const styles = StyleSheet.create({
     top: 10,
     right: 10,
     padding: 6,
-    borderRadius: 20,
   },
   cardContent: {
     padding: 12,
@@ -270,6 +473,59 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "700",
   },
+  brandCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: 16,
+    marginBottom: 8,
+    borderRadius: 0,
+  },
+  brandCardLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+    marginRight: 12,
+  },
+  brandLogo: {
+    width: 48,
+    height: 48,
+    borderRadius: 0,
+    backgroundColor: "#F5F5F5",
+    marginRight: 14,
+  },
+  brandLogoPlaceholder: {
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#000000",
+  },
+  brandLogoLetter: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: "#FFFFFF",
+  },
+  brandCardInfo: {
+    flex: 1,
+  },
+  brandCardName: {
+    fontSize: 15,
+    fontWeight: "700",
+    marginBottom: 3,
+  },
+  brandCardMeta: {
+    fontSize: 12,
+  },
+  unfollowBtn: {
+    borderWidth: 1,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 0,
+  },
+  unfollowText: {
+    fontSize: 10,
+    fontWeight: "700",
+    letterSpacing: 1,
+  },
   emptyTitle: {
     fontSize: 20,
     fontWeight: "700",
@@ -285,7 +541,6 @@ const styles = StyleSheet.create({
   shopBtn: {
     paddingVertical: 16,
     paddingHorizontal: 32,
-    borderRadius: 30,
   },
   shopBtnText: {
     color: "#fff",
@@ -296,7 +551,6 @@ const styles = StyleSheet.create({
   authBtn: {
     paddingVertical: 16,
     paddingHorizontal: 48,
-    borderRadius: 30,
   },
   authBtnText: {
     color: "#fff",

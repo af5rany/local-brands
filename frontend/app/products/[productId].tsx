@@ -12,10 +12,9 @@ import {
   Animated,
   Platform,
   StatusBar,
+  FlatList,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { BlurView } from "expo-blur";
-import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import getApiUrl from "@/helpers/getApiUrl";
 import { Product } from "@/types/product";
@@ -23,6 +22,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/context/ToastContext";
 import ProductReviews from "@/components/ProductReviews";
 import { useThemeColors } from "@/hooks/useThemeColor";
+import { ProductVariant } from "@/types/product";
 
 const { width: W, height: H } = Dimensions.get("window");
 const GALLERY_HEIGHT = H * 0.58;
@@ -38,14 +38,20 @@ const ProductDetailScreen = () => {
 
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
-  const [selectedVariant, setSelectedVariant] = useState(0);
+  const [selectedColor, setSelectedColor] = useState<string | null>(null);
+  const [selectedSize, setSelectedSize] = useState<string | null>(null);
   const [selectedImage, setSelectedImage] = useState(0);
   const [isInWishlist, setIsInWishlist] = useState(false);
   const [wishlistLoading, setWishlistLoading] = useState(false);
   const [cartLoading, setCartLoading] = useState(false);
   const [buyNowLoading, setBuyNowLoading] = useState(false);
+  const [showAddedConfirm, setShowAddedConfirm] = useState(false);
   const [notifyMeLoading, setNotifyMeLoading] = useState(false);
   const [isSubscribedNotify, setIsSubscribedNotify] = useState(false);
+  const [expandedSections, setExpandedSections] = useState<
+    Record<string, boolean>
+  >({ details: true });
+  const [similarProducts, setSimilarProducts] = useState<Product[]>([]);
 
   const scrollY = useRef(new Animated.Value(0)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -68,6 +74,13 @@ const ProductDetailScreen = () => {
         const data = await res.json();
         setProduct(data);
 
+        // Set initial color/size selection
+        if (data.variants?.length > 0) {
+          const firstVariant = data.variants[0];
+          setSelectedColor(firstVariant.color || firstVariant.attributes?.color || null);
+          setSelectedSize(firstVariant.size || firstVariant.attributes?.size || null);
+        }
+
         if (token) {
           try {
             const wRes = await fetch(`${getApiUrl()}/wishlist`, {
@@ -81,7 +94,6 @@ const ProductDetailScreen = () => {
             }
           } catch (_) {}
 
-          // Check notify-me subscription status
           try {
             const nRes = await fetch(
               `${getApiUrl()}/notifications/notify-me/check/${productId}`,
@@ -95,6 +107,12 @@ const ProductDetailScreen = () => {
             }
           } catch (_) {}
         }
+
+        // Fetch similar products in background
+        fetch(`${getApiUrl()}/products/${productId}/similar?limit=8`)
+          .then((r) => (r.ok ? r.json() : []))
+          .then((items) => setSimilarProducts(Array.isArray(items) ? items : []))
+          .catch(() => {});
 
         Animated.parallel([
           Animated.timing(fadeAnim, {
@@ -115,7 +133,8 @@ const ProductDetailScreen = () => {
       }
     };
     fetchProduct();
-    setSelectedVariant(0);
+    setSelectedColor(null);
+    setSelectedSize(null);
     setSelectedImage(0);
   }, [productId, token]);
 
@@ -147,6 +166,36 @@ const ProductDetailScreen = () => {
     }
   };
 
+  // Derive active variant from selected color + size
+  const getActiveVariant = (): ProductVariant | undefined => {
+    if (!product?.variants?.length) return undefined;
+    return product.variants.find((v) => {
+      const vColor = v.color || v.attributes?.color;
+      const vSize = v.size || v.attributes?.size;
+      const colorMatch = vColor === selectedColor;
+      const sizeMatch = !vSize || vSize === selectedSize;
+      return colorMatch && sizeMatch;
+    });
+  };
+
+  // Get unique colors from variants
+  const getUniqueColors = (): string[] => {
+    if (!product?.variants?.length) return [];
+    const colors = product.variants.map(
+      (v) => v.color || v.attributes?.color || "",
+    );
+    return [...new Set(colors)].filter(Boolean);
+  };
+
+  // Get available sizes for selected color
+  const getSizesForColor = (): string[] => {
+    if (!product?.variants?.length || !selectedColor) return [];
+    return product.variants
+      .filter((v) => (v.color || v.attributes?.color) === selectedColor)
+      .map((v) => v.size || v.attributes?.size || "")
+      .filter(Boolean);
+  };
+
   const addToCart = async () => {
     if (!token) {
       Alert.alert("Login Required", "Sign in to add items.", [
@@ -155,33 +204,43 @@ const ProductDetailScreen = () => {
       ]);
       return;
     }
-    const v = product?.variants?.[selectedVariant];
-    if (!v || v.stock <= 0) {
+
+    const hasVariants = product?.hasVariants || (product?.variants?.length || 0) > 0;
+    const variant = getActiveVariant();
+
+    if (hasVariants && !variant) {
+      Alert.alert("Select Options", "Please select a color and size.");
+      return;
+    }
+
+    const currentStock = variant ? variant.stock : (product?.stock || 0);
+    if (currentStock <= 0) {
       Alert.alert("Unavailable", "This item is out of stock.");
       return;
     }
+
     setCartLoading(true);
     try {
+      const body: any = { productId: Number(productId), quantity: 1 };
+      if (variant) body.variantId = variant.id;
+
       const res = await fetch(`${getApiUrl()}/cart/add`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          productId: Number(productId),
-          variantId: v.id,
-          quantity: 1,
-        }),
+        body: JSON.stringify(body),
       });
       if (!res.ok) {
         const d = await res.json();
         throw new Error(d.message || "Failed");
       }
-      Alert.alert("Added", "Item added to your bag.");
+      setCartLoading(false);
+      setShowAddedConfirm(true);
+      setTimeout(() => setShowAddedConfirm(false), 2000);
     } catch (e: any) {
       Alert.alert("Error", e.message);
-    } finally {
       setCartLoading(false);
     }
   };
@@ -191,24 +250,33 @@ const ProductDetailScreen = () => {
       router.push("/auth/login");
       return;
     }
-    const v = product?.variants?.[selectedVariant];
-    if (!v || v.stock <= 0) {
+
+    const hasVariants = product?.hasVariants || (product?.variants?.length || 0) > 0;
+    const variant = getActiveVariant();
+
+    if (hasVariants && !variant) {
+      Alert.alert("Select Options", "Please select a color and size.");
+      return;
+    }
+
+    const currentStock = variant ? variant.stock : (product?.stock || 0);
+    if (currentStock <= 0) {
       Alert.alert("Unavailable", "This item is out of stock.");
       return;
     }
+
     setBuyNowLoading(true);
     try {
+      const body: any = { productId: Number(productId), quantity: 1 };
+      if (variant) body.variantId = variant.id;
+
       const res = await fetch(`${getApiUrl()}/cart/add`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          productId: Number(productId),
-          variantId: v.id,
-          quantity: 1,
-        }),
+        body: JSON.stringify(body),
       });
       if (!res.ok) {
         const d = await res.json();
@@ -274,6 +342,9 @@ const ProductDetailScreen = () => {
     ]);
   };
 
+  const toggleSection = (key: string) =>
+    setExpandedSections((s) => ({ ...s, [key]: !s[key] }));
+
   // ── Interpolations ───────────────────────────
   const headerOpacity = scrollY.interpolate({
     inputRange: [GALLERY_HEIGHT - 150, GALLERY_HEIGHT - 50],
@@ -321,16 +392,28 @@ const ProductDetailScreen = () => {
     );
   }
 
-  const variant = product.variants[selectedVariant];
+  const hasVariants = product.hasVariants || (product.variants?.length || 0) > 0;
+  const variant = hasVariants ? getActiveVariant() : undefined;
+  const uniqueColors = getUniqueColors();
+  const availableSizes = getSizesForColor();
+
   const hasDiscount =
     product.salePrice !== undefined && product.salePrice < product.price;
   const price =
     variant?.priceOverride || (hasDiscount ? product.salePrice : product.price);
-  const inStock = (variant?.stock || 0) > 0;
-  const allOutOfStock =
-    product.stock === 0 ||
-    (product.variants.length > 0 &&
-      product.variants.every((v) => v.stock <= 0));
+  const currentStock = variant ? variant.stock : product.stock;
+  const inStock = currentStock > 0;
+  const allOutOfStock = hasVariants
+    ? product.variants.every((v) => v.stock <= 0)
+    : product.stock <= 0;
+
+  // Images: variant images if variant selected, else product images
+  const displayImages = variant?.images?.length
+    ? variant.images
+    : product.images?.length
+      ? product.images
+      : product.variants?.[0]?.images || [];
+
   const isOwnerOrAdmin =
     userRole === "admin" ||
     (user?.id &&
@@ -345,18 +428,57 @@ const ProductDetailScreen = () => {
         backgroundColor="transparent"
       />
 
+      {/* ── Added to Bag Confirmation ──────────── */}
+      {showAddedConfirm && (
+        <View style={styles.addedOverlay}>
+          <View style={styles.addedCard}>
+            <View style={styles.addedCheckCircle}>
+              <Ionicons name="checkmark" size={28} color="#fff" />
+            </View>
+            <Text style={styles.addedTitle}>ADDED TO BAG</Text>
+            <Text style={styles.addedSubtitle}>{product.name}</Text>
+            <TouchableOpacity
+              style={styles.addedViewBag}
+              onPress={() => {
+                setShowAddedConfirm(false);
+                router.push("/cart");
+              }}
+            >
+              <Text style={styles.addedViewBagText}>VIEW BAG</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => setShowAddedConfirm(false)}
+              style={styles.addedContinue}
+            >
+              <Text style={styles.addedContinueText}>CONTINUE SHOPPING</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+
       {/* ── Sticky Header ─────────────────────── */}
-      <Animated.View style={[styles.stickyHeader, { opacity: headerOpacity }]}>
-        <BlurView intensity={90} tint="dark" style={StyleSheet.absoluteFill} />
+      <Animated.View
+        style={[
+          styles.stickyHeader,
+          {
+            opacity: headerOpacity,
+            backgroundColor: colors.background,
+            borderBottomColor: colors.borderLight,
+          },
+        ]}
+      >
         <View style={styles.stickyInner}>
           <TouchableOpacity onPress={() => router.back()} hitSlop={12}>
-            <Ionicons name="arrow-back" size={20} color="#FFF" />
+            <Ionicons name="arrow-back" size={20} color={colors.text} />
           </TouchableOpacity>
-          <Text style={styles.stickyTitle} numberOfLines={1}>
+          <Text
+            style={[styles.stickyTitle, { color: colors.text }]}
+            numberOfLines={1}
+          >
             {product.name}
           </Text>
           <TouchableOpacity hitSlop={12}>
-            <Ionicons name="share-outline" size={20} color="#FFF" />
+            <Ionicons name="share-outline" size={20} color={colors.text} />
           </TouchableOpacity>
         </View>
       </Animated.View>
@@ -365,11 +487,13 @@ const ProductDetailScreen = () => {
       <View style={styles.floatingNav}>
         <TouchableOpacity
           onPress={() => router.back()}
-          style={styles.floatingPill}
+          style={[styles.floatingPill, { borderColor: colors.borderLight }]}
         >
           <Ionicons name="arrow-back" size={17} color="#000" />
         </TouchableOpacity>
-        <TouchableOpacity style={styles.floatingPill}>
+        <TouchableOpacity
+          style={[styles.floatingPill, { borderColor: colors.borderLight }]}
+        >
           <Ionicons name="share-outline" size={17} color="#000" />
         </TouchableOpacity>
       </View>
@@ -392,7 +516,7 @@ const ProductDetailScreen = () => {
               setSelectedImage(Math.round(e.nativeEvent.contentOffset.x / W))
             }
           >
-            {variant?.images?.map((uri: string, i: number) => (
+            {displayImages.map((uri: string, i: number) => (
               <Animated.View
                 key={i}
                 style={[
@@ -410,15 +534,9 @@ const ProductDetailScreen = () => {
             ))}
           </Animated.ScrollView>
 
-          {/* Bottom gradient */}
-          <LinearGradient
-            colors={["transparent", "rgba(0,0,0,0.35)"]}
-            style={styles.galleryGradient}
-          />
-
           {/* Image indicator bars */}
           <View style={styles.indicatorRow}>
-            {variant?.images?.map((_: string, i: number) => (
+            {displayImages.map((_: string, i: number) => (
               <View
                 key={i}
                 style={[
@@ -432,7 +550,7 @@ const ProductDetailScreen = () => {
           {/* Counter chip */}
           <View style={styles.counterChip}>
             <Text style={styles.counterText}>
-              {selectedImage + 1}/{variant?.images?.length || 0}
+              {selectedImage + 1}/{displayImages.length || 0}
             </Text>
           </View>
         </View>
@@ -453,7 +571,7 @@ const ProductDetailScreen = () => {
             onPress={() => router.push(`/brands/${product.brand.id}`)}
             activeOpacity={0.7}
           >
-            <Text style={[styles.brandLabel, { color: colors.primary }]}>
+            <Text style={[styles.brandLabel, { color: colors.text }]}>
               {product.brand.name?.toUpperCase()}
             </Text>
           </TouchableOpacity>
@@ -462,7 +580,7 @@ const ProductDetailScreen = () => {
             {product.name}
           </Text>
 
-          {/* Status pill */}
+          {/* Status chip */}
           {product.status !== "published" && (
             <View
               style={[
@@ -519,7 +637,7 @@ const ProductDetailScreen = () => {
               ]}
             />
             <Text style={[styles.stockLabel, { color: colors.textSecondary }]}>
-              {inStock ? `${variant.stock} in stock` : "Out of stock"}
+              {inStock ? `${currentStock} in stock` : "Out of stock"}
             </Text>
           </View>
 
@@ -528,135 +646,474 @@ const ProductDetailScreen = () => {
             style={[styles.divider, { backgroundColor: colors.borderLight }]}
           />
 
-          {/* ── Color Picker ──────────────────── */}
-          <View style={styles.section}>
-            <View style={styles.sectionRow}>
-              <Text
-                style={[styles.sectionLabel, { color: colors.textTertiary }]}
-              >
-                COLOR
-              </Text>
-              <Text style={[styles.sectionValue, { color: colors.text }]}>
-                {variant?.attributes?.color}
+          {/* ── Color Picker (only if product has variants) ──── */}
+          {hasVariants && uniqueColors.length > 0 && (
+            <>
+              <View style={styles.section}>
+                <View style={styles.sectionRow}>
+                  <Text
+                    style={[styles.sectionLabel, { color: colors.textTertiary }]}
+                  >
+                    COLOR
+                  </Text>
+                  <Text style={[styles.sectionValue, { color: colors.text }]}>
+                    {selectedColor}
+                  </Text>
+                </View>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.colorRow}
+                >
+                  {uniqueColors.map((colorVal) => {
+                    const active = selectedColor === colorVal;
+                    // Use the color value as hex (it's stored as hex from the palette)
+                    const hex = colorVal.startsWith("#")
+                      ? colorVal
+                      : colorVal.toLowerCase();
+                    return (
+                      <TouchableOpacity
+                        key={colorVal}
+                        onPress={() => {
+                          setSelectedColor(colorVal);
+                          setSelectedImage(0);
+                          // Auto-select first available size for this color
+                          const sizes = product.variants
+                            .filter(
+                              (v) =>
+                                (v.color || v.attributes?.color) === colorVal,
+                            )
+                            .map((v) => v.size || v.attributes?.size || "")
+                            .filter(Boolean);
+                          setSelectedSize(sizes[0] || null);
+                        }}
+                        style={styles.colorWrap}
+                      >
+                        <View
+                          style={[
+                            styles.colorRing,
+                            {
+                              borderColor: active
+                                ? colors.text
+                                : colors.borderLight,
+                            },
+                          ]}
+                        >
+                          <View
+                            style={[styles.colorDot, { backgroundColor: hex }]}
+                          />
+                        </View>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </ScrollView>
+              </View>
+
+              <View
+                style={[styles.divider, { backgroundColor: colors.borderLight }]}
+              />
+            </>
+          )}
+
+          {/* ── Size Selector (only if variants have sizes) ──── */}
+          {hasVariants && availableSizes.length > 0 && (
+            <>
+              <View style={styles.section}>
+                <View style={styles.sectionRow}>
+                  <Text
+                    style={[styles.sectionLabel, { color: colors.textTertiary }]}
+                  >
+                    SIZE
+                  </Text>
+                  <Text style={[styles.sectionValue, { color: colors.text }]}>
+                    {selectedSize}
+                  </Text>
+                </View>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.colorRow}
+                >
+                  {availableSizes.map((size) => {
+                    const active = selectedSize === size;
+                    // Check if this color+size combo has stock
+                    const sizeVariant = product.variants.find(
+                      (v) =>
+                        (v.color || v.attributes?.color) === selectedColor &&
+                        (v.size || v.attributes?.size) === size,
+                    );
+                    const sizeInStock = (sizeVariant?.stock || 0) > 0;
+                    return (
+                      <TouchableOpacity
+                        key={size}
+                        onPress={() => sizeInStock && setSelectedSize(size)}
+                        disabled={!sizeInStock}
+                        style={[
+                          styles.sizeChip,
+                          {
+                            borderColor: active
+                              ? colors.text
+                              : colors.borderLight,
+                            backgroundColor: active
+                              ? colors.text
+                              : "transparent",
+                            opacity: sizeInStock ? 1 : 0.35,
+                          },
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.sizeChipText,
+                            {
+                              color: active ? colors.background : colors.text,
+                            },
+                          ]}
+                        >
+                          {size}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </ScrollView>
+              </View>
+
+              <View
+                style={[styles.divider, { backgroundColor: colors.borderLight }]}
+              />
+            </>
+          )}
+
+          {/* ── Accordion: DETAILS ────────────── */}
+          <TouchableOpacity
+            style={styles.accordionHeader}
+            onPress={() => toggleSection("details")}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.accordionTitle, { color: colors.text }]}>
+              DETAILS
+            </Text>
+            <Ionicons
+              name={expandedSections.details ? "remove" : "add"}
+              size={20}
+              color={colors.text}
+            />
+          </TouchableOpacity>
+          {expandedSections.details && (
+            <View style={styles.accordionBody}>
+              <Text style={[styles.descText, { color: colors.textSecondary }]}>
+                {product.description}
               </Text>
             </View>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.colorRow}
-            >
-              {product.variants.map((v, i) => {
-                const active = selectedVariant === i;
-                const hex =
-                  v.attributes?.colorHex ||
-                  v.attributes?.color?.toLowerCase() ||
-                  "#CCC";
-                return (
-                  <TouchableOpacity
-                    key={i}
-                    onPress={() => {
-                      setSelectedVariant(i);
-                      setSelectedImage(0);
-                    }}
-                    style={styles.colorWrap}
-                  >
-                    <View
-                      style={[
-                        styles.colorRing,
-                        { borderColor: active ? colors.text : "transparent" },
-                      ]}
-                    >
-                      <View
-                        style={[styles.colorDot, { backgroundColor: hex }]}
-                      />
-                    </View>
-                    {active && (
-                      <View
-                        style={[
-                          styles.colorUnderline,
-                          { backgroundColor: colors.text },
-                        ]}
-                      />
-                    )}
-                  </TouchableOpacity>
-                );
-              })}
-            </ScrollView>
-          </View>
+          )}
 
           <View
             style={[styles.divider, { backgroundColor: colors.borderLight }]}
           />
 
-          {/* ── Description ───────────────────── */}
-          <View style={styles.section}>
-            <Text
-              style={[
-                styles.sectionLabel,
-                { color: colors.textTertiary, marginBottom: 14 },
-              ]}
-            >
-              ABOUT
+          {/* ── Accordion: SIZE & FIT ─────────── */}
+          <TouchableOpacity
+            style={styles.accordionHeader}
+            onPress={() => toggleSection("sizeFit")}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.accordionTitle, { color: colors.text }]}>
+              SIZE & FIT
             </Text>
-            <Text style={[styles.descText, { color: colors.textSecondary }]}>
-              {product.description}
-            </Text>
-          </View>
-
-          <View
-            style={[styles.divider, { backgroundColor: colors.borderLight }]}
-          />
-
-          {/* ── Details Grid ──────────────────── */}
-          <View style={styles.section}>
-            <Text
-              style={[
-                styles.sectionLabel,
-                { color: colors.textTertiary, marginBottom: 18 },
-              ]}
-            >
-              SPECIFICATIONS
-            </Text>
-            <View
-              style={[
-                styles.specCard,
-                {
-                  backgroundColor: colors.surfaceRaised,
-                  borderColor: colors.borderLight,
-                },
-              ]}
-            >
+            <Ionicons
+              name={expandedSections.sizeFit ? "remove" : "add"}
+              size={20}
+              color={colors.text}
+            />
+          </TouchableOpacity>
+          {expandedSections.sizeFit && (
+            <View style={styles.accordionBody}>
               {[
                 { k: "Type", v: product.productType },
-                { k: "Material", v: product.material || "—" },
-                { k: "Origin", v: product.origin || "Locally Made" },
                 { k: "Season", v: product.season },
-              ].map((item, i, arr) => (
-                <View
-                  key={item.k}
-                  style={[
-                    styles.specRow,
-                    i < arr.length - 1 && {
-                      borderBottomWidth: 1,
-                      borderBottomColor: colors.borderLight,
-                    },
-                  ]}
-                >
+              ].map((item) => (
+                <View key={item.k} style={styles.accordionRow}>
                   <Text
-                    style={[styles.specKey, { color: colors.textTertiary }]}
+                    style={[
+                      styles.accordionKey,
+                      { color: colors.textTertiary },
+                    ]}
                   >
                     {item.k}
                   </Text>
-                  <Text style={[styles.specVal, { color: colors.text }]}>
+                  <Text
+                    style={[styles.accordionVal, { color: colors.text }]}
+                  >
                     {item.v}
                   </Text>
                 </View>
               ))}
             </View>
+          )}
+
+          <View
+            style={[styles.divider, { backgroundColor: colors.borderLight }]}
+          />
+
+          {/* ── Accordion: COMPOSITION & CARE ─── */}
+          <TouchableOpacity
+            style={styles.accordionHeader}
+            onPress={() => toggleSection("composition")}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.accordionTitle, { color: colors.text }]}>
+              COMPOSITION & CARE
+            </Text>
+            <Ionicons
+              name={expandedSections.composition ? "remove" : "add"}
+              size={20}
+              color={colors.text}
+            />
+          </TouchableOpacity>
+          {expandedSections.composition && (
+            <View style={styles.accordionBody}>
+              {[
+                { k: "Material", v: product.material || "\u2014" },
+                { k: "Origin", v: product.origin || "Locally Made" },
+              ].map((item) => (
+                <View key={item.k} style={styles.accordionRow}>
+                  <Text
+                    style={[
+                      styles.accordionKey,
+                      { color: colors.textTertiary },
+                    ]}
+                  >
+                    {item.k}
+                  </Text>
+                  <Text
+                    style={[styles.accordionVal, { color: colors.text }]}
+                  >
+                    {item.v}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          )}
+
+          <View
+            style={[styles.divider, { backgroundColor: colors.borderLight }]}
+          />
+
+          {/* ── Accordion: DELIVERY & RETURNS ─── */}
+          <TouchableOpacity
+            style={styles.accordionHeader}
+            onPress={() => toggleSection("delivery")}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.accordionTitle, { color: colors.text }]}>
+              DELIVERY & RETURNS
+            </Text>
+            <Ionicons
+              name={expandedSections.delivery ? "remove" : "add"}
+              size={20}
+              color={colors.text}
+            />
+          </TouchableOpacity>
+          {expandedSections.delivery && (
+            <View style={styles.accordionBody}>
+              <View style={styles.deliveryRow}>
+                <Ionicons name="cube-outline" size={18} color={colors.text} />
+                <Text
+                  style={[
+                    styles.deliveryText,
+                    { color: colors.textSecondary },
+                  ]}
+                >
+                  Free standard delivery on all orders
+                </Text>
+              </View>
+              <View style={styles.deliveryRow}>
+                <Ionicons
+                  name="refresh-outline"
+                  size={18}
+                  color={colors.text}
+                />
+                <Text
+                  style={[
+                    styles.deliveryText,
+                    { color: colors.textSecondary },
+                  ]}
+                >
+                  Easy returns within 30 days
+                </Text>
+              </View>
+              <View style={styles.deliveryRow}>
+                <Ionicons
+                  name="shield-checkmark-outline"
+                  size={18}
+                  color={colors.text}
+                />
+                <Text
+                  style={[
+                    styles.deliveryText,
+                    { color: colors.textSecondary },
+                  ]}
+                >
+                  Secure checkout guaranteed
+                </Text>
+              </View>
+            </View>
+          )}
+
+          <View
+            style={[styles.divider, { backgroundColor: colors.borderLight }]}
+          />
+
+          {/* ── Trust Signals ─────────────────── */}
+          <View style={styles.trustRow}>
+            <View style={styles.trustItem}>
+              <Ionicons name="cube-outline" size={20} color={colors.text} />
+              <Text
+                style={[styles.trustText, { color: colors.textSecondary }]}
+              >
+                Free Delivery
+              </Text>
+            </View>
+            <View style={styles.trustItem}>
+              <Ionicons
+                name="shield-checkmark-outline"
+                size={20}
+                color={colors.text}
+              />
+              <Text
+                style={[styles.trustText, { color: colors.textSecondary }]}
+              >
+                Secure Payment
+              </Text>
+            </View>
+            <View style={styles.trustItem}>
+              <Ionicons name="refresh-outline" size={20} color={colors.text} />
+              <Text
+                style={[styles.trustText, { color: colors.textSecondary }]}
+              >
+                Easy Returns
+              </Text>
+            </View>
           </View>
+
+          <View
+            style={[styles.divider, { backgroundColor: colors.borderLight }]}
+          />
 
           {/* ── Reviews ───────────────────────── */}
           <ProductReviews productId={product.id} />
+
+          {/* ── You May Also Like ───────────────── */}
+          {similarProducts.length > 0 && (
+            <>
+              <View
+                style={[styles.divider, { backgroundColor: colors.borderLight }]}
+              />
+              <View style={styles.section}>
+                <Text
+                  style={[
+                    styles.sectionLabel,
+                    { color: colors.textTertiary, marginBottom: 14 },
+                  ]}
+                >
+                  YOU MAY ALSO LIKE
+                </Text>
+                <FlatList
+                  data={similarProducts}
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={{ gap: 12 }}
+                  keyExtractor={(item) => `similar-${item.id}`}
+                  renderItem={({ item }) => {
+                    const img =
+                      item.variants?.[0]?.images?.[0] ||
+                      item.variants?.[0]?.variantImages?.[0] ||
+                      item.mainImage ||
+                      "";
+                    const hasItemDiscount =
+                      item.salePrice && item.salePrice < item.price;
+                    return (
+                      <TouchableOpacity
+                        style={{
+                          width: 140,
+                          backgroundColor: colors.surface,
+                        }}
+                        onPress={() =>
+                          router.push(`/products/${item.id}` as any)
+                        }
+                        activeOpacity={0.7}
+                      >
+                        <Image
+                          source={{ uri: img }}
+                          style={{
+                            width: 140,
+                            height: 180,
+                            backgroundColor: colors.surfaceRaised,
+                          }}
+                        />
+                        <View style={{ padding: 8 }}>
+                          <Text
+                            style={{
+                              fontSize: 10,
+                              fontWeight: "600",
+                              textTransform: "uppercase",
+                              letterSpacing: 0.8,
+                              color: colors.textTertiary,
+                              marginBottom: 2,
+                            }}
+                            numberOfLines={1}
+                          >
+                            {item.brand?.name || ""}
+                          </Text>
+                          <Text
+                            style={{
+                              fontSize: 12,
+                              fontWeight: "600",
+                              color: colors.text,
+                              marginBottom: 4,
+                            }}
+                            numberOfLines={2}
+                          >
+                            {item.name}
+                          </Text>
+                          <View
+                            style={{
+                              flexDirection: "row",
+                              alignItems: "center",
+                              gap: 4,
+                            }}
+                          >
+                            <Text
+                              style={{
+                                fontSize: 13,
+                                fontWeight: "800",
+                                color: hasItemDiscount
+                                  ? colors.priceCurrent
+                                  : colors.text,
+                              }}
+                            >
+                              $
+                              {(item.salePrice || item.price)?.toFixed(2)}
+                            </Text>
+                            {hasItemDiscount && (
+                              <Text
+                                style={{
+                                  fontSize: 11,
+                                  color: colors.textTertiary,
+                                  textDecorationLine: "line-through",
+                                }}
+                              >
+                                ${item.price?.toFixed(2)}
+                              </Text>
+                            )}
+                          </View>
+                        </View>
+                      </TouchableOpacity>
+                    );
+                  }}
+                />
+              </View>
+            </>
+          )}
 
           {/* ── Admin Controls ────────────────── */}
           {isOwnerOrAdmin && (
@@ -742,20 +1199,20 @@ const ProductDetailScreen = () => {
           style={[
             styles.wishBtn,
             {
-              borderColor: isInWishlist ? colors.danger : colors.border,
-              backgroundColor: isInWishlist ? colors.dangerSoft : "transparent",
+              borderColor: isInWishlist ? colors.text : colors.border,
+              backgroundColor: isInWishlist ? colors.primarySoft : "transparent",
             },
           ]}
           onPress={toggleWishlist}
           disabled={wishlistLoading}
         >
           {wishlistLoading ? (
-            <ActivityIndicator size="small" color={colors.danger} />
+            <ActivityIndicator size="small" color={colors.text} />
           ) : (
             <Ionicons
               name={isInWishlist ? "heart" : "heart-outline"}
               size={22}
-              color={isInWishlist ? colors.danger : colors.textSecondary}
+              color={colors.text}
             />
           )}
         </TouchableOpacity>
@@ -812,7 +1269,7 @@ const ProductDetailScreen = () => {
                     },
                   ]}
                 >
-                  {isSubscribedNotify ? "Subscribed" : "Notify Me"}
+                  {isSubscribedNotify ? "SUBSCRIBED" : "NOTIFY ME"}
                 </Text>
               </>
             )}
@@ -838,22 +1295,14 @@ const ProductDetailScreen = () => {
                   color={colors.primaryForeground}
                 />
               ) : (
-                <>
-                  <Ionicons
-                    name="bag-add-outline"
-                    size={18}
-                    color={colors.primaryForeground}
-                    style={{ marginRight: 8 }}
-                  />
-                  <Text
-                    style={[
-                      styles.cartBtnText,
-                      { color: colors.primaryForeground },
-                    ]}
-                  >
-                    Add to Bag
-                  </Text>
-                </>
+                <Text
+                  style={[
+                    styles.cartBtnText,
+                    { color: colors.primaryForeground },
+                  ]}
+                >
+                  ADD TO BAG
+                </Text>
               )}
             </TouchableOpacity>
 
@@ -861,9 +1310,7 @@ const ProductDetailScreen = () => {
               style={[
                 styles.buyNowBtn,
                 {
-                  backgroundColor: inStock
-                    ? colors.accent
-                    : colors.textTertiary,
+                  borderColor: inStock ? colors.text : colors.textTertiary,
                 },
               ]}
               onPress={buyNow}
@@ -871,27 +1318,16 @@ const ProductDetailScreen = () => {
               activeOpacity={0.85}
             >
               {buyNowLoading ? (
-                <ActivityIndicator
-                  size="small"
-                  color={colors.accentForeground}
-                />
+                <ActivityIndicator size="small" color={colors.text} />
               ) : (
-                <>
-                  <Ionicons
-                    name="flash"
-                    size={18}
-                    color={colors.accentForeground}
-                    style={{ marginRight: 8 }}
-                  />
-                  <Text
-                    style={[
-                      styles.cartBtnText,
-                      { color: colors.accentForeground },
-                    ]}
-                  >
-                    Buy Now
-                  </Text>
-                </>
+                <Text
+                  style={[
+                    styles.cartBtnText,
+                    { color: inStock ? colors.text : colors.textTertiary },
+                  ]}
+                >
+                  BUY NOW
+                </Text>
               )}
             </TouchableOpacity>
           </View>
@@ -903,6 +1339,70 @@ const ProductDetailScreen = () => {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+
+  // ── Added to Bag Overlay ────────────────
+  addedOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0,0,0,0.55)",
+    zIndex: 200,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  addedCard: {
+    width: 280,
+    backgroundColor: "#fff",
+    paddingVertical: 36,
+    paddingHorizontal: 28,
+    alignItems: "center",
+  },
+  addedCheckCircle: {
+    width: 56,
+    height: 56,
+    backgroundColor: "#2E7D32",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 18,
+  },
+  addedTitle: {
+    fontSize: 14,
+    fontWeight: "800",
+    letterSpacing: 2.5,
+    color: "#000",
+    marginBottom: 6,
+  },
+  addedSubtitle: {
+    fontSize: 13,
+    fontWeight: "400",
+    color: "#666",
+    textAlign: "center",
+    marginBottom: 24,
+  },
+  addedViewBag: {
+    width: "100%",
+    backgroundColor: "#000",
+    paddingVertical: 14,
+    alignItems: "center",
+    marginBottom: 10,
+  },
+  addedViewBagText: {
+    color: "#fff",
+    fontSize: 13,
+    fontWeight: "700",
+    letterSpacing: 1.5,
+  },
+  addedContinue: {
+    width: "100%",
+    paddingVertical: 12,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#000",
+  },
+  addedContinueText: {
+    color: "#000",
+    fontSize: 12,
+    fontWeight: "700",
+    letterSpacing: 1.5,
+  },
   center: { flex: 1, alignItems: "center", justifyContent: "center" },
   loadingLabel: {
     marginTop: 16,
@@ -920,7 +1420,6 @@ const styles = StyleSheet.create({
     marginTop: 28,
     paddingVertical: 12,
     paddingHorizontal: 28,
-    borderRadius: 12,
     borderWidth: 1,
   },
   goBackText: { fontSize: 12, fontWeight: "700", letterSpacing: 1.5 },
@@ -934,6 +1433,7 @@ const styles = StyleSheet.create({
     height: STATUS_H + 50,
     zIndex: 100,
     paddingTop: STATUS_H,
+    borderBottomWidth: 1,
   },
   stickyInner: {
     flexDirection: "row",
@@ -943,7 +1443,6 @@ const styles = StyleSheet.create({
     height: 50,
   },
   stickyTitle: {
-    color: "#FFF",
     fontSize: 13,
     fontWeight: "600",
     letterSpacing: 1,
@@ -967,28 +1466,16 @@ const styles = StyleSheet.create({
   floatingPill: {
     width: 38,
     height: 38,
-    borderRadius: 19,
     backgroundColor: "rgba(255,255,255,0.92)",
+    borderWidth: 1,
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.12,
-    shadowRadius: 8,
-    elevation: 4,
   },
 
   // ── Gallery ───────────────────────────────
-  galleryWrap: { height: GALLERY_HEIGHT, backgroundColor: "#111" },
+  galleryWrap: { height: GALLERY_HEIGHT, backgroundColor: "#F5F5F5" },
   imgFrame: { width: W, height: GALLERY_HEIGHT },
   img: { width: W, height: "100%" },
-  galleryGradient: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: 120,
-  },
   indicatorRow: {
     position: "absolute",
     bottom: 20,
@@ -999,18 +1486,16 @@ const styles = StyleSheet.create({
   indicatorBar: {
     width: 20,
     height: 2.5,
-    borderRadius: 2,
-    backgroundColor: "rgba(255,255,255,0.3)",
+    backgroundColor: "rgba(0,0,0,0.2)",
   },
-  indicatorActive: { backgroundColor: "#FFF", width: 32 },
+  indicatorActive: { backgroundColor: "#000", width: 32 },
   counterChip: {
     position: "absolute",
     bottom: 20,
     right: 24,
-    backgroundColor: "rgba(0,0,0,0.55)",
+    backgroundColor: "rgba(0,0,0,0.6)",
     paddingHorizontal: 10,
     paddingVertical: 5,
-    borderRadius: 16,
   },
   counterText: {
     color: "#FFF",
@@ -1023,9 +1508,6 @@ const styles = StyleSheet.create({
   content: {
     paddingTop: 28,
     paddingHorizontal: 24,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    marginTop: -24,
   },
   brandLabel: {
     fontSize: 11,
@@ -1044,7 +1526,6 @@ const styles = StyleSheet.create({
     alignSelf: "flex-start",
     paddingHorizontal: 10,
     paddingVertical: 4,
-    borderRadius: 8,
     marginBottom: 12,
   },
   statusChipText: { fontSize: 10, fontWeight: "800", letterSpacing: 1 },
@@ -1059,7 +1540,7 @@ const styles = StyleSheet.create({
   priceLeft: { flexDirection: "row", alignItems: "baseline", gap: 10 },
   priceMain: { fontSize: 32, fontWeight: "300", letterSpacing: -0.5 },
   priceStrike: { fontSize: 16, textDecorationLine: "line-through" },
-  saveBadge: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8 },
+  saveBadge: { paddingHorizontal: 10, paddingVertical: 5 },
   saveBadgeText: {
     color: "#FFF",
     fontSize: 11,
@@ -1078,7 +1559,7 @@ const styles = StyleSheet.create({
   stockLabel: { fontSize: 13, fontWeight: "500" },
 
   // ── Shared ────────────────────────────────
-  divider: { height: 1, marginVertical: 28 },
+  divider: { height: 1, marginVertical: 20 },
   section: { marginBottom: 4 },
   sectionRow: {
     flexDirection: "row",
@@ -1091,16 +1572,50 @@ const styles = StyleSheet.create({
 
   // ── Colors ────────────────────────────────
   colorRow: { gap: 14, paddingVertical: 4 },
-  colorWrap: { alignItems: "center", gap: 6 },
+  colorWrap: { alignItems: "center" },
   colorRing: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    borderWidth: 2.5,
+    width: 40,
+    height: 40,
+    borderWidth: 2,
     padding: 3,
   },
-  colorDot: { flex: 1, borderRadius: 18 },
-  colorUnderline: { width: 14, height: 2, borderRadius: 1 },
+  colorDot: { flex: 1 },
+  sizeChip: {
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    borderWidth: 1.5,
+    minWidth: 48,
+    alignItems: "center",
+  },
+  sizeChipText: {
+    fontSize: 14,
+    fontWeight: "700",
+    letterSpacing: 0.5,
+  },
+
+  // ── Accordion ─────────────────────────────
+  accordionHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 4,
+  },
+  accordionTitle: {
+    fontSize: 12,
+    fontWeight: "700",
+    letterSpacing: 2,
+  },
+  accordionBody: {
+    paddingTop: 16,
+    paddingBottom: 4,
+  },
+  accordionRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingVertical: 10,
+  },
+  accordionKey: { fontSize: 13, fontWeight: "500" },
+  accordionVal: { fontSize: 13, fontWeight: "600" },
 
   // ── Description ───────────────────────────
   descText: {
@@ -1110,16 +1625,35 @@ const styles = StyleSheet.create({
     letterSpacing: 0.15,
   },
 
-  // ── Specs ─────────────────────────────────
-  specCard: { borderRadius: 16, borderWidth: 1, overflow: "hidden" },
-  specRow: {
+  // ── Delivery rows ─────────────────────────
+  deliveryRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingVertical: 8,
+  },
+  deliveryText: {
+    fontSize: 14,
+    fontWeight: "400",
+  },
+
+  // ── Trust Signals ─────────────────────────
+  trustRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    paddingVertical: 15,
-    paddingHorizontal: 18,
+    paddingVertical: 8,
   },
-  specKey: { fontSize: 13, fontWeight: "500" },
-  specVal: { fontSize: 13, fontWeight: "600" },
+  trustItem: {
+    alignItems: "center",
+    gap: 8,
+    flex: 1,
+  },
+  trustText: {
+    fontSize: 11,
+    fontWeight: "600",
+    letterSpacing: 0.5,
+    textAlign: "center",
+  },
 
   // ── Admin ─────────────────────────────────
   adminRow: { flexDirection: "row", gap: 12 },
@@ -1129,7 +1663,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     paddingVertical: 14,
-    borderRadius: 14,
     borderWidth: 1,
     gap: 8,
   },
@@ -1152,7 +1685,6 @@ const styles = StyleSheet.create({
   wishBtn: {
     width: 54,
     height: 54,
-    borderRadius: 16,
     borderWidth: 1.5,
     alignItems: "center",
     justifyContent: "center",
@@ -1160,12 +1692,15 @@ const styles = StyleSheet.create({
   cartBtn: {
     flex: 1,
     height: 54,
-    borderRadius: 16,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
   },
-  cartBtnText: { fontSize: 15, fontWeight: "700", letterSpacing: 0.3 },
+  cartBtnText: {
+    fontSize: 13,
+    fontWeight: "700",
+    letterSpacing: 1.5,
+  },
   buyRow: {
     flex: 1,
     flexDirection: "row",
@@ -1174,7 +1709,7 @@ const styles = StyleSheet.create({
   buyNowBtn: {
     flex: 1,
     height: 54,
-    borderRadius: 16,
+    borderWidth: 1.5,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
@@ -1182,7 +1717,6 @@ const styles = StyleSheet.create({
   notifyBtn: {
     flex: 1,
     height: 54,
-    borderRadius: 16,
     borderWidth: 1.5,
     flexDirection: "row",
     alignItems: "center",

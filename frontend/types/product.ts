@@ -11,6 +11,7 @@ export interface ProductVariant {
   images: string[];
   variantImages?: string[];
   color?: string;
+  size?: string;
   colorHex?: string;
   isAvailable: boolean;
   createdAt?: string;
@@ -39,9 +40,15 @@ export interface Product {
   stock: number;
   status: ProductStatus;
   isFeatured: boolean;
+  isNewArrival?: boolean;
+  hasVariants: boolean;
   brandId: number;
   brand: Brand;
   variants: ProductVariant[];
+  mainImage?: string;
+  images?: string[];
+  inStock?: boolean;
+  isLowStock?: boolean;
   createdAt: string;
   updatedAt: string;
   brandName?: string;

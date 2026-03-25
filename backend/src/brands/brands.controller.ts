@@ -14,6 +14,7 @@ import {
   UsePipes,
   ValidationPipe,
 } from '@nestjs/common';
+import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { BrandsService } from './brands.service';
 import { Brand } from './brand.entity';
 import { GetBrandsDto } from './dto/get-brands.dto';
@@ -58,6 +59,59 @@ export class BrandsController {
   async getMyBrands(@Request() req): Promise<Brand[]> {
     const currentUser = req.user;
     return this.brandsService.findByOwner(currentUser.userId as number);
+  }
+
+  @Get('user/followed')
+  @ApiOperation({ summary: 'Get brands the current user follows' })
+  async getFollowedBrands(@Request() req) {
+    return this.brandsService.getFollowedBrands(req.user.id);
+  }
+
+  // ── Brand Follow ──
+
+  @Post('follow/:id')
+  @ApiOperation({ summary: 'Follow a brand' })
+  async follow(
+    @Param('id', ParseIntPipe) brandId: number,
+    @Request() req,
+  ) {
+    return this.brandsService.followBrand(req.user.id, brandId);
+  }
+
+  @Delete('follow/:id')
+  @ApiOperation({ summary: 'Unfollow a brand' })
+  async unfollow(
+    @Param('id', ParseIntPipe) brandId: number,
+    @Request() req,
+  ) {
+    return this.brandsService.unfollowBrand(req.user.id, brandId);
+  }
+
+  @Get('follow/:id/check')
+  @ApiOperation({ summary: 'Check if user follows a brand' })
+  async isFollowing(
+    @Param('id', ParseIntPipe) brandId: number,
+    @Request() req,
+  ) {
+    return this.brandsService.isFollowing(req.user.id, brandId);
+  }
+
+  @Get('follow/:id/count')
+  @Public()
+  @ApiOperation({ summary: 'Get brand follower count' })
+  async getFollowerCount(@Param('id', ParseIntPipe) brandId: number) {
+    const count = await this.brandsService.getFollowerCount(brandId);
+    return { count };
+  }
+
+  @Get(':id/analytics')
+  @Roles(UserRole.ADMIN, UserRole.BRAND_OWNER)
+  @UseGuards(BrandAccessGuard)
+  @ApiOperation({ summary: 'Get brand analytics for dashboard' })
+  async getAnalytics(
+    @Param('id', ParseIntPipe) id: number,
+  ) {
+    return this.brandsService.getBrandAnalytics(id);
   }
 
   @Public()
@@ -129,4 +183,5 @@ export class BrandsController {
     console.log('Deleting brand:', { user: req.user, brandId: id });
     return this.brandsService.remove(id);
   }
+
 }

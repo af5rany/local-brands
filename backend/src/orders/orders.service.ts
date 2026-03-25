@@ -7,6 +7,7 @@ import { ProductVariant } from '../products/product-variant.entity';
 import { Address } from '../addresses/address.entity';
 import { Cart } from '../cart/cart.entity';
 import { CartItem } from '../cart/cart-item.entity';
+import { CheckoutDto } from './dto/checkout.dto';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
 import { OrderStatus, PaymentStatus } from 'src/common/enums/order.enum';
@@ -22,12 +23,15 @@ import {
 } from '@nestjs/common';
 import { MailService } from '../common/mail/mail.service';
 import { User } from '../users/user.entity';
+import { NotificationsService } from '../notifications/notifications.service';
+import { NotificationType } from '../notifications/notification.entity';
 
 @Injectable()
 export class OrdersService {
   constructor(
     private dataSource: DataSource,
     private readonly mailService: MailService,
+    private readonly notificationsService: NotificationsService,
     @InjectRepository(Order)
     private orderRepository: Repository<Order>,
     @InjectRepository(OrderItem)
@@ -40,6 +44,10 @@ export class OrdersService {
     private addressRepository: Repository<Address>,
     @InjectRepository(OrderStatusHistory)
     private statusHistoryRepository: Repository<OrderStatusHistory>,
+    @InjectRepository(Cart)
+    private cartRepository: Repository<Cart>,
+    @InjectRepository(CartItem)
+    private cartItemRepository: Repository<CartItem>,
   ) {}
 
   async create(createOrderDto: CreateOrderDto, userId: number): Promise<Order> {
@@ -101,24 +109,21 @@ export class OrdersService {
             })) ?? undefined;
           if (!variant)
             throw new NotFoundException(`Variant ${item.variantId} not found`);
-        } else if (product.productVariants?.length > 0) {
-          // Backward compatibility or legacy support: search by color/size if No variantId provided
-          variant =
-            (await manager.findOne(ProductVariant, {
-              where: {
-                productId: product.id,
-                // This logic might need refinement depending on how attributes are stored in JSONB
-                // For now, let's assume attributes: { color: 'red', size: 'M' }
-              },
-            })) ?? undefined;
-          // Note: If multiples match, it's ambiguous. v1 Best Practice says variants are mandatory if they exist.
         }
 
-        const availableStock = variant ? variant.stock : 0;
-        if (availableStock < item.quantity) {
-          throw new BadRequestException(
-            `Insufficient stock for ${product.name}`,
-          );
+        // Stock validation — variant stock if variant, product stock otherwise
+        if (variant) {
+          if (variant.stock < item.quantity) {
+            throw new BadRequestException(
+              `Insufficient stock for ${product.name}`,
+            );
+          }
+        } else {
+          if (product.stock < item.quantity) {
+            throw new BadRequestException(
+              `Insufficient stock for ${product.name}`,
+            );
+          }
         }
 
         const unitPrice = variant?.priceOverride
@@ -181,11 +186,18 @@ export class OrdersService {
         });
         await manager.save(OrderItem, orderItem);
 
-        // Deduct Variant Stock
+        // Deduct stock — variant stock if variant, product stock otherwise
         if (itemData.variantId) {
           await manager.decrement(
             ProductVariant,
             { id: itemData.variantId },
+            'stock',
+            itemData.quantity!,
+          );
+        } else {
+          await manager.decrement(
+            Product,
+            { id: itemData.productId },
             'stock',
             itemData.quantity!,
           );
@@ -226,6 +238,44 @@ export class OrdersService {
 
       return savedOrder;
     });
+  }
+
+  async checkout(checkoutDto: CheckoutDto, userId: number): Promise<Order> {
+    // 1. Get the user's cart with items
+    const cart = await this.cartRepository.findOne({
+      where: { user: { id: userId } },
+      relations: [
+        'cartItems',
+        'cartItems.product',
+        'cartItems.product.brand',
+        'cartItems.variant',
+      ],
+    });
+
+    if (!cart || !cart.cartItems || cart.cartItems.length === 0) {
+      throw new BadRequestException('Your cart is empty');
+    }
+
+    // 2. Build items from cart
+    const items = cart.cartItems.map((ci) => ({
+      productId: ci.productId,
+      variantId: ci.variantId || undefined,
+      quantity: ci.quantity,
+      color: ci.selectedColor || undefined,
+      size: ci.selectedSize || undefined,
+    }));
+
+    // 3. Delegate to existing create() with proper DTO
+    const createOrderDto: CreateOrderDto = {
+      items,
+      shippingAddressId: checkoutDto.shippingAddressId,
+      billingAddressId: checkoutDto.billingAddressId,
+      paymentMethod: checkoutDto.paymentMethod,
+      idempotencyKey: checkoutDto.idempotencyKey,
+      notes: checkoutDto.notes,
+    };
+
+    return this.create(createOrderDto, userId);
   }
 
   async findAll(query: OrderQueryDto, userId: number, userRole: UserRole) {
@@ -388,6 +438,28 @@ export class OrdersService {
             )
             .catch(() => {});
         }
+
+        // Send in-app notification for order status change
+        const statusMessages: Record<string, string> = {
+          CONFIRMED: 'Your order has been confirmed',
+          PROCESSING: 'Your order is being prepared',
+          SHIPPED: 'Your order is on its way',
+          DELIVERED: 'Your order has been delivered',
+          CANCELLED: 'Your order has been cancelled',
+          RETURNED: 'Your return has been processed',
+        };
+        const msg =
+          statusMessages[updateOrderDto.status] ||
+          `Order status updated to ${updateOrderDto.status}`;
+        this.notificationsService
+          .create(
+            order.user.id,
+            NotificationType.ORDER_UPDATE,
+            `Order ${order.orderNumber}`,
+            msg,
+            { orderId: order.id },
+          )
+          .catch(() => {});
       }
     });
 
@@ -414,6 +486,13 @@ export class OrdersService {
           await manager.increment(
             ProductVariant,
             { id: item.variantId },
+            'stock',
+            item.quantity,
+          );
+        } else {
+          await manager.increment(
+            Product,
+            { id: item.productId },
             'stock',
             item.quantity,
           );

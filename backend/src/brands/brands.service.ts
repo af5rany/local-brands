@@ -4,13 +4,23 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, DataSource, In } from 'typeorm';
 import { Brand } from './brand.entity';
 import { BrandUser } from './brand-user.entity';
+import { BrandFollow } from './brand-follow.entity';
+import { User } from '../users/user.entity';
+import { Product } from '../products/product.entity';
+import { Order } from '../orders/order.entity';
+import { OrderItem } from '../orders/order-item.entity';
 import { GetBrandsDto } from './dto/get-brands.dto';
 import { PaginatedResult } from 'src/common/types/pagination.type';
 import { BrandUserRole } from 'src/common/enums/brand-user-role.enum';
 import { BrandStatus } from 'src/common/enums/brand.enum';
+import { UserRole } from 'src/common/enums/user.enum';
+import { OrderStatus } from 'src/common/enums/order.enum';
+import { ProductStatus } from 'src/common/enums/product.enum';
+import { NotificationsService } from '../notifications/notifications.service';
+import { NotificationType } from '../notifications/notification.entity';
 
 @Injectable()
 export class BrandsService {
@@ -19,13 +29,17 @@ export class BrandsService {
     private brandsRepository: Repository<Brand>,
     @InjectRepository(BrandUser)
     private brandUsersRepository: Repository<BrandUser>,
+    @InjectRepository(BrandFollow)
+    private brandFollowRepository: Repository<BrandFollow>,
+    private notificationsService: NotificationsService,
+    private dataSource: DataSource,
   ) {}
 
   async findAll(
     dto: GetBrandsDto,
     isAdmin: boolean = false,
   ): Promise<PaginatedResult<Brand>> {
-    const { page = 1, limit = 10, search, status, isSponsored, isNew } = dto;
+    const { page = 1, limit = 10, search, status, isSponsored, isNew, isFeatured } = dto;
 
     const queryBuilder = this.brandsRepository
       .createQueryBuilder('brand')
@@ -41,6 +55,7 @@ export class BrandsService {
         'brand.status',
         'brand.isSponsored',
         'brand.isNew',
+        'brand.isFeatured',
         'brand.createdAt',
         'brand.updatedAt',
         'brandUsers.id',
@@ -77,6 +92,10 @@ export class BrandsService {
 
     if (isNew !== undefined) {
       queryBuilder.andWhere('brand.isNew = :isNew', { isNew });
+    }
+
+    if (isFeatured !== undefined) {
+      queryBuilder.andWhere('brand.isFeatured = :isFeatured', { isFeatured });
     }
 
     const [items, total] = await queryBuilder
@@ -296,11 +315,58 @@ export class BrandsService {
     ) {
       return this.findOne(id);
     }
+
+    // Check current status before update for notification trigger
+    const currentBrand = await this.brandsRepository.findOne({
+      where: { id },
+      select: ['id', 'name', 'status'],
+    });
+
     const result = await this.brandsRepository.update(id, updateData);
     if (result.affected === 0) {
       throw new NotFoundException(`Brand with id ${id} not found`);
     }
-    return this.findOne(id);
+
+    const updatedBrand = await this.findOne(id);
+
+    // Notify all customers when a new brand goes ACTIVE
+    if (
+      currentBrand &&
+      currentBrand.status !== BrandStatus.ACTIVE &&
+      updateData.status === BrandStatus.ACTIVE
+    ) {
+      this.notifyAllCustomers(
+        NotificationType.NEW_BRAND,
+        'New Brand',
+        `${updatedBrand.name} just joined the platform. Check out their collection!`,
+        { brandId: id },
+      ).catch(() => {});
+    }
+
+    return updatedBrand;
+  }
+
+  private async notifyAllCustomers(
+    type: NotificationType,
+    title: string,
+    message: string,
+    data?: Record<string, any>,
+  ): Promise<void> {
+    const userRepo = this.dataSource.getRepository(User);
+    const customers = await userRepo.find({
+      where: { role: UserRole.CUSTOMER },
+      select: ['id'],
+    });
+    const userIds = customers.map((u) => u.id);
+    if (userIds.length > 0) {
+      await this.notificationsService.createBulk(
+        userIds,
+        type,
+        title,
+        message,
+        data,
+      );
+    }
   }
 
   async batchCreate(brandsData: Partial<Brand>[]): Promise<Brand[]> {
@@ -313,5 +379,186 @@ export class BrandsService {
     if (result.affected === 0) {
       throw new NotFoundException(`Brand with id ${id} not found`);
     }
+  }
+
+  // ── Brand Follow ──
+
+  async followBrand(
+    userId: number,
+    brandId: number,
+  ): Promise<{ followed: boolean }> {
+    const brand = await this.brandsRepository.findOne({
+      where: { id: brandId },
+    });
+    if (!brand) throw new NotFoundException('Brand not found');
+
+    const existing = await this.brandFollowRepository.findOne({
+      where: { userId, brandId },
+    });
+    if (existing) return { followed: true };
+
+    const follow = this.brandFollowRepository.create({ userId, brandId });
+    await this.brandFollowRepository.save(follow);
+    return { followed: true };
+  }
+
+  async unfollowBrand(
+    userId: number,
+    brandId: number,
+  ): Promise<{ followed: boolean }> {
+    await this.brandFollowRepository.delete({ userId, brandId });
+    return { followed: false };
+  }
+
+  async isFollowing(
+    userId: number,
+    brandId: number,
+  ): Promise<{ following: boolean }> {
+    const count = await this.brandFollowRepository.count({
+      where: { userId, brandId },
+    });
+    return { following: count > 0 };
+  }
+
+  async getFollowedBrands(userId: number): Promise<any[]> {
+    const follows = await this.brandFollowRepository.find({
+      where: { userId },
+      relations: ['brand', 'brand.products'],
+      order: { createdAt: 'DESC' },
+    });
+
+    return follows
+      .filter((f) => f.brand && !f.brand.deletedAt)
+      .map((f) => ({
+        id: f.brand.id,
+        name: f.brand.name,
+        logo: f.brand.logo,
+        description: f.brand.description,
+        location: f.brand.location,
+        productCount: f.brand.products?.length || 0,
+        followedAt: f.createdAt,
+      }));
+  }
+
+  async getFollowerCount(brandId: number): Promise<number> {
+    return this.brandFollowRepository.count({ where: { brandId } });
+  }
+
+  async getFollowerIds(brandId: number): Promise<number[]> {
+    const follows = await this.brandFollowRepository.find({
+      where: { brandId },
+      select: ['userId'],
+    });
+    return follows.map((f) => f.userId);
+  }
+
+  async notifyFollowers(
+    brandId: number,
+    type: NotificationType,
+    title: string,
+    message: string,
+    data?: Record<string, any>,
+  ): Promise<void> {
+    const followerIds = await this.getFollowerIds(brandId);
+    const promises = followerIds.map((userId) =>
+      this.notificationsService.create(userId, type, title, message, data),
+    );
+    await Promise.allSettled(promises);
+  }
+
+  // ── Brand Analytics (Dashboard) ──
+
+  async getBrandAnalytics(brandId: number): Promise<any> {
+    const productRepo = this.dataSource.getRepository(Product);
+    const orderItemRepo = this.dataSource.getRepository(OrderItem);
+
+    // Products stats
+    const totalProducts = await productRepo.count({
+      where: { brandId, status: ProductStatus.PUBLISHED },
+    });
+
+    // Top products by sales
+    const topProducts = await productRepo.find({
+      where: { brandId, status: ProductStatus.PUBLISHED },
+      order: { salesCount: 'DESC' },
+      take: 5,
+      select: ['id', 'name', 'price', 'salePrice', 'salesCount', 'viewCount', 'averageRating', 'images'],
+    });
+
+    // Revenue and order count
+    const revenueData = await orderItemRepo
+      .createQueryBuilder('orderItem')
+      .leftJoin('orderItem.product', 'product')
+      .leftJoin('orderItem.order', 'order')
+      .where('product.brandId = :brandId', { brandId })
+      .andWhere('order.status = :status', { status: OrderStatus.DELIVERED })
+      .select('SUM(orderItem.totalPrice)', 'totalRevenue')
+      .addSelect('COUNT(DISTINCT orderItem.orderId)', 'totalOrders')
+      .addSelect('SUM(orderItem.quantity)', 'totalUnitsSold')
+      .getRawOne();
+
+    // Pending orders count
+    const pendingOrders = await orderItemRepo
+      .createQueryBuilder('orderItem')
+      .leftJoin('orderItem.product', 'product')
+      .leftJoin('orderItem.order', 'order')
+      .where('product.brandId = :brandId', { brandId })
+      .andWhere('order.status IN (:...statuses)', {
+        statuses: [OrderStatus.PENDING, OrderStatus.CONFIRMED, OrderStatus.PROCESSING],
+      })
+      .select('COUNT(DISTINCT orderItem.orderId)', 'count')
+      .getRawOne();
+
+    // Follower count
+    const followerCount = await this.getFollowerCount(brandId);
+
+    // Total views across all products
+    const viewsData = await productRepo
+      .createQueryBuilder('product')
+      .where('product.brandId = :brandId', { brandId })
+      .select('SUM(product.viewCount)', 'totalViews')
+      .getRawOne();
+
+    // Recent orders (last 10)
+    const recentOrders = await orderItemRepo
+      .createQueryBuilder('orderItem')
+      .leftJoinAndSelect('orderItem.order', 'order')
+      .leftJoinAndSelect('order.user', 'user')
+      .leftJoinAndSelect('orderItem.product', 'product')
+      .where('product.brandId = :brandId', { brandId })
+      .orderBy('order.createdAt', 'DESC')
+      .take(10)
+      .getMany();
+
+    const formattedRecentOrders = recentOrders.map((oi) => ({
+      orderId: oi.order?.id,
+      orderStatus: oi.order?.status,
+      customerName: oi.order?.user?.name || 'Unknown',
+      productName: oi.product?.name,
+      quantity: oi.quantity,
+      totalPrice: Number(oi.totalPrice),
+      createdAt: oi.order?.createdAt,
+    }));
+
+    return {
+      totalProducts,
+      totalRevenue: parseFloat(revenueData?.totalRevenue || '0'),
+      totalOrders: parseInt(revenueData?.totalOrders || '0', 10),
+      totalUnitsSold: parseInt(revenueData?.totalUnitsSold || '0', 10),
+      pendingOrders: parseInt(pendingOrders?.count || '0', 10),
+      followerCount,
+      totalViews: parseInt(viewsData?.totalViews || '0', 10),
+      topProducts: topProducts.map((p) => ({
+        id: p.id,
+        name: p.name,
+        price: Number(p.price),
+        salePrice: p.salePrice ? Number(p.salePrice) : null,
+        salesCount: p.salesCount,
+        viewCount: p.viewCount,
+        averageRating: Number(p.averageRating),
+        image: p.images?.[0] || '',
+      })),
+      recentOrders: formattedRecentOrders,
+    };
   }
 }

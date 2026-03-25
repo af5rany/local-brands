@@ -9,14 +9,14 @@ import {
   RefreshControl,
   Image,
   ScrollView,
+  TextInput,
+  Pressable,
+  Animated,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { useFocusEffect, useRouter } from "expo-router";
+import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/context/ToastContext";
-import Header from "@/components/Header";
-import { useCartCount } from "@/hooks/useCartCount";
 import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
 import FilterPanel, { PanelFilters } from "@/components/FilterPanel";
 import getApiUrl from "@/helpers/getApiUrl";
@@ -62,7 +62,7 @@ const CompactProductCard = React.memo(
     const [imageError, setImageError] = useState(false);
     const cardGap = 12;
 
-    const imageUri = item.variants?.[0]?.images?.[0] || "";
+    const imageUri = item.mainImage || item.variants?.[0]?.images?.[0] || item.images?.[0] || "";
     const hasDiscount = item.salePrice != null && item.salePrice < item.price;
     const discountPct = hasDiscount
       ? Math.round(((item.price - item.salePrice!) / item.price) * 100)
@@ -201,10 +201,10 @@ const CompactProductCard = React.memo(
 // ── Main Shop Screen ──────────────────────────────────
 const ShopScreen = () => {
   const router = useRouter();
+  const { category } = useLocalSearchParams<{ category?: string }>();
   const colors = useThemeColors();
   const { token, loading, user } = useAuth();
   const { showToast } = useToast();
-  const { count: cartCount, refresh: refreshCartCount } = useCartCount();
 
   // ── State ─────────────────────────────────────────
   const [selectedGender, setSelectedGender] = useState("All");
@@ -224,6 +224,8 @@ const ShopScreen = () => {
     sortOrder: "DESC" as "ASC" | "DESC",
     priceMin: 0,
     priceMax: 500,
+    inStockOnly: false,
+    followedBrandsOnly: false,
   });
   const [filterLabels, setFilterLabels] = useState<{
     brands: Record<string, string>;
@@ -241,13 +243,15 @@ const ShopScreen = () => {
   const activeFilterCount =
     (activeFilters.categories.length > 0 ? 1 : 0) +
     (activeFilters.brandIds.length > 0 ? 1 : 0) +
-    (hasPriceFilter ? 1 : 0);
+    (hasPriceFilter ? 1 : 0) +
+    (activeFilters.inStockOnly ? 1 : 0);
   const hasActiveChips =
     activeFilters.categories.length > 0 ||
     activeFilters.brandIds.length > 0 ||
     activeFilters.sortBy !== "createdAt" ||
     activeFilters.sortOrder !== "DESC" ||
-    hasPriceFilter;
+    hasPriceFilter ||
+    activeFilters.inStockOnly;
 
   // ── Build fetch function for infinite scroll ──────
   const fetchProducts = useCallback(
@@ -272,6 +276,8 @@ const ShopScreen = () => {
         params.set("minPrice", activeFilters.priceMin.toString());
       if (activeFilters.priceMax < 500)
         params.set("maxPrice", activeFilters.priceMax.toString());
+      if (activeFilters.inStockOnly)
+        params.set("inStock", "true");
 
       const res = await fetch(
         `${getApiUrl()}/products?${params.toString()}`,
@@ -345,7 +351,6 @@ const ShopScreen = () => {
     fetchFilters();
   }, []);
 
-  // ── Fetch brands (for filter panel) ───────────────
   useEffect(() => {
     const fetchBrands = async () => {
       try {
@@ -385,9 +390,15 @@ const ShopScreen = () => {
   useFocusEffect(
     useCallback(() => {
       fetchWishlist();
-      refreshCartCount();
     }, [token]),
   );
+
+  // Apply category filter from navigation params
+  useEffect(() => {
+    if (category) {
+      setActiveFilters((prev) => ({ ...prev, categories: [category] }));
+    }
+  }, [category]);
 
   const toggleWishlist = useCallback(
     async (productId: number) => {
@@ -435,7 +446,6 @@ const ShopScreen = () => {
           throw new Error(data.message || "Failed to add to cart");
         }
         showToast("Added to cart", "success");
-        refreshCartCount();
       } catch (err: any) {
         showToast(err.message || "Failed to add to cart", "error");
       }
@@ -507,6 +517,8 @@ const ShopScreen = () => {
       sortOrder: filters.sortOrder,
       priceMin: filters.priceMin,
       priceMax: filters.priceMax,
+      inStockOnly: filters.inStockOnly,
+      followedBrandsOnly: filters.followedBrandsOnly,
     }));
     setFilterLabels((l) => ({ ...l, sort: sortLabel }));
   };
@@ -518,6 +530,8 @@ const ShopScreen = () => {
     sortOrder: activeFilters.sortOrder,
     priceMin: activeFilters.priceMin ?? 0,
     priceMax: activeFilters.priceMax ?? 500,
+    inStockOnly: activeFilters.inStockOnly,
+    followedBrandsOnly: activeFilters.followedBrandsOnly,
   };
 
   const toggleCategory = (key: string) => {
@@ -991,25 +1005,125 @@ const ShopScreen = () => {
   }
 
   return (
-    <SafeAreaView
+    <View
       style={[styles.safeArea, { backgroundColor: colors.surface }]}
     >
-      {/* Header */}
-      <Header
-        userName={user?.name || user?.email?.split("@")[0]}
-        userRole={user?.role || user?.userRole || "customer"}
-        isGuest={!token}
-        showSearch={true}
-        searchQuery={searchQuery}
-        onSearchChange={handleSearchChange}
-        suggestions={suggestions}
-        onSuggestionPress={(text) => {
-          setSearchQuery(text);
-          handleSearchChange(text);
-          setSuggestions([]);
-        }}
-        cartItemCount={cartCount}
-      />
+      {/* Search Bar */}
+      <View style={[styles.searchSection, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
+        <View
+          style={[
+            styles.searchContainer,
+            {
+              backgroundColor: colors.surfaceRaised,
+              borderColor: colors.border,
+            },
+          ]}
+        >
+          <View
+            style={[
+              styles.searchIconWrap,
+              { backgroundColor: colors.primarySoft },
+            ]}
+          >
+            <Ionicons name="search" size={14} color={colors.primary} />
+          </View>
+          <TextInput
+            placeholder="Search products, brands..."
+            placeholderTextColor={colors.textTertiary}
+            style={[styles.searchInput, { color: colors.text }]}
+            value={searchQuery}
+            onChangeText={handleSearchChange}
+            returnKeyType="search"
+          />
+          {searchQuery.length > 0 && (
+            <Pressable
+              onPress={() => {
+                setSearchQuery("");
+                handleSearchChange("");
+              }}
+              style={[styles.clearBtn, { backgroundColor: colors.border }]}
+            >
+              <Ionicons name="close" size={12} color={colors.textSecondary} />
+            </Pressable>
+          )}
+        </View>
+
+        {/* Autocomplete Suggestions */}
+        {suggestions.length > 0 && searchQuery.length > 0 && (
+          <View
+            style={[
+              styles.suggestionBox,
+              {
+                backgroundColor: colors.surface,
+                borderColor: colors.border,
+                shadowColor: colors.cardShadow,
+              },
+            ]}
+          >
+            {suggestions.map((item, index) => (
+              <Pressable
+                key={index}
+                style={[
+                  styles.suggestionItem,
+                  { borderBottomColor: colors.borderLight },
+                ]}
+                onPress={() => {
+                  setSearchQuery(item.text);
+                  handleSearchChange(item.text);
+                  setSuggestions([]);
+                }}
+              >
+                <View style={styles.suggestionLeft}>
+                  <View
+                    style={[styles.suggestionIconCircle, { backgroundColor: colors.primarySoft }]}
+                  >
+                    <Ionicons
+                      name={
+                        item.type === "Product"
+                          ? "cube-outline"
+                          : "storefront-outline"
+                      }
+                      size={13}
+                      color={colors.text}
+                    />
+                  </View>
+                  <Text
+                    style={[styles.suggestionText, { color: colors.text }]}
+                    numberOfLines={1}
+                  >
+                    {item.text}
+                  </Text>
+                </View>
+                <View
+                  style={[
+                    styles.typeBadge,
+                    {
+                      backgroundColor:
+                        item.type === "Brand"
+                          ? colors.primarySoft
+                          : colors.successSoft,
+                    },
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.typeText,
+                      {
+                        color:
+                          item.type === "Brand"
+                            ? colors.primary
+                            : colors.success,
+                      },
+                    ]}
+                  >
+                    {item.type}
+                  </Text>
+                </View>
+              </Pressable>
+            ))}
+          </View>
+        )}
+      </View>
 
       {/* Main Product List with infinite scroll */}
       <FlatList
@@ -1046,7 +1160,7 @@ const ShopScreen = () => {
         }))}
         onApply={handlePanelApply}
       />
-    </SafeAreaView>
+    </View>
   );
 };
 
@@ -1057,8 +1171,6 @@ const cardStyles = StyleSheet.create({
     marginBottom: 12,
   },
   card: {
-    borderRadius: 16,
-    borderWidth: 1,
     overflow: "hidden",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 1,
@@ -1142,6 +1254,95 @@ const cardStyles = StyleSheet.create({
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
+  },
+  searchSection: {
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    paddingBottom: 12,
+    borderBottomWidth: 0.5,
+    zIndex: 100,
+  },
+  searchContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderRadius: 16,
+    paddingLeft: 6,
+    paddingRight: 14,
+    height: 44,
+    borderWidth: 1,
+  },
+  searchIconWrap: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 8,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 15,
+    paddingVertical: 0,
+  },
+  clearBtn: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  suggestionBox: {
+    position: "absolute",
+    top: 62,
+    left: 16,
+    right: 16,
+    borderRadius: 16,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.1,
+    shadowRadius: 16,
+    elevation: 8,
+    borderWidth: 1,
+    maxHeight: 280,
+    overflow: "hidden",
+    zIndex: 200,
+  },
+  suggestionItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderBottomWidth: 1,
+  },
+  suggestionLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    flex: 1,
+  },
+  suggestionIconCircle: {
+    width: 30,
+    height: 30,
+    borderRadius: 10,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  suggestionText: {
+    fontSize: 14,
+    fontWeight: "500",
+    flex: 1,
+  },
+  typeBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    marginLeft: 8,
+  },
+  typeText: {
+    fontSize: 10,
+    fontWeight: "700",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
   },
   loadingContainer: {
     flex: 1,

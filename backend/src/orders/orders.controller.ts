@@ -21,6 +21,7 @@ import { Roles } from 'src/auth/roles.decorator';
 import { UserRole } from 'src/common/enums/user.enum';
 import { RolesGuard } from 'src/auth/roles.guard';
 import { CreateOrderDto } from './dto/create-order.dto';
+import { CheckoutDto } from './dto/checkout.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
 import { OrderQueryDto } from './dto/get-orders.dto';
 
@@ -35,7 +36,16 @@ export class UpdateOrderStatusDto {
 export class OrdersController {
   constructor(private readonly ordersService: OrdersService) {}
 
-  // ✅ Create new order
+  // ✅ Checkout from cart (reads cart items server-side)
+  @Post('checkout')
+  async checkout(
+    @Body(ValidationPipe) checkoutDto: CheckoutDto,
+    @Request() req,
+  ): Promise<Order> {
+    return this.ordersService.checkout(checkoutDto, Number(req.user.id));
+  }
+
+  // ✅ Create new order (with explicit items)
   @Post()
   async createOrder(
     @Body() createOrderDto: CreateOrderDto,

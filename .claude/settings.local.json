@@ -34,7 +34,11 @@
       "Bash(wc -l /Users/f5rany/Documents/Work/local-brands/frontend/components/*.tsx)",
       "Bash(ls:*)",
       "Bash(npx tsc:*)",
-      "Bash(find /Users/f5rany/Documents/Work/local-brands -type f \\\\\\(-path */referrals/* -o -path */notifications/* \\\\\\) -name *.ts)"
+      "Bash(find /Users/f5rany/Documents/Work/local-brands -type f \\\\\\(-path */referrals/* -o -path */notifications/* \\\\\\) -name *.ts)",
+      "Bash(grep -n \"brand\\\\.\" /Users/f5rany/Documents/Work/local-brands/frontend/app/brands/[brandId]/index.tsx)",
+      "Bash(rm -rf dist)",
+      "Bash(npx nest:*)",
+      "Bash(npm run:*)"
     ]
   }
 }

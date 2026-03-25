@@ -9,7 +9,6 @@ import {
   Alert,
   RefreshControl,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/context/AuthContext";
@@ -49,7 +48,7 @@ const ProfileTab = () => {
   // Guest state
   if (!token) {
     return (
-      <SafeAreaView
+      <View
         style={[styles.container, { backgroundColor: colors.background }]}
       >
         <View style={styles.centeredContent}>
@@ -84,7 +83,7 @@ const ProfileTab = () => {
             </Text>
           </TouchableOpacity>
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
@@ -153,7 +152,7 @@ const ProfileTab = () => {
   ];
 
   return (
-    <SafeAreaView
+    <View
       style={[styles.container, { backgroundColor: colors.background }]}
     >
       <ScrollView
@@ -272,7 +271,7 @@ const ProfileTab = () => {
           Version 1.0.0
         </Text>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 };
 

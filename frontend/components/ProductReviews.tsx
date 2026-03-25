@@ -8,16 +8,24 @@ import {
   FlatList,
   Alert,
   ActivityIndicator,
+  Image,
+  ScrollView,
+  Modal,
+  Dimensions,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/context/AuthContext";
 import getApiUrl from "@/helpers/getApiUrl";
 import { useThemeColor } from "@/hooks/useThemeColor";
+import { useCloudinaryUpload } from "@/hooks/useCloudinaryUpload";
+
+const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
 interface Review {
   id: number;
   rating: number;
   comment: string;
+  images: string[];
   user: {
     name: string;
   };
@@ -37,16 +45,17 @@ const ProductReviews = ({ productId }: ProductReviewsProps) => {
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState("");
   const [canReview, setCanReview] = useState(false);
+  const [selectedImages, setSelectedImages] = useState<string[]>([]);
+  const [viewerVisible, setViewerVisible] = useState(false);
+  const [viewerImage, setViewerImage] = useState("");
+
+  const { pickAndUpload, isUploading } = useCloudinaryUpload();
 
   const backgroundColor = useThemeColor({}, "background");
   const textColor = useThemeColor({}, "text");
   const secondaryTextColor = useThemeColor(
     { light: "#737373", dark: "#A3A3A3" },
     "text",
-  );
-  const accentColor = useThemeColor(
-    { light: "#DC2626", dark: "#EF4444" },
-    "primary",
   );
   const cardBackground = useThemeColor(
     { light: "#FAFAFA", dark: "#1C1C1E" },
@@ -91,6 +100,29 @@ const ProductReviews = ({ productId }: ProductReviewsProps) => {
     }
   };
 
+  const handlePickImage = async () => {
+    if (selectedImages.length >= 5) {
+      Alert.alert("Limit reached", "You can add up to 5 images.");
+      return;
+    }
+    try {
+      const results = await pickAndUpload({
+        allowsEditing: false,
+        quality: 0.8,
+      });
+      if (results) {
+        const urls = results.filter((url): url is string => url !== null);
+        setSelectedImages((prev) => [...prev, ...urls].slice(0, 5));
+      }
+    } catch (error: any) {
+      Alert.alert("Error", error.message || "Failed to upload image.");
+    }
+  };
+
+  const handleRemoveImage = (index: number) => {
+    setSelectedImages((prev) => prev.filter((_, i) => i !== index));
+  };
+
   const handleSubmitReview = async () => {
     if (rating === 0) {
       Alert.alert("Error", "Please select a rating.");
@@ -113,6 +145,7 @@ const ProductReviews = ({ productId }: ProductReviewsProps) => {
           productId,
           rating,
           comment,
+          images: selectedImages,
         }),
       });
 
@@ -127,6 +160,7 @@ const ProductReviews = ({ productId }: ProductReviewsProps) => {
       );
       setRating(0);
       setComment("");
+      setSelectedImages([]);
       setCanReview(false);
       fetchReviews();
     } catch (error: any) {
@@ -134,6 +168,11 @@ const ProductReviews = ({ productId }: ProductReviewsProps) => {
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const openViewer = (imageUrl: string) => {
+    setViewerImage(imageUrl);
+    setViewerVisible(true);
   };
 
   const renderStars = (count: number, interactive = false) => {
@@ -148,12 +187,29 @@ const ProductReviews = ({ productId }: ProductReviewsProps) => {
           <Ionicons
             name={i <= (interactive ? rating : count) ? "star" : "star-outline"}
             size={interactive ? 32 : 14}
-            color="#F59E0B"
+            color="#000000"
           />
         </TouchableOpacity>,
       );
     }
     return stars;
+  };
+
+  const renderReviewImages = (images: string[]) => {
+    if (!images || images.length === 0) return null;
+    return (
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.reviewImagesRow}
+      >
+        {images.map((img, index) => (
+          <TouchableOpacity key={index} onPress={() => openViewer(img)}>
+            <Image source={{ uri: img }} style={styles.reviewThumbnail} />
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
+    );
   };
 
   const renderReviewItem = ({ item }: { item: Review }) => (
@@ -175,12 +231,13 @@ const ProductReviews = ({ productId }: ProductReviewsProps) => {
         {renderStars(item.rating)}
         {item.isVerifiedPurchase && (
           <View style={styles.verifiedBadge}>
-            <Ionicons name="checkmark-circle" size={12} color="#10B981" />
+            <Ionicons name="checkmark-circle" size={12} color="#000000" />
             <Text style={styles.verifiedText}>Verified Purchase</Text>
           </View>
         )}
       </View>
       <Text style={[styles.comment, { color: textColor }]}>{item.comment}</Text>
+      {renderReviewImages(item.images)}
     </View>
   );
 
@@ -208,10 +265,62 @@ const ProductReviews = ({ productId }: ProductReviewsProps) => {
             value={comment}
             onChangeText={setComment}
           />
+
+          {/* Image upload section */}
+          <View style={styles.imageSection}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.imagePickerRow}
+            >
+              {selectedImages.map((uri, index) => (
+                <View key={index} style={styles.selectedImageWrapper}>
+                  <Image source={{ uri }} style={styles.selectedImage} />
+                  <TouchableOpacity
+                    style={styles.removeImageBtn}
+                    onPress={() => handleRemoveImage(index)}
+                  >
+                    <Ionicons name="close" size={14} color="#FFFFFF" />
+                  </TouchableOpacity>
+                </View>
+              ))}
+              {selectedImages.length < 5 && (
+                <TouchableOpacity
+                  style={[
+                    styles.addImageBtn,
+                    { borderColor: secondaryTextColor + "40" },
+                  ]}
+                  onPress={handlePickImage}
+                  disabled={isUploading}
+                >
+                  {isUploading ? (
+                    <ActivityIndicator size="small" color={textColor} />
+                  ) : (
+                    <>
+                      <Ionicons
+                        name="camera-outline"
+                        size={22}
+                        color={secondaryTextColor}
+                      />
+                      <Text
+                        style={[styles.addImageText, { color: secondaryTextColor }]}
+                      >
+                        ADD PHOTO
+                      </Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+              )}
+            </ScrollView>
+            <Text style={[styles.imageHint, { color: secondaryTextColor }]}>
+              {selectedImages.length}/5 photos
+            </Text>
+          </View>
+
           <TouchableOpacity
             style={[styles.submitBtn, { backgroundColor: textColor }]}
             onPress={handleSubmitReview}
-            disabled={submitting}
+            disabled={submitting || isUploading}
           >
             {submitting ? (
               <ActivityIndicator color={backgroundColor} />
@@ -238,6 +347,28 @@ const ProductReviews = ({ productId }: ProductReviewsProps) => {
           scrollEnabled={false}
         />
       )}
+
+      {/* Fullscreen Image Viewer */}
+      <Modal
+        visible={viewerVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setViewerVisible(false)}
+      >
+        <View style={styles.viewerOverlay}>
+          <TouchableOpacity
+            style={styles.viewerCloseBtn}
+            onPress={() => setViewerVisible(false)}
+          >
+            <Ionicons name="close" size={28} color="#FFFFFF" />
+          </TouchableOpacity>
+          <Image
+            source={{ uri: viewerImage }}
+            style={styles.viewerImage}
+            resizeMode="contain"
+          />
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -280,19 +411,29 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 4,
     marginLeft: 12,
-    backgroundColor: "#DCFCE7",
+    backgroundColor: "#E5E5E5",
     paddingHorizontal: 8,
     paddingVertical: 2,
-    borderRadius: 4,
+    borderRadius: 0,
   },
   verifiedText: {
     fontSize: 10,
     fontWeight: "700",
-    color: "#059669",
+    color: "#000000",
   },
   comment: {
     fontSize: 14,
     lineHeight: 20,
+  },
+  reviewImagesRow: {
+    marginTop: 12,
+  },
+  reviewThumbnail: {
+    width: 72,
+    height: 72,
+    borderRadius: 0,
+    marginRight: 8,
+    backgroundColor: "#F5F5F5",
   },
   emptyText: {
     fontSize: 14,
@@ -302,7 +443,7 @@ const styles = StyleSheet.create({
   },
   box: {
     padding: 20,
-    borderRadius: 2,
+    borderRadius: 0,
     marginBottom: 32,
   },
   boxTitle: {
@@ -321,21 +462,86 @@ const styles = StyleSheet.create({
   input: {
     borderWidth: 1,
     padding: 12,
-    borderRadius: 2,
+    borderRadius: 0,
     fontSize: 14,
     height: 100,
     textAlignVertical: "top",
+    marginBottom: 16,
+  },
+  imageSection: {
     marginBottom: 20,
+  },
+  imagePickerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  selectedImageWrapper: {
+    position: "relative",
+  },
+  selectedImage: {
+    width: 72,
+    height: 72,
+    borderRadius: 0,
+    backgroundColor: "#F5F5F5",
+  },
+  removeImageBtn: {
+    position: "absolute",
+    top: 4,
+    right: 4,
+    width: 22,
+    height: 22,
+    borderRadius: 0,
+    backgroundColor: "#000000",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  addImageBtn: {
+    width: 72,
+    height: 72,
+    borderRadius: 0,
+    borderWidth: 1,
+    borderStyle: "dashed",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 4,
+  },
+  addImageText: {
+    fontSize: 8,
+    fontWeight: "700",
+    letterSpacing: 0.5,
+  },
+  imageHint: {
+    fontSize: 10,
+    marginTop: 8,
+    letterSpacing: 0.5,
   },
   submitBtn: {
     paddingVertical: 14,
-    borderRadius: 2,
+    borderRadius: 0,
     alignItems: "center",
   },
   submitBtnText: {
     fontSize: 11,
     fontWeight: "800",
     letterSpacing: 1.5,
+  },
+  viewerOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.95)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  viewerCloseBtn: {
+    position: "absolute",
+    top: 60,
+    right: 20,
+    zIndex: 10,
+    padding: 8,
+  },
+  viewerImage: {
+    width: SCREEN_WIDTH,
+    height: SCREEN_WIDTH,
   },
 });
 

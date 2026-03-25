@@ -864,7 +864,7 @@ const ProductsListScreen = () => {
             "Select Brand",
             "To add a new product, please navigate to the specific brand's page first.",
             [
-              { text: "Go to Brands", onPress: () => router.push("/brands") },
+              { text: "Go to Brands", onPress: () => router.push("/(tabs)/brands") },
               { text: "Cancel", style: "cancel" },
             ],
           );

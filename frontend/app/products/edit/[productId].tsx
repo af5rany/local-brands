@@ -26,6 +26,7 @@ import { useCloudinaryUpload } from "@/hooks/useCloudinaryUpload";
 import { ImageUploadProgress } from "@/components/ImageUploadProgress";
 import * as ImageManipulator from "expo-image-manipulator";
 import { ProductStatus } from "@/types/enums";
+import { COLOR_PALETTE, getSizesForProductType } from "@/constants/SizeChart";
 
 const genderOptions = [
   { label: "Men", value: "men" },
@@ -42,14 +43,7 @@ const seasonOptions = [
   { label: "All Season", value: "All Season" },
 ];
 
-const colorPalette = [
-  { name: "Red", hex: "#FF0000" },
-  { name: "Blue", hex: "#0000FF" },
-  { name: "Green", hex: "#008000" },
-  { name: "Yellow", hex: "#FFFF00" },
-  { name: "Black", hex: "#000000" },
-  { name: "White", hex: "#FFFFFF" },
-];
+const colorPalette = COLOR_PALETTE;
 
 const EditProductScreen = () => {
   const router = useRouter();
@@ -97,6 +91,8 @@ const EditProductScreen = () => {
   const [height, setHeight] = useState("");
   const [status, setStatus] = useState<ProductStatus>(ProductStatus.DRAFT);
   const [isFeatured, setIsFeatured] = useState(false);
+  const [hasVariants, setHasVariants] = useState(false);
+  const [productImages, setProductImages] = useState<string[]>([]);
   const [variants, setVariants] = useState<any[]>([]);
   const [stock, setStock] = useState(0);
   const [brandId, setBrandId] = useState<number | null>(null);
@@ -137,10 +133,12 @@ const EditProductScreen = () => {
       setHeight(data.height ? String(data.height) : "");
       setStatus(data.status);
       setIsFeatured(data.isFeatured);
+      setHasVariants((data.variants?.length || 0) > 0);
+      setProductImages(data.images || []);
       setVariants(
         data.variants && data.variants.length > 0
           ? data.variants
-          : [{ color: "", variantImages: [], stock: 0 }],
+          : [{ color: "", size: "", variantImages: [], stock: 0 }],
       );
       setStock(data.stock || 0);
       setBrandId(data.brandId);
@@ -183,25 +181,37 @@ const EditProductScreen = () => {
   const handleUpdateProduct = async () => {
     if (submitting) return;
 
-    if (
-      !productName ||
-      !productPrice ||
-      !productType ||
-      !gender ||
-      variants.some((v) => !v.color || !v.variantImages.length)
-    ) {
-      Alert.alert(
-        "Validation Error",
-        "Please fill in all required fields and ensure all variants have images.",
-      );
+    if (!productName || !productPrice || !productType || !gender) {
+      Alert.alert("Validation Error", "Please fill in all required fields.");
       return;
     }
 
-    const hasNonCloudinaryImage = variants.some((variant) =>
-      (variant.variantImages || []).some(
-        (uri: string) => !uri.startsWith("https://res.cloudinary."),
-      ),
-    );
+    if (hasVariants) {
+      if (
+        variants.some(
+          (v) => !v.color || !v.variantImages.length || v.stock === undefined,
+        )
+      ) {
+        Alert.alert(
+          "Validation Error",
+          "Each variant needs a color, at least one image, and stock quantity.",
+        );
+        return;
+      }
+    } else {
+      if (productImages.length === 0) {
+        Alert.alert("Validation Error", "Please add at least one product image.");
+        return;
+      }
+    }
+
+    const hasNonCloudinaryImage =
+      productImages.some((uri) => !uri.startsWith("https://res.cloudinary.")) ||
+      variants.some((variant) =>
+        (variant.variantImages || []).some(
+          (uri: string) => !uri.startsWith("https://res.cloudinary."),
+        ),
+      );
 
     if (hasNonCloudinaryImage) {
       Alert.alert(
@@ -214,7 +224,7 @@ const EditProductScreen = () => {
     setSubmitting(true);
 
     try {
-      const productData = {
+      const productData: any = {
         name: productName,
         description,
         price: parseFloat(productPrice),
@@ -233,12 +243,20 @@ const EditProductScreen = () => {
         height: height ? parseFloat(height) : null,
         status,
         isFeatured,
-        stock: variants.reduce((acc, v) => acc + (v.stock || 0), 0),
-        variants: variants.map((v) => ({
-          ...v,
-          stock: Number(v.stock),
-        })),
       };
+
+      if (hasVariants) {
+        productData.variants = variants.map((v) => ({
+          color: v.color,
+          size: v.size || undefined,
+          variantImages: v.variantImages,
+          stock: Number(v.stock),
+        }));
+        productData.stock = variants.reduce((acc: number, v: any) => acc + (Number(v.stock) || 0), 0);
+      } else {
+        productData.stock = Number(stock);
+        productData.images = productImages;
+      }
 
       const response = await fetch(`${getApiUrl()}/products/${productId}`, {
         method: "PUT",
@@ -277,7 +295,7 @@ const EditProductScreen = () => {
   };
 
   const addVariant = () => {
-    setVariants([...variants, { color: "", variantImages: [], stock: 0 }]);
+    setVariants([...variants, { color: "", size: "", variantImages: [], stock: 0 }]);
   };
 
   const removeVariant = (index: number) => {
@@ -346,6 +364,45 @@ const EditProductScreen = () => {
     } catch (error) {
       console.error("Error picking images:", error);
     }
+  };
+
+  const handleProductImagePick = async () => {
+    try {
+      const permissionResult =
+        await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permissionResult.granted) {
+        Alert.alert(
+          "Permission Required",
+          "Permission to access camera roll is required!",
+        );
+        return;
+      }
+      let result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["images"],
+        allowsMultipleSelection: true,
+        selectionLimit: 5,
+        quality: 1,
+      });
+      if (result.canceled || !result.assets) return;
+
+      const newLocalUris = result.assets.map((a) => a.uri);
+      setProductImages((prev) => [...prev, ...newLocalUris]);
+
+      result.assets.forEach(async (asset) => {
+        const cloudUrl = await uploadImage(asset.uri);
+        if (cloudUrl) {
+          setProductImages((prev) =>
+            prev.map((u) => (u === asset.uri ? cloudUrl : u)),
+          );
+        }
+      });
+    } catch (error) {
+      console.error("Error picking images:", error);
+    }
+  };
+
+  const removeProductImage = (index: number) => {
+    setProductImages((prev) => prev.filter((_, i) => i !== index));
   };
 
   if (loading) {
@@ -484,138 +541,294 @@ const EditProductScreen = () => {
             </View>
           </View>
 
-          {/* Variants */}
+          {/* Has Variants Toggle */}
           <View style={[styles.card, { backgroundColor: cardBackground }]}>
-            <Text style={[styles.sectionTitle, { color: textColor }]}>
-              Product Variants
-            </Text>
-            {variants.map((variant, index) => (
-              <View
-                key={index}
-                style={[styles.variantContainer, { borderColor }]}
-              >
-                <View style={styles.variantHeader}>
-                  <Text style={[styles.variantTitle, { color: textColor }]}>
-                    Variant {index + 1}
-                  </Text>
-                  {variants.length > 1 && (
-                    <TouchableOpacity
-                      onPress={() => removeVariant(index)}
-                      style={styles.removeVariantButton}
-                    >
-                      <Ionicons
-                        name="trash-outline"
-                        size={20}
-                        color="#ff3b30"
-                      />
-                    </TouchableOpacity>
-                  )}
-                </View>
-
-                <View style={styles.colorPaletteContainer}>
-                  {colorPalette.map((color) => (
-                    <TouchableOpacity
-                      key={color.name}
-                      onPress={() => updateVariant(index, "color", color.hex)}
-                      style={[
-                        styles.colorOption,
-                        { backgroundColor: color.hex },
-                        variant.color === color.hex && styles.selectedColor,
-                      ]}
-                    >
-                      {variant.color === color.hex && (
-                        <Ionicons
-                          name="checkmark"
-                          size={20}
-                          color={color.hex === "#FFFFFF" ? "#000" : "#fff"}
-                        />
-                      )}
-                    </TouchableOpacity>
-                  ))}
-                </View>
-
-                <View style={styles.inputContainer}>
-                  <Text style={[styles.label, { color: textColor }]}>
-                    Stock Quantity <Text style={styles.required}>*</Text>
-                  </Text>
-                  <TextInput
-                    style={[styles.input, { color: textColor, borderColor }]}
-                    value={String(variant.stock || 0)}
-                    onChangeText={(text) =>
-                      updateVariant(index, "stock", parseInt(text) || 0)
-                    }
-                    keyboardType="numeric"
-                    placeholder="Enter stock"
-                  />
-                </View>
-
-                <TouchableOpacity
-                  onPress={() => handleVariantImagePick(index)}
-                  style={[
-                    styles.imagePickerButton,
-                    { backgroundColor: primaryColor },
-                  ]}
-                >
-                  <Ionicons name="camera-outline" size={20} color="#fff" />
-                  <Text style={styles.imagePickerText}>Add Variant Images</Text>
-                </TouchableOpacity>
-
-                <View style={styles.imageGrid}>
-                  {(variant.variantImages || []).map(
-                    (uri: string, imgIdx: number) => (
-                      <View key={imgIdx} style={styles.imageContainer}>
-                        {uploads[uri] ? (
-                          <ImageUploadProgress
-                            upload={uploads[uri]}
-                            size={70}
-                          />
-                        ) : (
-                          <Image source={{ uri }} style={styles.imagePreview} />
-                        )}
-                        <TouchableOpacity
-                          onPress={() => {
-                            const newV = [...variants];
-                            newV[index].variantImages = (
-                              newV[index].variantImages || []
-                            ).filter((_: any, i: number) => i !== imgIdx);
-                            setVariants(newV);
-                          }}
-                          style={styles.removeImageButton}
-                        >
-                          <Ionicons name="close" size={14} color="#fff" />
-                        </TouchableOpacity>
-                      </View>
-                    ),
-                  )}
-                </View>
+            <View style={styles.switchContainer}>
+              <View>
+                <Text style={[styles.label, { color: textColor }]}>
+                  Has Color/Size Variants?
+                </Text>
+                <Text style={{ color: placeholderColor, fontSize: 13, marginTop: 2 }}>
+                  {hasVariants
+                    ? "Each variant has its own stock & images"
+                    : "Simple product with one stock count"}
+                </Text>
               </View>
-            ))}
-            <TouchableOpacity
-              onPress={addVariant}
-              style={[styles.addVariantButton, { borderColor: primaryColor }]}
-            >
-              <Text style={[styles.addVariantText, { color: primaryColor }]}>
-                + Add Another Variant
-              </Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Stock */}
-          <View style={[styles.card, { backgroundColor: cardBackground }]}>
-            <Text style={[styles.sectionTitle, { color: textColor }]}>
-              Stock & Visibility
-            </Text>
-            <View style={styles.inputContainer}>
-              <Text style={[styles.label, { color: textColor }]}>
-                Stock Quantity
-              </Text>
-              <TextInput
-                style={[styles.input, { color: textColor, borderColor }]}
-                value={String(stock)}
-                onChangeText={(text) => setStock(parseInt(text) || 0)}
-                keyboardType="numeric"
+              <Switch
+                value={hasVariants}
+                onValueChange={setHasVariants}
+                trackColor={{ false: placeholderColor, true: primaryColor }}
+                thumbColor={hasVariants ? "#ffffff" : "#f4f3f4"}
               />
             </View>
+          </View>
+
+          {!hasVariants ? (
+            /* Simple Product: Stock + Images */
+            <View style={[styles.card, { backgroundColor: cardBackground }]}>
+              <Text style={[styles.sectionTitle, { color: textColor }]}>
+                Stock & Images
+              </Text>
+
+              <View style={styles.inputContainer}>
+                <Text style={[styles.label, { color: textColor }]}>
+                  Stock Quantity <Text style={styles.required}>*</Text>
+                </Text>
+                <TextInput
+                  style={[styles.input, { color: textColor, borderColor }]}
+                  value={String(stock)}
+                  onChangeText={(text) => setStock(parseInt(text) || 0)}
+                  keyboardType="numeric"
+                  placeholder="Enter total stock quantity"
+                  placeholderTextColor={placeholderColor}
+                />
+              </View>
+
+              <View style={styles.inputContainer}>
+                <Text style={[styles.label, { color: textColor }]}>
+                  Product Images <Text style={styles.required}>*</Text>
+                </Text>
+                <View style={styles.imageGrid}>
+                  {productImages.map((uri, imgIndex) => (
+                    <View key={imgIndex} style={styles.imageContainer}>
+                      {uploads[uri] ? (
+                        <ImageUploadProgress upload={uploads[uri]} size={70} />
+                      ) : (
+                        <Image source={{ uri }} style={styles.imagePreview} />
+                      )}
+                      <TouchableOpacity
+                        style={styles.removeImageButton}
+                        onPress={() => removeProductImage(imgIndex)}
+                      >
+                        <Ionicons name="close" size={14} color="#fff" />
+                      </TouchableOpacity>
+                    </View>
+                  ))}
+                  <TouchableOpacity
+                    style={[
+                      styles.imagePreview,
+                      {
+                        justifyContent: "center",
+                        alignItems: "center",
+                        borderStyle: "dashed",
+                        borderWidth: 1.5,
+                        borderColor: primaryColor,
+                      },
+                    ]}
+                    onPress={handleProductImagePick}
+                  >
+                    <Ionicons name="add" size={32} color={primaryColor} />
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+          ) : (
+            /* Variant Product: Color + Size + Stock + Images per variant */
+            <View style={[styles.card, { backgroundColor: cardBackground }]}>
+              <Text style={[styles.sectionTitle, { color: textColor }]}>
+                Product Variants
+              </Text>
+              {variants.map((variant, index) => {
+                const sizes = getSizesForProductType(productType);
+                return (
+                  <View
+                    key={index}
+                    style={[styles.variantContainer, { borderColor }]}
+                  >
+                    <View style={styles.variantHeader}>
+                      <Text style={[styles.variantTitle, { color: textColor }]}>
+                        Variant {index + 1}
+                      </Text>
+                      {variants.length > 1 && (
+                        <TouchableOpacity
+                          onPress={() => removeVariant(index)}
+                          style={styles.removeVariantButton}
+                        >
+                          <Ionicons
+                            name="trash-outline"
+                            size={20}
+                            color="#ff3b30"
+                          />
+                        </TouchableOpacity>
+                      )}
+                    </View>
+
+                    {/* Color Picker */}
+                    <View style={styles.inputContainer}>
+                      <Text style={[styles.label, { color: textColor }]}>
+                        Color <Text style={styles.required}>*</Text>
+                      </Text>
+                      <View style={styles.colorPaletteContainer}>
+                        {colorPalette.map((color) => (
+                          <TouchableOpacity
+                            key={color.name}
+                            onPress={() => updateVariant(index, "color", color.hex)}
+                            style={[
+                              styles.colorOption,
+                              { backgroundColor: color.hex },
+                              variant.color === color.hex && styles.selectedColor,
+                            ]}
+                          >
+                            {variant.color === color.hex && (
+                              <Ionicons
+                                name="checkmark"
+                                size={20}
+                                color={
+                                  color.hex === "#FFFFFF" || color.hex === "#FDD835"
+                                    ? "#000"
+                                    : "#fff"
+                                }
+                              />
+                            )}
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                      {variant.color ? (
+                        <Text
+                          style={{
+                            color: placeholderColor,
+                            fontSize: 12,
+                            marginTop: 6,
+                          }}
+                        >
+                          Selected:{" "}
+                          {colorPalette.find((c) => c.hex === variant.color)
+                            ?.name || variant.color}
+                        </Text>
+                      ) : null}
+                    </View>
+
+                    {/* Size Picker (if product type has sizes) */}
+                    {sizes.length > 0 && (
+                      <View style={styles.inputContainer}>
+                        <Text style={[styles.label, { color: textColor }]}>
+                          Size
+                        </Text>
+                        <View style={styles.colorPaletteContainer}>
+                          {sizes.map((size) => (
+                            <TouchableOpacity
+                              key={size}
+                              onPress={() =>
+                                updateVariant(index, "size" as any, size)
+                              }
+                              style={[
+                                {
+                                  paddingHorizontal: 14,
+                                  paddingVertical: 8,
+                                  borderWidth: 1.5,
+                                  borderColor:
+                                    variant.size === size
+                                      ? primaryColor
+                                      : borderColor,
+                                  backgroundColor:
+                                    variant.size === size
+                                      ? primaryColor
+                                      : "transparent",
+                                  borderRadius: 8,
+                                },
+                              ]}
+                            >
+                              <Text
+                                style={{
+                                  color:
+                                    variant.size === size ? "#fff" : textColor,
+                                  fontWeight: "600",
+                                  fontSize: 14,
+                                }}
+                              >
+                                {size}
+                              </Text>
+                            </TouchableOpacity>
+                          ))}
+                        </View>
+                      </View>
+                    )}
+
+                    {/* Variant Images */}
+                    <View style={styles.inputContainer}>
+                      <Text style={[styles.label, { color: textColor }]}>
+                        Images <Text style={styles.required}>*</Text>
+                      </Text>
+                      <View style={styles.imageGrid}>
+                        {(variant.variantImages || []).map(
+                          (uri: string, imgIdx: number) => (
+                            <View key={imgIdx} style={styles.imageContainer}>
+                              {uploads[uri] ? (
+                                <ImageUploadProgress
+                                  upload={uploads[uri]}
+                                  size={70}
+                                />
+                              ) : (
+                                <Image source={{ uri }} style={styles.imagePreview} />
+                              )}
+                              <TouchableOpacity
+                                onPress={() => {
+                                  const newV = [...variants];
+                                  newV[index].variantImages = (
+                                    newV[index].variantImages || []
+                                  ).filter((_: any, i: number) => i !== imgIdx);
+                                  setVariants(newV);
+                                }}
+                                style={styles.removeImageButton}
+                              >
+                                <Ionicons name="close" size={14} color="#fff" />
+                              </TouchableOpacity>
+                            </View>
+                          ),
+                        )}
+                        <TouchableOpacity
+                          style={[
+                            styles.imagePreview,
+                            {
+                              justifyContent: "center",
+                              alignItems: "center",
+                              borderStyle: "dashed",
+                              borderWidth: 1.5,
+                              borderColor: primaryColor,
+                            },
+                          ]}
+                          onPress={() => handleVariantImagePick(index)}
+                        >
+                          <Ionicons name="add" size={32} color={primaryColor} />
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+
+                    {/* Variant Stock */}
+                    <View style={styles.inputContainer}>
+                      <Text style={[styles.label, { color: textColor }]}>
+                        Stock <Text style={styles.required}>*</Text>
+                      </Text>
+                      <TextInput
+                        style={[styles.input, { color: textColor, borderColor }]}
+                        value={String(variant.stock || 0)}
+                        onChangeText={(text) =>
+                          updateVariant(index, "stock", parseInt(text) || 0)
+                        }
+                        keyboardType="numeric"
+                        placeholder="Stock for this variant"
+                        placeholderTextColor={placeholderColor}
+                      />
+                    </View>
+                  </View>
+                );
+              })}
+              <TouchableOpacity
+                onPress={addVariant}
+                style={[styles.addVariantButton, { borderColor: primaryColor }]}
+              >
+                <Text style={[styles.addVariantText, { color: primaryColor }]}>
+                  + Add Another Variant
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {/* Status & Visibility */}
+          <View style={[styles.card, { backgroundColor: cardBackground }]}>
+            <Text style={[styles.sectionTitle, { color: textColor }]}>
+              Status & Visibility
+            </Text>
             <View style={styles.inputContainer}>
               <Text style={[styles.label, { color: textColor }]}>
                 Product Status

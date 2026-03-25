@@ -7,6 +7,9 @@ export enum NotificationType {
   REFERRAL = 'referral',
   STOCK_ALERT = 'stock_alert',
   GENERAL = 'general',
+  NEW_PRODUCT = 'new_product',
+  NEW_BRAND = 'new_brand',
+  PRICE_DROP = 'price_drop',
 }
 
 @Entity()

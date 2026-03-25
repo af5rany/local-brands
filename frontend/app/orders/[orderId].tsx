@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Image,
+  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -74,44 +75,16 @@ const OrderDetailScreen = () => {
 
   const getStatusColor = (status: string) => {
     switch (status?.toUpperCase()) {
-      case "PENDING":
-        return "#F59E0B";
-      case "CONFIRMED":
-        return "#3B82F6";
-      case "PROCESSING":
-        return "#8B5CF6";
-      case "SHIPPED":
-        return "#6366F1";
-      case "DELIVERED":
-        return "#10B981";
       case "CANCELLED":
-        return "#EF4444";
-      case "RETURNED":
-        return "#F97316";
+        return "#C41E3A";
       default:
-        return secondaryTextColor;
+        return "#000000";
     }
   };
 
-  const getStatusIcon = (status: string) => {
-    switch (status?.toUpperCase()) {
-      case "PENDING":
-        return "time-outline";
-      case "CONFIRMED":
-        return "checkmark-circle-outline";
-      case "PROCESSING":
-        return "construct-outline";
-      case "SHIPPED":
-        return "airplane-outline";
-      case "DELIVERED":
-        return "checkmark-done-circle-outline";
-      case "CANCELLED":
-        return "close-circle-outline";
-      case "RETURNED":
-        return "return-down-back-outline";
-      default:
-        return "ellipse-outline";
-    }
+  const copyTrackingNumber = () => {
+    if (!order?.trackingNumber) return;
+    Alert.alert("Copied", "Tracking number copied to clipboard.");
   };
 
   if (loading) {
@@ -178,7 +151,7 @@ const OrderDetailScreen = () => {
             <View
               style={[
                 styles.statusBadge,
-                { backgroundColor: getStatusColor(order.status) + "20" },
+                { backgroundColor: getStatusColor(order.status) + "15" },
               ]}
             >
               <Text
@@ -191,7 +164,57 @@ const OrderDetailScreen = () => {
               </Text>
             </View>
           </View>
+
+          {/* Estimated Delivery */}
+          {order.estimatedDeliveryDate && order.status !== "DELIVERED" && order.status !== "CANCELLED" && (
+            <View style={[styles.deliveryRow, { borderTopColor: secondaryTextColor + "15" }]}>
+              <Ionicons name="time-outline" size={14} color={secondaryTextColor} />
+              <Text style={[styles.deliveryText, { color: secondaryTextColor }]}>
+                ESTIMATED DELIVERY{" "}
+                <Text style={{ color: textColor, fontWeight: "700" }}>
+                  {new Date(order.estimatedDeliveryDate).toLocaleDateString("en-US", {
+                    month: "long",
+                    day: "numeric",
+                  })}
+                </Text>
+              </Text>
+            </View>
+          )}
+
+          {order.status === "DELIVERED" && order.deliveredAt && (
+            <View style={[styles.deliveryRow, { borderTopColor: secondaryTextColor + "15" }]}>
+              <Ionicons name="checkmark-circle-outline" size={14} color="#000000" />
+              <Text style={[styles.deliveryText, { color: textColor }]}>
+                DELIVERED{" "}
+                <Text style={{ fontWeight: "700" }}>
+                  {new Date(order.deliveredAt).toLocaleDateString("en-US", {
+                    month: "long",
+                    day: "numeric",
+                  })}
+                </Text>
+              </Text>
+            </View>
+          )}
         </View>
+
+        {/* Tracking Number */}
+        {order.trackingNumber && (
+          <TouchableOpacity
+            style={[styles.trackingCard, { backgroundColor: cardBackground }]}
+            onPress={copyTrackingNumber}
+            activeOpacity={0.7}
+          >
+            <View style={styles.trackingLeft}>
+              <Text style={[styles.trackingLabel, { color: secondaryTextColor }]}>
+                TRACKING NUMBER
+              </Text>
+              <Text style={[styles.trackingValue, { color: textColor }]}>
+                {order.trackingNumber}
+              </Text>
+            </View>
+            <Ionicons name="copy-outline" size={18} color={secondaryTextColor} />
+          </TouchableOpacity>
+        )}
 
         {/* Order Items */}
         <View style={styles.section}>
@@ -284,7 +307,7 @@ const OrderDetailScreen = () => {
                 >
                   Discount
                 </Text>
-                <Text style={[styles.priceValue, { color: "#10B981" }]}>
+                <Text style={[styles.priceValue, { color: "#666666" }]}>
                   -${Number(order.discountAmount).toFixed(2)}
                 </Text>
               </View>
@@ -356,7 +379,7 @@ const OrderDetailScreen = () => {
             ) : (
               history.map((entry, index) => {
                 const isLast = index === history.length - 1;
-                const statusColor = getStatusColor(entry.newStatus);
+                const isCancelled = entry.newStatus === "CANCELLED";
                 return (
                   <View key={entry.id} style={styles.timelineItem}>
                     <View style={styles.timelineDotCol}>
@@ -365,22 +388,18 @@ const OrderDetailScreen = () => {
                           styles.timelineDot,
                           {
                             backgroundColor: isLast
-                              ? statusColor
-                              : statusColor + "40",
+                              ? isCancelled
+                                ? "#C41E3A"
+                                : "#000000"
+                              : "#D4D4D4",
                           },
                         ]}
-                      >
-                        <Ionicons
-                          name={getStatusIcon(entry.newStatus) as any}
-                          size={14}
-                          color={isLast ? "#fff" : statusColor}
-                        />
-                      </View>
+                      />
                       {index < history.length - 1 && (
                         <View
                           style={[
                             styles.timelineLine,
-                            { backgroundColor: secondaryTextColor + "30" },
+                            { backgroundColor: "#E5E5E5" },
                           ]}
                         />
                       )}
@@ -389,7 +408,13 @@ const OrderDetailScreen = () => {
                       <Text
                         style={[
                           styles.timelineStatus,
-                          { color: isLast ? textColor : secondaryTextColor },
+                          {
+                            color: isLast
+                              ? isCancelled
+                                ? "#C41E3A"
+                                : textColor
+                              : secondaryTextColor,
+                          },
                         ]}
                       >
                         {entry.newStatus}
@@ -454,14 +479,9 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   card: {
-    borderRadius: 12,
+    borderRadius: 0,
     padding: 16,
     marginBottom: 8,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 3,
-    elevation: 1,
   },
   orderHeaderRow: {
     flexDirection: "row",
@@ -479,7 +499,7 @@ const styles = StyleSheet.create({
   statusBadge: {
     paddingHorizontal: 10,
     paddingVertical: 4,
-    borderRadius: 6,
+    borderRadius: 0,
   },
   statusText: {
     fontSize: 10,
@@ -497,7 +517,7 @@ const styles = StyleSheet.create({
   },
   itemCard: {
     flexDirection: "row",
-    borderRadius: 12,
+    borderRadius: 0,
     padding: 12,
     marginBottom: 8,
     alignItems: "center",
@@ -505,7 +525,7 @@ const styles = StyleSheet.create({
   itemImage: {
     width: 56,
     height: 56,
-    borderRadius: 8,
+    borderRadius: 0,
     backgroundColor: "#f5f5f5",
     marginRight: 12,
   },
@@ -587,11 +607,10 @@ const styles = StyleSheet.create({
     width: 36,
   },
   timelineDot: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    justifyContent: "center",
-    alignItems: "center",
+    width: 10,
+    height: 10,
+    borderRadius: 0,
+    marginTop: 4,
   },
   timelineLine: {
     width: 2,
@@ -616,6 +635,41 @@ const styles = StyleSheet.create({
   timelineDate: {
     fontSize: 11,
     marginTop: 4,
+  },
+  deliveryRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginTop: 14,
+    paddingTop: 14,
+    borderTopWidth: 1,
+  },
+  deliveryText: {
+    fontSize: 11,
+    fontWeight: "600",
+    letterSpacing: 1,
+  },
+  trackingCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: 16,
+    borderRadius: 0,
+    marginBottom: 8,
+  },
+  trackingLeft: {
+    flex: 1,
+  },
+  trackingLabel: {
+    fontSize: 10,
+    fontWeight: "700",
+    letterSpacing: 1.5,
+    marginBottom: 4,
+  },
+  trackingValue: {
+    fontSize: 15,
+    fontWeight: "600",
+    letterSpacing: 0.5,
   },
 });
 

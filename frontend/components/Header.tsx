@@ -5,27 +5,19 @@ import {
   StyleSheet,
   Pressable,
   useWindowDimensions,
-  TextInput,
   Image,
   Animated,
   Modal,
   TouchableOpacity,
   TouchableWithoutFeedback,
 } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useThemeColors } from "@/hooks/useThemeColor";
 import { useAuth } from "@/context/AuthContext";
+import { useCartCount } from "@/hooks/useCartCount";
 
 const LOGO_IMAGE = require("@/assets/images/local-sooq.png");
-
-const getGreeting = (): string => {
-  const h = new Date().getHours();
-  if (h < 12) return "Good morning";
-  if (h < 17) return "Good afternoon";
-  return "Good evening";
-};
 
 interface MenuItem {
   label: string;
@@ -37,48 +29,31 @@ const MENU_ITEMS: MenuItem[] = [
   { label: "Home", icon: "home-outline", route: "/(tabs)" },
   { label: "Shop", icon: "grid-outline", route: "/(tabs)/shop" },
   { label: "Wishlist", icon: "heart-outline", route: "/(tabs)/wishlist" },
-  { label: "Orders", icon: "receipt-outline", route: "/(tabs)/orders" },
+  { label: "Orders", icon: "receipt-outline", route: "/orders" },
   { label: "Profile", icon: "person-outline", route: "/(tabs)/profile" },
-  { label: "Brands", icon: "storefront-outline", route: "/(tabs)/shop" },
+  { label: "Brands", icon: "storefront-outline", route: "/(tabs)/brands" },
   { label: "Cart", icon: "bag-handle-outline", route: "/cart" },
   { label: "Settings", icon: "settings-outline", route: "/(tabs)/profile" },
 ];
 
 interface HeaderProps {
-  userName?: string;
-  userRole?: string;
-  isGuest?: boolean;
-  showSearch?: boolean;
-  searchQuery?: string;
-  onSearchChange?: (text: string) => void;
-  suggestions?: { text: string; type: "Product" | "Brand" }[];
-  onSuggestionPress?: (text: string) => void;
-  cartItemCount?: number;
   notificationCount?: number;
 }
 
 const Header: React.FC<HeaderProps> = ({
-  userName,
-  userRole,
-  isGuest = false,
-  showSearch = false,
-  searchQuery = "",
-  onSearchChange,
-  suggestions = [],
-  onSuggestionPress,
-  cartItemCount = 0,
   notificationCount = 0,
 }) => {
   const colors = useThemeColors();
   const { width } = useWindowDimensions();
   const router = useRouter();
-  const { token, logout } = useAuth();
+  const { token, user, logout } = useAuth();
+  const { count: cartItemCount } = useCartCount();
   const isTablet = width > 768;
+  const isGuest = !token;
+  const userName = user?.name || user?.email?.split("@")[0] || "";
 
   const [menuVisible, setMenuVisible] = useState(false);
   const slideAnim = useRef(new Animated.Value(width)).current;
-
-  const searchFocusAnim = useRef(new Animated.Value(0)).current;
 
   const openMenu = () => {
     setMenuVisible(true);
@@ -107,44 +82,8 @@ const Header: React.FC<HeaderProps> = ({
     }, 280);
   };
 
-  const handleSearchFocus = () => {
-    Animated.spring(searchFocusAnim, {
-      toValue: 1,
-      friction: 8,
-      tension: 100,
-      useNativeDriver: false,
-    }).start();
-  };
-
-  const handleSearchBlur = () => {
-    Animated.spring(searchFocusAnim, {
-      toValue: 0,
-      friction: 8,
-      tension: 100,
-      useNativeDriver: false,
-    }).start();
-  };
-
-  const searchBorderColor = searchFocusAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [colors.border, colors.primary],
-  });
-
-  const searchShadowOpacity = searchFocusAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0, 0.12],
-  });
-
   return (
-    <View style={[styles.headerWrapper, { backgroundColor: colors.surface }]}>
-      {/* Gradient Accent Strip */}
-      <LinearGradient
-        colors={[colors.primary, colors.accent]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 0 }}
-        style={styles.accentStrip}
-      />
-
+    <View style={[styles.headerWrapper, { backgroundColor: colors.surface, borderBottomWidth: 0.5, borderBottomColor: colors.border }]}>
       {/* Top Row: Logo + Actions */}
       <View style={[styles.topRow, isTablet && styles.topRowTablet]}>
         <Pressable
@@ -239,156 +178,6 @@ const Header: React.FC<HeaderProps> = ({
           )}
         </View>
       </View>
-
-      {/* Greeting Row */}
-      {!isGuest && userName && !showSearch && (
-        <View style={styles.greetingRow}>
-          <Text style={[styles.greetingText, { color: colors.textTertiary }]}>
-            {getGreeting()},{" "}
-            <Text style={[styles.greetingName, { color: colors.text }]}>
-              {userName}
-            </Text>
-          </Text>
-        </View>
-      )}
-
-      {/* Search Section -- only shown when showSearch is true */}
-      {showSearch && (
-        <View style={styles.searchSection}>
-          <Animated.View
-            style={[
-              styles.searchContainer,
-              {
-                backgroundColor: colors.surfaceRaised,
-                borderColor: searchBorderColor,
-                shadowColor: colors.primary,
-                shadowOpacity: searchShadowOpacity,
-              },
-            ]}
-          >
-            <View
-              style={[
-                styles.searchIconWrap,
-                { backgroundColor: colors.primarySoft },
-              ]}
-            >
-              <Ionicons name="search" size={14} color={colors.primary} />
-            </View>
-            <TextInput
-              placeholder="Search products, brands\u2026"
-              placeholderTextColor={colors.textTertiary}
-              style={[styles.searchInput, { color: colors.text }]}
-              value={searchQuery}
-              onChangeText={onSearchChange}
-              onFocus={handleSearchFocus}
-              onBlur={handleSearchBlur}
-              returnKeyType="search"
-            />
-            {searchQuery.length > 0 ? (
-              <Pressable
-                onPress={() => onSearchChange?.("")}
-                style={[styles.clearBtn, { backgroundColor: colors.border }]}
-              >
-                <Ionicons name="close" size={12} color={colors.textSecondary} />
-              </Pressable>
-            ) : (
-              <Pressable
-                style={[
-                  styles.micBtn,
-                  {
-                    backgroundColor: colors.surface,
-                    borderColor: colors.border,
-                  },
-                ]}
-              >
-                <Ionicons
-                  name="mic-outline"
-                  size={14}
-                  color={colors.textTertiary}
-                />
-              </Pressable>
-            )}
-          </Animated.View>
-
-          {/* Autocomplete Suggestions */}
-          {suggestions.length > 0 && searchQuery.length > 0 && (
-            <View
-              style={[
-                styles.suggestionBox,
-                {
-                  backgroundColor: colors.surface,
-                  borderColor: colors.border,
-                  shadowColor: colors.cardShadow,
-                },
-              ]}
-            >
-              {suggestions.map((item, index) => (
-                <Pressable
-                  key={index}
-                  style={({ pressed }) => [
-                    styles.suggestionItem,
-                    { borderBottomColor: colors.borderLight },
-                    pressed && { backgroundColor: colors.surfaceRaised },
-                  ]}
-                  onPress={() => onSuggestionPress?.(item.text)}
-                >
-                  <View style={styles.suggestionLeft}>
-                    <LinearGradient
-                      colors={
-                        item.type === "Brand"
-                          ? [colors.primary, colors.primaryMuted]
-                          : [colors.success, "#10B981"]
-                      }
-                      style={styles.suggestionIconCircle}
-                    >
-                      <Ionicons
-                        name={
-                          item.type === "Product"
-                            ? "cube-outline"
-                            : "storefront-outline"
-                        }
-                        size={13}
-                        color="#FFF"
-                      />
-                    </LinearGradient>
-                    <Text
-                      style={[styles.suggestionText, { color: colors.text }]}
-                      numberOfLines={1}
-                    >
-                      {item.text}
-                    </Text>
-                  </View>
-                  <View
-                    style={[
-                      styles.typeBadge,
-                      {
-                        backgroundColor:
-                          item.type === "Brand"
-                            ? colors.primarySoft
-                            : colors.successSoft,
-                      },
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.typeText,
-                        {
-                          color:
-                            item.type === "Brand"
-                              ? colors.primary
-                              : colors.success,
-                        },
-                      ]}
-                    >
-                      {item.type}
-                    </Text>
-                  </View>
-                </Pressable>
-              ))}
-            </View>
-          )}
-        </View>
-      )}
 
       {/* Side Menu Modal */}
       <Modal
@@ -534,10 +323,6 @@ const styles = StyleSheet.create({
     zIndex: 100,
     overflow: "visible",
   },
-  accentStrip: {
-    height: 3,
-    width: "100%",
-  },
   topRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -587,7 +372,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 14,
     gap: 8,
-    shadowColor: "#4338CA",
+    shadowColor: "#000000",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -642,120 +427,6 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: "800",
     lineHeight: 13,
-  },
-
-  greetingRow: {
-    paddingHorizontal: 20,
-    paddingBottom: 2,
-  },
-  greetingText: {
-    fontSize: 14,
-    fontWeight: "400",
-    letterSpacing: 0.1,
-  },
-  greetingName: {
-    fontWeight: "700",
-  },
-  searchSection: {
-    paddingHorizontal: 20,
-    paddingTop: 10,
-    paddingBottom: 16,
-    zIndex: 100,
-  },
-  searchContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    borderRadius: 16,
-    paddingLeft: 6,
-    paddingRight: 14,
-    height: 48,
-    borderWidth: 1.5,
-    shadowOffset: { width: 0, height: 4 },
-    shadowRadius: 12,
-    elevation: 2,
-  },
-  searchIconWrap: {
-    width: 36,
-    height: 36,
-    borderRadius: 12,
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 10,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 15,
-    paddingVertical: 0,
-    fontWeight: "400",
-    letterSpacing: 0.1,
-  },
-  clearBtn: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  micBtn: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    borderWidth: 0.5,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  suggestionBox: {
-    position: "absolute",
-    top: 66,
-    left: 20,
-    right: 20,
-    borderRadius: 18,
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 1,
-    shadowRadius: 32,
-    elevation: 12,
-    borderWidth: 1,
-    maxHeight: 300,
-    overflow: "hidden",
-  },
-  suggestionItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingVertical: 13,
-    paddingHorizontal: 16,
-    borderBottomWidth: 1,
-  },
-  suggestionLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    flex: 1,
-  },
-  suggestionIconCircle: {
-    width: 32,
-    height: 32,
-    borderRadius: 10,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  suggestionText: {
-    fontSize: 14,
-    fontWeight: "500",
-    flex: 1,
-    letterSpacing: 0.1,
-  },
-  typeBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
-    marginLeft: 8,
-  },
-  typeText: {
-    fontSize: 10,
-    fontWeight: "800",
-    textTransform: "uppercase",
-    letterSpacing: 0.8,
   },
 
   // Side Menu Modal

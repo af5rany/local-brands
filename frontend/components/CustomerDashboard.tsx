@@ -33,6 +33,7 @@ type CustomerDashboardProps = {
     sortBy?: string;
     priceMin?: number;
     priceMax?: number;
+    inStockOnly?: boolean;
   };
   onFilterPress?: (type: string, values: string[], labels?: string[]) => void;
   onFiltersApply?: (
@@ -92,6 +93,8 @@ const CustomerDashboard = ({
     sortOrder: (activeFilters.sort ?? "DESC") as "ASC" | "DESC",
     priceMin: activeFilters.priceMin ?? 0,
     priceMax: activeFilters.priceMax ?? 500,
+    inStockOnly: activeFilters.inStockOnly ?? false,
+    followedBrandsOnly: false,
   };
 
   const handlePanelApply = (filters: PanelFilters) => {

@@ -19,6 +19,9 @@ import {
 } from 'src/common/enums/product.enum';
 import { UserRole } from 'src/common/enums/user.enum';
 import { PublicProductDto } from './dto/public-product.dto';
+import { BrandsService } from '../brands/brands.service';
+import { NotificationsService } from '../notifications/notifications.service';
+import { NotificationType } from '../notifications/notification.entity';
 
 @Injectable()
 export class ProductsService {
@@ -30,6 +33,8 @@ export class ProductsService {
     @InjectRepository(ProductVariant)
     private variantRepository: Repository<ProductVariant>,
     private dataSource: DataSource,
+    private brandsService: BrandsService,
+    private notificationsService: NotificationsService,
   ) {}
 
   async findAll(
@@ -211,7 +216,7 @@ export class ProductsService {
     };
   }
 
-  async findOne(id: number): Promise<PublicProductDto> {
+  async findOne(id: number, trackView = false): Promise<PublicProductDto> {
     const product = await this.productsRepository.findOne({
       where: { id },
       relations: ['brand', 'brand.brandUsers', 'productVariants'],
@@ -219,19 +224,122 @@ export class ProductsService {
     if (!product) {
       throw new NotFoundException(`Product #${id} not found`);
     }
+
+    // Increment view count in the background (fire-and-forget)
+    if (trackView) {
+      this.productsRepository
+        .increment({ id }, 'viewCount', 1)
+        .catch(() => {});
+    }
+
     return this.mapToPublicDto(product);
+  }
+
+  async getTrending(limit = 10): Promise<PublicProductDto[]> {
+    const products = await this.productsRepository.find({
+      where: { status: ProductStatus.PUBLISHED, isAvailable: true },
+      relations: ['brand', 'productVariants'],
+      order: { viewCount: 'DESC', salesCount: 'DESC' },
+      take: limit,
+    });
+    return products.map((p) => this.mapToPublicDto(p));
+  }
+
+  async getBestsellers(limit = 10): Promise<PublicProductDto[]> {
+    const products = await this.productsRepository.find({
+      where: { status: ProductStatus.PUBLISHED, isAvailable: true },
+      relations: ['brand', 'productVariants'],
+      order: { salesCount: 'DESC' },
+      take: limit,
+    });
+    return products.map((p) => this.mapToPublicDto(p));
+  }
+
+  async getSimilar(id: number, limit = 10): Promise<PublicProductDto[]> {
+    const product = await this.productsRepository.findOne({
+      where: { id },
+      select: ['id', 'brandId', 'subcategory', 'productType', 'gender'],
+    });
+    if (!product) {
+      throw new NotFoundException(`Product #${id} not found`);
+    }
+
+    const qb = this.productsRepository
+      .createQueryBuilder('product')
+      .leftJoinAndSelect('product.brand', 'brand')
+      .leftJoinAndSelect('product.productVariants', 'productVariants')
+      .where('product.id != :id', { id })
+      .andWhere('product.status = :status', { status: ProductStatus.PUBLISHED })
+      .andWhere('product.isAvailable = true');
+
+    // Score similarity: same brand, same category, same type, same gender
+    const conditions: string[] = [];
+    const params: Record<string, any> = {};
+
+    if (product.brandId) {
+      conditions.push('CASE WHEN product.brandId = :brandId THEN 3 ELSE 0 END');
+      params.brandId = product.brandId;
+    }
+    if (product.subcategory) {
+      conditions.push(
+        "CASE WHEN product.subcategory = :subcategory THEN 2 ELSE 0 END",
+      );
+      params.subcategory = product.subcategory;
+    }
+    if (product.productType) {
+      conditions.push(
+        'CASE WHEN product.productType = :productType THEN 2 ELSE 0 END',
+      );
+      params.productType = product.productType;
+    }
+    if (product.gender) {
+      conditions.push(
+        'CASE WHEN product.gender = :gender THEN 1 ELSE 0 END',
+      );
+      params.gender = product.gender;
+    }
+
+    if (conditions.length > 0) {
+      // Filter to at least one match
+      const orConditions: string[] = [];
+      if (product.brandId)
+        orConditions.push('product.brandId = :brandId');
+      if (product.subcategory)
+        orConditions.push('product.subcategory = :subcategory');
+      if (product.productType)
+        orConditions.push('product.productType = :productType');
+      if (product.gender)
+        orConditions.push('product.gender = :gender');
+
+      qb.andWhere(`(${orConditions.join(' OR ')})`, params);
+
+      const scoreExpr = conditions.join(' + ');
+      qb.addSelect(`(${scoreExpr})`, 'similarity_score');
+      qb.orderBy('similarity_score', 'DESC');
+    }
+
+    qb.addOrderBy('product.salesCount', 'DESC');
+    qb.take(limit);
+
+    const products = await qb.getMany();
+    return products.map((p) => this.mapToPublicDto(p));
   }
 
   private mapToPublicDto(product: Product): PublicProductDto {
     const pvs = product.productVariants || [];
-    const hasVariantRows = pvs.length > 0;
-    const totalStock = hasVariantRows
+    const hasVariants = pvs.length > 0;
+    const totalStock = hasVariants
       ? pvs.reduce((sum, pv) => sum + (pv.stock || 0), 0)
-      : product.variants?.reduce((sum, v) => sum + (v.stock || 0), 0) || 0;
+      : product.stock || 0;
 
     const inStock = totalStock > 0;
     const isLowStock =
       inStock && totalStock <= (product.lowStockThreshold || 10);
+
+    // For variant images fallback to product images
+    const mainImage = hasVariants
+      ? pvs[0]?.images?.[0] || product.images?.[0] || ''
+      : product.images?.[0] || '';
 
     return {
       id: product.id,
@@ -242,7 +350,7 @@ export class ProductsService {
       salePrice: product.salePrice ? Number(product.salePrice) : null,
       basePrice: product.basePrice ? Number(product.basePrice) : null,
       currency: product.currency,
-      mainImage: product.images?.[0] || '',
+      mainImage,
       images: product.images || [],
       brand: {
         id: product.brand?.id,
@@ -255,27 +363,22 @@ export class ProductsService {
       isAvailable: product.isAvailable,
       inStock,
       isLowStock,
-      variants: hasVariantRows
-        ? pvs.map((pv) => ({
-            id: pv.id,
-            productId: pv.productId,
-            sku: pv.sku,
-            attributes: pv.attributes || {},
-            color: pv.attributes?.color,
-            size: pv.attributes?.size,
-            priceOverride: pv.priceOverride
-              ? Number(pv.priceOverride)
-              : undefined,
-            stock: pv.stock,
-            images: pv.images || [],
-            variantImages: pv.images || [],
-            isAvailable: pv.isAvailable,
-          }))
-        : (product.variants || []).map((v: any) => ({
-            ...v,
-            images: v.images?.length ? v.images : v.variantImages || [],
-            attributes: v.attributes || (v.color ? { color: v.color } : {}),
-          })),
+      hasVariants,
+      variants: pvs.map((pv) => ({
+        id: pv.id,
+        productId: pv.productId,
+        sku: pv.sku,
+        attributes: pv.attributes || {},
+        color: pv.attributes?.color,
+        size: pv.attributes?.size,
+        priceOverride: pv.priceOverride
+          ? Number(pv.priceOverride)
+          : undefined,
+        stock: pv.stock,
+        images: pv.images || [],
+        variantImages: pv.images || [],
+        isAvailable: pv.isAvailable,
+      })),
       rating: Number(product.averageRating),
       reviewCount: product.reviewCount,
       isFeatured: product.isFeatured,
@@ -305,41 +408,26 @@ export class ProductsService {
       }
     }
 
-    // Extract variants before saving the product
-    const variantsInput = productData.variants;
+    // Extract variants before saving (they go to ProductVariant table, not Product)
+    const variantsInput = (productData as any).variants;
+    delete (productData as any).variants;
 
-    // Dual-write: keep JSON column during transition (TODO: Remove after migration)
-    if (variantsInput && Array.isArray(variantsInput)) {
-      productData.variants = variantsInput.map((variant: any) => {
-        const { variantImages, color, ...rest } = variant;
-        return {
-          ...rest,
-          images: variantImages ?? rest.images ?? [],
-          attributes: {
-            ...(rest.attributes ?? {}),
-            ...(color ? { color } : {}),
-          },
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        };
-      });
-    }
-
-    return this.dataSource.transaction(async (manager) => {
+    const savedProduct = await this.dataSource.transaction(async (manager) => {
       const product = this.productsRepository.create(productData);
-      const savedProduct = await manager.save(Product, product);
+      const saved = await manager.save(Product, product);
 
-      // Create ProductVariant rows
-      if (variantsInput && Array.isArray(variantsInput)) {
+      // Create ProductVariant rows if variants provided
+      if (variantsInput && Array.isArray(variantsInput) && variantsInput.length > 0) {
         const variantEntities = variantsInput.map((v: any) =>
           this.variantRepository.create({
-            productId: savedProduct.id,
+            productId: saved.id,
             attributes: {
               ...(v.attributes ?? {}),
               ...(v.color ? { color: v.color } : {}),
               ...(v.size ? { size: v.size } : {}),
             },
             stock: v.stock || 0,
+            priceOverride: v.priceOverride || null,
             images: v.variantImages || v.images || [],
             isAvailable: true,
           }),
@@ -347,8 +435,28 @@ export class ProductsService {
         await manager.save(ProductVariant, variantEntities);
       }
 
-      return this.findOne(savedProduct.id);
+      return saved;
     });
+
+    const result = await this.findOne(savedProduct.id);
+
+    // Notify followers when a product is published
+    if (
+      savedProduct.status === ProductStatus.PUBLISHED &&
+      savedProduct.brandId
+    ) {
+      this.brandsService
+        .notifyFollowers(
+          savedProduct.brandId,
+          NotificationType.NEW_PRODUCT,
+          'New Arrival',
+          `${result.brand?.name || 'A brand you follow'} just dropped "${result.name}"`,
+          { productId: savedProduct.id, brandId: savedProduct.brandId },
+        )
+        .catch(() => {});
+    }
+
+    return result;
   }
 
   async update(
@@ -368,16 +476,9 @@ export class ProductsService {
       }
     }
 
-    const variantsInput = updateData.variants;
-
-    // Dual-write: keep JSON column during transition (TODO: Remove after migration)
-    if (variantsInput && Array.isArray(variantsInput)) {
-      updateData.variants = variantsInput.map((variant) => ({
-        ...variant,
-        updatedAt: new Date(),
-        createdAt: variant.createdAt || new Date(),
-      }));
-    }
+    // Extract variants — they go to ProductVariant table, not Product columns
+    const variantsInput = (updateData as any).variants;
+    delete (updateData as any).variants;
 
     // Defensive check: TypeORM update() fails with empty object or object with only undefined values
     const updatePayload = { ...updateData };
@@ -389,7 +490,13 @@ export class ProductsService {
       return this.findOne(id);
     }
 
-    return this.dataSource.transaction(async (manager) => {
+    // Fetch current product state before update for comparison
+    const currentProduct = await this.productsRepository.findOne({
+      where: { id },
+      select: ['id', 'status', 'salePrice', 'price', 'name', 'brandId'],
+    });
+
+    await this.dataSource.transaction(async (manager) => {
       await manager.update(Product, id, updatePayload);
 
       // Sync ProductVariant rows when variants are provided
@@ -410,9 +517,51 @@ export class ProductsService {
         );
         await manager.save(ProductVariant, variantEntities);
       }
-
-      return this.findOne(id);
     });
+
+    const result = await this.findOne(id);
+
+    if (currentProduct?.brandId) {
+      // Notify when product status changes to PUBLISHED
+      if (
+        currentProduct.status !== ProductStatus.PUBLISHED &&
+        updateData.status === ProductStatus.PUBLISHED
+      ) {
+        this.brandsService
+          .notifyFollowers(
+            currentProduct.brandId,
+            NotificationType.NEW_PRODUCT,
+            'New Arrival',
+            `${result.brand?.name || 'A brand you follow'} just dropped "${result.name}"`,
+            { productId: id, brandId: currentProduct.brandId },
+          )
+          .catch(() => {});
+      }
+
+      // Notify when sale price is set or reduced
+      if (
+        updateData.salePrice &&
+        (!currentProduct.salePrice ||
+          Number(updateData.salePrice) < Number(currentProduct.salePrice))
+      ) {
+        const discount = Math.round(
+          ((Number(currentProduct.price) - Number(updateData.salePrice)) /
+            Number(currentProduct.price)) *
+              100,
+        );
+        this.brandsService
+          .notifyFollowers(
+            currentProduct.brandId,
+            NotificationType.PRICE_DROP,
+            'Price Drop',
+            `"${result.name}" is now ${discount}% off`,
+            { productId: id, brandId: currentProduct.brandId },
+          )
+          .catch(() => {});
+      }
+    }
+
+    return result;
   }
 
   async remove(id: number): Promise<void> {
@@ -452,19 +601,13 @@ export class ProductsService {
         );
       }
 
-      if (data.variants && Array.isArray(data.variants)) {
-        console.log(
-          `[ProductsService] Processing ${data.variants.length} variants for product ${i + 1}`,
-        );
-        data.variants = data.variants.map((variant) => ({
-          ...variant,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        })) as any;
-      }
+      // Extract variants — they go to ProductVariant table separately
+      const variantsCopy = data.variants;
+      const productData = { ...data } as any;
+      delete productData.variants;
 
       const product = this.productsRepository.create(
-        data as any,
+        productData as any,
       ) as unknown as Product;
       products.push(product);
     }

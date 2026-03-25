@@ -59,4 +59,9 @@ export class GetBrandsDto {
   @Transform(({ value }) => value === 'true' || value === true)
   @IsBoolean()
   isNew?: boolean;
+
+  @IsOptional()
+  @Transform(({ value }) => value === 'true' || value === true)
+  @IsBoolean()
+  isFeatured?: boolean;
 }

@@ -12,13 +12,10 @@ const getApiUrl = () => {
 
   // Fallback based on platform
   if (Platform.OS === "android") {
-    // return "http://10.0.2.2:5000";
-  return "https://local-brands-production-0df0.up.railway.app";
-
+    return "http://10.0.2.2:5000";
   }
 
-  // return "http://192.168.1.6:5000";
-  return "https://local-brands-production-0df0.up.railway.app";
+  return "http://192.168.1.6:5000";
 };
 
 // --- DEBUG: log every fetch call (URL + payload) ---

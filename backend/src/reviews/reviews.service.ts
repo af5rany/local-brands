@@ -32,6 +32,7 @@ export class ReviewsService {
     rating: number,
     comment?: string,
     orderItemId?: number,
+    images?: string[],
   ): Promise<ProductReview> {
     // 1. Basic Validation
     if (rating < 1 || rating > 5)
@@ -70,6 +71,7 @@ export class ReviewsService {
       orderItemId,
       rating,
       comment,
+      images: images || [],
       isVerifiedPurchase,
       status: ReviewStatus.PENDING,
     });

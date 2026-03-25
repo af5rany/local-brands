@@ -58,15 +58,22 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onEdit, isWishlisted
     router.push(`/products/${product.id}`);
   };
 
-  // Collect all images from all variants for the carousel
+  // Collect all images: variant images → product images → mainImage fallback
   const getAllProductImages = (): string[] => {
     const images: string[] = [];
     if (product.variants && product.variants.length > 0) {
       for (const variant of product.variants) {
-        if (variant.variantImages && variant.variantImages.length > 0) {
-          images.push(...variant.variantImages);
+        const imgs = variant.variantImages || variant.images || [];
+        if (imgs.length > 0) {
+          images.push(...imgs);
         }
       }
+    }
+    if (images.length === 0 && product.images && product.images.length > 0) {
+      images.push(...product.images);
+    }
+    if (images.length === 0 && product.mainImage) {
+      images.push(product.mainImage);
     }
     return images;
   };
@@ -95,28 +102,20 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onEdit, isWishlisted
 
   const styles = StyleSheet.create({
     cardContainer: {
-      width: width - 32, // Full width minus margins
+      width: width - 32,
       backgroundColor: cardBackground,
-      borderRadius: 20,
-      padding: 16,
-      marginBottom: 16,
-      shadowColor: "#000",
-      shadowOffset: {
-        width: 0,
-        height: 4,
-      },
-      shadowOpacity: 0.1,
-      shadowRadius: 8,
-      elevation: 5,
-      borderWidth: 1,
+      borderRadius: 0,
+      padding: 0,
+      marginBottom: 24,
+      borderWidth: 0,
       borderColor: borderColor,
     },
     imageContainer: {
       width: "100%",
-      height: width - 32 - 32, // Maintain aspect ratio
+      height: width - 32,
       backgroundColor: imageBackgroundColor,
-      borderRadius: 16,
-      marginBottom: 16,
+      borderRadius: 0,
+      marginBottom: 12,
       overflow: "hidden",
       position: "relative",
     },
@@ -127,22 +126,23 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onEdit, isWishlisted
       backgroundColor: accentColor,
       paddingHorizontal: 8,
       paddingVertical: 4,
-      borderRadius: 8,
+      borderRadius: 0,
     },
     typeText: {
       fontSize: 10,
       fontWeight: "600",
       color: cardBackground,
       textTransform: "uppercase",
+      letterSpacing: 1,
     },
     discountBadge: {
       position: "absolute",
       top: 12,
       right: 12,
-      backgroundColor: "#ff4444",
+      backgroundColor: "#C41E3A",
       paddingHorizontal: 8,
       paddingVertical: 4,
-      borderRadius: 8,
+      borderRadius: 0,
     },
     discountText: {
       fontSize: 10,
@@ -174,7 +174,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onEdit, isWishlisted
       left: 12,
       flexDirection: "row",
       alignItems: "center",
-      backgroundColor: product.stock > 0 ? "#28a745" : "#dc3545",
+      backgroundColor: product.stock > 0 ? "#000000" : "#999999",
       paddingHorizontal: 6,
       paddingVertical: 3,
       borderRadius: 6,
@@ -194,10 +194,10 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onEdit, isWishlisted
       borderRadius: 8,
       backgroundColor:
         product.status === ProductStatus.PUBLISHED
-          ? "#10b981"
+          ? "#000000"
           : product.status === ProductStatus.DRAFT
-            ? "#64748b"
-            : "#ef4444",
+            ? "#999999"
+            : "#C41E3A",
     },
     statusText: {
       fontSize: 10,
@@ -228,7 +228,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onEdit, isWishlisted
     productPrice: {
       fontSize: 18,
       fontWeight: "700",
-      color: hasDiscount ? "#28a745" : accentColor,
+      color: hasDiscount ? "#000000" : accentColor,
       marginRight: 8,
     },
     originalPrice: {
@@ -266,9 +266,9 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onEdit, isWishlisted
     },
     addToCartButton: {
       backgroundColor: accentColor,
-      paddingVertical: 12,
+      paddingVertical: 14,
       paddingHorizontal: 16,
-      borderRadius: 12,
+      borderRadius: 0,
       alignItems: "center",
       justifyContent: "center",
       flexDirection: "row",
@@ -276,9 +276,11 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onEdit, isWishlisted
     },
     addToCartText: {
       color: cardBackground,
-      fontSize: 14,
+      fontSize: 13,
       fontWeight: "600",
       marginLeft: 6,
+      textTransform: "uppercase",
+      letterSpacing: 1,
     },
     decorativeElements: {
       position: "absolute",
@@ -322,13 +324,6 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onEdit, isWishlisted
 
   return (
     <TouchableOpacity onPress={handlePress} style={styles.cardContainer}>
-      {/* Decorative Elements */}
-      <View style={styles.decorativeElements}>
-        <View style={styles.circle1} />
-        <View style={styles.circle2} />
-        <View style={styles.wave} />
-      </View>
-
       {/* Product Image Carousel */}
       <View style={styles.imageContainer}>
         <AutoSwipeImages
@@ -382,7 +377,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onEdit, isWishlisted
           <Ionicons
             name={isWishlisted ? "heart" : "heart-outline"}
             size={16}
-            color={isWishlisted ? "#ff4444" : textColor}
+            color={isWishlisted ? "#000000" : textColor}
           />
         </TouchableOpacity>
 
@@ -445,7 +440,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onEdit, isWishlisted
           )}
           {product.isFeatured && (
             <View style={styles.infoItem}>
-              <Ionicons name="star" size={12} color="#FFD700" />
+              <Ionicons name="star" size={12} color="#000000" />
               <Text style={styles.infoText}>Featured</Text>
             </View>
           )}

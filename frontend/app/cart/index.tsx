@@ -123,7 +123,7 @@ const CartScreen = () => {
 
     return (
       <View style={[styles.cartItem, { backgroundColor: cardBackground }]}>
-        <Image source={{ uri: image }} style={styles.itemImage} />
+        <Image source={{ uri: image ? image: "" }} style={styles.itemImage} />
         <View style={styles.itemDetails}>
           <Text
             style={[styles.itemName, { color: textColor }]}
@@ -335,7 +335,6 @@ const styles = StyleSheet.create({
   },
   cartItem: {
     flexDirection: "row",
-    borderRadius: 12,
     padding: 12,
     marginBottom: 16,
     alignItems: "center",
@@ -343,7 +342,6 @@ const styles = StyleSheet.create({
   itemImage: {
     width: 80,
     height: 80,
-    borderRadius: 8,
     backgroundColor: "#f5f5f5",
   },
   itemDetails: {
@@ -401,7 +399,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#000",
     paddingVertical: 16,
     paddingHorizontal: 32,
-    borderRadius: 30,
   },
   discoverBtnText: {
     color: "#fff",
@@ -413,7 +410,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#000",
     paddingVertical: 16,
     paddingHorizontal: 48,
-    borderRadius: 30,
   },
   loginBtnText: {
     color: "#fff",
@@ -455,7 +451,6 @@ const styles = StyleSheet.create({
   },
   checkoutBtn: {
     paddingVertical: 18,
-    borderRadius: 30,
     alignItems: "center",
     justifyContent: "center",
   },

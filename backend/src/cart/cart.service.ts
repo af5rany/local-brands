@@ -224,7 +224,7 @@ export class CartService {
       throw new BadRequestException('Product is not available for purchase');
     }
 
-    // Validate variant if product has them or if variantId provided
+    // Validate variant if provided, or require one if product has variants
     let variant: ProductVariant | null = null;
     if (variantId) {
       variant = await this.variantRepository.findOne({
@@ -237,6 +237,7 @@ export class CartService {
         throw new BadRequestException('Variant is not available');
       }
     } else if (product.productVariants?.length > 0) {
+      // Product has variants — customer must select one
       throw new BadRequestException('Please select a product variant');
     }
 
@@ -247,7 +248,7 @@ export class CartService {
         ? Number(product.salePrice)
         : Number(product.price);
 
-    // Check if item already exists with same variants
+    // Check if item already exists with same variant
     let cartItem = await this.cartItemRepository.findOne({
       where: {
         cartId: cart.id,
@@ -258,18 +259,19 @@ export class CartService {
 
     const newQuantity = cartItem ? cartItem.quantity + quantity : quantity;
 
-    // Validate stock
-    // const availableStock = variant
-    //   ? variant.stock
-    //   : product.isInStock()
-    //     ? 999
-    //     : 0; // Fallback if no variants
-    // Note: product.isInStock() logic in entity might need update to support table variants
-
-    if (variant && variant.stock < newQuantity) {
-      throw new BadRequestException(
-        `Insufficient stock. Available: ${variant.stock}`,
-      );
+    // Validate stock — variant stock if variant exists, product stock otherwise
+    if (variant) {
+      if (variant.stock < newQuantity) {
+        throw new BadRequestException(
+          `Insufficient stock. Available: ${variant.stock}`,
+        );
+      }
+    } else {
+      if (product.stock < newQuantity) {
+        throw new BadRequestException(
+          `Insufficient stock. Available: ${product.stock}`,
+        );
+      }
     }
 
     if (cartItem) {

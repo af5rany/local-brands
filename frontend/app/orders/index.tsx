@@ -32,11 +32,6 @@ const OrdersScreen = () => {
     { light: "#737373", dark: "#A3A3A3" },
     "text",
   );
-  const accentColor = useThemeColor(
-    { light: "#DC2626", dark: "#EF4444" },
-    "primary",
-  );
-
   const fetchOrders = useCallback(async () => {
     if (!token) return;
     try {
@@ -60,18 +55,10 @@ const OrdersScreen = () => {
 
   const getStatusColor = (status: string) => {
     switch (status.toUpperCase()) {
-      case "PENDING":
-        return "#F59E0B";
-      case "PAID":
-        return "#3B82F6";
-      case "SHIPPED":
-        return "#8B5CF6";
-      case "DELIVERED":
-        return "#10B981";
       case "CANCELLED":
-        return "#EF4444";
+        return "#C41E3A";
       default:
-        return secondaryTextColor;
+        return "#000000";
     }
   };
 
@@ -109,12 +96,42 @@ const OrdersScreen = () => {
           {item.orderItems?.length === 1 ? "item" : "items"}
         </Text>
         <Text style={[styles.orderTotal, { color: textColor }]}>
-          ${item.totalAmount.toFixed(2)}
+          ${Number(item.totalAmount).toFixed(2)}
         </Text>
       </View>
 
+      {item.estimatedDeliveryDate && item.status !== "DELIVERED" && item.status !== "CANCELLED" && (
+        <View style={styles.estimatedRow}>
+          <Ionicons name="time-outline" size={12} color={secondaryTextColor} />
+          <Text style={[styles.estimatedText, { color: secondaryTextColor }]}>
+            EST. DELIVERY{" "}
+            <Text style={{ color: textColor, fontWeight: "700" }}>
+              {new Date(item.estimatedDeliveryDate).toLocaleDateString("en-US", {
+                month: "short",
+                day: "numeric",
+              })}
+            </Text>
+          </Text>
+        </View>
+      )}
+
+      {item.status === "DELIVERED" && item.deliveredAt && (
+        <View style={styles.estimatedRow}>
+          <Ionicons name="checkmark-circle-outline" size={12} color="#000000" />
+          <Text style={[styles.estimatedText, { color: textColor }]}>
+            DELIVERED{" "}
+            <Text style={{ fontWeight: "700" }}>
+              {new Date(item.deliveredAt).toLocaleDateString("en-US", {
+                month: "short",
+                day: "numeric",
+              })}
+            </Text>
+          </Text>
+        </View>
+      )}
+
       <View
-        style={[styles.divider, { backgroundColor: secondaryTextColor + "20" }]}
+        style={[styles.divider, { backgroundColor: secondaryTextColor + "15" }]}
       />
 
       <TouchableOpacity
@@ -232,14 +249,9 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   orderCard: {
-    borderRadius: 12,
+    borderRadius: 0,
     padding: 16,
     marginBottom: 16,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
   },
   orderHeader: {
     flexDirection: "row",
@@ -258,7 +270,7 @@ const styles = StyleSheet.create({
   statusBadge: {
     paddingHorizontal: 10,
     paddingVertical: 4,
-    borderRadius: 6,
+    borderRadius: 0,
   },
   statusText: {
     fontSize: 10,
@@ -314,7 +326,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#000",
     paddingVertical: 16,
     paddingHorizontal: 32,
-    borderRadius: 30,
+    borderRadius: 0,
   },
   shopBtnText: {
     color: "#fff",
@@ -326,13 +338,24 @@ const styles = StyleSheet.create({
     backgroundColor: "#000",
     paddingVertical: 16,
     paddingHorizontal: 48,
-    borderRadius: 30,
+    borderRadius: 0,
   },
   authBtnText: {
     color: "#fff",
     fontSize: 12,
     fontWeight: "700",
     letterSpacing: 1.5,
+  },
+  estimatedRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginTop: 12,
+  },
+  estimatedText: {
+    fontSize: 10,
+    fontWeight: "600",
+    letterSpacing: 1,
   },
 });
 

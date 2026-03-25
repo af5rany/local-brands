@@ -22,7 +22,7 @@ export class ReferralsService {
     if (!existing) {
       const code = uuidv4().slice(0, 8).toUpperCase();
       existing = this.referralRepo.create({
-        referrerId: userId,
+        referrer: { id: userId } as User,
         referralCode: code,
         status: ReferralStatus.PENDING,
       });
@@ -47,8 +47,8 @@ export class ReferralsService {
     if (referral.referrerId === newUserId) throw new BadRequestException('Cannot use your own referral code');
 
     const newReferral = this.referralRepo.create({
-      referrerId: referral.referrerId,
-      referredUserId: newUserId,
+      referrer: { id: referral.referrerId } as User,
+      referredUser: { id: newUserId } as User,
       referralCode: code + '-' + uuidv4().slice(0, 4).toUpperCase(),
       status: ReferralStatus.SIGNED_UP,
       discountPercentage: referral.discountPercentage,

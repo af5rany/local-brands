@@ -8,40 +8,39 @@ import {
   ActivityIndicator,
   Alert,
   Platform,
+  Image,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/context/AuthContext";
 import getApiUrl from "@/helpers/getApiUrl";
-import { useThemeColor } from "@/hooks/useThemeColor";
+import { useThemeColors } from "@/hooks/useThemeColor";
+
+const PAYMENT_METHODS = [
+  { key: "credit_card", label: "Credit Card", icon: "card-outline" as const },
+  { key: "debit_card", label: "Debit Card", icon: "card-outline" as const },
+  { key: "paypal", label: "PayPal", icon: "logo-paypal" as const },
+  {
+    key: "cash_on_delivery",
+    label: "Cash on Delivery",
+    icon: "cash-outline" as const,
+  },
+];
 
 const CheckoutScreen = () => {
   const router = useRouter();
-  const { token, user } = useAuth();
+  const colors = useThemeColors();
+  const { token } = useAuth();
 
   const [cart, setCart] = useState<any>(null);
   const [addresses, setAddresses] = useState<any[]>([]);
   const [selectedAddressId, setSelectedAddressId] = useState<number | null>(
     null,
   );
+  const [selectedPayment, setSelectedPayment] = useState("credit_card");
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
-
-  const backgroundColor = useThemeColor({}, "background");
-  const textColor = useThemeColor({}, "text");
-  const cardBackground = useThemeColor(
-    { light: "#ffffff", dark: "#1c1c1e" },
-    "background",
-  );
-  const secondaryTextColor = useThemeColor(
-    { light: "#737373", dark: "#A3A3A3" },
-    "text",
-  );
-  const accentColor = useThemeColor(
-    { light: "#DC2626", dark: "#EF4444" },
-    "primary",
-  );
 
   const fetchData = useCallback(async () => {
     if (!token) return;
@@ -80,9 +79,8 @@ const CheckoutScreen = () => {
     }, [fetchData]),
   );
 
-  const generateIdempotencyKey = () => {
-    return "key_" + Math.random().toString(36).substr(2, 9) + "_" + Date.now();
-  };
+  const generateIdempotencyKey = () =>
+    "key_" + Math.random().toString(36).substr(2, 9) + "_" + Date.now();
 
   const handleCheckout = async () => {
     if (!selectedAddressId) {
@@ -95,16 +93,17 @@ const CheckoutScreen = () => {
 
     setProcessing(true);
     try {
+      const idempotencyKey = generateIdempotencyKey();
       const response = await fetch(`${getApiUrl()}/orders/checkout`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
-          "Idempotency-Key": generateIdempotencyKey(),
         },
         body: JSON.stringify({
-          addressId: selectedAddressId,
-          paymentMethod: "CREDIT_CARD", // Mocked for now
+          shippingAddressId: selectedAddressId,
+          paymentMethod: selectedPayment,
+          idempotencyKey,
         }),
       });
 
@@ -114,71 +113,122 @@ const CheckoutScreen = () => {
       }
 
       const order = await response.json();
-      Alert.alert("Success", "Your acquisition is being processed.", [
-        { text: "View Order", onPress: () => router.replace("/orders" as any) },
-        { text: "Close", onPress: () => router.replace("/" as any) },
-      ]);
+      Alert.alert(
+        "Order Placed",
+        `Order ${order.orderNumber || ""} has been placed successfully.`,
+        [
+          {
+            text: "View Order",
+            onPress: () =>
+              router.replace(
+                order.id ? (`/orders/${order.id}` as any) : ("/orders" as any),
+              ),
+          },
+          { text: "Continue Shopping", onPress: () => router.replace("/" as any) },
+        ],
+      );
     } catch (error: any) {
-      Alert.alert("Error", error.message);
+      Alert.alert("Checkout Failed", error.message);
     } finally {
       setProcessing(false);
     }
   };
 
+  // ── Loading ──
   if (loading) {
     return (
-      <View style={[styles.center, { backgroundColor }]}>
-        <ActivityIndicator size="large" color={textColor} />
+      <View
+        style={[styles.center, { backgroundColor: colors.background }]}
+      >
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
 
-  if (!cart || !cart.items || cart.items.length === 0) {
+  // The cart API returns { cartItems, totalAmount, totalItems }
+  const cartItems = cart?.cartItems || cart?.items || [];
+  const cartTotal = cart?.totalAmount || 0;
+
+  // ── Empty cart ──
+  if (!cart || cartItems.length === 0) {
     return (
       <SafeAreaView
         style={[
           styles.container,
-          { backgroundColor, justifyContent: "center", alignItems: "center" },
+          {
+            backgroundColor: colors.background,
+            justifyContent: "center",
+            alignItems: "center",
+          },
         ]}
       >
-        <Text style={[styles.title, { color: textColor }]}>
+        <Ionicons
+          name="bag-outline"
+          size={48}
+          color={colors.textTertiary}
+        />
+        <Text
+          style={[
+            styles.emptyTitle,
+            { color: colors.text, marginTop: 12 },
+          ]}
+        >
           No items to checkout
         </Text>
-        <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-          <Text style={{ color: accentColor }}>GO BACK</Text>
+        <TouchableOpacity
+          style={[styles.goBackBtn, { borderColor: colors.border }]}
+          onPress={() => router.back()}
+        >
+          <Text style={[styles.goBackText, { color: colors.text }]}>
+            GO BACK
+          </Text>
         </TouchableOpacity>
       </SafeAreaView>
     );
   }
 
+  // ── Subtotal from items ──
+  const subtotal = cartItems.reduce(
+    (sum: number, item: any) =>
+      sum + Number(item.unitPrice || 0) * (item.quantity || 1),
+    0,
+  );
+  const tax = subtotal * 0.08;
+  const total = subtotal + tax;
+
   return (
     <SafeAreaView
-      style={[styles.container, { backgroundColor }]}
+      style={[styles.container, { backgroundColor: colors.background }]}
       edges={["top"]}
     >
-      <View style={styles.header}>
+      {/* Header */}
+      <View
+        style={[styles.header, { borderBottomColor: colors.borderLight }]}
+      >
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <Ionicons name="chevron-back" size={28} color={textColor} />
+          <Ionicons name="chevron-back" size={24} color={colors.text} />
         </TouchableOpacity>
-        <Text style={[styles.title, { color: textColor }]}>ACQUISITION</Text>
-        <View style={{ width: 28 }} />
+        <Text style={[styles.title, { color: colors.text }]}>CHECKOUT</Text>
+        <View style={{ width: 32 }} />
       </View>
 
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Shipping Address */}
+        {/* ── Shipping Address ── */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={[styles.sectionTitle, { color: secondaryTextColor }]}>
-              SHIPPING DESTINATION
+            <Text
+              style={[styles.sectionTitle, { color: colors.textTertiary }]}
+            >
+              SHIPPING ADDRESS
             </Text>
             <TouchableOpacity
-              onPress={() => router.push("/profile/addresses/new")}
+              onPress={() => router.push("/profile/addresses/new" as any)}
             >
-              <Text style={[styles.addText, { color: accentColor }]}>
-                ADD NEW
+              <Text style={[styles.addText, { color: colors.text }]}>
+                + ADD NEW
               </Text>
             </TouchableOpacity>
           </View>
@@ -187,132 +237,340 @@ const CheckoutScreen = () => {
             <TouchableOpacity
               style={[
                 styles.emptyAddress,
-                { borderColor: secondaryTextColor + "40" },
+                { borderColor: colors.border },
               ]}
-              onPress={() => router.push("/profile/addresses/new")}
+              onPress={() => router.push("/profile/addresses/new" as any)}
             >
               <Ionicons
                 name="location-outline"
                 size={24}
-                color={secondaryTextColor}
+                color={colors.textTertiary}
               />
               <Text
-                style={[styles.emptyAddressText, { color: secondaryTextColor }]}
+                style={[
+                  styles.emptyAddressText,
+                  { color: colors.textTertiary },
+                ]}
               >
-                No address selected. Tap to add.
+                No address found. Tap to add one.
               </Text>
             </TouchableOpacity>
           ) : (
-            addresses.map((addr) => (
-              <TouchableOpacity
-                key={addr.id}
-                style={[
-                  styles.addressCard,
-                  { backgroundColor: cardBackground },
-                  selectedAddressId === addr.id && {
-                    borderColor: textColor,
-                    borderWidth: 2,
-                  },
-                ]}
-                onPress={() => setSelectedAddressId(addr.id)}
-              >
-                <View style={styles.addressInfo}>
-                  <Text style={[styles.addressName, { color: textColor }]}>
-                    {addr.fullName}
-                  </Text>
-                  <Text
-                    style={[
-                      styles.addressDetails,
-                      { color: secondaryTextColor },
-                    ]}
-                  >
-                    {addr.addressLine1}, {addr.city}
-                  </Text>
-                </View>
-                <Ionicons
-                  name={
-                    selectedAddressId === addr.id
-                      ? "radio-button-on"
-                      : "radio-button-off"
-                  }
-                  size={20}
-                  color={
-                    selectedAddressId === addr.id
-                      ? textColor
-                      : secondaryTextColor
-                  }
-                />
-              </TouchableOpacity>
-            ))
+            addresses.map((addr) => {
+              const isSelected = selectedAddressId === addr.id;
+              return (
+                <TouchableOpacity
+                  key={addr.id}
+                  style={[
+                    styles.addressCard,
+                    {
+                      backgroundColor: colors.surface,
+                      borderColor: isSelected
+                        ? colors.text
+                        : colors.border,
+                      borderWidth: isSelected ? 2 : 1,
+                    },
+                  ]}
+                  onPress={() => setSelectedAddressId(addr.id)}
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.addressInfo}>
+                    <Text
+                      style={[styles.addressName, { color: colors.text }]}
+                    >
+                      {addr.fullName || addr.label || "Address"}
+                    </Text>
+                    <Text
+                      style={[
+                        styles.addressDetails,
+                        { color: colors.textTertiary },
+                      ]}
+                    >
+                      {[addr.addressLine1, addr.city, addr.state, addr.zipCode]
+                        .filter(Boolean)
+                        .join(", ")}
+                    </Text>
+                    {addr.phone && (
+                      <Text
+                        style={[
+                          styles.addressPhone,
+                          { color: colors.textTertiary },
+                        ]}
+                      >
+                        {addr.phone}
+                      </Text>
+                    )}
+                  </View>
+                  <Ionicons
+                    name={
+                      isSelected ? "radio-button-on" : "radio-button-off"
+                    }
+                    size={20}
+                    color={isSelected ? colors.text : colors.textTertiary}
+                  />
+                </TouchableOpacity>
+              );
+            })
           )}
         </View>
 
-        {/* Order Summary */}
+        {/* ── Order Items ── */}
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: secondaryTextColor }]}>
-            SUMMARY
-          </Text>
-          <View
-            style={[styles.summaryCard, { backgroundColor: cardBackground }]}
+          <Text
+            style={[styles.sectionTitle, { color: colors.textTertiary }]}
           >
-            {cart.items.map((item: any) => (
-              <View key={item.id} style={styles.summaryItem}>
+            ORDER SUMMARY ({cartItems.length} item
+            {cartItems.length !== 1 ? "s" : ""})
+          </Text>
+
+          <View
+            style={[
+              styles.summaryCard,
+              { backgroundColor: colors.surface, borderColor: colors.border },
+            ]}
+          >
+            {cartItems.map((item: any) => {
+              const product = item.product || {};
+              const variant = item.variant || {};
+              const image =
+                variant?.images?.[0] ||
+                product?.images?.[0] ||
+                "";
+              const itemPrice = Number(item.unitPrice || 0);
+              const qty = item.quantity || 1;
+
+              return (
+                <View key={item.id} style={styles.orderItem}>
+                  {image ? (
+                    <Image
+                      source={{ uri: image }}
+                      style={[
+                        styles.itemImage,
+                        { backgroundColor: colors.surfaceRaised },
+                      ]}
+                    />
+                  ) : (
+                    <View
+                      style={[
+                        styles.itemImage,
+                        { backgroundColor: colors.surfaceRaised },
+                      ]}
+                    />
+                  )}
+                  <View style={styles.itemInfo}>
+                    <Text
+                      style={[
+                        styles.itemBrand,
+                        { color: colors.textTertiary },
+                      ]}
+                      numberOfLines={1}
+                    >
+                      {product.brand?.name || ""}
+                    </Text>
+                    <Text
+                      style={[styles.itemName, { color: colors.text }]}
+                      numberOfLines={2}
+                    >
+                      {product.name || "Product"}
+                    </Text>
+                    {(item.selectedColor || item.selectedSize || variant?.attributes?.color || variant?.attributes?.size) && (
+                      <Text
+                        style={[
+                          styles.itemVariant,
+                          { color: colors.textTertiary },
+                        ]}
+                      >
+                        {[
+                          variant?.attributes?.color || item.selectedColor,
+                          variant?.attributes?.size || item.selectedSize,
+                        ]
+                          .filter(Boolean)
+                          .join(" / ")}
+                      </Text>
+                    )}
+                    <View style={styles.itemPriceRow}>
+                      <Text
+                        style={[
+                          styles.itemPrice,
+                          { color: colors.text },
+                        ]}
+                      >
+                        ${itemPrice.toFixed(2)}
+                      </Text>
+                      <Text
+                        style={[
+                          styles.itemQty,
+                          { color: colors.textTertiary },
+                        ]}
+                      >
+                        x {qty}
+                      </Text>
+                      <Text
+                        style={[
+                          styles.itemTotal,
+                          { color: colors.text },
+                        ]}
+                      >
+                        ${(itemPrice * qty).toFixed(2)}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+              );
+            })}
+
+            <View
+              style={[styles.divider, { backgroundColor: colors.borderLight }]}
+            />
+
+            {/* Totals */}
+            <View style={styles.totalsSection}>
+              <View style={styles.totalLine}>
                 <Text
-                  style={[styles.summaryItemName, { color: textColor }]}
-                  numberOfLines={1}
+                  style={[styles.totalLineLabel, { color: colors.textTertiary }]}
                 >
-                  {item.product.name} x {item.quantity}
+                  Subtotal
                 </Text>
-                <Text style={[styles.summaryItemPrice, { color: textColor }]}>
-                  ${(item.unitPrice * item.quantity).toFixed(2)}
+                <Text
+                  style={[styles.totalLineValue, { color: colors.text }]}
+                >
+                  ${subtotal.toFixed(2)}
                 </Text>
               </View>
-            ))}
-            <View
-              style={[
-                styles.divider,
-                { backgroundColor: secondaryTextColor + "20" },
-              ]}
-            />
-            <View style={styles.totalRow}>
-              <Text style={[styles.totalLabel, { color: textColor }]}>
-                Final Amount
-              </Text>
-              <Text style={[styles.totalValue, { color: textColor }]}>
-                ${cart.totalAmount.toFixed(2)}
-              </Text>
+              <View style={styles.totalLine}>
+                <Text
+                  style={[styles.totalLineLabel, { color: colors.textTertiary }]}
+                >
+                  Tax (8%)
+                </Text>
+                <Text
+                  style={[styles.totalLineValue, { color: colors.text }]}
+                >
+                  ${tax.toFixed(2)}
+                </Text>
+              </View>
+              <View style={styles.totalLine}>
+                <Text
+                  style={[styles.totalLineLabel, { color: colors.textTertiary }]}
+                >
+                  Shipping
+                </Text>
+                <Text
+                  style={[styles.totalLineValue, { color: colors.text }]}
+                >
+                  Free
+                </Text>
+              </View>
+              <View
+                style={[
+                  styles.divider,
+                  { backgroundColor: colors.borderLight, marginVertical: 12 },
+                ]}
+              />
+              <View style={styles.totalLine}>
+                <Text style={[styles.grandTotalLabel, { color: colors.text }]}>
+                  Total
+                </Text>
+                <Text style={[styles.grandTotalValue, { color: colors.text }]}>
+                  ${total.toFixed(2)}
+                </Text>
+              </View>
             </View>
           </View>
         </View>
 
-        {/* Payment Mock */}
+        {/* ── Payment Method ── */}
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: secondaryTextColor }]}>
-            METHOD OF TRANSACTION
-          </Text>
-          <View
-            style={[styles.paymentCard, { backgroundColor: cardBackground }]}
+          <Text
+            style={[styles.sectionTitle, { color: colors.textTertiary }]}
           >
-            <Ionicons name="card-outline" size={24} color={textColor} />
-            <Text style={[styles.paymentText, { color: textColor }]}>
-              Mock Payment Gateway
-            </Text>
-            <View style={styles.activeDot} />
-          </View>
+            PAYMENT METHOD
+          </Text>
+          {PAYMENT_METHODS.map((pm) => {
+            const isSelected = selectedPayment === pm.key;
+            return (
+              <TouchableOpacity
+                key={pm.key}
+                style={[
+                  styles.paymentOption,
+                  {
+                    backgroundColor: colors.surface,
+                    borderColor: isSelected ? colors.text : colors.border,
+                    borderWidth: isSelected ? 2 : 1,
+                  },
+                ]}
+                onPress={() => setSelectedPayment(pm.key)}
+                activeOpacity={0.7}
+              >
+                <Ionicons
+                  name={pm.icon}
+                  size={20}
+                  color={isSelected ? colors.text : colors.textTertiary}
+                />
+                <Text
+                  style={[
+                    styles.paymentLabel,
+                    {
+                      color: isSelected ? colors.text : colors.textSecondary,
+                      fontWeight: isSelected ? "700" : "500",
+                    },
+                  ]}
+                >
+                  {pm.label}
+                </Text>
+                <Ionicons
+                  name={
+                    isSelected ? "radio-button-on" : "radio-button-off"
+                  }
+                  size={18}
+                  color={isSelected ? colors.text : colors.textTertiary}
+                />
+              </TouchableOpacity>
+            );
+          })}
         </View>
+
+        <View style={{ height: 20 }} />
       </ScrollView>
 
-      <View style={[styles.footer, { backgroundColor: cardBackground }]}>
+      {/* ── Footer ── */}
+      <View
+        style={[
+          styles.footer,
+          {
+            backgroundColor: colors.surface,
+            borderTopColor: colors.borderLight,
+          },
+        ]}
+      >
+        <View style={styles.footerTotal}>
+          <Text style={[styles.footerTotalLabel, { color: colors.textTertiary }]}>
+            TOTAL
+          </Text>
+          <Text style={[styles.footerTotalValue, { color: colors.text }]}>
+            ${total.toFixed(2)}
+          </Text>
+        </View>
         <TouchableOpacity
-          style={[styles.checkoutBtn, { backgroundColor: textColor }]}
+          style={[
+            styles.checkoutBtn,
+            { backgroundColor: colors.primary },
+            (processing || !selectedAddressId) && { opacity: 0.5 },
+          ]}
           onPress={handleCheckout}
           disabled={processing || !selectedAddressId}
+          activeOpacity={0.8}
         >
           {processing ? (
-            <ActivityIndicator color={backgroundColor} />
+            <ActivityIndicator color={colors.primaryForeground} />
           ) : (
-            <Text style={[styles.checkoutBtnText, { color: backgroundColor }]}>
-              COMPLETE ACQUISITION
+            <Text
+              style={[
+                styles.checkoutBtnText,
+                { color: colors.primaryForeground },
+              ]}
+            >
+              PLACE ORDER
             </Text>
           )}
         </TouchableOpacity>
@@ -322,35 +580,40 @@ const CheckoutScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
+  container: { flex: 1 },
+  center: { flex: 1, justifyContent: "center", alignItems: "center" },
+  emptyTitle: { fontSize: 16, fontWeight: "600" },
+  goBackBtn: {
+    marginTop: 16,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderWidth: 1,
   },
-  center: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
+  goBackText: {
+    fontSize: 12,
+    fontWeight: "700",
+    letterSpacing: 1.5,
   },
+
+  // Header
   header: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
   },
-  backBtn: {
-    padding: 4,
-  },
+  backBtn: { width: 32 },
   title: {
     fontSize: 14,
-    fontWeight: "700",
+    fontWeight: "800",
     letterSpacing: 2,
   },
-  scrollContent: {
-    padding: 24,
-  },
-  section: {
-    marginBottom: 32,
-  },
+  scrollContent: { padding: 20 },
+
+  // Section
+  section: { marginBottom: 28 },
   sectionHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -361,105 +624,101 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: "700",
     letterSpacing: 1.5,
+    marginBottom: 12,
   },
   addText: {
     fontSize: 11,
     fontWeight: "700",
+    letterSpacing: 0.5,
   },
+
+  // Address
   emptyAddress: {
     height: 100,
     borderWidth: 1,
     borderStyle: "dashed",
-    borderRadius: 12,
     justifyContent: "center",
     alignItems: "center",
     gap: 8,
   },
-  emptyAddressText: {
-    fontSize: 12,
-  },
+  emptyAddressText: { fontSize: 12 },
   addressCard: {
     flexDirection: "row",
     alignItems: "center",
     padding: 16,
-    borderRadius: 12,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: "transparent",
+    marginBottom: 10,
   },
-  addressInfo: {
-    flex: 1,
+  addressInfo: { flex: 1, marginRight: 12 },
+  addressName: { fontSize: 14, fontWeight: "700", marginBottom: 4 },
+  addressDetails: { fontSize: 12, lineHeight: 18 },
+  addressPhone: { fontSize: 12, marginTop: 4 },
+
+  // Order Items
+  summaryCard: { borderWidth: 1, padding: 16 },
+  orderItem: {
+    flexDirection: "row",
+    marginBottom: 16,
+    gap: 12,
   },
-  addressName: {
-    fontSize: 16,
+  itemImage: { width: 56, height: 56 },
+  itemInfo: { flex: 1 },
+  itemBrand: {
+    fontSize: 9,
     fontWeight: "600",
-    marginBottom: 4,
+    textTransform: "uppercase",
+    letterSpacing: 0.8,
+    marginBottom: 2,
   },
-  addressDetails: {
-    fontSize: 13,
-  },
-  summaryCard: {
-    padding: 20,
-    borderRadius: 12,
-  },
-  summaryItem: {
+  itemName: { fontSize: 13, fontWeight: "600", marginBottom: 4 },
+  itemVariant: { fontSize: 11, marginBottom: 4 },
+  itemPriceRow: { flexDirection: "row", alignItems: "center", gap: 6 },
+  itemPrice: { fontSize: 13, fontWeight: "700" },
+  itemQty: { fontSize: 12 },
+  itemTotal: { fontSize: 13, fontWeight: "700", marginLeft: "auto" },
+  divider: { height: 1 },
+
+  // Totals
+  totalsSection: { marginTop: 4 },
+  totalLine: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginBottom: 12,
+    marginBottom: 6,
   },
-  summaryItemName: {
-    fontSize: 14,
-    flex: 1,
-    marginRight: 16,
-  },
-  summaryItemPrice: {
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  divider: {
-    height: 1,
-    marginVertical: 16,
-  },
-  totalRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  totalLabel: {
-    fontSize: 16,
-    fontWeight: "700",
-  },
-  totalValue: {
-    fontSize: 20,
-    fontWeight: "800",
-  },
-  paymentCard: {
+  totalLineLabel: { fontSize: 13 },
+  totalLineValue: { fontSize: 13, fontWeight: "600" },
+  grandTotalLabel: { fontSize: 16, fontWeight: "800" },
+  grandTotalValue: { fontSize: 18, fontWeight: "800" },
+
+  // Payment
+  paymentOption: {
     flexDirection: "row",
     alignItems: "center",
-    padding: 20,
-    borderRadius: 12,
-    gap: 16,
+    padding: 16,
+    marginBottom: 8,
+    gap: 12,
   },
-  paymentText: {
-    flex: 1,
-    fontSize: 14,
-    fontWeight: "500",
-  },
-  activeDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: "#10B981",
-  },
+  paymentLabel: { flex: 1, fontSize: 14 },
+
+  // Footer
   footer: {
-    padding: 24,
-    paddingBottom: Platform.OS === "ios" ? 40 : 24,
+    padding: 20,
+    paddingBottom: Platform.OS === "ios" ? 36 : 20,
     borderTopWidth: 1,
-    borderTopColor: "rgba(0,0,0,0.05)",
   },
+  footerTotal: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 14,
+  },
+  footerTotalLabel: {
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 1.5,
+  },
+  footerTotalValue: { fontSize: 20, fontWeight: "800" },
   checkoutBtn: {
     paddingVertical: 18,
-    borderRadius: 30,
     alignItems: "center",
     justifyContent: "center",
   },

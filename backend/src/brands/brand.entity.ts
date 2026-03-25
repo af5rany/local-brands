@@ -48,6 +48,9 @@ export class Brand {
   @Column('boolean', { default: false })
   isNew: boolean;
 
+  @Column('boolean', { default: false })
+  isFeatured: boolean;
+
   @OneToMany(() => BrandUser, (brandUser) => brandUser.brand)
   brandUsers: BrandUser[];
 

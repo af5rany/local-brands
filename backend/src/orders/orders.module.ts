@@ -8,7 +8,10 @@ import { OrderItem } from './order-item.entity';
 import { Product } from '../products/product.entity';
 import { ProductVariant } from '../products/product-variant.entity';
 import { Address } from '../addresses/address.entity';
+import { Cart } from '../cart/cart.entity';
+import { CartItem } from '../cart/cart-item.entity';
 import { OrderStatusHistory } from './order-status-history.entity';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
   imports: [
@@ -18,8 +21,11 @@ import { OrderStatusHistory } from './order-status-history.entity';
       Product,
       ProductVariant,
       Address,
+      Cart,
+      CartItem,
       OrderStatusHistory,
     ]),
+    NotificationsModule,
   ],
   controllers: [OrdersController],
   providers: [OrdersService],

@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsEnum } from 'class-validator';
+import { IsString, IsOptional, IsEnum, IsBoolean } from 'class-validator';
 import { BrandStatus } from 'src/common/enums/brand.enum';
 
 export class UpdateBrandDto {
@@ -21,4 +21,16 @@ export class UpdateBrandDto {
   @IsOptional()
   @IsEnum(BrandStatus)
   status?: BrandStatus;
+
+  @IsOptional()
+  @IsBoolean()
+  isSponsored?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  isFeatured?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  isNew?: boolean;
 }

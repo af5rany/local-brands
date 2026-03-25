@@ -33,6 +33,7 @@ export class ReviewsController {
       rating: number;
       comment?: string;
       orderItemId?: number;
+      images?: string[];
     },
   ) {
     return this.reviewsService.create(
@@ -41,6 +42,7 @@ export class ReviewsController {
       body.rating,
       body.comment,
       body.orderItemId,
+      body.images,
     );
   }
 

@@ -227,14 +227,10 @@ const RecommendationCard = ({
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: 16,
+    borderRadius: 0,
     width: 180,
     borderWidth: 1,
     overflow: "hidden",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 1,
-    shadowRadius: 12,
-    elevation: 4,
   },
   tabletCard: {
     width: 240,
@@ -277,7 +273,7 @@ const styles = StyleSheet.create({
     left: 10,
     paddingHorizontal: 8,
     paddingVertical: 3,
-    borderRadius: 8,
+    borderRadius: 0,
   },
   discountText: {
     fontSize: 11,
@@ -328,7 +324,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     paddingVertical: 9,
-    borderRadius: 10,
+    borderRadius: 0,
     marginTop: 8,
     gap: 5,
   },

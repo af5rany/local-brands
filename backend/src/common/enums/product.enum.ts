@@ -18,16 +18,6 @@ export enum ProductType {
   BAGS = 'Bags',
   HATS = 'Hats',
 }
-// Interface for variant data (timestamps optional for input)
-export interface ProductVariantData {
-  color: string;
-  size?: string;
-  variantImages: string[];
-  stock: number;
-  createdAt?: Date;
-  updatedAt?: Date;
-}
-
 export enum SortBy {
   NAME = 'name',
   PRICE = 'price',

@@ -17,7 +17,6 @@ import { ProductVariant } from './product-variant.entity';
 import { Brand } from '../brands/brand.entity';
 import {
   ProductType,
-  ProductVariantData,
   Season,
   ProductStatus,
 } from 'src/common/enums/product.enum';
@@ -119,6 +118,9 @@ export class Product {
   @Column('decimal', { precision: 10, scale: 2, nullable: true })
   basePrice: number;
 
+  @Column({ default: 0 })
+  stock: number;
+
   @Column({ default: 10 })
   lowStockThreshold: number;
 
@@ -192,13 +194,6 @@ export class Product {
   @OneToMany(() => ProductReview, (review) => review.product)
   reviews: ProductReview[];
 
-  // Deprecated: Moving to ProductVariant table
-  @Column({
-    type: 'json',
-    nullable: true,
-    default: () => "'[]'",
-  })
-  variants: ProductVariantData[];
 
   // ✅ Add available colors and sizes for quick filtering
   @Column('simple-array', { nullable: true })
@@ -229,95 +224,22 @@ export class Product {
   @DeleteDateColumn()
   deletedAt: Date;
 
-  // Helper methods for working with variants
-  addVariant(color: string, stock: number, variantImages: string[]): void {
-    if (!this.variants) {
-      this.variants = [];
-    }
-
-    const newVariant: ProductVariantData = {
-      color,
-      stock,
-      variantImages,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-
-    this.variants.push(newVariant);
-    this.updateAvailableColors();
-  }
-
-  removeVariant(color: string): void {
-    if (this.variants) {
-      this.variants = this.variants.filter(
-        (variant) => variant.color !== color,
-      );
-      this.updateAvailableColors();
-    }
-  }
-
-  updateVariant(color: string, updates: Partial<ProductVariantData>): void {
-    if (this.variants) {
-      const variantIndex = this.variants.findIndex(
-        (variant) => variant.color === color,
-      );
-      if (variantIndex !== -1) {
-        this.variants[variantIndex] = {
-          ...this.variants[variantIndex],
-          ...updates,
-          updatedAt: new Date(),
-        };
-      }
-    }
-  }
-
-  getVariantByColor(color: string): ProductVariantData | undefined {
-    return this.variants?.find((variant) => variant.color === color);
-  }
-
-  setVariantsFromPayload(
-    variants: Omit<ProductVariantData, 'createdAt' | 'updatedAt'>[],
-  ): void {
-    this.variants = variants.map((variant) => ({
-      ...variant,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    }));
-    this.updateAvailableColors();
-  }
-
-  // ✅ Helper to update available colors
-  private updateAvailableColors(): void {
-    this.availableColors = this.variants?.map((v) => v.color) || [];
-  }
-
-  // ✅ Check if product is in stock (sum of all variant stocks)
+  // Check if product is in stock
   isInStock(): boolean {
-    const variants = this.productVariants?.length
-      ? this.productVariants
-      : this.variants;
-    if (!variants || variants.length === 0) return false;
-    const totalStock = variants.reduce(
-      (sum, v) => sum + (v.stock || 0),
-      0,
-    );
-    return totalStock > 0;
+    if (this.productVariants?.length > 0) {
+      return this.productVariants.reduce((sum, v) => sum + (v.stock || 0), 0) > 0;
+    }
+    return this.stock > 0;
   }
 
-  // ✅ Check if product is low stock
+  // Check if product is low stock
   isLowStock(): boolean {
-    const variants = this.productVariants?.length
-      ? this.productVariants
-      : this.variants;
-    if (!variants || variants.length === 0) return false;
-    const totalStock = variants.reduce(
-      (sum, v) => sum + (v.stock || 0),
-      0,
-    );
+    const totalStock = this.productVariants?.length > 0
+      ? this.productVariants.reduce((sum, v) => sum + (v.stock || 0), 0)
+      : this.stock;
     return totalStock > 0 && totalStock <= this.lowStockThreshold;
   }
 
-  // ✅ Calculate final price
   getFinalPrice(): number {
     return this.salePrice || this.price;
   }

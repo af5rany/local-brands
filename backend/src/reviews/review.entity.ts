@@ -54,6 +54,9 @@ export class ProductReview {
   @Column('text', { nullable: true })
   comment: string;
 
+  @Column('simple-array', { nullable: true })
+  images: string[];
+
   @Column({
     type: 'enum',
     enum: ReviewStatus,

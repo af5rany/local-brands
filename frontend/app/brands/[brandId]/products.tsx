@@ -78,7 +78,7 @@ const BrandProductsScreen = () => {
       try {
         if (page === 1) setLoading(true);
         const response = await fetch(
-          `${getApiUrl()}/products?brandId=${brandId}&page=${page}&limit=10`,
+          `${getApiUrl()}/products?brandIds=${brandId}&page=${page}&limit=10`,
           {
             headers: { Authorization: `Bearer ${token}` },
           },

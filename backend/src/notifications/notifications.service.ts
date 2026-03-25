@@ -56,4 +56,17 @@ export class NotificationsService {
     const count = await this.stockNotificationRepo.count({ where: { userId, productId } });
     return { subscribed: count > 0 };
   }
+
+  async createBulk(
+    userIds: number[],
+    type: NotificationType,
+    title: string,
+    message: string,
+    data?: Record<string, any>,
+  ): Promise<void> {
+    const notifications = userIds.map((userId) =>
+      this.notificationRepo.create({ userId, type, title, message, data }),
+    );
+    await this.notificationRepo.save(notifications);
+  }
 }

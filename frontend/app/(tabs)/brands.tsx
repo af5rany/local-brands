@@ -9,11 +9,9 @@ import {
   Image,
   TextInput,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/context/AuthContext";
-import Header from "@/components/Header";
 import getApiUrl from "@/helpers/getApiUrl";
 import { useThemeColors } from "@/hooks/useThemeColor";
 
@@ -25,8 +23,8 @@ const BrandsTab = () => {
   const colors = useThemeColors();
   const [brands, setBrands] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  // const [activeCategory, setActiveCategory] = useState("WOMEN");
-  const [favorites, setFavorites] = useState<Set<number>>(new Set());
+  const [followedIds, setFollowedIds] = useState<Set<number>>(new Set());
+  const [togglingId, setTogglingId] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
 
   const fetchBrands = useCallback(async () => {
@@ -51,26 +49,69 @@ const BrandsTab = () => {
     }
   }, [token]);
 
+  const fetchFollowedBrands = useCallback(async () => {
+    if (!token) {
+      setFollowedIds(new Set());
+      return;
+    }
+    try {
+      const response = await fetch(`${getApiUrl()}/brands/user/followed`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setFollowedIds(new Set(data.map((b: any) => b.id)));
+      }
+    } catch (error) {
+      console.error("Error fetching followed brands:", error);
+    }
+  }, [token]);
+
   useEffect(() => {
     fetchBrands();
-  }, [fetchBrands]);
+    fetchFollowedBrands();
+  }, [fetchBrands, fetchFollowedBrands]);
 
   useFocusEffect(
     useCallback(() => {
       fetchBrands();
-    }, [fetchBrands])
+      fetchFollowedBrands();
+    }, [fetchBrands, fetchFollowedBrands])
   );
 
-  const toggleFavorite = (brandId: number) => {
-    setFavorites((prev) => {
-      const next = new Set(prev);
-      if (next.has(brandId)) {
-        next.delete(brandId);
-      } else {
-        next.add(brandId);
+  const toggleFollow = async (brandId: number) => {
+    if (!token) {
+      router.push("/auth/login");
+      return;
+    }
+    setTogglingId(brandId);
+    const wasFollowing = followedIds.has(brandId);
+    try {
+      const response = await fetch(
+        `${getApiUrl()}/brands/follow/${brandId}`,
+        {
+          method: wasFollowing ? "DELETE" : "POST",
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
+      const data = await response.json().catch(() => null);
+      console.log('[Follow] status:', response.status, 'data:', data);
+      if (response.ok) {
+        setFollowedIds((prev) => {
+          const next = new Set(prev);
+          if (wasFollowing) {
+            next.delete(brandId);
+          } else {
+            next.add(brandId);
+          }
+          return next;
+        });
       }
-      return next;
-    });
+    } catch (error) {
+      console.error("Error toggling follow:", error);
+    } finally {
+      setTogglingId(null);
+    }
   };
 
   // Get a representative product image from the brand's products
@@ -100,7 +141,7 @@ const BrandsTab = () => {
 
   const renderBrandCard = ({ item }: { item: any }) => {
     const image = getBrandImage(item);
-    const isFav = favorites.has(item.id);
+    const isFollowed = followedIds.has(item.id);
 
     return (
       <TouchableOpacity
@@ -111,14 +152,19 @@ const BrandsTab = () => {
         <View style={styles.brandCardContent}>
           <View style={styles.brandCardLeft}>
             <TouchableOpacity
-              onPress={() => toggleFavorite(item.id)}
+              onPress={() => toggleFollow(item.id)}
+              disabled={togglingId === item.id}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             >
-              <Ionicons
-                name={isFav ? "heart" : "heart-outline"}
-                size={22}
-                color={isFav ? colors.danger : colors.text}
-              />
+              {togglingId === item.id ? (
+                <ActivityIndicator size="small" color={colors.text} />
+              ) : (
+                <Ionicons
+                  name={isFollowed ? "heart" : "heart-outline"}
+                  size={22}
+                  color={colors.text}
+                />
+              )}
             </TouchableOpacity>
             <Text style={[styles.brandName, { color: colors.text }]}>
               {item.name}
@@ -126,7 +172,7 @@ const BrandsTab = () => {
           </View>
           {image && (
             <Image
-              source={{ uri: image }}
+              source={{ uri: image ? image: "" }}
               style={styles.brandImage}
               resizeMode="contain"
             />
@@ -146,10 +192,9 @@ const BrandsTab = () => {
   );
 
   return (
-    <SafeAreaView
+    <View
       style={[styles.container, { backgroundColor: colors.background }]}
     >
-      <Header />
 
       {/* Search */}
       <View style={[styles.searchSection, { borderBottomColor: colors.border }]}>
@@ -197,7 +242,7 @@ const BrandsTab = () => {
           showsVerticalScrollIndicator={false}
         />
       )}
-    </SafeAreaView>
+    </View>
   );
 };
 

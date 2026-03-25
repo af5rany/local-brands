@@ -47,10 +47,38 @@ export class ProductsController {
   }
 
   @Public()
+  @Header('Cache-Control', 'public, max-age=300')
+  @Get('trending')
+  async getTrending(
+    @Query('limit') limit?: number,
+  ): Promise<PublicProductDto[]> {
+    return this.productsService.getTrending(limit || 10);
+  }
+
+  @Public()
+  @Header('Cache-Control', 'public, max-age=300')
+  @Get('bestsellers')
+  async getBestsellers(
+    @Query('limit') limit?: number,
+  ): Promise<PublicProductDto[]> {
+    return this.productsService.getBestsellers(limit || 10);
+  }
+
+  @Public()
+  @Header('Cache-Control', 'public, max-age=600')
+  @Get(':id/similar')
+  async getSimilar(
+    @Param('id', ParseIntPipe) id: number,
+    @Query('limit') limit?: number,
+  ): Promise<PublicProductDto[]> {
+    return this.productsService.getSimilar(id, limit || 10);
+  }
+
+  @Public()
   @Header('Cache-Control', 'public, max-age=3600') // Cache for 1 hour
   @Get(':id')
   findOne(@Param('id', ParseIntPipe) id: number): Promise<PublicProductDto> {
-    return this.productsService.findOne(id);
+    return this.productsService.findOne(id, true);
   }
 
   @Post()

@@ -175,7 +175,7 @@ const CreateBrandScreen = () => {
         Alert.alert("Success", "Brand created successfully!", [
           {
             text: "OK",
-            onPress: () => router.replace("/brands"),
+            onPress: () => router.replace("/(tabs)/brands"),
           },
         ]);
       } else {

@@ -1,15 +1,14 @@
 /**
  * Local Brands — Design System Colors
  *
- * AESTHETIC: "Refined Commerce"
- * A warm, confident palette that feels premium without being cold.
- * Inspired by high-end retail apps (Farfetch, SSENSE) but with
- * warmth and approachability for local brands.
+ * AESTHETIC: "Minimalist Fashion"
+ * A stark black-and-white palette inspired by Zara, SSENSE, and
+ * high-fashion editorial design. Clean, bold, zero noise.
  *
- * PRIMARY: Deep Indigo (#4338CA) — trust, quality, depth
- * ACCENT: Warm Amber (#F59E0B) — energy, discovery, delight
- * SUCCESS: Emerald (#059669)
- * DANGER: Rose (#E11D48)
+ * PRIMARY: Black (#000000) — authority, fashion, clarity
+ * ACCENT: Black (#000000) — monochrome by design
+ * Functional color is used sparingly — only where UX demands it
+ * (sale prices, error states, stock indicators).
  *
  * The system uses semantic naming so components never reference
  * raw hex values. Every color has a purpose.
@@ -18,138 +17,146 @@
 export const Colors = {
   light: {
     // ── Core Brand ──────────────────────────────────────
-    primary: "#4338CA", // Deep Indigo — buttons, links, active states
-    primaryMuted: "#6366F1", // Lighter indigo — hover, secondary actions
-    primarySoft: "#EEF2FF", // Indigo tint — subtle backgrounds, badges
+    primary: "#000000", // Black — buttons, links, active states
+    primaryMuted: "#333333", // Softer black — hover, secondary actions
+    primarySoft: "#F5F5F5", // Light grey — subtle backgrounds, badges
     primaryForeground: "#FFFFFF", // Text on primary
 
-    accent: "#F59E0B", // Warm Amber — highlights, badges, CTAs
-    accentSoft: "#FEF3C7", // Amber tint — notification badges, tags
-    accentForeground: "#78350F", // Text on accent backgrounds
+    accent: "#000000", // Same as primary — monochrome system
+    accentSoft: "#F5F5F5", // Light grey — tags, badges
+    accentForeground: "#000000", // Text on accent backgrounds
 
     // ── Surfaces ────────────────────────────────────────
-    background: "#FAFAF9", // Warm off-white — main app background
+    background: "#FFFFFF", // Pure white — main app background
     surface: "#FFFFFF", // Cards, modals, elevated content
-    surfaceRaised: "#F5F5F4", // Slightly raised — input fields, chips
-    surfaceOverlay: "rgba(0, 0, 0, 0.4)", // Modal backdrops
+    surfaceRaised: "#F7F7F7", // Barely-there grey — input fields, chips
+    surfaceOverlay: "rgba(0, 0, 0, 0.5)", // Modal backdrops
 
     // ── Typography ──────────────────────────────────────
-    text: "#1C1917", // Primary text — Stone 900
-    textSecondary: "#57534E", // Secondary text — Stone 600
-    textTertiary: "#A8A29E", // Muted text — Stone 400
-    textInverse: "#FAFAF9", // Text on dark backgrounds
+    text: "#000000", // Primary text — pure black
+    textSecondary: "#666666", // Secondary text
+    textTertiary: "#999999", // Muted text
+    textInverse: "#FFFFFF", // Text on dark backgrounds
 
     // ── Borders & Dividers ──────────────────────────────
-    border: "#E7E5E4", // Default border — Stone 200
-    borderLight: "#F5F5F4", // Subtle dividers — Stone 100
-    borderFocus: "#4338CA", // Focus rings
+    border: "#E5E5E5", // Default border
+    borderLight: "#F0F0F0", // Subtle dividers
+    borderFocus: "#000000", // Focus rings
 
     // ── Feedback ────────────────────────────────────────
-    success: "#059669", // Emerald 600
-    successSoft: "#D1FAE5", // Emerald 100
-    danger: "#E11D48", // Rose 600
-    dangerSoft: "#FFE4E6", // Rose 100
-    warning: "#D97706", // Amber 600
-    warningSoft: "#FEF3C7", // Amber 100
-    info: "#0284C7", // Sky 600
-    infoSoft: "#E0F2FE", // Sky 100
+    success: "#1A1A1A", // Near-black — keeps the monochrome feel
+    successSoft: "#F5F5F5",
+    danger: "#C41E3A", // Deep red — only for errors and sale prices
+    dangerSoft: "#FFF0F2",
+    warning: "#8B6914", // Muted gold
+    warningSoft: "#FFF9E6",
+    info: "#1A1A1A",
+    infoSoft: "#F5F5F5",
 
     // ── Component-Specific ──────────────────────────────
-    tabActive: "#4338CA",
-    tabInactive: "#A8A29E",
-    tabActiveBackground: "#4338CA",
-    tabInactiveBackground: "#F5F5F4",
+    tabActive: "#000000",
+    tabInactive: "#BBBBBB",
+    tabActiveBackground: "#000000",
+    tabInactiveBackground: "#F7F7F7",
 
-    chipBackground: "#F5F5F4",
-    chipActiveBackground: "#4338CA",
-    chipBorder: "#E7E5E4",
-    chipText: "#57534E",
+    chipBackground: "#F7F7F7",
+    chipActiveBackground: "#000000",
+    chipBorder: "#E5E5E5",
+    chipText: "#666666",
     chipActiveText: "#FFFFFF",
 
-    cardShadow: "rgba(28, 25, 23, 0.08)",
-    cardBorder: "#F5F5F4",
+    cardShadow: "rgba(0, 0, 0, 0.06)",
+    cardBorder: "#F0F0F0",
 
-    wishlistHeart: "#E11D48",
-    discountBadge: "#E11D48",
-    priceCurrent: "#059669",
-    priceOriginal: "#A8A29E",
+    wishlistHeart: "#000000",
+    discountBadge: "#C41E3A",
+    priceCurrent: "#000000",
+    priceOriginal: "#999999",
 
-    skeleton: "#E7E5E4",
-    skeletonHighlight: "#F5F5F4",
+    skeleton: "#F0F0F0",
+    skeletonHighlight: "#F7F7F7",
 
     // ── Navigation & Status Bar ─────────────────────────
     statusBar: "dark-content",
-    headerBackground: "#FAFAF9",
+    headerBackground: "#FFFFFF",
     bottomTabBackground: "#FFFFFF",
-    bottomTabBorder: "#F5F5F4",
+    bottomTabBorder: "#F0F0F0",
+
+    // ── Misc ─────────────────────────────────────────────
+    icon: "#000000",
+    tint: "#000000",
   },
 
   dark: {
     // ── Core Brand ──────────────────────────────────────
-    primary: "#818CF8", // Lighter Indigo for dark mode
-    primaryMuted: "#6366F1",
-    primarySoft: "rgba(99, 102, 241, 0.15)",
-    primaryForeground: "#FFFFFF",
+    primary: "#FFFFFF", // White on dark — inverted
+    primaryMuted: "#CCCCCC",
+    primarySoft: "rgba(255, 255, 255, 0.08)",
+    primaryForeground: "#000000", // Text on primary
 
-    accent: "#FBBF24", // Brighter Amber for contrast
-    accentSoft: "rgba(251, 191, 36, 0.15)",
-    accentForeground: "#FEF3C7",
+    accent: "#FFFFFF",
+    accentSoft: "rgba(255, 255, 255, 0.08)",
+    accentForeground: "#FFFFFF",
 
     // ── Surfaces ────────────────────────────────────────
-    background: "#0C0A09", // Deep warm black — Stone 950
-    surface: "#1C1917", // Cards — Stone 900
-    surfaceRaised: "#292524", // Elevated — Stone 800
+    background: "#000000", // Pure black
+    surface: "#111111", // Cards — near black
+    surfaceRaised: "#1A1A1A", // Elevated
     surfaceOverlay: "rgba(0, 0, 0, 0.7)",
 
     // ── Typography ──────────────────────────────────────
-    text: "#FAFAF9", // Primary text — Stone 50
-    textSecondary: "#D6D3D1", // Secondary — Stone 300
-    textTertiary: "#78716C", // Muted — Stone 500
-    textInverse: "#1C1917",
+    text: "#FFFFFF", // Primary text — pure white
+    textSecondary: "#AAAAAA", // Secondary
+    textTertiary: "#666666", // Muted
+    textInverse: "#000000",
 
     // ── Borders & Dividers ──────────────────────────────
-    border: "#292524", // Stone 800
-    borderLight: "#1C1917", // Stone 900
-    borderFocus: "#818CF8",
+    border: "#222222",
+    borderLight: "#111111",
+    borderFocus: "#FFFFFF",
 
     // ── Feedback ────────────────────────────────────────
-    success: "#34D399",
-    successSoft: "rgba(52, 211, 153, 0.15)",
-    danger: "#FB7185",
-    dangerSoft: "rgba(251, 113, 133, 0.15)",
-    warning: "#FBBF24",
-    warningSoft: "rgba(251, 191, 36, 0.15)",
-    info: "#38BDF8",
-    infoSoft: "rgba(56, 189, 248, 0.15)",
+    success: "#FFFFFF",
+    successSoft: "rgba(255, 255, 255, 0.08)",
+    danger: "#FF4D6A",
+    dangerSoft: "rgba(255, 77, 106, 0.12)",
+    warning: "#D4A926",
+    warningSoft: "rgba(212, 169, 38, 0.12)",
+    info: "#FFFFFF",
+    infoSoft: "rgba(255, 255, 255, 0.08)",
 
     // ── Component-Specific ──────────────────────────────
-    tabActive: "#818CF8",
-    tabInactive: "#78716C",
-    tabActiveBackground: "rgba(99, 102, 241, 0.15)",
-    tabInactiveBackground: "#1C1917",
+    tabActive: "#FFFFFF",
+    tabInactive: "#555555",
+    tabActiveBackground: "rgba(255, 255, 255, 0.1)",
+    tabInactiveBackground: "#111111",
 
-    chipBackground: "#1C1917",
-    chipActiveBackground: "#818CF8",
-    chipBorder: "#292524",
-    chipText: "#D6D3D1",
-    chipActiveText: "#FFFFFF",
+    chipBackground: "#1A1A1A",
+    chipActiveBackground: "#FFFFFF",
+    chipBorder: "#222222",
+    chipText: "#AAAAAA",
+    chipActiveText: "#000000",
 
-    cardShadow: "rgba(0, 0, 0, 0.3)",
-    cardBorder: "#292524",
+    cardShadow: "rgba(0, 0, 0, 0.4)",
+    cardBorder: "#222222",
 
-    wishlistHeart: "#FB7185",
-    discountBadge: "#FB7185",
-    priceCurrent: "#34D399",
-    priceOriginal: "#78716C",
+    wishlistHeart: "#FFFFFF",
+    discountBadge: "#FF4D6A",
+    priceCurrent: "#FFFFFF",
+    priceOriginal: "#666666",
 
-    skeleton: "#292524",
-    skeletonHighlight: "#44403C",
+    skeleton: "#1A1A1A",
+    skeletonHighlight: "#222222",
 
     // ── Navigation & Status Bar ─────────────────────────
     statusBar: "light-content",
-    headerBackground: "#0C0A09",
-    bottomTabBackground: "#0C0A09",
-    bottomTabBorder: "#1C1917",
+    headerBackground: "#000000",
+    bottomTabBackground: "#000000",
+    bottomTabBorder: "#111111",
+
+    // ── Misc ─────────────────────────────────────────────
+    icon: "#FFFFFF",
+    tint: "#FFFFFF",
   },
 } as const;
 

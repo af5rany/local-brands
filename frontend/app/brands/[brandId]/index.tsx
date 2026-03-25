@@ -170,6 +170,11 @@ const BrandDetailScreen = () => {
   const [sortOrder, setSortOrder] = useState<SortOrder>(SortOrder.DESC);
   const [selectedSortOption, setSelectedSortOption] = useState(sortOptions[0]);
 
+  // Follow state
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [followerCount, setFollowerCount] = useState(0);
+  const [followLoading, setFollowLoading] = useState(false);
+
   // ── Status color helpers ─────────────────────
   const getStatusColors = (status: BrandStatus) => {
     switch (status) {
@@ -218,6 +223,55 @@ const BrandDetailScreen = () => {
     }
   };
 
+  const fetchFollowState = async () => {
+    if (!token || !brandId) return;
+    try {
+      const [followRes, countRes] = await Promise.all([
+        fetch(`${getApiUrl()}/brands/follow/${brandId}/check`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+        fetch(`${getApiUrl()}/brands/follow/${brandId}/count`),
+      ]);
+      if (followRes.ok) {
+        const data = await followRes.json();
+        setIsFollowing(data.following);
+      }
+      if (countRes.ok) {
+        const data = await countRes.json();
+        setFollowerCount(data.count);
+      }
+    } catch (err) {
+      console.error("Error fetching follow state:", err);
+    }
+  };
+
+  const toggleFollow = async () => {
+    if (!token) {
+      router.push("/auth/login");
+      return;
+    }
+    setFollowLoading(true);
+    try {
+      const response = await fetch(
+        `${getApiUrl()}/brands/follow/${brandId}`,
+        {
+          method: isFollowing ? "DELETE" : "POST",
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
+      const data = await response.text();
+      console.log('[Follow] status:', response.status, 'body:', data);
+      if (response.ok) {
+        setIsFollowing(!isFollowing);
+        setFollowerCount((prev) => (isFollowing ? prev - 1 : prev + 1));
+      }
+    } catch (err) {
+      console.error("Error toggling follow:", err);
+    } finally {
+      setFollowLoading(false);
+    }
+  };
+
   const handleDeleteBrand = () => {
     Alert.alert(
       "Delete Brand",
@@ -238,7 +292,7 @@ const BrandDetailScreen = () => {
                 throw new Error(errorData.message || "Failed to delete brand");
               }
               Alert.alert("Success", "Brand deleted successfully");
-              router.replace("/brands");
+              router.replace("/(tabs)/brands");
             } catch (err: any) {
               Alert.alert("Error", err.message);
             }
@@ -332,8 +386,26 @@ const BrandDetailScreen = () => {
   );
 
   useEffect(() => {
-    if (brandId) fetchBrandDetails();
+    if (brandId) {
+      fetchBrandDetails();
+    }
   }, [brandId]);
+
+  useEffect(() => {
+    if (brandId) {
+      // Follower count is public - always fetch
+      fetch(`${getApiUrl()}/brands/follow/${brandId}/count`)
+        .then((r) => r.ok ? r.json() : null)
+        .then((data) => { if (data) setFollowerCount(data.count); })
+        .catch(() => {});
+
+      if (token) {
+        fetchFollowState();
+      } else {
+        setIsFollowing(false);
+      }
+    }
+  }, [brandId, token]);
 
   useEffect(() => {
     if (brandId && brand) fetchProducts(1, true);
@@ -569,6 +641,40 @@ const BrandDetailScreen = () => {
             </View>
           )}
 
+          {/* Follow Button (customers only) */}
+          {!isOwnerOrAdmin && (
+            <TouchableOpacity
+              style={[
+                styles.followBtn,
+                isFollowing
+                  ? { borderColor: colors.textTertiary + "40", borderWidth: 1 }
+                  : { backgroundColor: colors.primary },
+              ]}
+              onPress={toggleFollow}
+              disabled={followLoading}
+            >
+              {followLoading ? (
+                <ActivityIndicator
+                  size="small"
+                  color={isFollowing ? colors.text : colors.primaryForeground}
+                />
+              ) : (
+                <Text
+                  style={[
+                    styles.followBtnText,
+                    {
+                      color: isFollowing
+                        ? colors.text
+                        : colors.primaryForeground,
+                    },
+                  ]}
+                >
+                  {isFollowing ? "FOLLOWING" : "FOLLOW"}
+                </Text>
+              )}
+            </TouchableOpacity>
+          )}
+
           {/* Stats Row */}
           <View
             style={[
@@ -576,6 +682,25 @@ const BrandDetailScreen = () => {
               { borderTopColor: colors.borderLight },
             ]}
           >
+            <View style={styles.heroStat}>
+              <Text style={[styles.heroStatValue, { color: colors.text }]}>
+                {followerCount}
+              </Text>
+              <Text
+                style={[
+                  styles.heroStatLabel,
+                  { color: colors.textTertiary },
+                ]}
+              >
+                Followers
+              </Text>
+            </View>
+            <View
+              style={[
+                styles.heroStatDivider,
+                { backgroundColor: colors.borderLight },
+              ]}
+            />
             <View style={styles.heroStat}>
               <Text style={[styles.heroStatValue, { color: colors.text }]}>
                 {pagination.total}
@@ -636,6 +761,31 @@ const BrandDetailScreen = () => {
                 </Text>
               </TouchableOpacity>
             </View>
+
+            <TouchableOpacity
+              style={[
+                styles.actionBtn,
+                {
+                  backgroundColor: colors.surfaceRaised,
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                  marginTop: 10,
+                  marginHorizontal: 0,
+                },
+              ]}
+              onPress={() =>
+                router.push(`/brands/${brandId}/dashboard` as any)
+              }
+            >
+              <Ionicons
+                name="stats-chart-outline"
+                size={18}
+                color={colors.text}
+              />
+              <Text style={[styles.actionBtnText, { color: colors.text }]}>
+                Dashboard & Analytics
+              </Text>
+            </TouchableOpacity>
 
             {/* Status Changer */}
             {/* <View
@@ -1459,9 +1609,24 @@ const styles = StyleSheet.create({
     width: "100%",
     justifyContent: "center",
   },
-  heroStat: { alignItems: "center" },
+  heroStat: { alignItems: "center", flex: 1 },
   heroStatValue: { fontSize: 22, fontWeight: "800" },
   heroStatLabel: { fontSize: 11, fontWeight: "600", letterSpacing: 1, textTransform: "uppercase", marginTop: 2 },
+  heroStatDivider: { width: 1, height: 32, alignSelf: "center" },
+  followBtn: {
+    marginTop: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 32,
+    borderRadius: 0,
+    alignItems: "center",
+    justifyContent: "center",
+    minWidth: 140,
+  },
+  followBtnText: {
+    fontSize: 11,
+    fontWeight: "800",
+    letterSpacing: 1.5,
+  },
 
   // ── Management Section ──────────────────────
   managementSection: { paddingHorizontal: 16, marginTop: 16, gap: 12 },
