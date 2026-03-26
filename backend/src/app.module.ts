@@ -16,6 +16,7 @@ import { ReviewsModule } from './reviews/reviews.module';
 import { AddressesModule } from './addresses/addresses.module';
 import { ReferralsModule } from './referrals/referrals.module';
 import { NotificationsModule } from './notifications/notifications.module';
+import { TryOnModule } from './try-on/try-on.module';
 
 @Module({
   imports: [
@@ -47,6 +48,7 @@ import { NotificationsModule } from './notifications/notifications.module';
     AddressesModule,
     ReferralsModule,
     NotificationsModule,
+    TryOnModule,
   ],
   controllers: [AppController],
   providers: [AppService],
