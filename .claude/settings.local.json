@@ -39,7 +39,19 @@
       "Bash(rm -rf dist)",
       "Bash(npx nest:*)",
       "Bash(npm run:*)",
-      "Bash(npm install:*)"
+      "Bash(npm install:*)",
+      "Bash(curl -s \"https://fal.ai/models/fashn-ai/tryon/api\")",
+      "Bash(curl -s \"https://fal.ai/models/fashn/tryon/api\")",
+      "WebFetch(domain:fal.ai)",
+      "WebFetch(domain:docs.fashn.ai)",
+      "WebFetch(domain:www.npmjs.com)",
+      "WebFetch(domain:github.com)",
+      "Bash(curl -s \"https://raw.githubusercontent.com/fashn-AI/tryon-nextjs-app/main/src/app/api/run/route.ts\")",
+      "Bash(curl -s \"https://raw.githubusercontent.com/fashn-AI/fashn-typescript-sdk/main/src/index.ts\")",
+      "Bash(curl -s \"https://raw.githubusercontent.com/fashn-AI/fashn-typescript-sdk/main/src/resources/predictions.ts\")",
+      "Bash(curl -s \"https://raw.githubusercontent.com/fashn-AI/fashn-typescript-sdk/main/src/client.ts\")",
+      "Bash(git show:*)",
+      "Bash(git ls-tree:*)"
     ]
   }
 }
