@@ -51,7 +51,8 @@
       "Bash(curl -s \"https://raw.githubusercontent.com/fashn-AI/fashn-typescript-sdk/main/src/resources/predictions.ts\")",
       "Bash(curl -s \"https://raw.githubusercontent.com/fashn-AI/fashn-typescript-sdk/main/src/client.ts\")",
       "Bash(git show:*)",
-      "Bash(git ls-tree:*)"
+      "Bash(git ls-tree:*)",
+      "Bash(echo \"EXIT:$?\")"
     ]
   }
 }

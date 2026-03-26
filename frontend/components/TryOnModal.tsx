@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   View,
   Text,
@@ -18,6 +18,7 @@ import { useAuth } from "@/context/AuthContext";
 
 const CLOUDINARY_URL = "https://api.cloudinary.com/v1_1/dg4l2eelg/image/upload";
 const UPLOAD_PRESET = "UnsignedPreset";
+const POLL_INTERVAL = 1500;
 
 interface TryOnModalProps {
   visible: boolean;
@@ -37,6 +38,19 @@ export default function TryOnModal({
   const [resultUrl, setResultUrl] = useState<string | null>(null);
   const [personUri, setPersonUri] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Cleanup polling on unmount or close
+  useEffect(() => {
+    return () => {
+      if (pollRef.current) clearInterval(pollRef.current);
+    };
+  }, []);
+
+  const authHeaders = () => ({
+    "Content-Type": "application/json",
+    ...(token && { Authorization: `Bearer ${token}` }),
+  });
 
   const uploadToCloudinary = async (uri: string): Promise<string> => {
     const compressed = await ImageManipulator.manipulateAsync(
@@ -54,6 +68,33 @@ export default function TryOnModal({
     return res.data.secure_url;
   };
 
+  const pollForResult = (jobId: string) => {
+    pollRef.current = setInterval(async () => {
+      try {
+        const res = await fetch(`${getApiUrl()}/try-on/${jobId}/status`, {
+          headers: authHeaders(),
+        });
+        if (!res.ok) return;
+
+        const data = await res.json();
+
+        if (data.status === "completed" && data.resultUrl) {
+          if (pollRef.current) clearInterval(pollRef.current);
+          pollRef.current = null;
+          setResultUrl(data.resultUrl);
+          setStage("result");
+        } else if (data.status === "failed") {
+          if (pollRef.current) clearInterval(pollRef.current);
+          pollRef.current = null;
+          setError(data.error || "Try-on failed. Please try again.");
+          setStage("pick");
+        }
+      } catch {
+        // Silently retry on network errors
+      }
+    }, POLL_INTERVAL);
+  };
+
   const runTryOn = async (uri: string) => {
     setPersonUri(uri);
     setError(null);
@@ -62,7 +103,7 @@ export default function TryOnModal({
     let personImageUrl: string;
     try {
       personImageUrl = await uploadToCloudinary(uri);
-    } catch (e: any) {
+    } catch {
       setError("Failed to upload photo. Try again.");
       setStage("pick");
       return;
@@ -72,23 +113,30 @@ export default function TryOnModal({
     try {
       const res = await fetch(`${getApiUrl()}/try-on`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token && { Authorization: `Bearer ${token}` }),
-        },
+        headers: authHeaders(),
         body: JSON.stringify({
           personImageUrl,
           garmentImageUrl,
           category: "auto",
         }),
       });
+
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
         throw new Error(err.message || "Try-on failed");
       }
+
       const data = await res.json();
-      setResultUrl(data.resultUrl);
-      setStage("result");
+
+      // Cache hit — instant result
+      if (data.cached && data.resultUrl) {
+        setResultUrl(data.resultUrl);
+        setStage("result");
+        return;
+      }
+
+      // Queued — start polling
+      pollForResult(data.jobId);
     } catch (e: any) {
       setError(e.message || "Something went wrong");
       setStage("pick");
@@ -122,6 +170,8 @@ export default function TryOnModal({
   };
 
   const handleRetry = () => {
+    if (pollRef.current) clearInterval(pollRef.current);
+    pollRef.current = null;
     setResultUrl(null);
     setPersonUri(null);
     setError(null);
