@@ -1,3 +1,4 @@
+
 {
   "expo": {
     "name": "local-brands",
@@ -12,7 +13,8 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.fakharanii.localbrands",
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSCameraUsageDescription": "Used for virtual try-on feature"
       }
     },
     "android": {
@@ -20,7 +22,8 @@
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.fakharanii.localbrands"
+      "package": "com.fakharanii.localbrands",
+      "permissions": ["android.permission.CAMERA"]
     },
     "web": {
       "bundler": "metro",

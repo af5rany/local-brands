@@ -451,7 +451,8 @@ const BrandDetailScreen = () => {
     setSelectedSortOption(option);
     setSortBy(option.sortBy);
     setSortOrder(option.sortOrder);
-    fetchProducts(1, true);
+    // No direct fetchProducts call — useEffect([fetchProducts]) handles re-fetch
+    // when sortBy/sortOrder state updates cause fetchProducts to get a new reference.
   };
 
   const getActiveFiltersCount = () => {

@@ -38,7 +38,8 @@
       "Bash(grep -n \"brand\\\\.\" /Users/f5rany/Documents/Work/local-brands/frontend/app/brands/[brandId]/index.tsx)",
       "Bash(rm -rf dist)",
       "Bash(npx nest:*)",
-      "Bash(npm run:*)"
+      "Bash(npm run:*)",
+      "Bash(npm install:*)"
     ]
   }
 }
