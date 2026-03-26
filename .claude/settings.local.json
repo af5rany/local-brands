@@ -52,20 +52,10 @@
       "Bash(curl -s \"https://raw.githubusercontent.com/fashn-AI/fashn-typescript-sdk/main/src/client.ts\")",
       "Bash(git show:*)",
       "Bash(git ls-tree:*)",
-      "Bash(git checkout:*)",
-      "Bash(git stash:*)",
       "Bash(git add:*)",
       "Bash(git commit:*)",
-      "Bash(./node_modules/.bin/tsc --noEmit)",
-      "Bash(npx -p typescript tsc --noEmit)",
-      "Bash(git worktree:*)",
-      "Bash(curl -s -L --max-time 15 https://fal.ai/models/fashn-ai/tryon/api)",
-      "Bash(curl -s -L --max-time 15 https://fal.ai/models/fashn-ai/tryon)",
-      "Bash(curl -s -L --max-time 15 https://fal.ai/models/fashn-ai/tryon/v1/api)",
-      "Bash(curl -s -L --max-time 15 https://fal.ai/models?q=fashn)",
-      "Bash(curl -s -L --max-time 15 https://fal.ai/models/fal-ai/fashn/tryon/api)",
-      "Bash(curl -s -L --max-time 15 https://fal.ai/models/fashn/tryon/api)",
-      "WebSearch"
+      "Bash(git checkout:*)",
+      "Bash(git stash:*)"
     ]
   }
 }
