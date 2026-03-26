@@ -64,7 +64,8 @@
       "Bash(curl -s -L --max-time 15 https://fal.ai/models/fashn-ai/tryon/v1/api)",
       "Bash(curl -s -L --max-time 15 https://fal.ai/models?q=fashn)",
       "Bash(curl -s -L --max-time 15 https://fal.ai/models/fal-ai/fashn/tryon/api)",
-      "Bash(curl -s -L --max-time 15 https://fal.ai/models/fashn/tryon/api)"
+      "Bash(curl -s -L --max-time 15 https://fal.ai/models/fashn/tryon/api)",
+      "WebSearch"
     ]
   }
 }
