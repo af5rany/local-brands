@@ -39,7 +39,31 @@
       "Bash(rm -rf dist)",
       "Bash(npx nest:*)",
       "Bash(npm run:*)",
-      "Bash(npm install:*)"
+      "Bash(npm install:*)",
+      "Bash(curl -s \"https://fal.ai/models/fashn-ai/tryon/api\")",
+      "Bash(curl -s \"https://fal.ai/models/fashn/tryon/api\")",
+      "WebFetch(domain:fal.ai)",
+      "WebFetch(domain:docs.fashn.ai)",
+      "WebFetch(domain:www.npmjs.com)",
+      "WebFetch(domain:github.com)",
+      "Bash(curl -s \"https://raw.githubusercontent.com/fashn-AI/tryon-nextjs-app/main/src/app/api/run/route.ts\")",
+      "Bash(curl -s \"https://raw.githubusercontent.com/fashn-AI/fashn-typescript-sdk/main/src/index.ts\")",
+      "Bash(curl -s \"https://raw.githubusercontent.com/fashn-AI/fashn-typescript-sdk/main/src/resources/predictions.ts\")",
+      "Bash(curl -s \"https://raw.githubusercontent.com/fashn-AI/fashn-typescript-sdk/main/src/client.ts\")",
+      "Bash(git show:*)",
+      "Bash(git ls-tree:*)",
+      "Bash(git checkout:*)",
+      "Bash(git stash:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(./node_modules/.bin/tsc --noEmit)",
+      "Bash(npx -p typescript tsc --noEmit)",
+      "Bash(git worktree:*)",
+      "Bash(curl -s -L --max-time 15 https://fal.ai/models/fashn-ai/tryon/api)",
+      "Bash(curl -s -L --max-time 15 https://fal.ai/models/fashn-ai/tryon)",
+      "Bash(curl -s -L --max-time 15 https://fal.ai/models/fashn-ai/tryon/v1/api)",
+      "Bash(curl -s -L --max-time 15 https://fal.ai/models?q=fashn)",
+      "Bash(curl -s -L --max-time 15 https://fal.ai/models/fal-ai/fashn/tryon/api)"
     ]
   }
 }

@@ -1,0 +1,196 @@
+ Phase 5: Outfit Builder
+
+  Vision
+
+  Let users create and share styled outfits by combining products from across brands. Think Pinterest boards meets Zara "Shop the Look" — a social/editorial layer on top of the catalog.
+
+  Backend
+
+  New Entities:
+
+  1. Outfit entity
+    - id, userId (creator), title, description, coverImage (auto-generated or user-picked)
+    - isPublic: boolean (default true — visible to other users)
+    - likeCount: number (default 0)
+    - viewCount: number (default 0)
+    - tags: string[] (e.g. "streetwear", "summer", "formal")
+    - gender: Gender (optional)
+    - season: Season (optional)
+    - createdAt, updatedAt, deletedAt (soft delete)
+  2. OutfitItem entity (junction)
+    - id, outfitId, productId
+    - position: string (slot label — e.g. "top", "bottom", "shoes", "accessory", "bag", "hat")
+    - note: string (optional — user styling note for that piece)
+    - sortOrder: number (display order)
+  3. OutfitLike entity (junction)
+    - userId, outfitId, unique constraint, createdAt
+
+  New Module: outfits (outfits.module.ts, outfits.service.ts, outfits.controller.ts)
+
+  Endpoints:
+  - POST /outfits — create outfit (auth required, body: title, description, tags, gender, season, items array of { productId, position, note })
+  - GET /outfits — public feed of outfits, paginated, filterable by gender, season, tags, userId, sortable by createdAt, likeCount, viewCount
+  - GET /outfits/:id — single outfit with all items populated (product details, brand, images, prices)
+  - PUT /outfits/:id — update own outfit (or admin)
+  - DELETE /outfits/:id — soft delete own outfit (or admin)
+  - POST /outfits/:id/like — like/unlike toggle (auth required)
+  - GET /outfits/:id/like/check — check if user liked
+  - GET /outfits/user/mine — current user's outfits
+  - GET /outfits/user/:userId — public outfits by a specific user
+  - Auto-increment viewCount on GET /outfits/:id
+
+  Relations:
+  - User → Outfit (1:M)
+  - Outfit → OutfitItem (1:M, cascade delete)
+  - OutfitItem → Product (M:1)
+  - User → OutfitLike → Outfit
+
+  Frontend
+
+  New Screens:
+
+  1. Outfits Feed (/outfits/index.tsx)
+    - Masonry/grid layout of outfit cards (cover image, title, creator name, like count)
+    - Filter bar: gender tabs (All / Men / Women), season pills, sort (Newest, Most Liked, Most Viewed)
+    - Search by tags or title
+    - Tapping a card → outfit detail
+    - B&W design: no border-radius, sharp cards, uppercase labels
+  2. Outfit Detail (/outfits/[outfitId].tsx)
+    - Cover image / collage at top
+    - Title, description, creator info, like button, view count
+    - Product list: each item shows position label ("TOP", "BOTTOM", "SHOES"), product image, brand, name, price, "ADD TO BAG" button
+    - "SHOP THE LOOK" CTA at bottom — adds all in-stock items to cart
+    - Share button (deep link)
+    - B&W design consistent with product detail page
+  3. Create/Edit Outfit (/outfits/create.tsx, /outfits/edit/[outfitId].tsx)
+    - Title, description, tags input
+    - Gender and season pickers
+    - Slot-based product picker: 6 slots (Top, Bottom, Shoes, Accessory, Bag, Hat) — each slot opens a product search modal
+    - Product search modal: search bar, results grid, tap to select
+    - Each slot shows the selected product thumbnail, tap to change/remove
+    - Optional note per slot
+    - "PUBLISH" / "SAVE" CTA
+  4. My Outfits (accessible from profile or tab)
+    - Grid of user's own outfits with edit/delete options
+  5. Outfits Tab or Section on Home
+    - Add an "Outfit Inspiration" section on the home screen (horizontal scroll of popular outfits)
+    - Optionally add "Outfits" as a new bottom tab or as a section within the existing explore flow
+
+  Product Detail Integration:
+  - On product detail page, add "FEATURED IN OUTFITS" section if the product appears in any public outfits
+  - Query: GET /outfits?productId=X (needs backend filter support)
+
+  ---
+  Phase 6: Advanced (Videos, Drops, AI Try-On)
+
+  6A: Product Videos
+
+  Backend:
+  - Add videos: string[] column to Product entity (simple-array, Cloudinary video URLs)
+  - Add videoUrl: string (nullable) to ProductVariant entity for variant-specific videos
+  - Update PublicProductDto to include videos array
+  - Update CreateProductDto and UpdateProductDto to accept videos
+
+  Frontend:
+  - Product Detail: Replace or augment the image gallery with a mixed media carousel (images + videos). Videos auto-play muted on scroll, tap for full-screen with sound.
+  - Create/Edit Product: Add video upload via Cloudinary (use useCloudinaryUpload hook with resource_type: 'video'). Limit to 3 videos per product. Show video thumbnails with duration badge.
+  - Home Screen / Feed: Product cards can show a video indicator icon. Tapping plays a short preview.
+  - Brand Page: Optional brand intro video (brandVideo: string on Brand entity)
+
+  6B: Product Drops (Hype / Limited Releases)
+
+  Backend:
+
+  1. Drop entity
+    - id, brandId, title, description, coverImage
+    - dropDate: Date (when the drop goes live)
+    - endDate: Date (optional — when the drop ends)
+    - status: DropStatus enum (UPCOMING, LIVE, ENDED)
+    - isExclusive: boolean (followers only?)
+    - maxQuantityPerUser: number (optional purchase limit)
+    - createdAt, updatedAt
+  2. DropProduct entity (junction)
+    - dropId, productId, sortOrder
+    - specialPrice: decimal (optional drop-exclusive price)
+  3. DropReminder entity
+    - userId, dropId, unique constraint, createdAt
+    - When drop goes live, notify all users who set a reminder
+
+  Endpoints:
+  - POST /drops — create drop (brand owner/admin)
+  - GET /drops — public list, filterable by status (upcoming, live), brandId
+  - GET /drops/:id — drop detail with products
+  - PUT /drops/:id — update drop
+  - DELETE /drops/:id — cancel/remove drop
+  - POST /drops/:id/remind — set reminder (auth required)
+  - DELETE /drops/:id/remind — remove reminder
+  - GET /drops/:id/remind/check — check if reminder set
+
+  Automated Jobs (cron or on-request):
+  - When dropDate is reached → set status to LIVE, notify all reminders (DROP_LIVE notification type), set associated products to PUBLISHED
+  - When endDate is reached → set status to ENDED, optionally archive products
+
+  Frontend:
+
+  1. Drops Feed (/drops/index.tsx)
+    - Two tabs: UPCOMING / LIVE
+    - Countdown timer on upcoming drops (days:hours:minutes:seconds)
+    - "REMIND ME" button on upcoming drops
+    - Live drops show products with "SHOP NOW" CTA
+    - B&W design with bold countdown typography
+  2. Drop Detail (/drops/[dropId].tsx)
+    - Hero banner with cover image, brand logo, title
+    - Countdown timer (if upcoming) or "LIVE NOW" badge
+    - Product grid with drop-exclusive prices
+    - "REMIND ME" / "SHOP NOW" buttons
+    - Brand info section
+  3. Home Screen Integration:
+    - "Upcoming Drops" section with countdown cards
+    - "Live Now" banner if any drop is currently live
+  4. Push Notifications:
+    - "Drop goes live in 1 hour" reminder
+    - "Drop is now live!" notification
+
+  6C: AI Virtual Try-On
+
+  Backend:
+  - POST /try-on/generate — accepts { productId, userImageUrl }, sends to an external AI service (e.g. Replicate, Stability AI, or a custom model), returns a generated try-on image URL
+  - GET /try-on/history — user's past try-on results
+  - Store results in a TryOnResult entity: id, userId, productId, inputImageUrl, outputImageUrl, createdAt
+  - Rate limiting: max 10 try-ons per user per day
+
+  External Service Integration:
+  - Use a virtual try-on API (options: Replicate's IDM-VTON model, Kolors Virtual Try-On, or Google's virtual try-on API)
+  - The service takes: a person image + a garment image → outputs a composited image
+  - Queue-based: submit job, poll for result, or use webhook callback
+  - Store generated images in Cloudinary
+
+  Frontend:
+
+  1. Try-On Button on Product Detail
+    - "VIRTUAL TRY-ON" button appears for clothing products (not accessories/bags)
+    - Tapping opens the try-on flow
+  2. Try-On Flow (modal or new screen)
+    - Step 1: Upload or take a photo of yourself (full body preferred)
+    - Step 2: Loading state with progress indicator ("Generating your look...")
+    - Step 3: Show the generated try-on image
+    - Actions: "SAVE TO GALLERY", "SHARE", "ADD TO BAG"
+    - Disclaimer text: "AI-generated preview. Actual product may vary."
+  3. Try-On Gallery (profile section)
+    - Grid of past try-on results
+    - Tap to view full screen, link to product
+
+  Privacy & Safety:
+  - User images are processed and stored only with consent
+  - Option to delete try-on history
+  - Images are private to the user (not publicly visible)
+  - Clear data handling disclosure in the UI
+
+  ---
+  Implementation Order Suggestion
+
+  For Phase 5 (Outfit Builder): Backend entities & endpoints first → Outfit detail & feed screens → Create/edit flow → Home integration
+
+  For Phase 6: Start with 6B (Drops) as it drives engagement and is self-contained → then 6A (Videos) as a media enhancement → then 6C (AI Try-On) last since it requires external service integration and
+  is the most experimental.
+

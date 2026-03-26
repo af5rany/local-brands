@@ -1,3 +1,19 @@
+/Users/f5rany/Documents/Work/local-brands/frontend/app/(tabs)/index.tsx check this "ick Stats (authenticated users"
+about size and color i want to handle out of stock for a size and color and get notify for them as well
+handle synchronization for multiple users purchasing same product with stock 1
+handle add item to cart and make sure choosing color and size esists
+remove edit and delete brand and product from customer dashboard when admin is signed in
+make a dashboard for editing home page content
+--------------------------
+fix the filter and add sort by price and review and name and date
+fix rating later /Users/f5rany/Documents/Work/local-brands/frontend/components/CustomerDashboard.tsx
+fix header style
+improve screen products managment 
+add same header for all tabs 
+check the difference between screens and tabs
+
+add email later
+loading states and place holders in case no data and handle no internet case and  optimistic updates
 update the docs
 fix the filter and add sort by price and review and name and date
 add way too much dummy data like brands and products for them
