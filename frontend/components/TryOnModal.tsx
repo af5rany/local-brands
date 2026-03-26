@@ -14,6 +14,7 @@ import * as ImageManipulator from "expo-image-manipulator";
 import axios from "axios";
 import { Ionicons } from "@expo/vector-icons";
 import getApiUrl from "@/helpers/getApiUrl";
+import { useAuth } from "@/context/AuthContext";
 
 const CLOUDINARY_URL = "https://api.cloudinary.com/v1_1/dg4l2eelg/image/upload";
 const UPLOAD_PRESET = "UnsignedPreset";
@@ -31,6 +32,7 @@ export default function TryOnModal({
   garmentImageUrl,
   onClose,
 }: TryOnModalProps) {
+  const { token } = useAuth();
   const [stage, setStage] = useState<Stage>("pick");
   const [resultUrl, setResultUrl] = useState<string | null>(null);
   const [personUri, setPersonUri] = useState<string | null>(null);
@@ -70,7 +72,10 @@ export default function TryOnModal({
     try {
       const res = await fetch(`${getApiUrl()}/try-on`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(token && { Authorization: `Bearer ${token}` }),
+        },
         body: JSON.stringify({
           personImageUrl,
           garmentImageUrl,

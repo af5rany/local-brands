@@ -1,9 +1,12 @@
-import { Controller, Post, Body } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { Controller, Post, Body, UseGuards } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { TryOnService } from './try-on.service';
 import { TryOnDto } from './dto/try-on.dto';
 
 @ApiTags('try-on')
+@ApiBearerAuth()
+@UseGuards(JwtAuthGuard)
 @Controller('try-on')
 export class TryOnController {
   constructor(private readonly tryOnService: TryOnService) {}
