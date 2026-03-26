@@ -79,7 +79,7 @@ export default function TryOnModal({
         body: JSON.stringify({
           personImageUrl,
           garmentImageUrl,
-          clothType: "upper",
+          category: "auto",
         }),
       });
       if (!res.ok) {
@@ -195,7 +195,7 @@ export default function TryOnModal({
               {stage === "uploading" ? "UPLOADING" : "GENERATING"}
             </Text>
             <Text style={styles.processingSubtext}>
-              {stage === "uploading" ? "Preparing your photo…" : "AI is styling you · ~5 seconds"}
+              {stage === "uploading" ? "Preparing your photo…" : "AI is styling you · ~10 seconds"}
             </Text>
           </View>
         )}

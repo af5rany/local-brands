@@ -14,9 +14,13 @@ export class TryOnDto {
   @IsUrl()
   garmentImageUrl: string;
 
-  @ApiPropertyOptional({ enum: ['upper', 'lower', 'overall', 'inner', 'outer'], default: 'upper' })
+  @ApiPropertyOptional({
+    enum: ['auto', 'tops', 'bottoms', 'one-pieces'],
+    default: 'auto',
+    description: 'Garment category. Defaults to auto-detection.',
+  })
   @IsString()
   @IsOptional()
-  @IsIn(['upper', 'lower', 'overall', 'inner', 'outer'])
-  clothType?: 'upper' | 'lower' | 'overall' | 'inner' | 'outer';
+  @IsIn(['auto', 'tops', 'bottoms', 'one-pieces'])
+  category?: 'auto' | 'tops' | 'bottoms' | 'one-pieces';
 }

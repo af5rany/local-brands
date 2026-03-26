@@ -1,7 +1,7 @@
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { TryOnDto } from './dto/try-on.dto';
 
-const FAL_MODEL = 'fal-ai/cat-vton';
+const FAL_MODEL = 'fal-ai/fashn/tryon/v1.6';
 const FAL_QUEUE_URL = `https://queue.fal.run/${FAL_MODEL}`;
 
 @Injectable()
@@ -23,19 +23,23 @@ export class TryOnService {
       method: 'POST',
       headers,
       body: JSON.stringify({
-        human_image_url: dto.personImageUrl,
-        garment_image_url: dto.garmentImageUrl,
-        cloth_type: dto.clothType || 'upper',
+        model_image: dto.personImageUrl,
+        garment_image: dto.garmentImageUrl,
+        category: dto.category || 'auto',
+        mode: 'balanced',
+        output_format: 'jpeg',
       }),
     });
 
     if (!submitRes.ok) {
-      const text = await submitRes.text();
-      throw new InternalServerErrorException(`fal.ai submit failed (${submitRes.status}): ${text}`);
+      if (submitRes.status === 403) {
+        throw new InternalServerErrorException('Try-on is temporarily unavailable. Please try again later.');
+      }
+      throw new InternalServerErrorException('Failed to start try-on generation');
     }
 
     const { request_id } = (await submitRes.json()) as { request_id: string };
-    const statusUrl = `${FAL_QUEUE_URL}/requests/${request_id}`;
+    const statusUrl = `${FAL_QUEUE_URL}/requests/${request_id}/status`;
 
     // 2. Poll for completion (max 60s)
     for (let i = 0; i < 30; i++) {
@@ -47,8 +51,16 @@ export class TryOnService {
       const status = (await statusRes.json()) as any;
 
       if (status.status === 'COMPLETED') {
-        const resultUrl =
-          status.output?.image?.url || status.output?.images?.[0]?.url;
+        // Fetch the actual result from the response endpoint
+        const resultRes = await fetch(
+          `${FAL_QUEUE_URL}/requests/${request_id}`,
+          { headers },
+        );
+        if (!resultRes.ok) {
+          throw new InternalServerErrorException('Failed to fetch try-on result');
+        }
+        const result = (await resultRes.json()) as any;
+        const resultUrl = result.images?.[0]?.url;
         if (!resultUrl) {
           throw new InternalServerErrorException('No result image in response');
         }
