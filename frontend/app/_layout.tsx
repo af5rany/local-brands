@@ -4,6 +4,8 @@ import { BrandProvider } from "@/context/BrandContext";
 import { ActivityIndicator, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { ToastProvider } from "@/context/ToastContext";
+import { NetworkProvider } from "@/context/NetworkContext";
+import { ThemeProvider } from "@/context/ThemeContext";
 import GlobalErrorBoundary from "@/components/GlobalErrorBoundary";
 import { useEffect } from "react";
 
@@ -82,13 +84,17 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <GlobalErrorBoundary>
-        <ToastProvider>
-          <AuthProvider>
-            <BrandProvider>
-              <RootLayoutNav />
-            </BrandProvider>
-          </AuthProvider>
-        </ToastProvider>
+        <ThemeProvider>
+          <NetworkProvider>
+            <ToastProvider>
+              <AuthProvider>
+                <BrandProvider>
+                  <RootLayoutNav />
+                </BrandProvider>
+              </AuthProvider>
+            </ToastProvider>
+          </NetworkProvider>
+        </ThemeProvider>
       </GlobalErrorBoundary>
     </GestureHandlerRootView>
   );

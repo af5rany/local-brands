@@ -93,9 +93,11 @@ export class OrdersService {
       const orderItemsToCreate: Partial<OrderItem>[] = [];
 
       for (const item of createOrderDto.items) {
+        // Lock the product row to prevent concurrent stock reads
         const product = await manager.findOne(Product, {
           where: { id: item.productId },
           relations: ['brand'],
+          lock: { mode: 'pessimistic_write' },
         });
 
         if (!product)
@@ -106,6 +108,7 @@ export class OrdersService {
           variant =
             (await manager.findOne(ProductVariant, {
               where: { id: item.variantId, productId: product.id },
+              lock: { mode: 'pessimistic_write' },
             })) ?? undefined;
           if (!variant)
             throw new NotFoundException(`Variant ${item.variantId} not found`);

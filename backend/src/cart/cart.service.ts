@@ -236,8 +236,8 @@ export class CartService {
       if (!variant.isAvailable) {
         throw new BadRequestException('Variant is not available');
       }
-    } else if (product.productVariants?.length > 0) {
-      // Product has variants — customer must select one
+    } else if (product.productVariants?.some((v) => v.isAvailable)) {
+      // Product has available variants — customer must select one
       throw new BadRequestException('Please select a product variant');
     }
 

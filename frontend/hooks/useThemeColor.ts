@@ -9,16 +9,15 @@
  *   const bg = useThemeColor({ light: '#fff', dark: '#000' }, 'background');
  */
 
-import { useColorScheme } from "react-native";
 import { Colors, type ThemeColors, type ColorKey } from "@/constants/Colors";
+import { useThemePreference } from "@/context/ThemeContext";
 
 /**
  * Returns the full themed color object for the current scheme.
  * This is the primary hook most components should use.
  */
 export function useThemeColors(): ThemeColors {
-  // const scheme = useColorScheme() ?? "light";
-  const scheme = "light";
+  const { scheme } = useThemePreference();
   return Colors[scheme];
 }
 
@@ -30,8 +29,7 @@ export function useThemeColor(
   props: { light?: string; dark?: string },
   colorName: ColorKey,
 ): string {
-  // const scheme = useColorScheme() ?? "light";
-  const scheme = "light";
+  const { scheme } = useThemePreference();
   const colorFromProps = props[scheme];
 
   if (colorFromProps) {

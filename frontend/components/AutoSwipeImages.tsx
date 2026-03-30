@@ -1,10 +1,11 @@
 import React, { useRef, useEffect, useState, useCallback } from "react";
 import {
   View,
-  FlatList,
+  ScrollView,
   Image,
   StyleSheet,
-  ViewToken,
+  NativeSyntheticEvent,
+  NativeScrollEvent,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useThemeColor } from "@/hooks/useThemeColor";
@@ -22,7 +23,7 @@ const AutoSwipeImages: React.FC<AutoSwipeImagesProps> = ({
   height,
   borderRadius = 0,
 }) => {
-  const flatListRef = useRef<FlatList>(null);
+  const scrollRef = useRef<ScrollView>(null);
   const [activeIndex, setActiveIndex] = useState(0);
   const activeIndexRef = useRef(0);
 
@@ -35,20 +36,17 @@ const AutoSwipeImages: React.FC<AutoSwipeImagesProps> = ({
     "background",
   );
 
-  const onViewableItemsChanged = useCallback(
-    ({ viewableItems }: { viewableItems: ViewToken[] }) => {
-      if (viewableItems.length > 0 && viewableItems[0].index != null) {
-        const newIndex = viewableItems[0].index;
+  const onScroll = useCallback(
+    (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+      if (width === 0) return;
+      const newIndex = Math.round(e.nativeEvent.contentOffset.x / width);
+      if (newIndex !== activeIndexRef.current) {
         activeIndexRef.current = newIndex;
         setActiveIndex(newIndex);
       }
     },
-    [],
+    [width],
   );
-
-  const viewabilityConfig = useRef({
-    viewAreaCoveragePercentThreshold: 50,
-  }).current;
 
   useEffect(() => {
     if (!images || images.length <= 1) return;
@@ -58,14 +56,14 @@ const AutoSwipeImages: React.FC<AutoSwipeImagesProps> = ({
       const nextIndex =
         currentIndex >= images.length - 1 ? 0 : currentIndex + 1;
 
-      flatListRef.current?.scrollToIndex({
-        index: nextIndex,
+      scrollRef.current?.scrollTo({
+        x: nextIndex * width,
         animated: true,
       });
     }, 3000);
 
     return () => clearInterval(interval);
-  }, [images]);
+  }, [images, width]);
 
   if (!images || images.length === 0) {
     return (
@@ -85,43 +83,47 @@ const AutoSwipeImages: React.FC<AutoSwipeImagesProps> = ({
     );
   }
 
+  if (images.length === 1) {
+    return (
+      <Image
+        source={{ uri: images[0] }}
+        style={{ width, height, borderRadius }}
+        resizeMode="cover"
+      />
+    );
+  }
+
   return (
     <View style={{ width, height, borderRadius, overflow: "hidden" }}>
-      <FlatList
-        ref={flatListRef}
-        data={images}
+      <ScrollView
+        ref={scrollRef}
         horizontal
         pagingEnabled
         showsHorizontalScrollIndicator={false}
-        keyExtractor={(_, index) => index.toString()}
-        onViewableItemsChanged={onViewableItemsChanged}
-        viewabilityConfig={viewabilityConfig}
-        getItemLayout={(_, index) => ({
-          length: width,
-          offset: width * index,
-          index,
-        })}
-        renderItem={({ item }) => (
+        onScroll={onScroll}
+        scrollEventThrottle={16}
+        decelerationRate="fast"
+      >
+        {images.map((uri, index) => (
           <Image
-            source={{ uri: item }}
+            key={index}
+            source={{ uri }}
             style={{ width, height, borderRadius }}
             resizeMode="cover"
           />
-        )}
-      />
-      {images.length > 1 && (
-        <View style={styles.dotContainer}>
-          {images.map((_, index) => (
-            <View
-              key={index}
-              style={[
-                styles.dot,
-                activeIndex === index ? styles.dotActive : styles.dotInactive,
-              ]}
-            />
-          ))}
-        </View>
-      )}
+        ))}
+      </ScrollView>
+      <View style={styles.dotContainer}>
+        {images.map((_, index) => (
+          <View
+            key={index}
+            style={[
+              styles.dot,
+              activeIndex === index ? styles.dotActive : styles.dotInactive,
+            ]}
+          />
+        ))}
+      </View>
     </View>
   );
 };

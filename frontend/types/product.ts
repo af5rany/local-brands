@@ -47,6 +47,10 @@ export interface Product {
   variants: ProductVariant[];
   mainImage?: string;
   images?: string[];
+  averageRating?: number;
+  reviewCount?: number;
+  viewCount?: number;
+  salesCount?: number;
   inStock?: boolean;
   isLowStock?: boolean;
   createdAt: string;

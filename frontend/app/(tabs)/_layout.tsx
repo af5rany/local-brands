@@ -2,15 +2,14 @@ import { Tabs } from "expo-router";
 import React from "react";
 import { Platform, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Colors } from "@/constants/Colors";
 import { HapticTab } from "@/components/HapticTab";
 import Header from "@/components/Header";
 import { useThemeColors } from "@/hooks/useThemeColor";
 
 export default function TabLayout() {
   const colors = useThemeColors();
-  const tintColor = Colors["light"].tabActive;
-  const inactiveColor = Colors["light"].tabInactive;
+  const tintColor = colors.tabActive;
+  const inactiveColor = colors.tabInactive;
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
@@ -27,18 +26,18 @@ export default function TabLayout() {
           tabBarStyle: Platform.select({
             ios: {
               position: "absolute",
-              backgroundColor: Colors["light"].bottomTabBackground,
+              backgroundColor: colors.bottomTabBackground,
               height: 80,
-              borderTopColor: Colors["light"].bottomTabBorder,
-              shadowColor: "#000000",
+              borderTopColor: colors.bottomTabBorder,
+              shadowColor: colors.cardShadow,
               shadowOpacity: 0.04,
               shadowOffset: { width: 0, height: -2 },
               shadowRadius: 8,
             },
             default: {
-              backgroundColor: Colors["light"].bottomTabBackground,
+              backgroundColor: colors.bottomTabBackground,
               height: 64,
-              borderTopColor: Colors["light"].bottomTabBorder,
+              borderTopColor: colors.bottomTabBorder,
               elevation: 4,
             },
           }),

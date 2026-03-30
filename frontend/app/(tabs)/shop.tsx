@@ -23,6 +23,7 @@ import getApiUrl from "@/helpers/getApiUrl";
 import { Product } from "@/types/product";
 import { Brand } from "@/types/brand";
 import { useThemeColors } from "@/hooks/useThemeColor";
+import AutoSwipeImages from "@/components/AutoSwipeImages";
 
 // ── Category definitions ──────────────────────────────
 const CATEGORIES = [
@@ -59,10 +60,17 @@ const CompactProductCard = React.memo(
     onWishlistPress: () => void;
     isInWishlist: boolean;
   }) => {
-    const [imageError, setImageError] = useState(false);
+    const [imageWidth, setImageWidth] = useState(0);
     const cardGap = 12;
 
-    const imageUri = item.mainImage || item.variants?.[0]?.images?.[0] || item.images?.[0] || "";
+    // Collect all unique images for carousel
+    const allImages: string[] = [];
+    if (item.mainImage) allImages.push(item.mainImage);
+    item.variants?.forEach((v) => {
+      v.images?.forEach((img) => { if (img && !allImages.includes(img)) allImages.push(img); });
+    });
+    item.images?.forEach((img) => { if (img && !allImages.includes(img)) allImages.push(img); });
+
     const hasDiscount = item.salePrice != null && item.salePrice < item.price;
     const discountPct = hasDiscount
       ? Math.round(((item.price - item.salePrice!) / item.price) * 100)
@@ -83,7 +91,7 @@ const CompactProductCard = React.memo(
             : { marginLeft: cardGap / 2 },
         ]}
       >
-        <TouchableOpacity
+        <View
           style={[
             cardStyles.card,
             {
@@ -92,36 +100,21 @@ const CompactProductCard = React.memo(
               shadowColor: colors.cardShadow,
             },
           ]}
-          onPress={onPress}
-          activeOpacity={0.85}
         >
-          {/* Image */}
+          {/* Image — no TouchableOpacity wrapper so swipe gestures pass through */}
           <View
             style={[
               cardStyles.imageBox,
               { backgroundColor: colors.surfaceRaised },
             ]}
+            onLayout={(e) => setImageWidth(e.nativeEvent.layout.width)}
           >
-            {!imageError && imageUri ? (
-              <Image
-                source={{ uri: imageUri }}
-                style={cardStyles.image}
-                onError={() => setImageError(true)}
-                resizeMode="cover"
+            {imageWidth > 0 && (
+              <AutoSwipeImages
+                images={allImages}
+                width={imageWidth}
+                height={170}
               />
-            ) : (
-              <View
-                style={[
-                  cardStyles.placeholder,
-                  { backgroundColor: colors.surfaceRaised },
-                ]}
-              >
-                <Ionicons
-                  name="image-outline"
-                  size={32}
-                  color={colors.textTertiary}
-                />
-              </View>
             )}
 
             {/* Wishlist Heart */}
@@ -152,47 +145,49 @@ const CompactProductCard = React.memo(
                   { backgroundColor: colors.discountBadge },
                 ]}
               >
-                <Text style={cardStyles.discountText}>-{discountPct}%</Text>
+                <Text style={[cardStyles.discountText, { color: colors.textInverse }]}>-{discountPct}%</Text>
               </View>
             )}
           </View>
 
-          {/* Content */}
-          <View style={cardStyles.content}>
-            <Text
-              style={[cardStyles.brandLabel, { color: colors.textTertiary }]}
-              numberOfLines={1}
-            >
-              {item.brand?.name || item.brandName || "Local Brand"}
-            </Text>
-
-            <Text
-              style={[cardStyles.productName, { color: colors.text }]}
-              numberOfLines={2}
-            >
-              {item.name}
-            </Text>
-
-            {/* Price row */}
-            <View style={cardStyles.priceRow}>
+          {/* Content — tappable to navigate */}
+          <TouchableOpacity onPress={onPress} activeOpacity={0.85}>
+            <View style={cardStyles.content}>
               <Text
-                style={[cardStyles.price, { color: colors.priceCurrent }]}
+                style={[cardStyles.brandLabel, { color: colors.textTertiary }]}
+                numberOfLines={1}
               >
-                {formatCurrency(hasDiscount ? item.salePrice! : item.price)}
+                {item.brand?.name || item.brandName || "Local Brand"}
               </Text>
-              {hasDiscount && (
+
+              <Text
+                style={[cardStyles.productName, { color: colors.text }]}
+                numberOfLines={2}
+              >
+                {item.name}
+              </Text>
+
+              {/* Price row */}
+              <View style={cardStyles.priceRow}>
                 <Text
-                  style={[
-                    cardStyles.originalPrice,
-                    { color: colors.priceOriginal },
-                  ]}
+                  style={[cardStyles.price, { color: colors.priceCurrent }]}
                 >
-                  {formatCurrency(item.price)}
+                  {formatCurrency(hasDiscount ? item.salePrice! : item.price)}
                 </Text>
-              )}
+                {hasDiscount && (
+                  <Text
+                    style={[
+                      cardStyles.originalPrice,
+                      { color: colors.priceOriginal },
+                    ]}
+                  >
+                    {formatCurrency(item.price)}
+                  </Text>
+                )}
+              </View>
             </View>
-          </View>
-        </TouchableOpacity>
+          </TouchableOpacity>
+        </View>
       </View>
     );
   },
@@ -788,7 +783,7 @@ const ShopScreen = () => {
               style={[
                 styles.activeChip,
                 {
-                  backgroundColor: "rgba(67, 56, 202, 0.08)",
+                  backgroundColor: colors.primarySoft,
                   borderColor: colors.primary,
                 },
               ]}
@@ -817,25 +812,25 @@ const ShopScreen = () => {
             </View>
           ))}
 
-          {/* Brand chips — teal */}
+          {/* Brand chips */}
           {activeFilters.brandIds.map((id) => (
             <View
               key={`brand-${id}`}
               style={[
                 styles.activeChip,
                 {
-                  backgroundColor: "rgba(15, 110, 86, 0.08)",
-                  borderColor: "#0F6E56",
+                  backgroundColor: colors.primarySoft,
+                  borderColor: colors.primary,
                 },
               ]}
             >
               <Ionicons
                 name="person-outline"
                 size={11}
-                color="#0F6E56"
+                color={colors.primary}
               />
               <Text
-                style={[styles.activeChipText, { color: "#0F6E56" }]}
+                style={[styles.activeChipText, { color: colors.primary }]}
               >
                 {filterLabels.brands[id] || id}
               </Text>
@@ -853,30 +848,30 @@ const ShopScreen = () => {
                 }}
                 hitSlop={{ top: 8, bottom: 8, left: 4, right: 8 }}
               >
-                <Ionicons name="close" size={12} color="#0F6E56" />
+                <Ionicons name="close" size={12} color={colors.primary} />
               </TouchableOpacity>
             </View>
           ))}
 
-          {/* Sort chip — amber */}
+          {/* Sort chip */}
           {(activeFilters.sortBy !== "createdAt" ||
             activeFilters.sortOrder !== "DESC") && (
             <View
               style={[
                 styles.activeChip,
                 {
-                  backgroundColor: "rgba(133, 79, 11, 0.08)",
-                  borderColor: "#854F0B",
+                  backgroundColor: colors.primarySoft,
+                  borderColor: colors.primary,
                 },
               ]}
             >
               <Ionicons
                 name="swap-vertical-outline"
                 size={11}
-                color="#854F0B"
+                color={colors.primary}
               />
               <Text
-                style={[styles.activeChipText, { color: "#854F0B" }]}
+                style={[styles.activeChipText, { color: colors.primary }]}
               >
                 {filterLabels.sort || "Oldest First"}
               </Text>
@@ -891,18 +886,18 @@ const ShopScreen = () => {
                 }}
                 hitSlop={{ top: 8, bottom: 8, left: 4, right: 8 }}
               >
-                <Ionicons name="close" size={12} color="#854F0B" />
+                <Ionicons name="close" size={12} color={colors.primary} />
               </TouchableOpacity>
             </View>
           )}
 
-          {/* Price chip — indigo */}
+          {/* Price chip */}
           {hasPriceFilter && (
             <View
               style={[
                 styles.activeChip,
                 {
-                  backgroundColor: "rgba(67, 56, 202, 0.08)",
+                  backgroundColor: colors.primarySoft,
                   borderColor: colors.primary,
                 },
               ]}

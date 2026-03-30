@@ -153,7 +153,7 @@ const WishlistTab = () => {
         ]}
         onPress={() => router.push(`/products/${product.id}`)}
       >
-        <Image source={{ uri: image ? image: "" }} style={styles.productImage} />
+        <Image source={{ uri: image ? image: "" }} style={[styles.productImage, { backgroundColor: colors.surfaceRaised }]} />
         <TouchableOpacity
           style={[styles.removeIcon, { backgroundColor: colors.surface }]}
           onPress={() => toggleWishlist(product.id)}
@@ -193,10 +193,10 @@ const WishlistTab = () => {
     >
       <View style={styles.brandCardLeft}>
         {item.logo ? (
-          <Image source={{ uri: item.logo }} style={styles.brandLogo} />
+          <Image source={{ uri: item.logo }} style={[styles.brandLogo, { backgroundColor: colors.surfaceRaised }]} />
         ) : (
-          <View style={[styles.brandLogo, styles.brandLogoPlaceholder]}>
-            <Text style={styles.brandLogoLetter}>
+          <View style={[styles.brandLogo, styles.brandLogoPlaceholder, { backgroundColor: colors.primary }]}>
+            <Text style={[styles.brandLogoLetter, { color: colors.textInverse }]}>
               {item.name.charAt(0).toUpperCase()}
             </Text>
           </View>
@@ -249,7 +249,7 @@ const WishlistTab = () => {
             style={[styles.authBtn, { backgroundColor: colors.primary }]}
             onPress={() => router.push("/auth/login")}
           >
-            <Text style={styles.authBtnText}>SIGN IN</Text>
+            <Text style={[styles.authBtnText, { color: colors.primaryForeground }]}>SIGN IN</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -326,7 +326,7 @@ const WishlistTab = () => {
                 style={[styles.shopBtn, { backgroundColor: colors.primary }]}
                 onPress={() => router.push("/(tabs)/shop" as any)}
               >
-                <Text style={styles.shopBtnText}>BROWSE SHOP</Text>
+                <Text style={[styles.shopBtnText, { color: colors.primaryForeground }]}>BROWSE SHOP</Text>
               </TouchableOpacity>
             </View>
           ) : (
@@ -368,7 +368,7 @@ const WishlistTab = () => {
                 style={[styles.shopBtn, { backgroundColor: colors.primary }]}
                 onPress={() => router.push("/(tabs)/brands" as any)}
               >
-                <Text style={styles.shopBtnText}>DISCOVER BRANDS</Text>
+                <Text style={[styles.shopBtnText, { color: colors.primaryForeground }]}>DISCOVER BRANDS</Text>
               </TouchableOpacity>
             </View>
           ) : (
@@ -446,7 +446,7 @@ const styles = StyleSheet.create({
   productImage: {
     width: "100%",
     height: 180,
-    backgroundColor: "#f5f5f5",
+    // backgroundColor set via inline style (colors.surfaceRaised)
   },
   removeIcon: {
     position: "absolute",
@@ -491,18 +491,18 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 0,
-    backgroundColor: "#F5F5F5",
+    // backgroundColor set via inline style (colors.surfaceRaised)
     marginRight: 14,
   },
   brandLogoPlaceholder: {
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#000000",
+    // backgroundColor set via inline style (colors.primary)
   },
   brandLogoLetter: {
     fontSize: 20,
     fontWeight: "700",
-    color: "#FFFFFF",
+    // color set via inline style (colors.textInverse)
   },
   brandCardInfo: {
     flex: 1,
@@ -543,7 +543,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 32,
   },
   shopBtnText: {
-    color: "#fff",
+    // color set via inline style (colors.primaryForeground)
     fontSize: 12,
     fontWeight: "700",
     letterSpacing: 1.5,
@@ -553,7 +553,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 48,
   },
   authBtnText: {
-    color: "#fff",
+    // color set via inline style (colors.primaryForeground)
     fontSize: 12,
     fontWeight: "700",
     letterSpacing: 1.5,

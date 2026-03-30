@@ -104,7 +104,7 @@ const Header: React.FC<HeaderProps> = ({
                 style={[styles.loginButton, { backgroundColor: colors.primary }]}
                 onPress={() => router.push("/auth/login")}
               >
-                <Ionicons name="log-in-outline" size={16} color="#FFF" />
+                <Ionicons name="log-in-outline" size={16} color={colors.primaryForeground} />
                 <Text style={styles.loginText}>Sign In</Text>
               </Pressable> */}
 
@@ -134,13 +134,13 @@ const Header: React.FC<HeaderProps> = ({
                   color={colors.text}
                 />
                 {notificationCount > 0 && (
-                  <View style={styles.notificationDot}>
+                  <View style={[styles.notificationDot, { backgroundColor: colors.danger, borderColor: colors.surface }]}>
                     {notificationCount <= 9 ? (
-                      <Text style={styles.badgeTextSmall}>
+                      <Text style={[styles.badgeTextSmall, { color: colors.textInverse }]}>
                         {notificationCount}
                       </Text>
                     ) : (
-                      <Text style={styles.badgeTextSmall}>9+</Text>
+                      <Text style={[styles.badgeTextSmall, { color: colors.textInverse }]}>9+</Text>
                     )}
                   </View>
                 )}
@@ -156,8 +156,8 @@ const Header: React.FC<HeaderProps> = ({
               >
                   <Ionicons name="bag-outline" size={24} color={colors.text} />
                 {cartItemCount > 0 && (
-                  <View style={styles.cartBadge}>
-                    <Text style={styles.cartBadgeText}>
+                  <View style={[styles.cartBadge, { backgroundColor: colors.danger, borderColor: colors.surface }]}>
+                    <Text style={[styles.cartBadgeText, { color: colors.textInverse }]}>
                       {cartItemCount > 99 ? "99+" : cartItemCount}
                     </Text>
                   </View>
@@ -381,7 +381,6 @@ const styles = StyleSheet.create({
   loginText: {
     fontSize: 14,
     fontWeight: "700",
-    color: "#FFF",
     letterSpacing: 0.3,
   },
 
@@ -393,15 +392,12 @@ const styles = StyleSheet.create({
     minWidth: 16,
     height: 16,
     borderRadius: 8,
-    backgroundColor: "#EF4444",
     justifyContent: "center",
     alignItems: "center",
     borderWidth: 1.5,
-    borderColor: "#FFF",
     paddingHorizontal: 3,
   },
   badgeTextSmall: {
-    color: "#FFF",
     fontSize: 9,
     fontWeight: "800",
     lineHeight: 12,
@@ -415,15 +411,12 @@ const styles = StyleSheet.create({
     minWidth: 18,
     height: 18,
     borderRadius: 9,
-    backgroundColor: "#EF4444",
     justifyContent: "center",
     alignItems: "center",
     borderWidth: 1.5,
-    borderColor: "#FFF",
     paddingHorizontal: 3,
   },
   cartBadgeText: {
-    color: "#FFF",
     fontSize: 10,
     fontWeight: "800",
     lineHeight: 13,

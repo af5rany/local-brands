@@ -671,6 +671,12 @@ const ProductDetailScreen = () => {
                     const hex = colorVal.startsWith("#")
                       ? colorVal
                       : colorVal.toLowerCase();
+                    // Check if any variant with this color has stock
+                    const colorInStock = product.variants.some(
+                      (v) =>
+                        (v.color || v.attributes?.color) === colorVal &&
+                        v.stock > 0,
+                    );
                     return (
                       <TouchableOpacity
                         key={colorVal}
@@ -681,13 +687,14 @@ const ProductDetailScreen = () => {
                           const sizes = product.variants
                             .filter(
                               (v) =>
-                                (v.color || v.attributes?.color) === colorVal,
+                                (v.color || v.attributes?.color) === colorVal &&
+                                v.stock > 0,
                             )
                             .map((v) => v.size || v.attributes?.size || "")
                             .filter(Boolean);
                           setSelectedSize(sizes[0] || null);
                         }}
-                        style={styles.colorWrap}
+                        style={[styles.colorWrap, { opacity: colorInStock ? 1 : 0.35 }]}
                       >
                         <View
                           style={[

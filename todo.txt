@@ -1,3 +1,7 @@
+No-internet handling
+add a coment or review on products as a customer 
+prevent getting back after proceeding with an order 
+
 /Users/f5rany/Documents/Work/local-brands/frontend/app/(tabs)/index.tsx check this "ick Stats (authenticated users"
 about size and color i want to handle out of stock for a size and color and get notify for them as well
 handle synchronization for multiple users purchasing same product with stock 1

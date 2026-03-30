@@ -22,6 +22,7 @@ import getApiUrl from "@/helpers/getApiUrl";
 import { Brand } from "@/types/brand";
 import { Product } from "@/types/product";
 import { useThemeColors } from "@/hooks/useThemeColor";
+import AutoSwipeImages from "@/components/AutoSwipeImages";
 
 // ── Categories ──────────────────────────────────────────────
 const CATEGORIES = [
@@ -313,16 +314,21 @@ const HomeScreen = () => {
   };
 
   const renderProductCard = (item: Product, showDealBadge = false) => {
-    const firstVariant = item.variants?.[0];
-    const image =
-      item.mainImage || firstVariant?.images?.[0] || firstVariant?.variantImages?.[0] || item.images?.[0] || "";
+    // Collect all unique images for carousel
+    const allImages: string[] = [];
+    if (item.mainImage) allImages.push(item.mainImage);
+    item.variants?.forEach((v) => {
+      v.images?.forEach((img) => { if (img && !allImages.includes(img)) allImages.push(img); });
+    });
+    item.images?.forEach((img) => { if (img && !allImages.includes(img)) allImages.push(img); });
+
     const hasDiscount = item.salePrice && item.salePrice < item.price;
     const discountPercent = hasDiscount
       ? Math.round(((item.price - item.salePrice!) / item.price) * 100)
       : 0;
 
     return (
-      <TouchableOpacity
+      <View
         style={[
           styles.productCard,
           {
@@ -330,36 +336,13 @@ const HomeScreen = () => {
             backgroundColor: colors.surface,
           },
         ]}
-        onPress={() => router.push(`/products/${item.id}` as any)}
-        activeOpacity={0.7}
       >
         <View style={styles.productImageWrapper}>
-          {image ? (
-            <Image
-              source={{ uri: image }}
-              style={[
-                styles.productImage,
-                { backgroundColor: colors.surfaceRaised },
-              ]}
-            />
-          ) : (
-            <View
-              style={[
-                styles.productImage,
-                {
-                  backgroundColor: colors.surfaceRaised,
-                  alignItems: "center",
-                  justifyContent: "center",
-                },
-              ]}
-            >
-              <Ionicons
-                name="image-outline"
-                size={32}
-                color={colors.textTertiary}
-              />
-            </View>
-          )}
+          <AutoSwipeImages
+            images={allImages}
+            width={productCardWidth}
+            height={180}
+          />
           {hasDiscount && (
             <View
               style={[styles.discountBadge, { backgroundColor: colors.text }]}
@@ -372,44 +355,49 @@ const HomeScreen = () => {
             </View>
           )}
           {showDealBadge && hasDiscount && (
-            <View style={styles.dealTag}>
-              <Ionicons name="flash" size={10} color="#FFF" />
-              <Text style={styles.dealTagText}>DEAL</Text>
+            <View style={[styles.dealTag, { backgroundColor: colors.text }]}>
+              <Ionicons name="flash" size={10} color={colors.textInverse} />
+              <Text style={[styles.dealTagText, { color: colors.textInverse }]}>DEAL</Text>
             </View>
           )}
         </View>
-        <View style={styles.productInfo}>
-          <Text
-            style={[styles.productBrand, { color: colors.textTertiary }]}
-            numberOfLines={1}
-          >
-            {item.brand?.name || item.brandName || "Brand"}
-          </Text>
-          <Text
-            style={[styles.productName, { color: colors.text }]}
-            numberOfLines={2}
-          >
-            {item.name}
-          </Text>
-          <View style={styles.priceRow}>
+        <TouchableOpacity
+          onPress={() => router.push(`/products/${item.id}` as any)}
+          activeOpacity={0.7}
+        >
+          <View style={styles.productInfo}>
             <Text
-              style={[
-                styles.productPrice,
-                { color: hasDiscount ? colors.priceCurrent : colors.text },
-              ]}
+              style={[styles.productBrand, { color: colors.textTertiary }]}
+              numberOfLines={1}
             >
-              ${(item.salePrice || item.price).toFixed(2)}
+              {item.brand?.name || item.brandName || "Brand"}
             </Text>
-            {hasDiscount && (
+            <Text
+              style={[styles.productName, { color: colors.text }]}
+              numberOfLines={2}
+            >
+              {item.name}
+            </Text>
+            <View style={styles.priceRow}>
               <Text
-                style={[styles.originalPrice, { color: colors.textTertiary }]}
+                style={[
+                  styles.productPrice,
+                  { color: hasDiscount ? colors.priceCurrent : colors.text },
+                ]}
               >
-                ${item.price.toFixed(2)}
+                ${(item.salePrice || item.price).toFixed(2)}
               </Text>
-            )}
+              {hasDiscount && (
+                <Text
+                  style={[styles.originalPrice, { color: colors.textTertiary }]}
+                >
+                  ${item.price.toFixed(2)}
+                </Text>
+              )}
+            </View>
           </View>
-        </View>
-      </TouchableOpacity>
+        </TouchableOpacity>
+      </View>
     );
   };
 
@@ -494,59 +482,52 @@ const HomeScreen = () => {
         </Animated.View>
 
         {/* ── Quick Stats (authenticated users) ──────────────── */}
-        {/* {token && (
+        {token && Object.keys(stats).length > 0 && (
           <View style={styles.quickStats}>
-            {Object.keys(stats).filter((k) => ({
-              brands: 1, products: 1, users: 1, myProducts: 1, orders: 1, revenue: 1, myOrders: 1, wishlist: 1, cartItems: 1,
-            } as Record<string, number>)[k]).slice(0, 3).map((key) => ({
-              key,
-              value: stats[key] || 0,
-              ...({
-                brands:     { label: "Brands",   icon: "storefront-outline" as const, iconColor: colors.accent,  iconBg: colors.accentSoft,  route: "/(tabs)/brands" },
-                products:   { label: "Products", icon: "cube-outline" as const,       iconColor: colors.primary, iconBg: colors.primarySoft, route: "/products" },
-                users:      { label: "Users",    icon: "people-outline" as const,     iconColor: colors.info,    iconBg: colors.infoSoft,    route: "/users" },
-                myProducts: { label: "Products", icon: "cube-outline" as const,       iconColor: colors.primary, iconBg: colors.primarySoft, route: "/products" },
-                orders:     { label: "Orders",   icon: "receipt-outline" as const,    iconColor: colors.primary, iconBg: colors.primarySoft, route: "/orders" },
-                revenue:    { label: "Revenue",  icon: "cash-outline" as const,       iconColor: colors.success, iconBg: colors.successSoft, route: "/orders" },
-                myOrders:   { label: "Orders",   icon: "receipt-outline" as const,    iconColor: colors.primary, iconBg: colors.primarySoft, route: "/orders" },
-                wishlist:   { label: "Wishlist",  icon: "heart-outline" as const,     iconColor: colors.danger,  iconBg: colors.dangerSoft,  route: "/(tabs)/wishlist" },
-                cartItems:  { label: "Cart",     icon: "bag-handle-outline" as const, iconColor: colors.success, iconBg: colors.successSoft, route: "/cart" },
-              } as Record<string, { label: string; icon: any; iconColor: string; iconBg: string; route: string }>)[key],
-            })).map((stat) => (
-              <TouchableOpacity
-                key={stat.label}
-                style={[
-                  styles.statCard,
-                  {
-                    backgroundColor: colors.surface,
-                    borderColor: colors.border,
-                  },
-                ]}
-                onPress={() => router.push(stat.route as any)}
-                activeOpacity={0.7}
-              >
-                <View
+            {(user?.role === "admin"
+              ? [
+                  { key: "brands", label: "Brands", icon: "storefront-outline" as keyof typeof Ionicons.glyphMap, route: "/(tabs)/brands" },
+                  { key: "products", label: "Products", icon: "cube-outline" as keyof typeof Ionicons.glyphMap, route: "/(tabs)/shop" },
+                  { key: "users", label: "Users", icon: "people-outline" as keyof typeof Ionicons.glyphMap, route: "/users" },
+                ]
+              : user?.role === "brand_owner"
+                ? [
+                    { key: "myProducts", label: "Products", icon: "cube-outline" as keyof typeof Ionicons.glyphMap, route: "/(tabs)/shop" },
+                    { key: "orders", label: "Orders", icon: "receipt-outline" as keyof typeof Ionicons.glyphMap, route: "/orders" },
+                    { key: "revenue", label: "Revenue", icon: "cash-outline" as keyof typeof Ionicons.glyphMap, route: "/orders" },
+                  ]
+                : [
+                    { key: "myOrders", label: "Orders", icon: "receipt-outline" as keyof typeof Ionicons.glyphMap, route: "/orders" },
+                    { key: "wishlist", label: "Wishlist", icon: "heart-outline" as keyof typeof Ionicons.glyphMap, route: "/(tabs)/wishlist" },
+                    { key: "cartItems", label: "Cart", icon: "bag-handle-outline" as keyof typeof Ionicons.glyphMap, route: "/cart" },
+                  ]
+            )
+              .filter((s) => stats[s.key] !== undefined)
+              .map((stat) => (
+                <TouchableOpacity
+                  key={stat.key}
                   style={[
-                    styles.statIconBox,
-                    { backgroundColor: stat.iconBg },
+                    styles.statCard,
+                    { backgroundColor: colors.surface, borderColor: colors.border },
                   ]}
+                  onPress={() => router.push(stat.route as any)}
+                  activeOpacity={0.7}
                 >
-                  <Ionicons name={stat.icon} size={16} color={stat.iconColor} />
-                </View>
-                <View>
-                  <Text style={[styles.statValue, { color: colors.text }]}>
-                    {stat.value || 0}
-                  </Text>
-                  <Text
-                    style={[styles.statLabel, { color: colors.textTertiary }]}
-                  >
-                    {stat.label}
-                  </Text>
-                </View>
-              </TouchableOpacity>
-            ))}
+                  <View style={[styles.statIconBox, { backgroundColor: colors.surfaceRaised }]}>
+                    <Ionicons name={stat.icon} size={16} color={colors.text} />
+                  </View>
+                  <View>
+                    <Text style={[styles.statValue, { color: colors.text }]}>
+                      {stats[stat.key] ?? 0}
+                    </Text>
+                    <Text style={[styles.statLabel, { color: colors.textTertiary }]}>
+                      {stat.label}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              ))}
           </View>
-        )} */}
+        )}
 
         {/* ── Promotional Banners ────────────────────────────── */}
         <View style={styles.bannerSection}>
@@ -582,7 +563,7 @@ const HomeScreen = () => {
                     <Text
                       style={[
                         styles.promoSubtitle,
-                        { color: "rgba(255,255,255,0.6)" },
+                        { color: colors.textTertiary },
                       ]}
                     >
                       {item.subtitle}
@@ -591,7 +572,7 @@ const HomeScreen = () => {
                       style={[
                         styles.promoButton,
                         {
-                          borderColor: "rgba(255,255,255,0.3)",
+                          borderColor: colors.primarySoft,
                           borderWidth: 1,
                           backgroundColor: "transparent",
                         },
@@ -684,7 +665,7 @@ const HomeScreen = () => {
             {renderSectionHeader(
               "Flash Deals",
               "flash",
-              ["#FF6B00", "#FF9500"],
+              [colors.primary, colors.primaryMuted],
               navigateToShop,
             )}
 
@@ -695,14 +676,17 @@ const HomeScreen = () => {
                 style={styles.sectionLoader}
               />
             ) : (
-              <FlatList
-                data={dealProducts}
+              <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.horizontalList}
-                keyExtractor={(item) => `deal-${item.id}`}
-                renderItem={({ item }) => renderProductCard(item, true)}
-              />
+              >
+                {dealProducts.map((item) => (
+                  <React.Fragment key={`deal-${item.id}`}>
+                    {renderProductCard(item, true)}
+                  </React.Fragment>
+                ))}
+              </ScrollView>
             )}
           </View>
         )}
@@ -715,7 +699,7 @@ const HomeScreen = () => {
             {renderSectionHeader(
               "Trending Now",
               "trending-up",
-              ["#000", "#333"],
+              [colors.text, colors.textSecondary],
               navigateToShop,
             )}
 
@@ -726,14 +710,17 @@ const HomeScreen = () => {
                 style={styles.sectionLoader}
               />
             ) : (
-              <FlatList
-                data={trendingProducts}
+              <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.horizontalList}
-                keyExtractor={(item) => `trending-${item.id}`}
-                renderItem={({ item }) => renderProductCard(item)}
-              />
+              >
+                {trendingProducts.map((item) => (
+                  <React.Fragment key={`trending-${item.id}`}>
+                    {renderProductCard(item)}
+                  </React.Fragment>
+                ))}
+              </ScrollView>
             )}
           </View>
         )}
@@ -746,7 +733,7 @@ const HomeScreen = () => {
             {renderSectionHeader(
               "Featured Brands",
               "star",
-              ["#000", "#333"],
+              [colors.text, colors.textSecondary],
               () => router.push("/(tabs)/brands" as any),
             )}
 
@@ -757,14 +744,17 @@ const HomeScreen = () => {
                 style={styles.sectionLoader}
               />
             ) : (
-              <FlatList
-                data={featuredBrands}
+              <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.horizontalList}
-                keyExtractor={(item) => `featured-brand-${item.id}`}
-                renderItem={({ item }) => renderBrandCard(item, "FEATURED")}
-              />
+              >
+                {featuredBrands.map((item) => (
+                  <React.Fragment key={`featured-brand-${item.id}`}>
+                    {renderBrandCard(item, "FEATURED")}
+                  </React.Fragment>
+                ))}
+              </ScrollView>
             )}
           </View>
         )}
@@ -774,7 +764,7 @@ const HomeScreen = () => {
           {renderSectionHeader(
             "New Arrivals",
             "star",
-            ["#4facfe", "#00f2fe"],
+            [colors.primary, colors.primaryMuted],
             navigateToShop,
           )}
 
@@ -789,14 +779,17 @@ const HomeScreen = () => {
               No products available
             </Text>
           ) : (
-            <FlatList
-              data={newArrivals}
+            <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.horizontalList}
-              keyExtractor={(item) => `arrival-${item.id}`}
-              renderItem={({ item }) => renderProductCard(item)}
-            />
+            >
+              {newArrivals.map((item) => (
+                <React.Fragment key={`arrival-${item.id}`}>
+                  {renderProductCard(item)}
+                </React.Fragment>
+              ))}
+            </ScrollView>
           )}
         </View>
 
@@ -805,7 +798,7 @@ const HomeScreen = () => {
           {renderSectionHeader(
             "New Brands",
             "sparkles",
-            [colors.success, "#10B981"],
+            [colors.success, colors.success],
             navigateToShop,
           )}
 
@@ -820,14 +813,17 @@ const HomeScreen = () => {
               No brands available
             </Text>
           ) : (
-            <FlatList
-              data={newBrands}
+            <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.horizontalList}
-              keyExtractor={(item) => `new-brand-${item.id}`}
-              renderItem={({ item }) => renderBrandCard(item, "NEW")}
-            />
+            >
+              {newBrands.map((item) => (
+                <React.Fragment key={`new-brand-${item.id}`}>
+                  {renderBrandCard(item, "NEW")}
+                </React.Fragment>
+              ))}
+            </ScrollView>
           )}
         </View>
 
@@ -839,7 +835,7 @@ const HomeScreen = () => {
             {renderSectionHeader(
               "Bestsellers",
               "trophy",
-              ["#000", "#333"],
+              [colors.text, colors.textSecondary],
               navigateToShop,
             )}
 
@@ -850,14 +846,17 @@ const HomeScreen = () => {
                 style={styles.sectionLoader}
               />
             ) : (
-              <FlatList
-                data={bestsellers}
+              <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.horizontalList}
-                keyExtractor={(item) => `bestseller-${item.id}`}
-                renderItem={({ item }) => renderProductCard(item)}
-              />
+              >
+                {bestsellers.map((item) => (
+                  <React.Fragment key={`bestseller-${item.id}`}>
+                    {renderProductCard(item)}
+                  </React.Fragment>
+                ))}
+              </ScrollView>
             )}
           </View>
         )}
@@ -881,14 +880,17 @@ const HomeScreen = () => {
                 style={styles.sectionLoader}
               />
             ) : (
-              <FlatList
-                data={sponsoredBrands}
+              <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.horizontalList}
-                keyExtractor={(item) => `sponsored-brand-${item.id}`}
-                renderItem={({ item }) => renderBrandCard(item, "SPONSORED")}
-              />
+              >
+                {sponsoredBrands.map((item) => (
+                  <React.Fragment key={`sponsored-brand-${item.id}`}>
+                    {renderBrandCard(item, "SPONSORED")}
+                  </React.Fragment>
+                ))}
+              </ScrollView>
             )}
           </View>
         )}
@@ -994,14 +996,12 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   promoTitle: {
-    color: "#FFF",
     fontSize: 26,
     fontWeight: "800",
     letterSpacing: -0.5,
     lineHeight: 32,
   },
   promoSubtitle: {
-    color: "rgba(255,255,255,0.8)",
     fontSize: 13,
     fontWeight: "500",
     marginTop: 6,
@@ -1010,7 +1010,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     alignSelf: "flex-start",
-    backgroundColor: "rgba(255,255,255,0.25)",
     paddingHorizontal: 16,
     paddingVertical: 9,
     borderRadius: 20,
@@ -1018,7 +1017,6 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   promoButtonText: {
-    color: "#FFF",
     fontSize: 13,
     fontWeight: "700",
   },
@@ -1138,7 +1136,6 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   brandBadgeText: {
-    color: "#FFF",
     fontSize: 8,
     fontWeight: "900",
     letterSpacing: 0.5,
@@ -1180,7 +1177,6 @@ const styles = StyleSheet.create({
     borderRadius: 0,
   },
   discountText: {
-    color: "#FFF",
     fontSize: 10,
     fontWeight: "800",
     letterSpacing: 0.3,
@@ -1191,14 +1187,12 @@ const styles = StyleSheet.create({
     left: 10,
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#000000",
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 0,
     gap: 3,
   },
   dealTagText: {
-    color: "#FFFFFF",
     fontSize: 9,
     fontWeight: "900",
     letterSpacing: 1,

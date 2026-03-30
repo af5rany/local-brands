@@ -59,7 +59,7 @@ interface FilterPanelProps {
   onApply: (filters: PanelFilters) => void;
 }
 
-type SortOptionKey = "newest" | "oldest" | "price_low" | "price_high";
+type SortOptionKey = "newest" | "oldest" | "price_low" | "price_high" | "name_az" | "name_za" | "popular";
 
 const SORT_OPTIONS: {
   key: SortOptionKey;
@@ -96,11 +96,35 @@ const SORT_OPTIONS: {
     sortOrder: "DESC",
     icon: "trending-down-outline",
   },
+  {
+    key: "name_az",
+    label: "Name: A\u2013Z",
+    sortBy: "name",
+    sortOrder: "ASC",
+    icon: "text-outline",
+  },
+  {
+    key: "name_za",
+    label: "Name: Z\u2013A",
+    sortBy: "name",
+    sortOrder: "DESC",
+    icon: "text-outline",
+  },
+  {
+    key: "popular",
+    label: "Most popular",
+    sortBy: "popularity",
+    sortOrder: "DESC",
+    icon: "flame-outline",
+  },
 ];
 
 const getSortKey = (sortBy: string, sortOrder: string): SortOptionKey => {
   if (sortBy === "price" && sortOrder === "ASC") return "price_low";
   if (sortBy === "price" && sortOrder === "DESC") return "price_high";
+  if (sortBy === "name" && sortOrder === "ASC") return "name_az";
+  if (sortBy === "name" && sortOrder === "DESC") return "name_za";
+  if (sortBy === "popularity") return "popular";
   if (sortBy === "createdAt" && sortOrder === "ASC") return "oldest";
   return "newest";
 };
@@ -579,14 +603,14 @@ const FilterPanel: React.FC<FilterPanelProps> = ({
                 >
                   Sort by
                 </Text>
-                <View style={styles.sortGrid}>
-                  {SORT_OPTIONS.slice(0, 2).map((opt) => {
+                <View style={styles.chipWrap}>
+                  {SORT_OPTIONS.map((opt) => {
                     const isActive = pendingSortKey === opt.key;
                     return (
                       <TouchableOpacity
                         key={opt.key}
                         style={[
-                          styles.sortCard,
+                          styles.selectChip,
                           {
                             backgroundColor: isActive
                               ? colors.primarySoft
@@ -601,56 +625,15 @@ const FilterPanel: React.FC<FilterPanelProps> = ({
                       >
                         <Ionicons
                           name={opt.icon}
-                          size={16}
+                          size={14}
                           color={
                             isActive ? colors.primary : colors.textSecondary
                           }
+                          style={{ marginRight: 6 }}
                         />
                         <Text
                           style={[
-                            styles.sortCardLabel,
-                            {
-                              color: isActive ? colors.primary : colors.text,
-                            },
-                            isActive && styles.boldText,
-                          ]}
-                        >
-                          {opt.label}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-                <View style={[styles.sortGrid, { marginTop: 8 }]}>
-                  {SORT_OPTIONS.slice(2).map((opt) => {
-                    const isActive = pendingSortKey === opt.key;
-                    return (
-                      <TouchableOpacity
-                        key={opt.key}
-                        style={[
-                          styles.sortCard,
-                          {
-                            backgroundColor: isActive
-                              ? colors.primarySoft
-                              : colors.surfaceRaised,
-                            borderColor: isActive
-                              ? colors.primary
-                              : colors.border,
-                          },
-                        ]}
-                        onPress={() => setPendingSortKey(opt.key)}
-                        activeOpacity={0.7}
-                      >
-                        <Ionicons
-                          name={opt.icon}
-                          size={16}
-                          color={
-                            isActive ? colors.primary : colors.textSecondary
-                          }
-                        />
-                        <Text
-                          style={[
-                            styles.sortCardLabel,
+                            styles.selectChipText,
                             {
                               color: isActive ? colors.primary : colors.text,
                             },

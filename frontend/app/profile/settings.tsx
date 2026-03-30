@@ -13,11 +13,13 @@ import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/context/AuthContext";
 import { useThemeColors } from "@/hooks/useThemeColor";
+import { useThemePreference } from "@/context/ThemeContext";
 
 const SettingsScreen = () => {
   const router = useRouter();
   const colors = useThemeColors();
   const { user, logout } = useAuth();
+  const { preference, setPreference } = useThemePreference();
 
   const [pushNotifications, setPushNotifications] = useState(true);
   const [emailNotifications, setEmailNotifications] = useState(true);
@@ -156,6 +158,80 @@ const SettingsScreen = () => {
                 thumbColor={colors.primaryForeground}
               />
             </View>
+          ))}
+        </View>
+
+        {/* Appearance Section */}
+        <Text style={[styles.sectionTitle, { color: colors.textTertiary }]}>
+          APPEARANCE
+        </Text>
+        <View
+          style={[
+            styles.section,
+            {
+              backgroundColor: colors.surface,
+              borderColor: colors.borderLight,
+            },
+          ]}
+        >
+          {(
+            [
+              { key: "system", label: "System", icon: "phone-portrait-outline" },
+              { key: "light", label: "Light", icon: "sunny-outline" },
+              { key: "dark", label: "Dark", icon: "moon-outline" },
+            ] as const
+          ).map((opt, index) => (
+            <TouchableOpacity
+              key={opt.key}
+              style={[
+                styles.menuItem,
+                index < 2 && {
+                  borderBottomWidth: 1,
+                  borderBottomColor: colors.borderLight,
+                },
+              ]}
+              onPress={() => setPreference(opt.key)}
+              activeOpacity={0.7}
+            >
+              <View style={styles.settingLeft}>
+                <View
+                  style={[
+                    styles.settingIcon,
+                    {
+                      backgroundColor:
+                        preference === opt.key
+                          ? colors.primarySoft
+                          : colors.surfaceRaised,
+                    },
+                  ]}
+                >
+                  <Ionicons
+                    name={opt.icon as any}
+                    size={18}
+                    color={
+                      preference === opt.key
+                        ? colors.primary
+                        : colors.textSecondary
+                    }
+                  />
+                </View>
+                <Text
+                  style={[
+                    styles.settingLabel,
+                    {
+                      color:
+                        preference === opt.key ? colors.primary : colors.text,
+                      fontWeight: preference === opt.key ? "700" : "500",
+                    },
+                  ]}
+                >
+                  {opt.label}
+                </Text>
+              </View>
+              {preference === opt.key && (
+                <Ionicons name="checkmark" size={20} color={colors.primary} />
+              )}
+            </TouchableOpacity>
           ))}
         </View>
 

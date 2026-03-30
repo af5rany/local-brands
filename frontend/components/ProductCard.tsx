@@ -7,7 +7,7 @@ import {
   Dimensions,
 } from "react-native";
 import { useRouter } from "expo-router";
-import { useThemeColor } from "@/hooks/useThemeColor";
+import { useThemeColor, useThemeColors } from "@/hooks/useThemeColor";
 import { Ionicons } from "@expo/vector-icons";
 import { Product } from "@/types/product";
 import { ProductStatus } from "@/types/enums";
@@ -53,6 +53,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onEdit, isWishlisted
     { light: "#007AFF", dark: "#0A84FF" },
     "primary",
   );
+  const colors = useThemeColors();
 
   const handlePress = () => {
     router.push(`/products/${product.id}`);
@@ -139,7 +140,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onEdit, isWishlisted
       position: "absolute",
       top: 12,
       right: 12,
-      backgroundColor: "#C41E3A",
+      backgroundColor: colors.discountBadge,
       paddingHorizontal: 8,
       paddingVertical: 4,
       borderRadius: 0,
@@ -147,7 +148,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onEdit, isWishlisted
     discountText: {
       fontSize: 10,
       fontWeight: "600",
-      color: "#ffffff",
+      color: colors.textInverse,
     },
     favoriteButton: {
       position: "absolute",
@@ -174,7 +175,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onEdit, isWishlisted
       left: 12,
       flexDirection: "row",
       alignItems: "center",
-      backgroundColor: product.stock > 0 ? "#000000" : "#999999",
+      backgroundColor: product.stock > 0 ? colors.primary : colors.textTertiary,
       paddingHorizontal: 6,
       paddingVertical: 3,
       borderRadius: 6,
@@ -182,7 +183,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onEdit, isWishlisted
     stockText: {
       fontSize: 9,
       fontWeight: "600",
-      color: "#ffffff",
+      color: colors.primaryForeground,
       marginLeft: 3,
     },
     statusBadge: {
@@ -194,15 +195,15 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onEdit, isWishlisted
       borderRadius: 8,
       backgroundColor:
         product.status === ProductStatus.PUBLISHED
-          ? "#000000"
+          ? colors.primary
           : product.status === ProductStatus.DRAFT
-            ? "#999999"
-            : "#C41E3A",
+            ? colors.textTertiary
+            : colors.discountBadge,
     },
     statusText: {
       fontSize: 10,
       fontWeight: "700",
-      color: "#ffffff",
+      color: colors.primaryForeground,
       textTransform: "uppercase",
     },
     productDetails: {
@@ -228,7 +229,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onEdit, isWishlisted
     productPrice: {
       fontSize: 18,
       fontWeight: "700",
-      color: hasDiscount ? "#000000" : accentColor,
+      color: hasDiscount ? colors.priceCurrent : accentColor,
       marginRight: 8,
     },
     originalPrice: {
@@ -359,7 +360,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onEdit, isWishlisted
           <Ionicons
             name={product.stock > 0 ? "checkmark-circle" : "close-circle"}
             size={10}
-            color="#ffffff"
+            color={colors.primaryForeground}
           />
           <Text style={styles.stockText}>
             {product.stock > 0 ? `${product.stock}` : "Out"}
@@ -377,7 +378,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onEdit, isWishlisted
           <Ionicons
             name={isWishlisted ? "heart" : "heart-outline"}
             size={16}
-            color={isWishlisted ? "#000000" : textColor}
+            color={isWishlisted ? colors.wishlistHeart : textColor}
           />
         </TouchableOpacity>
 
@@ -440,7 +441,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onEdit, isWishlisted
           )}
           {product.isFeatured && (
             <View style={styles.infoItem}>
-              <Ionicons name="star" size={12} color="#000000" />
+              <Ionicons name="star" size={12} color={colors.text} />
               <Text style={styles.infoText}>Featured</Text>
             </View>
           )}
