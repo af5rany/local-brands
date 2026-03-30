@@ -4,11 +4,13 @@ import { ValidationPipe } from '@nestjs/common';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
+    bodyParser: true,
     // logger: ['error', 'warn'],
     logger: ['error', 'warn', 'log', 'debug', 'verbose'],
   });
   app.useGlobalPipes(new ValidationPipe({ transform: true, whitelist: true }));
   app.enableCors();
+  app.use(require('express').json({ limit: '10mb' }));
 
   await app.listen(5000, '0.0.0.0', () => {
     console.log('Server running on port 5000');

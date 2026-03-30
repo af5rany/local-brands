@@ -52,22 +52,9 @@
       "Bash(curl -s \"https://raw.githubusercontent.com/fashn-AI/fashn-typescript-sdk/main/src/client.ts\")",
       "Bash(git show:*)",
       "Bash(git ls-tree:*)",
-      "Bash(git add:*)",
-      "Bash(git commit:*)",
-      "Bash(git checkout:*)",
-      "Bash(git stash:*)",
-      "Bash(grep -r \"review\\\\|rating\\\\|star\" /Users/f5rany/Documents/Work/local-brands/frontend --include=*.tsx --include=*.ts -l)",
-      "Bash(grep -n \"ProductReviews\\\\|rating\\\\|review\" /Users/f5rany/Documents/Work/local-brands/frontend/app/products/[productId].tsx)",
-      "Bash(find /Users/f5rany/Documents/Work/local-brands/frontend -name *omponent* -o -name *omponents*)",
-      "Bash(grep -n \"averageRating\\\\|rating\\\\|reviewCount\" /Users/f5rany/Documents/Work/local-brands/frontend/app/products/[productId].tsx)",
-      "Bash(find /Users/f5rany/Documents/Work/local-brands -name *api* -o -name *service*)",
-      "Bash(grep -E \"\\\\.\\(tsx|ts\\)$\")",
-      "Bash(find /Users/f5rany/Documents/Work/local-brands/frontend/context -type f -name *.tsx -o -name *.ts)",
-      "Bash(wc:*)",
-      "Bash(grep -E \"\\\\.tsx?$\")",
-      "Bash(grep:*)",
-      "Bash(grep -n '#[0-9a-fA-F]\\\\{3,8\\\\}' /Users/f5rany/Documents/Work/local-brands/frontend/components/Header.tsx)",
-      "Bash(grep -n '#[0-9a-fA-F]\\\\{3,8\\\\}' /Users/f5rany/Documents/Work/local-brands/frontend/components/ProductCard.tsx)"
+      "Bash(echo \"EXIT:$?\")",
+      "Bash(npx expo:*)",
+      "Bash(node:*)"
     ]
   }
 }

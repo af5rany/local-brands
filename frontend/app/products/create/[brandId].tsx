@@ -308,6 +308,14 @@ const CreateProductScreen = () => {
       return;
     }
 
+    if (salePrice && parseFloat(salePrice) >= parseFloat(productPrice)) {
+      Alert.alert(
+        "Validation Error",
+        "Sale price must be less than the regular price.",
+      );
+      return;
+    }
+
     if (hasVariants) {
       if (
         variants.some(

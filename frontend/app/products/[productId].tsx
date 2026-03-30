@@ -21,6 +21,7 @@ import { Product } from "@/types/product";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/context/ToastContext";
 import ProductReviews from "@/components/ProductReviews";
+import TryOnModal from "@/components/TryOnModal";
 import { useThemeColors } from "@/hooks/useThemeColor";
 import { ProductVariant } from "@/types/product";
 
@@ -52,6 +53,7 @@ const ProductDetailScreen = () => {
     Record<string, boolean>
   >({ details: true });
   const [similarProducts, setSimilarProducts] = useState<Product[]>([]);
+  const [showTryOn, setShowTryOn] = useState(false);
 
   const scrollY = useRef(new Animated.Value(0)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -428,6 +430,15 @@ const ProductDetailScreen = () => {
         backgroundColor="transparent"
       />
 
+      {/* ── Try On Modal ──────────────────────── */}
+      {showTryOn && displayImages.length > 0 && (
+        <TryOnModal
+          visible={showTryOn}
+          garmentImageUrl={displayImages[selectedImage] || displayImages[0]}
+          onClose={() => setShowTryOn(false)}
+        />
+      )}
+
       {/* ── Added to Bag Confirmation ──────────── */}
       {showAddedConfirm && (
         <View style={styles.addedOverlay}>
@@ -553,6 +564,18 @@ const ProductDetailScreen = () => {
               {selectedImage + 1}/{displayImages.length || 0}
             </Text>
           </View>
+
+          {/* Try-on icon */}
+          {displayImages.length > 0 && (
+            <TouchableOpacity
+              style={styles.tryOnBtn}
+              onPress={() => setShowTryOn(true)}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="body-outline" size={16} color="#fff" />
+              <Text style={styles.tryOnBtnText}>TRY ON</Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* ── Content ─────────────────────────── */}
@@ -1509,6 +1532,23 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: "600",
     letterSpacing: 0.5,
+  },
+  tryOnBtn: {
+    position: "absolute",
+    bottom: 20,
+    left: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "rgba(0,0,0,0.75)",
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+  },
+  tryOnBtnText: {
+    color: "#fff",
+    fontSize: 10,
+    fontWeight: "700",
+    letterSpacing: 1.5,
   },
 
   // ── Content ───────────────────────────────
