@@ -52,7 +52,9 @@
       "Bash(curl -s \"https://raw.githubusercontent.com/fashn-AI/fashn-typescript-sdk/main/src/client.ts\")",
       "Bash(git show:*)",
       "Bash(git ls-tree:*)",
-      "Bash(echo \"EXIT:$?\")"
+      "Bash(echo \"EXIT:$?\")",
+      "Bash(npx expo:*)",
+      "Bash(node:*)"
     ]
   }
 }
