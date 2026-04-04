@@ -14,8 +14,10 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/context/AuthContext";
+import { useCart } from "@/context/CartContext";
 import getApiUrl from "@/helpers/getApiUrl";
 import { useThemeColors } from "@/hooks/useThemeColor";
+import Header from "@/components/Header";
 
 const PAYMENT_METHODS = [
   { key: "credit_card", label: "Credit Card", icon: "card-outline" as const },
@@ -32,6 +34,7 @@ const CheckoutScreen = () => {
   const router = useRouter();
   const colors = useThemeColors();
   const { token } = useAuth();
+  const { refresh: refreshCart } = useCart();
 
   const [cart, setCart] = useState<any>(null);
   const [addresses, setAddresses] = useState<any[]>([]);
@@ -113,20 +116,16 @@ const CheckoutScreen = () => {
       }
 
       const order = await response.json();
-      Alert.alert(
-        "Order Placed",
-        `Order ${order.orderNumber || ""} has been placed successfully.`,
-        [
-          {
-            text: "View Order",
-            onPress: () =>
-              router.replace(
-                order.id ? (`/orders/${order.id}` as any) : ("/orders" as any),
-              ),
-          },
-          { text: "Continue Shopping", onPress: () => router.replace("/" as any) },
-        ],
-      );
+      refreshCart();
+      router.replace({
+        pathname: "/checkout/confirmation",
+        params: {
+          orderId: order.id?.toString() || "",
+          orderNumber: order.orderNumber || "",
+          total: order.totalAmount?.toString() || "",
+          itemCount: order.totalItems?.toString() || "",
+        },
+      } as any);
     } catch (error: any) {
       Alert.alert("Checkout Failed", error.message);
     } finally {
@@ -134,58 +133,10 @@ const CheckoutScreen = () => {
     }
   };
 
-  // ── Loading ──
-  if (loading) {
-    return (
-      <View
-        style={[styles.center, { backgroundColor: colors.background }]}
-      >
-        <ActivityIndicator size="large" color={colors.primary} />
-      </View>
-    );
-  }
-
-  // The cart API returns { cartItems, totalAmount, totalItems }
+  // The cart API returns { items, totalAmount, totalItems }
   const cartItems = cart?.cartItems || cart?.items || [];
   const cartTotal = cart?.totalAmount || 0;
-
-  // ── Empty cart ──
-  if (!cart || cartItems.length === 0) {
-    return (
-      <SafeAreaView
-        style={[
-          styles.container,
-          {
-            backgroundColor: colors.background,
-            justifyContent: "center",
-            alignItems: "center",
-          },
-        ]}
-      >
-        <Ionicons
-          name="bag-outline"
-          size={48}
-          color={colors.textTertiary}
-        />
-        <Text
-          style={[
-            styles.emptyTitle,
-            { color: colors.text, marginTop: 12 },
-          ]}
-        >
-          No items to checkout
-        </Text>
-        <TouchableOpacity
-          style={[styles.goBackBtn, { borderColor: colors.border }]}
-          onPress={() => router.back()}
-        >
-          <Text style={[styles.goBackText, { color: colors.text }]}>
-            GO BACK
-          </Text>
-        </TouchableOpacity>
-      </SafeAreaView>
-    );
-  }
+  const isEmpty = !cart || cartItems.length === 0;
 
   // ── Subtotal from items ──
   const subtotal = cartItems.reduce(
@@ -197,21 +148,32 @@ const CheckoutScreen = () => {
   const total = subtotal + tax;
 
   return (
-    <SafeAreaView
-      style={[styles.container, { backgroundColor: colors.background }]}
-      edges={["top"]}
-    >
-      {/* Header */}
-      <View
-        style={[styles.header, { borderBottomColor: colors.borderLight }]}
-      >
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <Ionicons name="chevron-back" size={24} color={colors.text} />
-        </TouchableOpacity>
-        <Text style={[styles.title, { color: colors.text }]}>CHECKOUT</Text>
-        <View style={{ width: 32 }} />
-      </View>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <SafeAreaView edges={["top"]} style={{ backgroundColor: colors.surface }}>
+        <Header />
+      </SafeAreaView>
 
+      {loading ? (
+        <View style={styles.center}>
+          <ActivityIndicator size="large" color={colors.primary} />
+        </View>
+      ) : isEmpty ? (
+        <View style={[styles.center, { gap: 12 }]}>
+          <Ionicons name="bag-outline" size={48} color={colors.textTertiary} />
+          <Text style={[styles.emptyTitle, { color: colors.text }]}>
+            No items to checkout
+          </Text>
+          <TouchableOpacity
+            style={[styles.goBackBtn, { borderColor: colors.border }]}
+            onPress={() => router.back()}
+          >
+            <Text style={[styles.goBackText, { color: colors.text }]}>
+              GO BACK
+            </Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
+      <>
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
@@ -575,7 +537,9 @@ const CheckoutScreen = () => {
           )}
         </TouchableOpacity>
       </View>
-    </SafeAreaView>
+      </>
+      )}
+    </View>
   );
 };
 

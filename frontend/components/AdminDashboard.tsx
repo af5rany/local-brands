@@ -69,7 +69,7 @@ const AdminDashboard = ({
       description: "View and manage all brands",
       icon: "storefront" as const,
       color: colors.primary,
-      onPress: () => navigateTo("/brands"),
+      onPress: () => navigateTo("/(tabs)/brands"),
     },
     {
       title: "Product Management",
@@ -144,7 +144,7 @@ const AdminDashboard = ({
                 onPress={() =>
                   navigateTo(
                     s.title.includes("Brand")
-                      ? "/brands"
+                      ? "/(tabs)/brands"
                       : s.title.includes("Product")
                         ? "/products"
                         : "/users",
@@ -172,7 +172,7 @@ const AdminDashboard = ({
                 onPress={() =>
                   navigateTo(
                     s.title.includes("Brand")
-                      ? "/brands"
+                      ? "/(tabs)/brands"
                       : s.title.includes("Product")
                         ? "/products"
                         : "/users",

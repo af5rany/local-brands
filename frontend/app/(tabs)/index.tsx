@@ -70,7 +70,6 @@ const HomeScreen = () => {
   const { width } = useWindowDimensions();
   const isTablet = width > 768;
 
-
   // Banner auto-scroll
   const bannerRef = useRef<FlatList>(null);
   const [activeBannerIndex, setActiveBannerIndex] = useState(0);
@@ -314,13 +313,14 @@ const HomeScreen = () => {
   };
 
   const renderProductCard = (item: Product, showDealBadge = false) => {
-    // Collect all unique images for carousel
-    const allImages: string[] = [];
-    if (item.mainImage) allImages.push(item.mainImage);
-    item.variants?.forEach((v) => {
-      v.images?.forEach((img) => { if (img && !allImages.includes(img)) allImages.push(img); });
-    });
-    item.images?.forEach((img) => { if (img && !allImages.includes(img)) allImages.push(img); });
+    // Use product images if available, else first variant's images (don't mix across variants)
+    const cardImages: string[] = item.images?.length
+      ? item.images
+      : item.variants?.[0]?.images?.length
+        ? item.variants[0].images
+        : item.mainImage
+          ? [item.mainImage]
+          : [];
 
     const hasDiscount = item.salePrice && item.salePrice < item.price;
     const discountPercent = hasDiscount
@@ -328,7 +328,7 @@ const HomeScreen = () => {
       : 0;
 
     return (
-      <View
+      <Pressable
         style={[
           styles.productCard,
           {
@@ -336,10 +336,11 @@ const HomeScreen = () => {
             backgroundColor: colors.surface,
           },
         ]}
+        onPress={() => router.push(`/products/${item.id}` as any)}
       >
         <View style={styles.productImageWrapper}>
           <AutoSwipeImages
-            images={allImages}
+            images={cardImages}
             width={productCardWidth}
             height={180}
           />
@@ -357,47 +358,44 @@ const HomeScreen = () => {
           {showDealBadge && hasDiscount && (
             <View style={[styles.dealTag, { backgroundColor: colors.text }]}>
               <Ionicons name="flash" size={10} color={colors.textInverse} />
-              <Text style={[styles.dealTagText, { color: colors.textInverse }]}>DEAL</Text>
+              <Text style={[styles.dealTagText, { color: colors.textInverse }]}>
+                DEAL
+              </Text>
             </View>
           )}
         </View>
-        <TouchableOpacity
-          onPress={() => router.push(`/products/${item.id}` as any)}
-          activeOpacity={0.7}
-        >
-          <View style={styles.productInfo}>
+        <View style={styles.productInfo}>
+          <Text
+            style={[styles.productBrand, { color: colors.textTertiary }]}
+            numberOfLines={1}
+          >
+            {item.brand?.name || item.brandName || "Brand"}
+          </Text>
+          <Text
+            style={[styles.productName, { color: colors.text }]}
+            numberOfLines={2}
+          >
+            {item.name}
+          </Text>
+          <View style={styles.priceRow}>
             <Text
-              style={[styles.productBrand, { color: colors.textTertiary }]}
-              numberOfLines={1}
+              style={[
+                styles.productPrice,
+                { color: hasDiscount ? colors.priceCurrent : colors.text },
+              ]}
             >
-              {item.brand?.name || item.brandName || "Brand"}
+              ${(item.salePrice || item.price).toFixed(2)}
             </Text>
-            <Text
-              style={[styles.productName, { color: colors.text }]}
-              numberOfLines={2}
-            >
-              {item.name}
-            </Text>
-            <View style={styles.priceRow}>
+            {hasDiscount && (
               <Text
-                style={[
-                  styles.productPrice,
-                  { color: hasDiscount ? colors.priceCurrent : colors.text },
-                ]}
+                style={[styles.originalPrice, { color: colors.textTertiary }]}
               >
-                ${(item.salePrice || item.price).toFixed(2)}
+                ${item.price.toFixed(2)}
               </Text>
-              {hasDiscount && (
-                <Text
-                  style={[styles.originalPrice, { color: colors.textTertiary }]}
-                >
-                  ${item.price.toFixed(2)}
-                </Text>
-              )}
-            </View>
+            )}
           </View>
-        </TouchableOpacity>
-      </View>
+        </View>
+      </Pressable>
     );
   };
 
@@ -444,9 +442,7 @@ const HomeScreen = () => {
 
   // ── JSX ────────────────────────────────────────────────────
   return (
-    <View
-      style={[styles.safeArea, { backgroundColor: colors.background }]}
-    >
+    <View style={[styles.safeArea, { backgroundColor: colors.background }]}>
       <ScrollView
         style={styles.container}
         contentContainerStyle={styles.scrollContent}
@@ -455,80 +451,6 @@ const HomeScreen = () => {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
-        {/* ── Search Bar (tappable → navigates to Shop) ──────── */}
-        <Animated.View style={{ transform: [{ scale: searchBarScale }] }}>
-          <Pressable
-            style={[
-              styles.searchBar,
-              {
-                backgroundColor: colors.surfaceRaised,
-                borderColor: colors.border,
-              },
-            ]}
-            onPress={navigateToShop}
-          >
-            <View style={styles.searchBarIcon}>
-              <Ionicons name="search" size={18} color={colors.text} />
-            </View>
-            <Text style={[styles.searchBarText, { color: colors.textTertiary }]}>
-              Search products, brands...
-            </Text>
-            <Ionicons
-              name="options-outline"
-              size={18}
-              color={colors.textTertiary}
-            />
-          </Pressable>
-        </Animated.View>
-
-        {/* ── Quick Stats (authenticated users) ──────────────── */}
-        {token && Object.keys(stats).length > 0 && (
-          <View style={styles.quickStats}>
-            {(user?.role === "admin"
-              ? [
-                  { key: "brands", label: "Brands", icon: "storefront-outline" as keyof typeof Ionicons.glyphMap, route: "/(tabs)/brands" },
-                  { key: "products", label: "Products", icon: "cube-outline" as keyof typeof Ionicons.glyphMap, route: "/(tabs)/shop" },
-                  { key: "users", label: "Users", icon: "people-outline" as keyof typeof Ionicons.glyphMap, route: "/users" },
-                ]
-              : user?.role === "brand_owner"
-                ? [
-                    { key: "myProducts", label: "Products", icon: "cube-outline" as keyof typeof Ionicons.glyphMap, route: "/(tabs)/shop" },
-                    { key: "orders", label: "Orders", icon: "receipt-outline" as keyof typeof Ionicons.glyphMap, route: "/orders" },
-                    { key: "revenue", label: "Revenue", icon: "cash-outline" as keyof typeof Ionicons.glyphMap, route: "/orders" },
-                  ]
-                : [
-                    { key: "myOrders", label: "Orders", icon: "receipt-outline" as keyof typeof Ionicons.glyphMap, route: "/orders" },
-                    { key: "wishlist", label: "Wishlist", icon: "heart-outline" as keyof typeof Ionicons.glyphMap, route: "/(tabs)/wishlist" },
-                    { key: "cartItems", label: "Cart", icon: "bag-handle-outline" as keyof typeof Ionicons.glyphMap, route: "/cart" },
-                  ]
-            )
-              .filter((s) => stats[s.key] !== undefined)
-              .map((stat) => (
-                <TouchableOpacity
-                  key={stat.key}
-                  style={[
-                    styles.statCard,
-                    { backgroundColor: colors.surface, borderColor: colors.border },
-                  ]}
-                  onPress={() => router.push(stat.route as any)}
-                  activeOpacity={0.7}
-                >
-                  <View style={[styles.statIconBox, { backgroundColor: colors.surfaceRaised }]}>
-                    <Ionicons name={stat.icon} size={16} color={colors.text} />
-                  </View>
-                  <View>
-                    <Text style={[styles.statValue, { color: colors.text }]}>
-                      {stats[stat.key] ?? 0}
-                    </Text>
-                    <Text style={[styles.statLabel, { color: colors.textTertiary }]}>
-                      {stat.label}
-                    </Text>
-                  </View>
-                </TouchableOpacity>
-              ))}
-          </View>
-        )}
-
         {/* ── Promotional Banners ────────────────────────────── */}
         <View style={styles.bannerSection}>
           <FlatList
@@ -546,10 +468,7 @@ const HomeScreen = () => {
               index,
             })}
             renderItem={({ item }) => (
-              <Pressable
-                style={{ width, paddingHorizontal: 20 }}
-                onPress={navigateToShop}
-              >
+              <Pressable style={{ width }} onPress={navigateToShop}>
                 <View
                   style={[styles.promoBanner, { backgroundColor: colors.text }]}
                 >
@@ -631,7 +550,12 @@ const HomeScreen = () => {
               <TouchableOpacity
                 key={index}
                 style={styles.categoryItem}
-                onPress={() => router.push({ pathname: "/(tabs)/shop", params: { category: cat.type } } as any)}
+                onPress={() =>
+                  router.push({
+                    pathname: "/(tabs)/shop",
+                    params: { category: cat.type },
+                  } as any)
+                }
                 activeOpacity={0.7}
               >
                 <View
@@ -950,16 +874,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     paddingHorizontal: 20,
     marginTop: 16,
-    gap: 10,
-  },
-  statCard: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 12,
-    paddingHorizontal: 12,
-    borderRadius: 0,
-    borderWidth: 1,
     gap: 10,
   },
   statIconBox: {

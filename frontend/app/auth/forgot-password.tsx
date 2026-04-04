@@ -17,9 +17,12 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import getApiUrl from "@/helpers/getApiUrl";
 import { useRouter } from "expo-router";
+import { useThemeColors } from "@/hooks/useThemeColor";
+import Header from "@/components/Header";
 
 const ForgotPasswordScreen = () => {
   const router = useRouter();
+  const colors = useThemeColors();
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -60,7 +63,10 @@ const ForgotPasswordScreen = () => {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <View style={[styles.safeArea, { backgroundColor: colors.background }]}>
+      <SafeAreaView edges={["top"]} style={{ backgroundColor: colors.surface }}>
+        <Header />
+      </SafeAreaView>
       <KeyboardAvoidingView
         style={styles.container}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
@@ -118,7 +124,7 @@ const ForgotPasswordScreen = () => {
           </Pressable>
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </View>
   );
 };
 

@@ -16,11 +16,14 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import getApiUrl from "@/helpers/getApiUrl";
 import { useRouter, useLocalSearchParams } from "expo-router";
+import { useThemeColors } from "@/hooks/useThemeColor";
+import Header from "@/components/Header";
 
 type Status = "idle" | "loading" | "success" | "error";
 
 const ResetPasswordScreen = () => {
   const router = useRouter();
+  const colors = useThemeColors();
   const { token } = useLocalSearchParams<{ token: string }>();
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -79,7 +82,10 @@ const ResetPasswordScreen = () => {
   // ── Success state ──────────────────────────────────────────────────────────
   if (status === "success") {
     return (
-      <SafeAreaView style={styles.safeArea}>
+      <View style={[styles.safeArea, { backgroundColor: colors.background }]}>
+        <SafeAreaView edges={["top"]} style={{ backgroundColor: colors.surface }}>
+          <Header />
+        </SafeAreaView>
         <View style={styles.centeredContainer}>
           <Image
             source={require("@/assets/images/local-sooq.png")}
@@ -101,13 +107,16 @@ const ResetPasswordScreen = () => {
             <Text style={styles.buttonText}>Continue to Login</Text>
           </Pressable>
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
   // ── Form state ─────────────────────────────────────────────────────────────
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <View style={[styles.safeArea, { backgroundColor: colors.background }]}>
+      <SafeAreaView edges={["top"]} style={{ backgroundColor: colors.surface }}>
+        <Header />
+      </SafeAreaView>
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
@@ -216,7 +225,7 @@ const ResetPasswordScreen = () => {
           </Pressable>
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </View>
   );
 };
 

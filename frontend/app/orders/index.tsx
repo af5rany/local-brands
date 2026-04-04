@@ -11,6 +11,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
+import Header from "@/components/Header";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/context/AuthContext";
 import getApiUrl from "@/helpers/getApiUrl";
@@ -100,20 +101,29 @@ const OrdersScreen = () => {
         </Text>
       </View>
 
-      {item.estimatedDeliveryDate && item.status !== "DELIVERED" && item.status !== "CANCELLED" && (
-        <View style={styles.estimatedRow}>
-          <Ionicons name="time-outline" size={12} color={secondaryTextColor} />
-          <Text style={[styles.estimatedText, { color: secondaryTextColor }]}>
-            EST. DELIVERY{" "}
-            <Text style={{ color: textColor, fontWeight: "700" }}>
-              {new Date(item.estimatedDeliveryDate).toLocaleDateString("en-US", {
-                month: "short",
-                day: "numeric",
-              })}
+      {item.estimatedDeliveryDate &&
+        item.status !== "DELIVERED" &&
+        item.status !== "CANCELLED" && (
+          <View style={styles.estimatedRow}>
+            <Ionicons
+              name="time-outline"
+              size={12}
+              color={secondaryTextColor}
+            />
+            <Text style={[styles.estimatedText, { color: secondaryTextColor }]}>
+              EST. DELIVERY{" "}
+              <Text style={{ color: textColor, fontWeight: "700" }}>
+                {new Date(item.estimatedDeliveryDate).toLocaleDateString(
+                  "en-US",
+                  {
+                    month: "short",
+                    day: "numeric",
+                  },
+                )}
+              </Text>
             </Text>
-          </Text>
-        </View>
-      )}
+          </View>
+        )}
 
       {item.status === "DELIVERED" && item.deliveredAt && (
         <View style={styles.estimatedRow}>
@@ -146,45 +156,29 @@ const OrdersScreen = () => {
     </TouchableOpacity>
   );
 
-  if (!token) {
-    return (
-      <SafeAreaView
-        style={[
-          styles.container,
-          { backgroundColor, justifyContent: "center", alignItems: "center" },
-        ]}
-      >
-        <Ionicons name="list-outline" size={64} color={secondaryTextColor} />
-        <Text style={[styles.emptyTitle, { color: textColor }]}>
-          Order history
-        </Text>
-        <Text style={[styles.emptySubtitle, { color: secondaryTextColor }]}>
-          Login to view your previous acquisitions.
-        </Text>
-        <TouchableOpacity
-          style={styles.authBtn}
-          onPress={() => router.push("/auth/login")}
-        >
-          <Text style={styles.authBtnText}>SIGN IN</Text>
-        </TouchableOpacity>
-      </SafeAreaView>
-    );
-  }
-
   return (
-    <SafeAreaView
-      style={[styles.container, { backgroundColor }]}
-      edges={["top"]}
-    >
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <Ionicons name="chevron-back" size={28} color={textColor} />
-        </TouchableOpacity>
-        <Text style={[styles.title, { color: textColor }]}>MY ORDERS</Text>
-        <View style={{ width: 28 }} />
-      </View>
+    <View style={[styles.container, { backgroundColor }]}>
+      <SafeAreaView edges={["top"]} style={{ backgroundColor: cardBackground }}>
+        <Header />
+      </SafeAreaView>
 
-      {loading ? (
+      {!token ? (
+        <View style={{ flex: 1, justifyContent: "center", alignItems: "center", padding: 32 }}>
+          <Ionicons name="list-outline" size={64} color={secondaryTextColor} />
+          <Text style={[styles.emptyTitle, { color: textColor }]}>
+            Order history
+          </Text>
+          <Text style={[styles.emptySubtitle, { color: secondaryTextColor }]}>
+            Login to view your previous acquisitions.
+          </Text>
+          <TouchableOpacity
+            style={styles.authBtn}
+            onPress={() => router.push("/auth/login")}
+          >
+            <Text style={styles.authBtnText}>SIGN IN</Text>
+          </TouchableOpacity>
+        </View>
+      ) : loading ? (
         <View style={styles.center}>
           <ActivityIndicator size="large" color={textColor} />
         </View>
@@ -217,7 +211,7 @@ const OrdersScreen = () => {
           showsVerticalScrollIndicator={false}
         />
       )}
-    </SafeAreaView>
+    </View>
   );
 };
 

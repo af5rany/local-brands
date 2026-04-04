@@ -9,39 +9,39 @@ export class NotificationsController {
 
   @Get()
   async getMyNotifications(@Request() req, @Query('limit') limit?: string, @Query('offset') offset?: string) {
-    return this.notificationsService.getByUser(req.user.userId, limit ? parseInt(limit) : 50, offset ? parseInt(offset) : 0);
+    return this.notificationsService.getByUser(req.user.id, limit ? parseInt(limit) : 50, offset ? parseInt(offset) : 0);
   }
 
   @Get('unread-count')
   async getUnreadCount(@Request() req) {
-    const count = await this.notificationsService.getUnreadCount(req.user.userId);
+    const count = await this.notificationsService.getUnreadCount(req.user.id);
     return { count };
   }
 
   @Patch(':id/read')
   async markAsRead(@Param('id', ParseIntPipe) id: number, @Request() req) {
-    await this.notificationsService.markAsRead(id, req.user.userId);
+    await this.notificationsService.markAsRead(id, req.user.id);
     return { success: true };
   }
 
   @Patch('read-all')
   async markAllAsRead(@Request() req) {
-    await this.notificationsService.markAllAsRead(req.user.userId);
+    await this.notificationsService.markAllAsRead(req.user.id);
     return { success: true };
   }
 
   @Post('notify-me/:productId')
   async subscribeStockAlert(@Param('productId', ParseIntPipe) productId: number, @Request() req) {
-    return this.notificationsService.subscribeToStock(req.user.userId, productId);
+    return this.notificationsService.subscribeToStock(req.user.id, productId);
   }
 
   @Delete('notify-me/:productId')
   async unsubscribeStockAlert(@Param('productId', ParseIntPipe) productId: number, @Request() req) {
-    return this.notificationsService.unsubscribeFromStock(req.user.userId, productId);
+    return this.notificationsService.unsubscribeFromStock(req.user.id, productId);
   }
 
   @Get('notify-me/check/:productId')
   async checkStockSubscription(@Param('productId', ParseIntPipe) productId: number, @Request() req) {
-    return this.notificationsService.isSubscribedToStock(req.user.userId, productId);
+    return this.notificationsService.isSubscribedToStock(req.user.id, productId);
   }
 }

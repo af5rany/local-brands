@@ -23,10 +23,12 @@ import { TryOnModule } from './try-on/try-on.module';
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     BullModule.forRoot({
-      connection: {
-        host: process.env.REDIS_HOST || 'localhost',
-        port: parseInt(process.env.REDIS_PORT || '6379'),
-      },
+      connection: process.env.REDIS_URL
+        ? { url: process.env.REDIS_URL }
+        : {
+            host: process.env.REDIS_HOST || 'localhost',
+            port: parseInt(process.env.REDIS_PORT || '6379'),
+          },
     }),
     TypeOrmModule.forRoot({
       type: 'postgres',

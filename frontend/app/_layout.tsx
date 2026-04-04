@@ -1,6 +1,7 @@
 import { Stack, useRouter, useSegments } from "expo-router";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
 import { BrandProvider } from "@/context/BrandContext";
+import { CartProvider } from "@/context/CartContext";
 import { ActivityIndicator, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { ToastProvider } from "@/context/ToastContext";
@@ -66,9 +67,10 @@ function RootLayoutNav() {
       {/* Cart & Checkout */}
       <Stack.Screen name="cart/index" options={{ headerShown: false, title: "Cart" }} />
       <Stack.Screen name="checkout/index" options={{ headerShown: false, title: "Checkout" }} />
+      <Stack.Screen name="checkout/confirmation" options={{ headerShown: false, title: "Order Confirmed", gestureEnabled: false }} />
 
       {/* Orders */}
-      <Stack.Screen name="orders/index" options={{ title: "My Orders", headerBackTitle: "Home" }} />
+      <Stack.Screen name="orders/index" options={{ headerShown: false, title: "My Orders" }} />
       <Stack.Screen name="orders/[orderId]" options={{ headerShown: false, title: "Order Details" }} />
 
       <Stack.Screen name="referral/index" options={{ headerShown: false, title: "Invite Friends" }} />
@@ -89,7 +91,9 @@ export default function RootLayout() {
             <ToastProvider>
               <AuthProvider>
                 <BrandProvider>
-                  <RootLayoutNav />
+                  <CartProvider>
+                    <RootLayoutNav />
+                  </CartProvider>
                 </BrandProvider>
               </AuthProvider>
             </ToastProvider>

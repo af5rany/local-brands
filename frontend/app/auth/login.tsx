@@ -19,6 +19,7 @@ import { useAuth } from "@/context/AuthContext";
 import getApiUrl from "@/helpers/getApiUrl";
 import { useRouter } from "expo-router";
 import { useThemeColors } from "@/hooks/useThemeColor";
+import Header from "@/components/Header";
 
 const LoginScreen = () => {
   const router = useRouter();
@@ -90,9 +91,10 @@ const LoginScreen = () => {
   const isAnyLoading = loading || guestLoading;
 
   return (
-    <SafeAreaView
-      style={[styles.safeArea, { backgroundColor: colors.background }]}
-    >
+    <View style={[styles.safeArea, { backgroundColor: colors.background }]}>
+      <SafeAreaView edges={["top"]} style={{ backgroundColor: colors.surface }}>
+        <Header />
+      </SafeAreaView>
       <KeyboardAvoidingView
         style={styles.container}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
@@ -351,7 +353,7 @@ const LoginScreen = () => {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </View>
   );
 };
 

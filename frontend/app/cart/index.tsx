@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -11,15 +11,18 @@ import {
   Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
+import { useRouter, useFocusEffect } from "expo-router";
+import Header from "@/components/Header";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/context/AuthContext";
+import { useCart } from "@/context/CartContext";
 import getApiUrl from "@/helpers/getApiUrl";
 import { useThemeColor } from "@/hooks/useThemeColor";
 
 const CartScreen = () => {
   const router = useRouter();
   const { token, user } = useAuth();
+  const { refresh: refreshCart } = useCart();
   const [cart, setCart] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState<number | null>(null);
@@ -60,9 +63,11 @@ const CartScreen = () => {
     }
   }, [token]);
 
-  useEffect(() => {
-    fetchCart();
-  }, [fetchCart]);
+  useFocusEffect(
+    useCallback(() => {
+      fetchCart();
+    }, [fetchCart]),
+  );
 
   const updateQuantity = async (itemId: number, quantity: number) => {
     if (quantity < 1) return;
@@ -78,6 +83,7 @@ const CartScreen = () => {
       });
       if (!response.ok) throw new Error("Failed to update quantity");
       await fetchCart();
+      refreshCart();
     } catch (error: any) {
       Alert.alert("Error", error.message);
     } finally {
@@ -102,6 +108,7 @@ const CartScreen = () => {
             );
             if (!response.ok) throw new Error("Failed to remove item");
             await fetchCart();
+            refreshCart();
           } catch (error: any) {
             Alert.alert("Error", error.message);
           }
@@ -179,55 +186,35 @@ const CartScreen = () => {
     );
   };
 
-  if (!token) {
-    return (
-      <SafeAreaView
-        style={[
-          styles.container,
-          { backgroundColor, justifyContent: "center", alignItems: "center" },
-        ]}
-      >
-        <Ionicons name="cart-outline" size={64} color={secondaryTextColor} />
-        <Text style={[styles.emptyTitle, { color: textColor }]}>
-          Your collection is empty
-        </Text>
-        <Text style={[styles.emptySubtitle, { color: secondaryTextColor }]}>
-          Login to start curating your finds.
-        </Text>
-        <TouchableOpacity
-          style={styles.loginBtn}
-          onPress={() => router.push("/auth/login")}
-        >
-          <Text style={styles.loginBtnText}>LOGIN</Text>
-        </TouchableOpacity>
-      </SafeAreaView>
-    );
-  }
-
-  if (loading) {
-    return (
-      <View style={[styles.center, { backgroundColor }]}>
-        <ActivityIndicator size="large" color={primaryColor} />
-      </View>
-    );
-  }
-
   const isEmpty = !cart || !cart.items || cart.items.length === 0;
 
   return (
-    <SafeAreaView
-      style={[styles.container, { backgroundColor }]}
-      edges={["top"]}
-    >
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <Ionicons name="chevron-back" size={28} color={textColor} />
-        </TouchableOpacity>
-        <Text style={[styles.title, { color: textColor }]}>COLLECTION</Text>
-        <View style={{ width: 28 }} />
-      </View>
+    <View style={[styles.container, { backgroundColor }]}>
+      <SafeAreaView edges={["top"]} style={{ backgroundColor: cardBackground }}>
+        <Header />
+      </SafeAreaView>
 
-      {isEmpty ? (
+      {!token ? (
+        <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+          <Ionicons name="cart-outline" size={64} color={secondaryTextColor} />
+          <Text style={[styles.emptyTitle, { color: textColor }]}>
+            Your collection is empty
+          </Text>
+          <Text style={[styles.emptySubtitle, { color: secondaryTextColor }]}>
+            Login to start curating your finds.
+          </Text>
+          <TouchableOpacity
+            style={styles.loginBtn}
+            onPress={() => router.push("/auth/login")}
+          >
+            <Text style={styles.loginBtnText}>LOGIN</Text>
+          </TouchableOpacity>
+        </View>
+      ) : loading ? (
+        <View style={styles.center}>
+          <ActivityIndicator size="large" color={primaryColor} />
+        </View>
+      ) : isEmpty ? (
         <View style={styles.emptyContainer}>
           <Ionicons name="bag-outline" size={64} color={secondaryTextColor} />
           <Text style={[styles.emptyTitle, { color: textColor }]}>
@@ -302,7 +289,7 @@ const CartScreen = () => {
           </View>
         </>
       )}
-    </SafeAreaView>
+    </View>
   );
 };
 

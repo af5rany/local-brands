@@ -71,8 +71,8 @@ const ProfileTab = () => {
             style={[styles.signInBtn, { backgroundColor: colors.primary }]}
             onPress={() => router.push("/auth/login")}
           >
-            <Ionicons name="log-in-outline" size={18} color="#FFF" />
-            <Text style={styles.signInBtnText}>SIGN IN</Text>
+            <Ionicons name="log-in-outline" size={18} color={colors.primaryForeground} />
+            <Text style={[styles.signInBtnText, { color: colors.primaryForeground }]}>SIGN IN</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.registerBtn, { borderColor: colors.primary }]}
@@ -319,7 +319,6 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   signInBtnText: {
-    color: "#fff",
     fontSize: 14,
     fontWeight: "700",
     letterSpacing: 1,

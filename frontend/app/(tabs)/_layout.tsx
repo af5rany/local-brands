@@ -27,7 +27,7 @@ export default function TabLayout() {
             ios: {
               position: "absolute",
               backgroundColor: colors.bottomTabBackground,
-              height: 80,
+              height: 94,
               borderTopColor: colors.bottomTabBorder,
               shadowColor: colors.cardShadow,
               shadowOpacity: 0.04,
@@ -36,9 +36,10 @@ export default function TabLayout() {
             },
             default: {
               backgroundColor: colors.bottomTabBackground,
-              height: 64,
+              height: 94,
               borderTopColor: colors.bottomTabBorder,
               elevation: 4,
+              paddingBottom: 16,
             },
           }),
           tabBarLabelStyle: {

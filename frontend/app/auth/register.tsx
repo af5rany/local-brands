@@ -23,6 +23,7 @@ import { useRouter } from "expo-router";
 import { useCloudinaryUpload } from "@/hooks/useCloudinaryUpload";
 import { ImageUploadProgress } from "@/components/ImageUploadProgress";
 import { useThemeColors } from "@/hooks/useThemeColor";
+import Header from "@/components/Header";
 
 const RegisterScreen = () => {
   const router = useRouter();
@@ -250,9 +251,10 @@ const RegisterScreen = () => {
   };
 
   return (
-    <SafeAreaView
-      style={[styles.safeArea, { backgroundColor: colors.background }]}
-    >
+    <View style={[styles.safeArea, { backgroundColor: colors.background }]}>
+      <SafeAreaView edges={["top"]} style={{ backgroundColor: colors.surface }}>
+        <Header />
+      </SafeAreaView>
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={styles.container}
@@ -568,7 +570,7 @@ const RegisterScreen = () => {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </View>
   );
 };
 

@@ -1,23 +1,28 @@
-import React, { useRef, useState } from "react";
+import React, { useRef, useState, useCallback, useEffect } from "react";
 import {
   View,
   Text,
   StyleSheet,
   Pressable,
   useWindowDimensions,
-  Image,
   Animated,
   Modal,
   TouchableOpacity,
   TouchableWithoutFeedback,
 } from "react-native";
+import ReAnimated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withDelay,
+  withSpring,
+  withTiming,
+} from "react-native-reanimated";
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+import { useRouter, usePathname } from "expo-router";
 import { useThemeColors } from "@/hooks/useThemeColor";
 import { useAuth } from "@/context/AuthContext";
-import { useCartCount } from "@/hooks/useCartCount";
-
-const LOGO_IMAGE = require("@/assets/images/local-sooq.png");
+import { useCart } from "@/context/CartContext";
+import SearchModal from "@/components/SearchModal";
 
 interface MenuItem {
   label: string;
@@ -28,47 +33,152 @@ interface MenuItem {
 const MENU_ITEMS: MenuItem[] = [
   { label: "Home", icon: "home-outline", route: "/(tabs)" },
   { label: "Shop", icon: "grid-outline", route: "/(tabs)/shop" },
-  { label: "Wishlist", icon: "heart-outline", route: "/(tabs)/wishlist" },
-  { label: "Orders", icon: "receipt-outline", route: "/orders" },
-  { label: "Profile", icon: "person-outline", route: "/(tabs)/profile" },
   { label: "Brands", icon: "storefront-outline", route: "/(tabs)/brands" },
+  { label: "Wishlist", icon: "heart-outline", route: "/(tabs)/wishlist" },
   { label: "Cart", icon: "bag-handle-outline", route: "/cart" },
-  { label: "Settings", icon: "settings-outline", route: "/(tabs)/profile" },
+  { label: "Orders", icon: "receipt-outline", route: "/orders" },
+  { label: "Notifications", icon: "notifications-outline", route: "/notifications" },
+  { label: "Profile", icon: "person-outline", route: "/(tabs)/profile" },
 ];
+
+const STAGGER_DELAY = 50;
+const ITEM_SPRING = { damping: 18, stiffness: 140 };
+
+interface AnimatedMenuItemProps {
+  index: number;
+  menuOpen: boolean;
+  item: MenuItem;
+  active: boolean;
+  colors: any;
+  onPress: () => void;
+}
+
+const AnimatedMenuItem: React.FC<AnimatedMenuItemProps> = ({
+  index,
+  menuOpen,
+  item,
+  active,
+  colors,
+  onPress,
+}) => {
+  const translateX = useSharedValue(-60);
+  const opacity = useSharedValue(0);
+
+  useEffect(() => {
+    if (menuOpen) {
+      const delay = 150 + index * STAGGER_DELAY;
+      translateX.value = withDelay(delay, withTiming(0, { duration: 300 }));
+      opacity.value = withDelay(delay, withTiming(1, { duration: 250 }));
+    } else {
+      translateX.value = -60;
+      opacity.value = 0;
+    }
+  }, [menuOpen]);
+
+  const animStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: translateX.value }],
+    opacity: opacity.value,
+  }));
+
+  return (
+    <ReAnimated.View style={animStyle}>
+      <TouchableOpacity
+        style={[
+          styles.menuItem,
+          active && { backgroundColor: colors.surfaceRaised },
+        ]}
+        onPress={onPress}
+        activeOpacity={0.6}
+      >
+        <View style={styles.menuItemIconWrap}>
+          <Ionicons
+            name={item.icon}
+            size={20}
+            color={active ? colors.text : colors.textTertiary}
+          />
+        </View>
+        <Text
+          style={[
+            styles.menuItemLabel,
+            { color: active ? colors.text : colors.textSecondary },
+            active && { fontWeight: "700" },
+          ]}
+        >
+          {item.label}
+        </Text>
+        <Ionicons
+          name="chevron-forward"
+          size={18}
+          color={active ? colors.text : colors.textTertiary}
+        />
+      </TouchableOpacity>
+    </ReAnimated.View>
+  );
+};
+
+const AnimatedSection: React.FC<{
+  menuOpen: boolean;
+  delay: number;
+  style?: any;
+  children: React.ReactNode;
+}> = ({ menuOpen, delay, style, children }) => {
+  const translateY = useSharedValue(20);
+  const opacity = useSharedValue(0);
+
+  useEffect(() => {
+    if (menuOpen) {
+      translateY.value = withDelay(delay, withSpring(0, { damping: 20, stiffness: 120 }));
+      opacity.value = withDelay(delay, withTiming(1, { duration: 300 }));
+    } else {
+      translateY.value = 20;
+      opacity.value = 0;
+    }
+  }, [menuOpen]);
+
+  const animStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: translateY.value }],
+    opacity: opacity.value,
+  }));
+
+  return <ReAnimated.View style={[animStyle, style]}>{children}</ReAnimated.View>;
+};
 
 interface HeaderProps {
   notificationCount?: number;
 }
 
-const Header: React.FC<HeaderProps> = ({
-  notificationCount = 0,
-}) => {
+const Header: React.FC<HeaderProps> = ({ notificationCount = 0 }) => {
   const colors = useThemeColors();
   const { width } = useWindowDimensions();
   const router = useRouter();
+  const pathname = usePathname();
   const { token, user, logout } = useAuth();
-  const { count: cartItemCount } = useCartCount();
+  const { count: cartItemCount } = useCart();
   const isTablet = width > 768;
-  const isGuest = !token;
-  const userName = user?.name || user?.email?.split("@")[0] || "";
+
+  const isActiveRoute = (route: string) => {
+    if (route === "/(tabs)") return pathname === "/" || pathname === "/(tabs)";
+    const clean = route.replace("/(tabs)", "");
+    return pathname === clean || pathname === route || pathname.startsWith(clean + "/");
+  };
 
   const [menuVisible, setMenuVisible] = useState(false);
-  const slideAnim = useRef(new Animated.Value(width)).current;
+  const [searchVisible, setSearchVisible] = useState(false);
+  const slideAnim = useRef(new Animated.Value(-300)).current;
 
   const openMenu = () => {
     setMenuVisible(true);
-    Animated.spring(slideAnim, {
+    Animated.timing(slideAnim, {
       toValue: 0,
-      friction: 9,
-      tension: 70,
+      duration: 280,
       useNativeDriver: true,
     }).start();
   };
 
   const closeMenu = () => {
     Animated.timing(slideAnim, {
-      toValue: width,
-      duration: 250,
+      toValue: -300, // ← slide back off-screen to the LEFT
+      duration: 220,
       useNativeDriver: true,
     }).start(() => {
       setMenuVisible(false);
@@ -83,99 +193,77 @@ const Header: React.FC<HeaderProps> = ({
   };
 
   return (
-    <View style={[styles.headerWrapper, { backgroundColor: colors.surface, borderBottomWidth: 0.5, borderBottomColor: colors.border }]}>
+    <View
+      style={[
+        styles.headerWrapper,
+        {
+          backgroundColor: colors.surface,
+          borderBottomWidth: 0.5,
+          borderBottomColor: colors.border,
+        },
+      ]}
+    >
       {/* Top Row: Logo + Actions */}
       <View style={[styles.topRow, isTablet && styles.topRowTablet]}>
-        <Pressable
-          onPress={() => router.push("/(tabs)")}
-          style={styles.logoContainer}
-        >
-          <Image
-            source={LOGO_IMAGE}
-            style={styles.logoImage}
-            resizeMode="contain"
-          />
-        </Pressable>
+        <View style={[styles.authActions, isTablet && styles.topRowTablet]}>
+          {/* LEFT — Hamburger + Search */}
+          <View style={styles.rightActions}>
+            <Pressable style={styles.iconBtn} onPress={openMenu}>
+              <Ionicons name="menu" size={20} color={colors.text} />
+            </Pressable>
+            <Pressable
+              style={styles.iconBtn}
+              onPress={() => setSearchVisible(true)}
+            >
+              <Ionicons name="search" size={20} color={colors.text} />
+            </Pressable>
+          </View>
 
-        <View style={styles.headerActions}>
-          {isGuest ? (
-            <View style={styles.guestActions}>
-              {/* <Pressable
-                style={[styles.loginButton, { backgroundColor: colors.primary }]}
-                onPress={() => router.push("/auth/login")}
-              >
-                <Ionicons name="log-in-outline" size={16} color={colors.primaryForeground} />
-                <Text style={styles.loginText}>Sign In</Text>
-              </Pressable> */}
+          {/* CENTER — Logo */}
+          <Pressable
+            onPress={() => router.push("/(tabs)")}
+            style={styles.logoContainer}
+          >
+            <Text style={[styles.logoText, { color: colors.text }]}>
+              LOCAL SOOQ
+            </Text>
+          </Pressable>
 
-              <Pressable
-                style={[
-                  styles.iconBtn,
-                  { backgroundColor: colors.surfaceRaised },
-                ]}
-                onPress={openMenu}
-              >
-                <Ionicons name="menu" size={20} color={colors.text} />
-              </Pressable>
-            </View>
-          ) : (
-            <View style={styles.authActions}>
-              {/* Notification Bell */}
-              {/* <Pressable
-                style={[
-                  styles.iconBtn,
-                  { backgroundColor: colors.surfaceRaised },
-                ]}
-                onPress={() => router.push("/(tabs)/orders" as any)}
-              >
-                <Ionicons
-                  name="notifications-outline"
-                  size={18}
-                  color={colors.text}
-                />
-                {notificationCount > 0 && (
-                  <View style={[styles.notificationDot, { backgroundColor: colors.danger, borderColor: colors.surface }]}>
-                    {notificationCount <= 9 ? (
-                      <Text style={[styles.badgeTextSmall, { color: colors.textInverse }]}>
-                        {notificationCount}
-                      </Text>
-                    ) : (
-                      <Text style={[styles.badgeTextSmall, { color: colors.textInverse }]}>9+</Text>
-                    )}
-                  </View>
-                )}
-              </Pressable> */}
-
-              {/* Cart Icon with Badge */}
-              <Pressable
-                style={[
-                  styles.iconBtn,
-                  { backgroundColor: colors.surfaceRaised },
-                ]}
-                onPress={() => router.push("/cart" as any)}
-              >
-                  <Ionicons name="bag-outline" size={24} color={colors.text} />
-                {cartItemCount > 0 && (
-                  <View style={[styles.cartBadge, { backgroundColor: colors.danger, borderColor: colors.surface }]}>
-                    <Text style={[styles.cartBadgeText, { color: colors.textInverse }]}>
-                      {cartItemCount > 99 ? "99+" : cartItemCount}
-                    </Text>
-                  </View>
-                )}
-              </Pressable>
-
-              {/* Hamburger Menu */}
-              <Pressable
-                style={[
-                  styles.iconBtn,
-                  { backgroundColor: colors.surfaceRaised },
-                ]}
-                onPress={openMenu}
-              >
-                <Ionicons name="menu" size={20} color={colors.text} />
-              </Pressable>
-            </View>
-          )}
+          {/* RIGHT — Profile + Cart */}
+          <View style={styles.rightActions}>
+            <Pressable
+              style={styles.iconBtn}
+              onPress={() => router.push("/(tabs)/profile" as any)}
+            >
+              <Ionicons name="person-outline" size={20} color={colors.text} />
+            </Pressable>
+            <Pressable
+              style={styles.iconBtn}
+              onPress={() => router.push("/cart" as any)}
+            >
+              <Ionicons name="bag-outline" size={22} color={colors.text} />
+              {cartItemCount > 0 && (
+                <View
+                  style={[
+                    styles.cartBadge,
+                    {
+                      backgroundColor: colors.danger,
+                      borderColor: colors.surface,
+                    },
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.cartBadgeText,
+                      { color: colors.textInverse },
+                    ]}
+                  >
+                    {cartItemCount > 99 ? "99+" : cartItemCount}
+                  </Text>
+                </View>
+              )}
+            </Pressable>
+          </View>
         </View>
       </View>
 
@@ -200,120 +288,110 @@ const Header: React.FC<HeaderProps> = ({
                 ]}
               >
                 {/* Menu Header */}
-                <View style={styles.menuHeader}>
-                  <Text style={[styles.menuTitle, { color: colors.text }]}>
-                    Menu
-                  </Text>
-                  <Pressable
-                    style={[
-                      styles.menuCloseBtn,
-                      { backgroundColor: colors.surfaceRaised },
-                    ]}
-                    onPress={closeMenu}
-                  >
-                    <Ionicons name="close" size={20} color={colors.text} />
-                  </Pressable>
-                </View>
-
-                {/* Divider */}
-                <View
-                  style={[
-                    styles.menuDivider,
-                    { backgroundColor: colors.border },
-                  ]}
-                />
-
-                {/* Menu Items */}
-                <View style={styles.menuItems}>
-                  {MENU_ITEMS.map((item, index) => (
-                    <TouchableOpacity
-                      key={index}
-                      style={styles.menuItem}
-                      onPress={() => handleMenuItemPress(item.route)}
-                      activeOpacity={0.6}
+                <AnimatedSection menuOpen={menuVisible} delay={80}>
+                  <View style={styles.menuHeader}>
+                    <Text style={[styles.menuTitle, { color: colors.text }]}>
+                      Menu
+                    </Text>
+                    <Pressable
+                      style={[
+                        styles.menuCloseBtn,
+                        { backgroundColor: colors.surfaceRaised },
+                      ]}
+                      onPress={closeMenu}
                     >
-                      <View
-                        style={[
-                          styles.menuItemIconWrap,
-                          { backgroundColor: colors.surfaceRaised },
-                        ]}
-                      >
-                        <Ionicons
-                          name={item.icon}
-                          size={20}
-                          color={colors.primary}
-                        />
-                      </View>
-                      <Text
-                        style={[styles.menuItemLabel, { color: colors.text }]}
-                      >
-                        {item.label}
-                      </Text>
-                      <Ionicons
-                        name="chevron-forward"
-                        size={18}
-                        color={colors.textTertiary}
-                      />
-                    </TouchableOpacity>
-                  ))}
-                </View>
+                      <Ionicons name="close" size={20} color={colors.text} />
+                    </Pressable>
+                  </View>
 
-                {/* Menu Footer */}
-                <View style={styles.menuFooter}>
+                  {/* Divider */}
                   <View
                     style={[
                       styles.menuDivider,
                       { backgroundColor: colors.border },
                     ]}
                   />
-                  <TouchableOpacity
-                    style={[
-                      styles.menuLogoutBtn,
-                      {
-                        backgroundColor: token
-                          ? colors.dangerSoft
-                          : colors.primarySoft,
-                        borderColor: token ? colors.danger : colors.primary,
-                      },
-                    ]}
-                    onPress={() => {
-                      closeMenu();
-                      if (token) {
-                        logout();
-                      } else {
-                        router.push("/auth/login" as any);
-                      }
-                    }}
-                    activeOpacity={0.7}
-                  >
-                    <Ionicons
-                      name={token ? "log-out-outline" : "log-in-outline"}
-                      size={18}
-                      color={token ? colors.danger : colors.primary}
+                </AnimatedSection>
+
+                {/* Menu Items */}
+                <View style={styles.menuItems}>
+                  {MENU_ITEMS.map((item, index) => (
+                    <AnimatedMenuItem
+                      key={index}
+                      index={index}
+                      menuOpen={menuVisible}
+                      item={item}
+                      active={isActiveRoute(item.route)}
+                      colors={colors}
+                      onPress={() => handleMenuItemPress(item.route)}
                     />
+                  ))}
+                </View>
+
+                {/* Menu Footer */}
+                <AnimatedSection menuOpen={menuVisible} delay={150 + MENU_ITEMS.length * STAGGER_DELAY + 100} style={{ marginTop: "auto" }}>
+                  <View style={styles.menuFooter}>
+                    <View
+                      style={[
+                        styles.menuDivider,
+                        { backgroundColor: colors.border },
+                      ]}
+                    />
+                    <TouchableOpacity
+                      style={[
+                        styles.menuLogoutBtn,
+                        {
+                          backgroundColor: token
+                            ? colors.dangerSoft
+                            : colors.primarySoft,
+                          borderColor: token ? colors.danger : colors.primary,
+                        },
+                      ]}
+                      onPress={() => {
+                        closeMenu();
+                        if (token) {
+                          logout();
+                        } else {
+                          router.push("/auth/login" as any);
+                        }
+                      }}
+                      activeOpacity={0.7}
+                    >
+                      <Ionicons
+                        name={token ? "log-out-outline" : "log-in-outline"}
+                        size={18}
+                        color={token ? colors.danger : colors.primary}
+                      />
+                      <Text
+                        style={[
+                          styles.menuLogoutText,
+                          { color: token ? colors.danger : colors.primary },
+                        ]}
+                      >
+                        {token ? "Log Out" : "Log In"}
+                      </Text>
+                    </TouchableOpacity>
                     <Text
                       style={[
-                        styles.menuLogoutText,
-                        { color: token ? colors.danger : colors.primary },
+                        styles.menuFooterText,
+                        { color: colors.textTertiary },
                       ]}
                     >
-                      {token ? "Log Out" : "Log In"}
+                      Local Brands
                     </Text>
-                  </TouchableOpacity>
-                  <Text
-                    style={[
-                      styles.menuFooterText,
-                      { color: colors.textTertiary },
-                    ]}
-                  >
-                    Local Brands
-                  </Text>
-                </View>
+                  </View>
+                </AnimatedSection>
               </Animated.View>
             </TouchableWithoutFeedback>
           </View>
         </TouchableWithoutFeedback>
       </Modal>
+
+      {/* Search Modal */}
+      <SearchModal
+        visible={searchVisible}
+        onClose={() => setSearchVisible(false)}
+      />
     </View>
   );
 };
@@ -327,7 +405,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 20,
     paddingTop: 14,
     paddingBottom: 6,
   },
@@ -335,33 +412,35 @@ const styles = StyleSheet.create({
     paddingHorizontal: 28,
   },
   logoContainer: {
-    width: 56,
-    height: 40,
     justifyContent: "center",
     alignItems: "center",
   },
-  logoImage: {
-    width: "100%",
-    height: "100%",
+  logoText: {
+    fontSize: 15,
+    fontWeight: "800",
+    letterSpacing: 3,
   },
-  headerActions: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  guestActions: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-  },
+  // logoImage: {
+  //   width: "100%",
+  //   height: "100%",
+  // },
   authActions: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
+    justifyContent: "space-between",
+    width: "100%",
+    paddingHorizontal: 20,
+    paddingTop: 14,
+    paddingBottom: 6,
+  },
+  rightActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
   },
   iconBtn: {
     width: 40,
     height: 40,
-    borderRadius: 14,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -427,13 +506,13 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "rgba(0, 0, 0, 0.5)",
     flexDirection: "row",
-    justifyContent: "flex-end",
+    justifyContent: "flex-start",
   },
   menuDrawer: {
     width: 300,
     height: "100%",
     shadowColor: "#000",
-    shadowOffset: { width: -4, height: 0 },
+    shadowOffset: { width: 4, height: 0 }, // ← was -4
     shadowOpacity: 0.15,
     shadowRadius: 20,
     elevation: 20,
@@ -488,10 +567,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.1,
   },
   menuFooter: {
-    position: "absolute",
-    bottom: 40,
-    left: 0,
-    right: 0,
+    paddingBottom: 40,
   },
   menuLogoutBtn: {
     flexDirection: "row",

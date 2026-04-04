@@ -5,6 +5,7 @@ import { OrderItem } from './order-item.entity';
 import { Product } from '../products/product.entity';
 import { ProductVariant } from '../products/product-variant.entity';
 import { Address } from '../addresses/address.entity';
+import { Brand } from '../brands/brand.entity';
 import { Cart } from '../cart/cart.entity';
 import { CartItem } from '../cart/cart-item.entity';
 import { CheckoutDto } from './dto/checkout.dto';
@@ -94,14 +95,20 @@ export class OrdersService {
 
       for (const item of createOrderDto.items) {
         // Lock the product row to prevent concurrent stock reads
-        const product = await manager.findOne(Product, {
-          where: { id: item.productId },
-          relations: ['brand'],
-          lock: { mode: 'pessimistic_write' },
-        });
+        // Note: relations with LEFT JOIN are incompatible with FOR UPDATE in PostgreSQL
+        const product = await manager
+          .createQueryBuilder(Product, 'product')
+          .setLock('pessimistic_write')
+          .where('product.id = :id', { id: item.productId })
+          .getOne();
 
         if (!product)
           throw new NotFoundException(`Product ${item.productId} not found`);
+
+        // Load brand separately (read-only, no lock needed)
+        const brand = product.brandId
+          ? await manager.findOne(Brand, { where: { id: product.brandId } })
+          : null;
 
         let variant: ProductVariant | undefined;
         if (item.variantId) {
@@ -149,7 +156,7 @@ export class OrdersService {
           productColor: variant?.attributes?.color || item.color,
           productSize: variant?.attributes?.size || item.size,
           productImage: variant?.images?.[0] || product.images?.[0],
-          brandName: product.brand?.name,
+          brandName: brand?.name,
           productSku: variant?.sku || product.sku || `SKU-${product.id}`,
         });
       }

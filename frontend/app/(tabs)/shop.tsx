@@ -63,13 +63,14 @@ const CompactProductCard = React.memo(
     const [imageWidth, setImageWidth] = useState(0);
     const cardGap = 12;
 
-    // Collect all unique images for carousel
-    const allImages: string[] = [];
-    if (item.mainImage) allImages.push(item.mainImage);
-    item.variants?.forEach((v) => {
-      v.images?.forEach((img) => { if (img && !allImages.includes(img)) allImages.push(img); });
-    });
-    item.images?.forEach((img) => { if (img && !allImages.includes(img)) allImages.push(img); });
+    // Use product images if available, else first variant's images (don't mix across variants)
+    const cardImages: string[] = item.images?.length
+      ? item.images
+      : item.variants?.[0]?.images?.length
+        ? item.variants[0].images
+        : item.mainImage
+          ? [item.mainImage]
+          : [];
 
     const hasDiscount = item.salePrice != null && item.salePrice < item.price;
     const discountPct = hasDiscount
@@ -91,7 +92,7 @@ const CompactProductCard = React.memo(
             : { marginLeft: cardGap / 2 },
         ]}
       >
-        <View
+        <Pressable
           style={[
             cardStyles.card,
             {
@@ -100,8 +101,8 @@ const CompactProductCard = React.memo(
               shadowColor: colors.cardShadow,
             },
           ]}
+          onPress={onPress}
         >
-          {/* Image — no TouchableOpacity wrapper so swipe gestures pass through */}
           <View
             style={[
               cardStyles.imageBox,
@@ -111,7 +112,7 @@ const CompactProductCard = React.memo(
           >
             {imageWidth > 0 && (
               <AutoSwipeImages
-                images={allImages}
+                images={cardImages}
                 width={imageWidth}
                 height={170}
               />
@@ -150,9 +151,7 @@ const CompactProductCard = React.memo(
             )}
           </View>
 
-          {/* Content — tappable to navigate */}
-          <TouchableOpacity onPress={onPress} activeOpacity={0.85}>
-            <View style={cardStyles.content}>
+          <View style={cardStyles.content}>
               <Text
                 style={[cardStyles.brandLabel, { color: colors.textTertiary }]}
                 numberOfLines={1}
@@ -185,9 +184,8 @@ const CompactProductCard = React.memo(
                   </Text>
                 )}
               </View>
-            </View>
-          </TouchableOpacity>
-        </View>
+          </View>
+        </Pressable>
       </View>
     );
   },

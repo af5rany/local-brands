@@ -19,6 +19,7 @@ import { Ionicons } from "@expo/vector-icons";
 import getApiUrl from "@/helpers/getApiUrl";
 import { Product } from "@/types/product";
 import { useAuth } from "@/context/AuthContext";
+import { useCart } from "@/context/CartContext";
 import { useToast } from "@/context/ToastContext";
 import ProductReviews from "@/components/ProductReviews";
 import TryOnModal from "@/components/TryOnModal";
@@ -34,6 +35,7 @@ const ProductDetailScreen = () => {
   const colors = useThemeColors();
   const { productId } = useLocalSearchParams();
   const { token, user } = useAuth();
+  const { refresh: refreshCart } = useCart();
   const { showToast } = useToast();
   const userRole = user?.role || user?.userRole;
 
@@ -79,8 +81,12 @@ const ProductDetailScreen = () => {
         // Set initial color/size selection
         if (data.variants?.length > 0) {
           const firstVariant = data.variants[0];
-          setSelectedColor(firstVariant.color || firstVariant.attributes?.color || null);
-          setSelectedSize(firstVariant.size || firstVariant.attributes?.size || null);
+          setSelectedColor(
+            firstVariant.color || firstVariant.attributes?.color || null,
+          );
+          setSelectedSize(
+            firstVariant.size || firstVariant.attributes?.size || null,
+          );
         }
 
         if (token) {
@@ -113,7 +119,9 @@ const ProductDetailScreen = () => {
         // Fetch similar products in background
         fetch(`${getApiUrl()}/products/${productId}/similar?limit=8`)
           .then((r) => (r.ok ? r.json() : []))
-          .then((items) => setSimilarProducts(Array.isArray(items) ? items : []))
+          .then((items) =>
+            setSimilarProducts(Array.isArray(items) ? items : []),
+          )
           .catch(() => {});
 
         Animated.parallel([
@@ -207,7 +215,8 @@ const ProductDetailScreen = () => {
       return;
     }
 
-    const hasVariants = product?.hasVariants || (product?.variants?.length || 0) > 0;
+    const hasVariants =
+      product?.hasVariants || (product?.variants?.length || 0) > 0;
     const variant = getActiveVariant();
 
     if (hasVariants && !variant) {
@@ -215,7 +224,7 @@ const ProductDetailScreen = () => {
       return;
     }
 
-    const currentStock = variant ? variant.stock : (product?.stock || 0);
+    const currentStock = variant ? variant.stock : product?.stock || 0;
     if (currentStock <= 0) {
       Alert.alert("Unavailable", "This item is out of stock.");
       return;
@@ -238,6 +247,7 @@ const ProductDetailScreen = () => {
         const d = await res.json();
         throw new Error(d.message || "Failed");
       }
+      refreshCart();
       setCartLoading(false);
       setShowAddedConfirm(true);
       setTimeout(() => setShowAddedConfirm(false), 2000);
@@ -253,7 +263,8 @@ const ProductDetailScreen = () => {
       return;
     }
 
-    const hasVariants = product?.hasVariants || (product?.variants?.length || 0) > 0;
+    const hasVariants =
+      product?.hasVariants || (product?.variants?.length || 0) > 0;
     const variant = getActiveVariant();
 
     if (hasVariants && !variant) {
@@ -261,7 +272,7 @@ const ProductDetailScreen = () => {
       return;
     }
 
-    const currentStock = variant ? variant.stock : (product?.stock || 0);
+    const currentStock = variant ? variant.stock : product?.stock || 0;
     if (currentStock <= 0) {
       Alert.alert("Unavailable", "This item is out of stock.");
       return;
@@ -284,6 +295,7 @@ const ProductDetailScreen = () => {
         const d = await res.json();
         throw new Error(d.message || "Failed");
       }
+      refreshCart();
       router.push("/checkout");
     } catch (e: any) {
       Alert.alert("Error", e.message);
@@ -394,7 +406,8 @@ const ProductDetailScreen = () => {
     );
   }
 
-  const hasVariants = product.hasVariants || (product.variants?.length || 0) > 0;
+  const hasVariants =
+    product.hasVariants || (product.variants?.length || 0) > 0;
   const variant = hasVariants ? getActiveVariant() : undefined;
   const uniqueColors = getUniqueColors();
   const availableSizes = getSizesForColor();
@@ -675,7 +688,10 @@ const ProductDetailScreen = () => {
               <View style={styles.section}>
                 <View style={styles.sectionRow}>
                   <Text
-                    style={[styles.sectionLabel, { color: colors.textTertiary }]}
+                    style={[
+                      styles.sectionLabel,
+                      { color: colors.textTertiary },
+                    ]}
                   >
                     COLOR
                   </Text>
@@ -717,7 +733,10 @@ const ProductDetailScreen = () => {
                             .filter(Boolean);
                           setSelectedSize(sizes[0] || null);
                         }}
-                        style={[styles.colorWrap, { opacity: colorInStock ? 1 : 0.35 }]}
+                        style={[
+                          styles.colorWrap,
+                          { opacity: colorInStock ? 1 : 0.35 },
+                        ]}
                       >
                         <View
                           style={[
@@ -740,7 +759,10 @@ const ProductDetailScreen = () => {
               </View>
 
               <View
-                style={[styles.divider, { backgroundColor: colors.borderLight }]}
+                style={[
+                  styles.divider,
+                  { backgroundColor: colors.borderLight },
+                ]}
               />
             </>
           )}
@@ -751,7 +773,10 @@ const ProductDetailScreen = () => {
               <View style={styles.section}>
                 <View style={styles.sectionRow}>
                   <Text
-                    style={[styles.sectionLabel, { color: colors.textTertiary }]}
+                    style={[
+                      styles.sectionLabel,
+                      { color: colors.textTertiary },
+                    ]}
                   >
                     SIZE
                   </Text>
@@ -808,7 +833,10 @@ const ProductDetailScreen = () => {
               </View>
 
               <View
-                style={[styles.divider, { backgroundColor: colors.borderLight }]}
+                style={[
+                  styles.divider,
+                  { backgroundColor: colors.borderLight },
+                ]}
               />
             </>
           )}
@@ -870,9 +898,7 @@ const ProductDetailScreen = () => {
                   >
                     {item.k}
                   </Text>
-                  <Text
-                    style={[styles.accordionVal, { color: colors.text }]}
-                  >
+                  <Text style={[styles.accordionVal, { color: colors.text }]}>
                     {item.v}
                   </Text>
                 </View>
@@ -914,9 +940,7 @@ const ProductDetailScreen = () => {
                   >
                     {item.k}
                   </Text>
-                  <Text
-                    style={[styles.accordionVal, { color: colors.text }]}
-                  >
+                  <Text style={[styles.accordionVal, { color: colors.text }]}>
                     {item.v}
                   </Text>
                 </View>
@@ -948,10 +972,7 @@ const ProductDetailScreen = () => {
               <View style={styles.deliveryRow}>
                 <Ionicons name="cube-outline" size={18} color={colors.text} />
                 <Text
-                  style={[
-                    styles.deliveryText,
-                    { color: colors.textSecondary },
-                  ]}
+                  style={[styles.deliveryText, { color: colors.textSecondary }]}
                 >
                   Free standard delivery on all orders
                 </Text>
@@ -963,10 +984,7 @@ const ProductDetailScreen = () => {
                   color={colors.text}
                 />
                 <Text
-                  style={[
-                    styles.deliveryText,
-                    { color: colors.textSecondary },
-                  ]}
+                  style={[styles.deliveryText, { color: colors.textSecondary }]}
                 >
                   Easy returns within 30 days
                 </Text>
@@ -978,10 +996,7 @@ const ProductDetailScreen = () => {
                   color={colors.text}
                 />
                 <Text
-                  style={[
-                    styles.deliveryText,
-                    { color: colors.textSecondary },
-                  ]}
+                  style={[styles.deliveryText, { color: colors.textSecondary }]}
                 >
                   Secure checkout guaranteed
                 </Text>
@@ -997,9 +1012,7 @@ const ProductDetailScreen = () => {
           <View style={styles.trustRow}>
             <View style={styles.trustItem}>
               <Ionicons name="cube-outline" size={20} color={colors.text} />
-              <Text
-                style={[styles.trustText, { color: colors.textSecondary }]}
-              >
+              <Text style={[styles.trustText, { color: colors.textSecondary }]}>
                 Free Delivery
               </Text>
             </View>
@@ -1009,17 +1022,13 @@ const ProductDetailScreen = () => {
                 size={20}
                 color={colors.text}
               />
-              <Text
-                style={[styles.trustText, { color: colors.textSecondary }]}
-              >
+              <Text style={[styles.trustText, { color: colors.textSecondary }]}>
                 Secure Payment
               </Text>
             </View>
             <View style={styles.trustItem}>
               <Ionicons name="refresh-outline" size={20} color={colors.text} />
-              <Text
-                style={[styles.trustText, { color: colors.textSecondary }]}
-              >
+              <Text style={[styles.trustText, { color: colors.textSecondary }]}>
                 Easy Returns
               </Text>
             </View>
@@ -1036,7 +1045,10 @@ const ProductDetailScreen = () => {
           {similarProducts.length > 0 && (
             <>
               <View
-                style={[styles.divider, { backgroundColor: colors.borderLight }]}
+                style={[
+                  styles.divider,
+                  { backgroundColor: colors.borderLight },
+                ]}
               />
               <View style={styles.section}>
                 <Text
@@ -1121,8 +1133,7 @@ const ProductDetailScreen = () => {
                                   : colors.text,
                               }}
                             >
-                              $
-                              {(item.salePrice || item.price)?.toFixed(2)}
+                              ${(item.salePrice || item.price)?.toFixed(2)}
                             </Text>
                             {hasItemDiscount && (
                               <Text
@@ -1230,7 +1241,9 @@ const ProductDetailScreen = () => {
             styles.wishBtn,
             {
               borderColor: isInWishlist ? colors.text : colors.border,
-              backgroundColor: isInWishlist ? colors.primarySoft : "transparent",
+              backgroundColor: isInWishlist
+                ? colors.primarySoft
+                : "transparent",
             },
           ]}
           onPress={toggleWishlist}
@@ -1268,9 +1281,7 @@ const ProductDetailScreen = () => {
               <ActivityIndicator
                 size="small"
                 color={
-                  isSubscribedNotify
-                    ? colors.success
-                    : colors.accentForeground
+                  isSubscribedNotify ? colors.success : colors.textInverse
                 }
               />
             ) : (
@@ -1285,7 +1296,7 @@ const ProductDetailScreen = () => {
                   color={
                     isSubscribedNotify
                       ? colors.success
-                      : colors.accentForeground
+                      : colors.textInverse
                   }
                   style={{ marginRight: 8 }}
                 />
@@ -1295,7 +1306,7 @@ const ProductDetailScreen = () => {
                     {
                       color: isSubscribedNotify
                         ? colors.success
-                        : colors.accentForeground,
+                        : colors.textInverse,
                     },
                   ]}
                 >
@@ -1322,7 +1333,7 @@ const ProductDetailScreen = () => {
               {cartLoading ? (
                 <ActivityIndicator
                   size="small"
-                  color={colors.primaryForeground}
+                  color={inStock ? colors.primaryForeground : colors.text}
                 />
               ) : (
                 <Text

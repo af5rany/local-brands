@@ -14,6 +14,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/context/AuthContext";
 import { useThemeColors } from "@/hooks/useThemeColor";
 import getApiUrl from "@/helpers/getApiUrl";
+import Header from "@/components/Header";
 
 interface Notification {
   id: string;
@@ -248,28 +249,15 @@ const NotificationsScreen = () => {
   );
 
   return (
-    <SafeAreaView
-      style={[styles.container, { backgroundColor: colors.background }]}
-      edges={["top"]}
-    >
-      {/* Header */}
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <SafeAreaView edges={["top"]} style={{ backgroundColor: colors.surface }}>
+        <Header />
+      </SafeAreaView>
+
+      {/* Sub-header */}
       <View
         style={[styles.header, { borderBottomColor: colors.borderLight }]}
       >
-        <TouchableOpacity
-          onPress={() => router.back()}
-          style={styles.backBtn}
-          activeOpacity={0.7}
-        >
-          <View
-            style={[
-              styles.backCircle,
-              { backgroundColor: colors.surfaceRaised },
-            ]}
-          >
-            <Ionicons name="chevron-back" size={22} color={colors.text} />
-          </View>
-        </TouchableOpacity>
         <Text style={[styles.title, { color: colors.text }]}>
           Notifications
         </Text>
@@ -312,7 +300,7 @@ const NotificationsScreen = () => {
           ItemSeparatorComponent={() => <View style={{ height: 1 }} />}
         />
       )}
-    </SafeAreaView>
+    </View>
   );
 };
 
