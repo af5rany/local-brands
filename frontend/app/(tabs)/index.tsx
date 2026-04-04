@@ -223,6 +223,8 @@ const HomeScreen = () => {
     fetchHomeData();
   };
 
+const searchBarScale = useRef(new Animated.Value(1));
+
   // ── Loading state ──────────────────────────────────────────
   if (loading) {
     return (
@@ -420,22 +422,20 @@ const HomeScreen = () => {
     </View>
   );
 
-  const searchBarScale = useRef(new Animated.Value(1)).current;
-
   const navigateToShop = () => {
     Animated.sequence([
-      Animated.timing(searchBarScale, {
+      Animated.timing(searchBarScale.current, {
         toValue: 0.95,
         duration: 100,
         useNativeDriver: true,
       }),
-      Animated.timing(searchBarScale, {
+      Animated.timing(searchBarScale.current, {
         toValue: 1.02,
         duration: 120,
         useNativeDriver: true,
       }),
     ]).start(() => {
-      searchBarScale.setValue(1);
+      searchBarScale.current.setValue(1);
       router.push("/(tabs)/shop" as any);
     });
   };
