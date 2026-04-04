@@ -51,6 +51,11 @@ services:
       - app-network
     environment:
       - NODE_ENV=production
+    develop:
+      watch:
+        - action: rebuild
+          path: ./backend/src
+          target: /usr/src/app/src
 
 networks:
   app-network:

@@ -9,16 +9,16 @@ export class ReferralsController {
 
   @Get('my-code')
   async getMyReferralCode(@Request() req) {
-    return this.referralsService.getOrCreateReferralCode(req.user.userId);
+    return this.referralsService.getOrCreateReferralCode(req.user.id);
   }
 
   @Post('apply')
   async applyCode(@Request() req, @Body('code') code: string) {
-    return this.referralsService.applyReferralCode(code, req.user.userId);
+    return this.referralsService.applyReferralCode(code, req.user.id);
   }
 
   @Get('my-referrals')
   async getMyReferrals(@Request() req) {
-    return this.referralsService.getMyReferrals(req.user.userId);
+    return this.referralsService.getMyReferrals(req.user.id);
   }
 }

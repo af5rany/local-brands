@@ -7,13 +7,9 @@ export enum UserRole {
 }
 
 export enum UserStatus {
-  PENDING = 'pending',
   APPROVED = 'approved',
-  REJECTED = 'rejected',
   SUSPENDED = 'suspended',
-  INACTIVE = 'inactive',
   BLOCKED = 'blocked',
-  ACTIVE = 'active',
 }
 
 // Gender Enum

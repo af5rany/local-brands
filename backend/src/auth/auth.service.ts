@@ -50,7 +50,7 @@ export class AuthService {
       email: `guest_${guestId}@temp.local`,
       password: undefined, // No password for guest
       role: UserRole.GUEST,
-      status: UserStatus.APPROVED, // Auto-approve guests
+      status: UserStatus.APPROVED,
       isGuest: true,
     });
 
@@ -144,7 +144,7 @@ export class AuthService {
       email: userDto.email,
       password: hashedPassword,
       role: userDto.role,
-      status: UserStatus.PENDING,
+      status: UserStatus.APPROVED,
       isGuest: false,
     });
 

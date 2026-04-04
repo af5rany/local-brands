@@ -58,7 +58,7 @@ export class BrandsController {
   @Roles(UserRole.BRAND_OWNER)
   async getMyBrands(@Request() req): Promise<Brand[]> {
     const currentUser = req.user;
-    return this.brandsService.findByOwner(currentUser.userId as number);
+    return this.brandsService.findByOwner(currentUser.id as number);
   }
 
   @Get('user/followed')

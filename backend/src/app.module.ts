@@ -18,6 +18,7 @@ import { AddressesModule } from './addresses/addresses.module';
 import { ReferralsModule } from './referrals/referrals.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { TryOnModule } from './try-on/try-on.module';
+import { FeedModule } from './feed/feed.module';
 
 @Module({
   imports: [
@@ -58,6 +59,7 @@ import { TryOnModule } from './try-on/try-on.module';
     ReferralsModule,
     NotificationsModule,
     TryOnModule,
+    FeedModule,
   ],
   controllers: [AppController],
   providers: [AppService],

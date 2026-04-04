@@ -98,7 +98,6 @@ const RegisterScreen = () => {
           dateOfBirth: formData.dateOfBirth || null,
           avatar,
           role: "customer",
-          status: "pending",
         }),
       });
 

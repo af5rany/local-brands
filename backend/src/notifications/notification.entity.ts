@@ -10,6 +10,7 @@ export enum NotificationType {
   NEW_PRODUCT = 'new_product',
   NEW_BRAND = 'new_brand',
   PRICE_DROP = 'price_drop',
+  NEW_POST = 'new_post',
 }
 
 @Entity()

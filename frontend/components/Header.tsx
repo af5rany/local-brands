@@ -33,6 +33,7 @@ interface MenuItem {
 const MENU_ITEMS: MenuItem[] = [
   { label: "Home", icon: "home-outline", route: "/(tabs)" },
   { label: "Shop", icon: "grid-outline", route: "/(tabs)/shop" },
+  { label: "Feed", icon: "images-outline", route: "/(tabs)/feed" },
   { label: "Brands", icon: "storefront-outline", route: "/(tabs)/brands" },
   { label: "Wishlist", icon: "heart-outline", route: "/(tabs)/wishlist" },
   { label: "Cart", icon: "bag-handle-outline", route: "/cart" },

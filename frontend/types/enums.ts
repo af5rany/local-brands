@@ -39,13 +39,9 @@ export enum UserRole {
 
 // UserStatus Enum
 export enum UserStatus {
-  PENDING = "pending",
   APPROVED = "approved",
-  REJECTED = "rejected",
   SUSPENDED = "suspended",
-  INACTIVE = "inactive",
   BLOCKED = "blocked",
-  ACTIVE = "active",
 }
 
 // BrandRole Enum

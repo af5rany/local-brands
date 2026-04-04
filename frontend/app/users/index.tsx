@@ -263,8 +263,6 @@ const UsersListScreen = () => {
     switch (status) {
       case UserStatus.APPROVED:
         return "#10b981";
-      case UserStatus.PENDING:
-        return "#f59e0b";
       case UserStatus.BLOCKED:
         return "#ef4444";
       default:

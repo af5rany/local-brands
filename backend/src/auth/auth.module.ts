@@ -37,6 +37,7 @@ import { RegisteredUsersOnlyGuard } from './registered-users-only.guard';
     JwtAuthGuard,
     GuestAuthGuard,
     RegisteredUsersOnlyGuard,
+    JwtModule,
   ],
 })
 export class AuthModule {}

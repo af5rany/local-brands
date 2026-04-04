@@ -61,7 +61,11 @@
       "Bash(curl -s \"http://localhost:5000/products?status=published&limit=20&sortBy=createdAt&sortOrder=DESC\")",
       "Bash(python3 -m json.tool)",
       "Bash(curl -s \"http://localhost:5000/products?status=published&limit=5&sortBy=createdAt&sortOrder=DESC\")",
-      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(f''''total: {d.get\\(\"\"total\"\",d.get\\(\"\"totalItems\"\",\"\"?\"\"\\)\\)}''''\\); [print\\(f''''  id={p[\"\"id\"\"]} name={p[\"\"name\"\"]} status={p[\"\"status\"\"]}''''\\) for p in d[''''items'''']]\")"
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(f''''total: {d.get\\(\"\"total\"\",d.get\\(\"\"totalItems\"\",\"\"?\"\"\\)\\)}''''\\); [print\\(f''''  id={p[\"\"id\"\"]} name={p[\"\"name\"\"]} status={p[\"\"status\"\"]}''''\\) for p in d[''''items'''']]\")",
+      "Bash(./node_modules/.bin/tsc --noEmit)",
+      "Bash(node_modules/.bin/tsc --noEmit)",
+      "Bash(curl -s http://localhost:5000/feed)",
+      "Bash(grep -E \"\\\\.\\(tsx|ts\\)$\")"
     ]
   }
 }

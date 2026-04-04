@@ -69,6 +69,10 @@ function RootLayoutNav() {
       <Stack.Screen name="checkout/index" options={{ headerShown: false, title: "Checkout" }} />
       <Stack.Screen name="checkout/confirmation" options={{ headerShown: false, title: "Order Confirmed", gestureEnabled: false }} />
 
+      {/* Feed */}
+      <Stack.Screen name="feed/[postId]" options={{ headerShown: false, title: "Post" }} />
+      <Stack.Screen name="feed/create" options={{ headerShown: false, title: "New Post" }} />
+
       {/* Orders */}
       <Stack.Screen name="orders/index" options={{ headerShown: false, title: "My Orders" }} />
       <Stack.Screen name="orders/[orderId]" options={{ headerShown: false, title: "Order Details" }} />

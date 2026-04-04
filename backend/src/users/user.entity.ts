@@ -48,7 +48,7 @@ export class User {
   @Column({ type: 'enum', enum: UserRole, default: UserRole.CUSTOMER })
   role: UserRole;
 
-  @Column({ type: 'enum', enum: UserStatus, default: UserStatus.PENDING })
+  @Column({ type: 'enum', enum: UserStatus, default: UserStatus.APPROVED })
   status: UserStatus;
 
   @Column({ default: false })

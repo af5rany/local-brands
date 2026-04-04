@@ -26,11 +26,8 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       throw new UnauthorizedException('User not found');
     }
 
-    // Check if user is active (except for guests who might be approved)
-    if (
-      user.status !== UserStatus.APPROVED &&
-      user.status !== UserStatus.PENDING
-    ) {
+    // Check if user is active
+    if (user.status !== UserStatus.APPROVED) {
       throw new UnauthorizedException('User account is not active');
     }
 
