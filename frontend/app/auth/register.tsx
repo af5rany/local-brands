@@ -91,8 +91,8 @@ const RegisterScreen = () => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: formData.name,
-          username: formData.username,
-          email: formData.email,
+          username: formData.username.trim() || null,
+          email: formData.email.trim().toLowerCase(),
           password: formData.password,
           phoneNumber: formData.phoneNumber || null,
           dateOfBirth: formData.dateOfBirth || null,

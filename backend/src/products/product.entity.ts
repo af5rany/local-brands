@@ -124,6 +124,9 @@ export class Product {
   @Column({ default: 10 })
   lowStockThreshold: number;
 
+  @Column({ nullable: true })
+  color: string;
+
   @Column('simple-array', { nullable: true })
   images: string[];
 

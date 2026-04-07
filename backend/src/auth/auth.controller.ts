@@ -19,7 +19,6 @@ import { User } from 'src/users/user.entity';
 export class AuthController {
   constructor(private authService: AuthService) {}
 
-  // Register new user (no authentication required)
   @Post('register')
   @UsePipes(new ValidationPipe({ whitelist: true }))
   async register(@Body() userDto: CreateUserDto) {

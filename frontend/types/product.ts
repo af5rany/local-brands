@@ -4,18 +4,9 @@ import { Brand } from "./brand"; // Import Brand interface
 export interface ProductVariant {
   id: number;
   productId: number;
-  sku?: string;
-  attributes: Record<string, string>;
-  priceOverride?: number;
-  stock: number;
-  images: string[];
-  variantImages?: string[];
-  color?: string;
   size?: string;
-  colorHex?: string;
+  stock: number;
   isAvailable: boolean;
-  createdAt?: string;
-  updatedAt?: string;
 }
 
 // Product Interface
@@ -37,6 +28,7 @@ export interface Product {
   length?: number;
   width?: number;
   height?: number;
+  color?: string;
   stock: number;
   status: ProductStatus;
   isFeatured: boolean;

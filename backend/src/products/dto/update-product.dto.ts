@@ -115,6 +115,15 @@ export class UpdateProductDto {
   brandId?: number;
 
   @IsOptional()
+  @IsString()
+  color?: string;
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  images?: string[];
+
+  @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => CreateProductVariantDto)

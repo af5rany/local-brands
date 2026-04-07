@@ -31,6 +31,8 @@ export class BrandsService {
     private brandUsersRepository: Repository<BrandUser>,
     @InjectRepository(BrandFollow)
     private brandFollowRepository: Repository<BrandFollow>,
+    @InjectRepository(User)
+    private usersRepository: Repository<User>,
     private notificationsService: NotificationsService,
     private dataSource: DataSource,
   ) {}
@@ -39,7 +41,7 @@ export class BrandsService {
     dto: GetBrandsDto,
     isAdmin: boolean = false,
   ): Promise<PaginatedResult<Brand>> {
-    const { page = 1, limit = 10, search, status, isSponsored, isNew, isFeatured } = dto;
+    const { page = 1, limit = 10, search, status, isSponsored, isNew, isFeatured, sortBy = 'createdAt', sortOrder = 'DESC' } = dto;
 
     const queryBuilder = this.brandsRepository
       .createQueryBuilder('brand')
@@ -97,6 +99,68 @@ export class BrandsService {
     if (isFeatured !== undefined) {
       queryBuilder.andWhere('brand.isFeatured = :isFeatured', { isFeatured });
     }
+
+    // Apply sorting
+    const order = sortOrder === 'ASC' ? 'ASC' : 'DESC';
+    if (sortBy === 'productCount') {
+      // For product count sorting, get sorted brand IDs via a raw query,
+      // then load entities in that order to avoid DISTINCT + ORDER BY conflict.
+      const filterQueryBuilder = this.brandsRepository
+        .createQueryBuilder('b')
+        .select('b.id', 'id')
+        .addSelect('COUNT(p.id)', 'cnt')
+        .leftJoin('b.products', 'p')
+        .groupBy('b.id')
+        .orderBy('cnt', order);
+
+      // Apply same filters to the ID query
+      if (search) {
+        filterQueryBuilder.where('b.name ILIKE :search', { search: `%${search}%` });
+      }
+      if (status) {
+        filterQueryBuilder.andWhere('b.status = :status', { status });
+      } else if (!isAdmin) {
+        filterQueryBuilder.andWhere('b.status = :defaultStatus', { defaultStatus: BrandStatus.ACTIVE });
+      }
+      if (isSponsored !== undefined) {
+        filterQueryBuilder.andWhere('b.isSponsored = :isSponsored', { isSponsored });
+      }
+      if (isNew !== undefined) {
+        filterQueryBuilder.andWhere('b.isNew = :isNew', { isNew });
+      }
+      if (isFeatured !== undefined) {
+        filterQueryBuilder.andWhere('b.isFeatured = :isFeatured', { isFeatured });
+      }
+
+      const allSorted = await filterQueryBuilder.getRawMany();
+      const total = allSorted.length;
+      const pagedIds = allSorted.slice((page - 1) * limit, page * limit).map((r) => r.id);
+
+      let items: Brand[] = [];
+      if (pagedIds.length > 0) {
+        items = await queryBuilder
+          .andWhereInIds(pagedIds)
+          .getMany();
+        // Preserve the sorted order
+        const idOrder = new Map(pagedIds.map((id, i) => [id, i]));
+        items.sort((a, b) => (idOrder.get(a.id) ?? 0) - (idOrder.get(b.id) ?? 0));
+      }
+
+      return {
+        items,
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+        hasNextPage: total > page * limit,
+        hasPreviousPage: page > 1,
+      };
+    }
+
+    // Standard column sorting
+    const allowedColumns = ['name', 'createdAt', 'updatedAt', 'location'];
+    const column = allowedColumns.includes(sortBy) ? sortBy : 'createdAt';
+    queryBuilder.orderBy(`brand.${column}`, order);
 
     const [items, total] = await queryBuilder
       .skip((page - 1) * limit)
@@ -304,6 +368,13 @@ export class BrandsService {
       ownerId,
       BrandUserRole.OWNER,
     );
+
+    // Auto-promote user to brandOwner if they are a customer
+    const user = await this.usersRepository.findOne({ where: { id: ownerId } });
+    if (user && user.role === UserRole.CUSTOMER) {
+      user.role = UserRole.BRAND_OWNER;
+      await this.usersRepository.save(user);
+    }
 
     return this.findOne(savedBrand.id);
   }

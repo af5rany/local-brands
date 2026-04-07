@@ -176,33 +176,17 @@ const ProductDetailScreen = () => {
     }
   };
 
-  // Derive active variant from selected color + size
+  // Derive active variant from selected size
   const getActiveVariant = (): ProductVariant | undefined => {
-    if (!product?.variants?.length) return undefined;
-    return product.variants.find((v) => {
-      const vColor = v.color || v.attributes?.color;
-      const vSize = v.size || v.attributes?.size;
-      const colorMatch = vColor === selectedColor;
-      const sizeMatch = !vSize || vSize === selectedSize;
-      return colorMatch && sizeMatch;
-    });
+    if (!product?.variants?.length || !selectedSize) return undefined;
+    return product.variants.find((v) => v.size === selectedSize);
   };
 
-  // Get unique colors from variants
-  const getUniqueColors = (): string[] => {
+  // Get available sizes from variants
+  const getAvailableSizes = (): string[] => {
     if (!product?.variants?.length) return [];
-    const colors = product.variants.map(
-      (v) => v.color || v.attributes?.color || "",
-    );
-    return [...new Set(colors)].filter(Boolean);
-  };
-
-  // Get available sizes for selected color
-  const getSizesForColor = (): string[] => {
-    if (!product?.variants?.length || !selectedColor) return [];
     return product.variants
-      .filter((v) => (v.color || v.attributes?.color) === selectedColor)
-      .map((v) => v.size || v.attributes?.size || "")
+      .map((v) => v.size || "")
       .filter(Boolean);
   };
 
@@ -220,7 +204,7 @@ const ProductDetailScreen = () => {
     const variant = getActiveVariant();
 
     if (hasVariants && !variant) {
-      Alert.alert("Select Options", "Please select a color and size.");
+      Alert.alert("Select Options", "Please select a size.");
       return;
     }
 
@@ -268,7 +252,7 @@ const ProductDetailScreen = () => {
     const variant = getActiveVariant();
 
     if (hasVariants && !variant) {
-      Alert.alert("Select Options", "Please select a color and size.");
+      Alert.alert("Select Options", "Please select a size.");
       return;
     }
 
@@ -346,9 +330,14 @@ const ProductDetailScreen = () => {
               method: "DELETE",
               headers: { Authorization: `Bearer ${token}` },
             });
-            if (!res.ok) throw new Error("Failed");
-            router.back();
+            const text = await res.text();
+            console.log("[DELETE] status:", res.status, "body:", text);
+            if (!res.ok) throw new Error(text || "Failed to delete product");
+            Alert.alert("Success", "Product deleted.", [
+              { text: "OK", onPress: () => router.back() },
+            ]);
           } catch (e: any) {
+            console.error("[DELETE] Error:", e);
             Alert.alert("Error", e.message);
           }
         },
@@ -409,25 +398,23 @@ const ProductDetailScreen = () => {
   const hasVariants =
     product.hasVariants || (product.variants?.length || 0) > 0;
   const variant = hasVariants ? getActiveVariant() : undefined;
-  const uniqueColors = getUniqueColors();
-  const availableSizes = getSizesForColor();
+  const availableSizes = getAvailableSizes();
 
   const hasDiscount =
     product.salePrice !== undefined && product.salePrice < product.price;
-  const price =
-    variant?.priceOverride || (hasDiscount ? product.salePrice : product.price);
+  const price = hasDiscount ? product.salePrice : product.price;
   const currentStock = variant ? variant.stock : product.stock;
   const inStock = currentStock > 0;
   const allOutOfStock = hasVariants
     ? product.variants.every((v) => v.stock <= 0)
     : product.stock <= 0;
 
-  // Images: variant images if variant selected, else product images
-  const displayImages = variant?.images?.length
-    ? variant.images
-    : product.images?.length
-      ? product.images
-      : product.variants?.[0]?.images || [];
+  // Images always come from product level
+  const displayImages = product.images?.length
+    ? product.images
+    : product.mainImage
+      ? [product.mainImage]
+      : [];
 
   const isOwnerOrAdmin =
     userRole === "admin" ||
@@ -682,8 +669,8 @@ const ProductDetailScreen = () => {
             style={[styles.divider, { backgroundColor: colors.borderLight }]}
           />
 
-          {/* ── Color Picker (only if product has variants) ──── */}
-          {hasVariants && uniqueColors.length > 0 && (
+          {/* ── Color Display (product-level) ──── */}
+          {product.color && (
             <>
               <View style={styles.section}>
                 <View style={styles.sectionRow}>
@@ -695,67 +682,19 @@ const ProductDetailScreen = () => {
                   >
                     COLOR
                   </Text>
-                  <Text style={[styles.sectionValue, { color: colors.text }]}>
-                    {selectedColor}
-                  </Text>
                 </View>
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={styles.colorRow}
-                >
-                  {uniqueColors.map((colorVal) => {
-                    const active = selectedColor === colorVal;
-                    // Use the color value as hex (it's stored as hex from the palette)
-                    const hex = colorVal.startsWith("#")
-                      ? colorVal
-                      : colorVal.toLowerCase();
-                    // Check if any variant with this color has stock
-                    const colorInStock = product.variants.some(
-                      (v) =>
-                        (v.color || v.attributes?.color) === colorVal &&
-                        v.stock > 0,
-                    );
-                    return (
-                      <TouchableOpacity
-                        key={colorVal}
-                        onPress={() => {
-                          setSelectedColor(colorVal);
-                          setSelectedImage(0);
-                          // Auto-select first available size for this color
-                          const sizes = product.variants
-                            .filter(
-                              (v) =>
-                                (v.color || v.attributes?.color) === colorVal &&
-                                v.stock > 0,
-                            )
-                            .map((v) => v.size || v.attributes?.size || "")
-                            .filter(Boolean);
-                          setSelectedSize(sizes[0] || null);
-                        }}
-                        style={[
-                          styles.colorWrap,
-                          { opacity: colorInStock ? 1 : 0.35 },
-                        ]}
-                      >
-                        <View
-                          style={[
-                            styles.colorRing,
-                            {
-                              borderColor: active
-                                ? colors.text
-                                : colors.borderLight,
-                            },
-                          ]}
-                        >
-                          <View
-                            style={[styles.colorDot, { backgroundColor: hex }]}
-                          />
-                        </View>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </ScrollView>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: 8 }}>
+                  <View
+                    style={[
+                      styles.colorRing,
+                      { borderColor: colors.text },
+                    ]}
+                  >
+                    <View
+                      style={[styles.colorDot, { backgroundColor: product.color }]}
+                    />
+                  </View>
+                </View>
               </View>
 
               <View
@@ -767,7 +706,7 @@ const ProductDetailScreen = () => {
             </>
           )}
 
-          {/* ── Size Selector (only if variants have sizes) ──── */}
+          {/* ── Size Selector (from variants) ──── */}
           {hasVariants && availableSizes.length > 0 && (
             <>
               <View style={styles.section}>
@@ -791,11 +730,8 @@ const ProductDetailScreen = () => {
                 >
                   {availableSizes.map((size) => {
                     const active = selectedSize === size;
-                    // Check if this color+size combo has stock
                     const sizeVariant = product.variants.find(
-                      (v) =>
-                        (v.color || v.attributes?.color) === selectedColor &&
-                        (v.size || v.attributes?.size) === size,
+                      (v) => v.size === size,
                     );
                     const sizeInStock = (sizeVariant?.stock || 0) > 0;
                     return (
@@ -1067,8 +1003,7 @@ const ProductDetailScreen = () => {
                   keyExtractor={(item) => `similar-${item.id}`}
                   renderItem={({ item }) => {
                     const img =
-                      item.variants?.[0]?.images?.[0] ||
-                      item.variants?.[0]?.variantImages?.[0] ||
+                      item.images?.[0] ||
                       item.mainImage ||
                       "";
                     const hasItemDiscount =

@@ -8,6 +8,7 @@ import {
   Param,
   Put,
   Delete,
+  Query,
   UseGuards,
   Request,
   ForbiddenException,
@@ -28,9 +29,8 @@ export class UsersController {
 
   @Roles(UserRole.ADMIN)
   @Get()
-  async findAll(@Request() req): Promise<User[]> {
-    console.log('Admin accessing all users:', req.user);
-    return this.usersService.findAll();
+  async findAll(@Query('excludeGuests') excludeGuests?: string): Promise<User[]> {
+    return this.usersService.findAll(excludeGuests === 'true');
   }
 
   // View a single user (Admin or self)

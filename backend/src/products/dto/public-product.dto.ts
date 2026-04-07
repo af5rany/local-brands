@@ -13,14 +13,8 @@ export class PublicBrandDto {
 export class PublicVariantDto {
   id?: number;
   productId?: number;
-  sku?: string;
-  attributes?: Record<string, any>;
-  color?: string;
   size?: string;
-  priceOverride?: number;
   stock: number;
-  images: string[];
-  variantImages?: string[];
   isAvailable?: boolean;
 }
 
@@ -35,6 +29,7 @@ export class PublicProductDto {
   currency: string;
   mainImage: string;
   images: string[];
+  color: string | null;
   brand: PublicBrandDto;
   category: string; // Mapping from subcategory
   productType: ProductType;

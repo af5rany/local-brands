@@ -69,7 +69,7 @@ const AdminDashboard = ({
       description: "View and manage all brands",
       icon: "storefront" as const,
       color: colors.primary,
-      onPress: () => navigateTo("/(tabs)/brands"),
+      onPress: () => navigateTo("/brands"),
     },
     {
       title: "Product Management",

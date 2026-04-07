@@ -1,4 +1,5 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
+import { useFocusEffect } from "expo-router";
 import {
   View,
   Text,
@@ -119,12 +120,6 @@ const sortOptions: SortOption[] = [
     sortOrder: SortOrder.DESC,
   },
   {
-    key: "brand_name",
-    label: "Brand Name",
-    sortBy: SortBy.BRAND_NAME,
-    sortOrder: SortOrder.ASC,
-  },
-  {
     key: "popularity",
     label: "Most Popular",
     sortBy: SortBy.POPULARITY,
@@ -176,20 +171,10 @@ const BrandDetailScreen = () => {
   const [followLoading, setFollowLoading] = useState(false);
 
   // ── Status color helpers ─────────────────────
-  const getStatusColors = (status: BrandStatus) => {
-    switch (status) {
-      case BrandStatus.ACTIVE:
-        return { bg: colors.successSoft, fg: colors.success };
-      case BrandStatus.DRAFT:
-        return { bg: colors.warningSoft, fg: colors.warning };
-      case BrandStatus.SUSPENDED:
-        return { bg: colors.dangerSoft, fg: colors.danger };
-      case BrandStatus.ARCHIVED:
-        return { bg: colors.surfaceRaised, fg: colors.textTertiary };
-      default:
-        return { bg: colors.surfaceRaised, fg: colors.textSecondary };
-    }
-  };
+  const getStatusColors = (_status: BrandStatus) => ({
+    bg: "transparent",
+    fg: colors.textSecondary,
+  });
 
   // ── Data fetching ────────────────────────────
   const fetchBrandDetails = async () => {
@@ -292,7 +277,7 @@ const BrandDetailScreen = () => {
                 throw new Error(errorData.message || "Failed to delete brand");
               }
               Alert.alert("Success", "Brand deleted successfully");
-              router.replace("/(tabs)/brands");
+              router.replace("/brands");
             } catch (err: any) {
               Alert.alert("Error", err.message);
             }
@@ -355,6 +340,8 @@ const BrandDetailScreen = () => {
             headers: {
               ...(token && { Authorization: `Bearer ${token}` }),
               "Content-Type": "application/json",
+              "Cache-Control": "no-cache, no-store",
+              Pragma: "no-cache",
             },
           },
         );
@@ -410,6 +397,15 @@ const BrandDetailScreen = () => {
   useEffect(() => {
     if (brandId && brand) fetchProducts(1, true);
   }, [fetchProducts]);
+
+  const fetchProductsRef = useRef(fetchProducts);
+  fetchProductsRef.current = fetchProducts;
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchProductsRef.current(1, true);
+    }, [])
+  );
 
   useEffect(() => {
     if (refresh === "true") {
@@ -534,7 +530,7 @@ const BrandDetailScreen = () => {
           styles.navBar,
           {
             backgroundColor: colors.surface,
-            borderBottomColor: colors.borderLight,
+            borderBottomColor: colors.border,
           },
         ]}
       >
@@ -554,10 +550,10 @@ const BrandDetailScreen = () => {
         {isOwnerOrAdmin ? (
           <TouchableOpacity
             onPress={() => router.push(`/brands/${brandId}/edit` as any)}
-            style={[styles.navBtn, { backgroundColor: colors.primarySoft }]}
+            style={[styles.navBtn, { backgroundColor: colors.surfaceRaised }]}
             hitSlop={8}
           >
-            <Ionicons name="create-outline" size={18} color={colors.primary} />
+            <Ionicons name="create-outline" size={18} color={colors.text} />
           </TouchableOpacity>
         ) : (
           <View style={styles.navBtnPlaceholder} />
@@ -581,8 +577,7 @@ const BrandDetailScreen = () => {
             styles.heroCard,
             {
               backgroundColor: colors.surface,
-              borderColor: colors.borderLight,
-              shadowColor: colors.cardShadow,
+              borderColor: colors.border,
             },
           ]}
         >
@@ -590,13 +585,13 @@ const BrandDetailScreen = () => {
           {brand.logo ? (
             <Image
               source={{ uri: brand.logo }}
-              style={[styles.heroLogo, { borderColor: colors.borderLight }]}
+              style={[styles.heroLogo, { borderColor: colors.border }]}
             />
           ) : (
             <View
-              style={[styles.heroLogo, { backgroundColor: colors.primarySoft }]}
+              style={[styles.heroLogo, { backgroundColor: colors.surfaceRaised }]}
             >
-              <Text style={[styles.heroLogoText, { color: colors.primary }]}>
+              <Text style={[styles.heroLogoText, { color: colors.text }]}>
                 {brand.name.charAt(0).toUpperCase()}
               </Text>
             </View>
@@ -609,11 +604,10 @@ const BrandDetailScreen = () => {
 
           {/* Status Badge */}
           <View
-            style={[styles.statusBadge, { backgroundColor: statusColors.bg }]}
+            style={[styles.statusBadge, { borderColor: colors.border }]}
           >
-            <Ionicons name={statusCfg.icon} size={13} color={statusColors.fg} />
-            <Text style={[styles.statusBadgeText, { color: statusColors.fg }]}>
-              {statusCfg.label}
+            <Text style={[styles.statusBadgeText, { color: colors.textSecondary }]}>
+              {statusCfg.label.toUpperCase()}
             </Text>
           </View>
 
@@ -648,7 +642,7 @@ const BrandDetailScreen = () => {
               style={[
                 styles.followBtn,
                 isFollowing
-                  ? { borderColor: colors.textTertiary + "40", borderWidth: 1 }
+                  ? { borderColor: colors.border, borderWidth: 1 }
                   : { backgroundColor: colors.primary },
               ]}
               onPress={toggleFollow}
@@ -680,7 +674,7 @@ const BrandDetailScreen = () => {
           <View
             style={[
               styles.heroStatsRow,
-              { borderTopColor: colors.borderLight },
+              { borderTopColor: colors.border },
             ]}
           >
             <View style={styles.heroStat}>
@@ -699,7 +693,7 @@ const BrandDetailScreen = () => {
             <View
               style={[
                 styles.heroStatDivider,
-                { backgroundColor: colors.borderLight },
+                { backgroundColor: colors.border },
               ]}
             />
             <View style={styles.heroStat}>
@@ -794,7 +788,7 @@ const BrandDetailScreen = () => {
                 styles.statusCard,
                 {
                   backgroundColor: colors.surface,
-                  borderColor: colors.borderLight,
+                  borderColor: colors.border,
                 },
               ]}
             >
@@ -1036,7 +1030,7 @@ const BrandDetailScreen = () => {
               styles.emptyState,
               {
                 backgroundColor: colors.surface,
-                borderColor: colors.borderLight,
+                borderColor: colors.border,
               },
             ]}
           >
@@ -1144,7 +1138,7 @@ const BrandDetailScreen = () => {
             <View
               style={[
                 styles.modalHeader,
-                { borderBottomColor: colors.borderLight },
+                { borderBottomColor: colors.border },
               ]}
             >
               <Text style={[styles.modalTitle, { color: colors.text }]}>
@@ -1160,294 +1154,146 @@ const BrandDetailScreen = () => {
 
             <ScrollView showsVerticalScrollIndicator={false}>
               {/* Product Type */}
-              <View
-                style={[
-                  styles.filterSection,
-                  { borderBottomColor: colors.borderLight },
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.filterSectionTitle,
-                    { color: colors.text },
-                  ]}
-                >
+              <View style={[styles.filterSection, { borderBottomColor: colors.border }]}>
+                <Text style={[styles.filterSectionTitle, { color: colors.textTertiary }]}>
                   Product Type
                 </Text>
-                <View style={styles.filterChips}>
-                  {filterOptions.productTypes.map((type) => {
-                    const active = filters.productType === type;
-                    return (
-                      <TouchableOpacity
-                        key={type}
-                        style={[
-                          styles.filterChip,
-                          {
-                            backgroundColor: active
-                              ? colors.primary
-                              : colors.surfaceRaised,
-                            borderColor: active
-                              ? colors.primary
-                              : colors.border,
-                          },
-                        ]}
-                        onPress={() =>
-                          handleFilterChange(
-                            "productType",
-                            active ? undefined : type,
-                          )
-                        }
-                      >
-                        <Text
-                          style={[
-                            styles.filterChipText,
-                            {
-                              color: active
-                                ? colors.primaryForeground
-                                : colors.text,
-                            },
-                          ]}
-                        >
-                          {type}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
+                {filterOptions.productTypes.map((type, i) => {
+                  const active = filters.productType === type;
+                  const isLast = i === filterOptions.productTypes.length - 1;
+                  return (
+                    <TouchableOpacity
+                      key={type}
+                      style={[
+                        styles.filterRow,
+                        !isLast && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border },
+                      ]}
+                      onPress={() => handleFilterChange("productType", active ? undefined : type)}
+                      activeOpacity={0.5}
+                    >
+                      <Text style={[styles.filterRowLabel, { color: colors.text, fontWeight: active ? "700" : "400" }]}>
+                        {type}
+                      </Text>
+                      {active && <Ionicons name="checkmark" size={16} color={colors.text} />}
+                    </TouchableOpacity>
+                  );
+                })}
               </View>
 
               {/* Gender */}
-              <View
-                style={[
-                  styles.filterSection,
-                  { borderBottomColor: colors.borderLight },
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.filterSectionTitle,
-                    { color: colors.text },
-                  ]}
-                >
+              <View style={[styles.filterSection, { borderBottomColor: colors.border }]}>
+                <Text style={[styles.filterSectionTitle, { color: colors.textTertiary }]}>
                   Gender
                 </Text>
-                <View style={styles.filterChips}>
-                  {filterOptions.genders.map((gender) => {
-                    const active = filters.gender === gender;
-                    return (
-                      <TouchableOpacity
-                        key={gender}
-                        style={[
-                          styles.filterChip,
-                          {
-                            backgroundColor: active
-                              ? colors.primary
-                              : colors.surfaceRaised,
-                            borderColor: active
-                              ? colors.primary
-                              : colors.border,
-                          },
-                        ]}
-                        onPress={() =>
-                          handleFilterChange(
-                            "gender",
-                            active ? undefined : gender,
-                          )
-                        }
-                      >
-                        <Text
-                          style={[
-                            styles.filterChipText,
-                            {
-                              color: active
-                                ? colors.primaryForeground
-                                : colors.text,
-                            },
-                          ]}
-                        >
-                          {gender}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
+                {filterOptions.genders.map((gender, i) => {
+                  const active = filters.gender === gender;
+                  const isLast = i === filterOptions.genders.length - 1;
+                  return (
+                    <TouchableOpacity
+                      key={gender}
+                      style={[
+                        styles.filterRow,
+                        !isLast && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border },
+                      ]}
+                      onPress={() => handleFilterChange("gender", active ? undefined : gender)}
+                      activeOpacity={0.5}
+                    >
+                      <Text style={[styles.filterRowLabel, { color: colors.text, fontWeight: active ? "700" : "400" }]}>
+                        {gender}
+                      </Text>
+                      {active && <Ionicons name="checkmark" size={16} color={colors.text} />}
+                    </TouchableOpacity>
+                  );
+                })}
               </View>
 
               {/* Season */}
-              <View
-                style={[
-                  styles.filterSection,
-                  { borderBottomColor: colors.borderLight },
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.filterSectionTitle,
-                    { color: colors.text },
-                  ]}
-                >
+              <View style={[styles.filterSection, { borderBottomColor: colors.border }]}>
+                <Text style={[styles.filterSectionTitle, { color: colors.textTertiary }]}>
                   Season
                 </Text>
-                <View style={styles.filterChips}>
-                  {filterOptions.seasons.map((season) => {
-                    const active = filters.season === season;
-                    return (
-                      <TouchableOpacity
-                        key={season}
-                        style={[
-                          styles.filterChip,
-                          {
-                            backgroundColor: active
-                              ? colors.primary
-                              : colors.surfaceRaised,
-                            borderColor: active
-                              ? colors.primary
-                              : colors.border,
-                          },
-                        ]}
-                        onPress={() =>
-                          handleFilterChange(
-                            "season",
-                            active ? undefined : season,
-                          )
-                        }
-                      >
-                        <Text
-                          style={[
-                            styles.filterChipText,
-                            {
-                              color: active
-                                ? colors.primaryForeground
-                                : colors.text,
-                            },
-                          ]}
-                        >
-                          {season}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
+                {filterOptions.seasons.map((season, i) => {
+                  const active = filters.season === season;
+                  const isLast = i === filterOptions.seasons.length - 1;
+                  return (
+                    <TouchableOpacity
+                      key={season}
+                      style={[
+                        styles.filterRow,
+                        !isLast && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border },
+                      ]}
+                      onPress={() => handleFilterChange("season", active ? undefined : season)}
+                      activeOpacity={0.5}
+                    >
+                      <Text style={[styles.filterRowLabel, { color: colors.text, fontWeight: active ? "700" : "400" }]}>
+                        {season}
+                      </Text>
+                      {active && <Ionicons name="checkmark" size={16} color={colors.text} />}
+                    </TouchableOpacity>
+                  );
+                })}
               </View>
 
               {/* Status */}
-              <View
-                style={[
-                  styles.filterSection,
-                  { borderBottomColor: colors.borderLight },
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.filterSectionTitle,
-                    { color: colors.text },
-                  ]}
-                >
+              <View style={[styles.filterSection, { borderBottomColor: colors.border }]}>
+                <Text style={[styles.filterSectionTitle, { color: colors.textTertiary }]}>
                   Status
                 </Text>
-                <View style={styles.filterChips}>
-                  {filterOptions.statuses.map((status) => {
-                    const active = filters.status === status;
-                    return (
-                      <TouchableOpacity
-                        key={status}
-                        style={[
-                          styles.filterChip,
-                          {
-                            backgroundColor: active
-                              ? colors.primary
-                              : colors.surfaceRaised,
-                            borderColor: active
-                              ? colors.primary
-                              : colors.border,
-                          },
-                        ]}
-                        onPress={() =>
-                          handleFilterChange(
-                            "status",
-                            active ? undefined : status,
-                          )
-                        }
-                      >
-                        <Text
-                          style={[
-                            styles.filterChipText,
-                            {
-                              color: active
-                                ? colors.primaryForeground
-                                : colors.text,
-                            },
-                          ]}
-                        >
-                          {status}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
+                {filterOptions.statuses.map((status, i) => {
+                  const active = filters.status === status;
+                  const isLast = i === filterOptions.statuses.length - 1;
+                  return (
+                    <TouchableOpacity
+                      key={status}
+                      style={[
+                        styles.filterRow,
+                        !isLast && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border },
+                      ]}
+                      onPress={() => handleFilterChange("status", active ? undefined : status)}
+                      activeOpacity={0.5}
+                    >
+                      <Text style={[styles.filterRowLabel, { color: colors.text, fontWeight: active ? "700" : "400" }]}>
+                        {status}
+                      </Text>
+                      {active && <Ionicons name="checkmark" size={16} color={colors.text} />}
+                    </TouchableOpacity>
+                  );
+                })}
               </View>
 
               {/* Price Range */}
-              <View
-                style={[
-                  styles.filterSection,
-                  { borderBottomColor: colors.borderLight },
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.filterSectionTitle,
-                    { color: colors.text },
-                  ]}
-                >
+              <View style={[styles.filterSection, { borderBottomColor: colors.border }]}>
+                <Text style={[styles.filterSectionTitle, { color: colors.textTertiary }]}>
                   Price Range
                 </Text>
                 <View style={styles.priceRow}>
-                  <TextInput
-                    style={[
-                      styles.priceInput,
-                      {
-                        backgroundColor: colors.surfaceRaised,
-                        borderColor: colors.border,
-                        color: colors.text,
-                      },
-                    ]}
-                    placeholder="Min"
-                    placeholderTextColor={colors.textTertiary}
-                    keyboardType="numeric"
-                    value={filters.minPrice?.toString() || ""}
-                    onChangeText={(text) =>
-                      handleFilterChange(
-                        "minPrice",
-                        text ? parseFloat(text) : undefined,
-                      )
-                    }
-                  />
-                  <Text
-                    style={[styles.priceDash, { color: colors.textTertiary }]}
-                  >
-                    —
-                  </Text>
-                  <TextInput
-                    style={[
-                      styles.priceInput,
-                      {
-                        backgroundColor: colors.surfaceRaised,
-                        borderColor: colors.border,
-                        color: colors.text,
-                      },
-                    ]}
-                    placeholder="Max"
-                    placeholderTextColor={colors.textTertiary}
-                    keyboardType="numeric"
-                    value={filters.maxPrice?.toString() || ""}
-                    onChangeText={(text) =>
-                      handleFilterChange(
-                        "maxPrice",
-                        text ? parseFloat(text) : undefined,
-                      )
-                    }
-                  />
+                  <View style={styles.priceInputGroup}>
+                    <Text style={[styles.priceLabel, { color: colors.textTertiary }]}>MIN</Text>
+                    <TextInput
+                      style={[styles.priceInput, { borderBottomColor: colors.text, color: colors.text }]}
+                      placeholder="0"
+                      placeholderTextColor={colors.textTertiary}
+                      keyboardType="numeric"
+                      value={filters.minPrice?.toString() || ""}
+                      onChangeText={(text) =>
+                        handleFilterChange("minPrice", text ? parseFloat(text) : undefined)
+                      }
+                    />
+                  </View>
+                  <View style={[styles.priceSeparator, { backgroundColor: colors.border }]} />
+                  <View style={styles.priceInputGroup}>
+                    <Text style={[styles.priceLabel, { color: colors.textTertiary }]}>MAX</Text>
+                    <TextInput
+                      style={[styles.priceInput, { borderBottomColor: colors.text, color: colors.text }]}
+                      placeholder="∞"
+                      placeholderTextColor={colors.textTertiary}
+                      keyboardType="numeric"
+                      value={filters.maxPrice?.toString() || ""}
+                      onChangeText={(text) =>
+                        handleFilterChange("maxPrice", text ? parseFloat(text) : undefined)
+                      }
+                    />
+                  </View>
                 </View>
               </View>
             </ScrollView>
@@ -1456,7 +1302,7 @@ const BrandDetailScreen = () => {
             <View
               style={[
                 styles.modalFooter,
-                { borderTopColor: colors.borderLight },
+                { borderTopColor: colors.border },
               ]}
             >
               <TouchableOpacity
@@ -1513,7 +1359,7 @@ const styles = StyleSheet.create({
     marginTop: 16,
     paddingVertical: 10,
     paddingHorizontal: 24,
-    borderRadius: 12,
+    borderRadius: 0,
     borderWidth: 1,
   },
   goBackBtnText: { fontSize: 12, fontWeight: "700", letterSpacing: 1.5 },
@@ -1525,23 +1371,24 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingHorizontal: 16,
     paddingVertical: 10,
-    borderBottomWidth: 1,
+    borderBottomWidth: StyleSheet.hairlineWidth,
     gap: 12,
   },
   navBtn: {
     width: 38,
     height: 38,
-    borderRadius: 12,
+    borderRadius: 0,
     alignItems: "center",
     justifyContent: "center",
   },
   navBtnPlaceholder: { width: 38 },
   navTitle: {
     flex: 1,
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: "700",
     textAlign: "center",
-    letterSpacing: 0.2,
+    letterSpacing: 1,
+    textTransform: "uppercase",
   },
 
   // ── Brand Hero ──────────────────────────────
@@ -1549,45 +1396,43 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginHorizontal: 16,
     marginTop: 16,
-    borderRadius: 20,
+    borderRadius: 0,
     padding: 24,
     borderWidth: 1,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 1,
-    shadowRadius: 16,
-    elevation: 4,
   },
   heroLogo: {
     width: 88,
     height: 88,
-    borderRadius: 24,
+    borderRadius: 0,
     marginBottom: 16,
-    borderWidth: 2,
+    borderWidth: 1,
     overflow: "hidden",
     justifyContent: "center",
     alignItems: "center",
   },
   heroLogoText: { fontSize: 36, fontWeight: "700" },
   heroName: {
-    fontSize: 26,
+    fontSize: 24,
     fontWeight: "800",
-    letterSpacing: -0.3,
-    marginBottom: 10,
+    letterSpacing: 1,
+    textTransform: "uppercase",
+    marginBottom: 8,
     textAlign: "center",
   },
   statusBadge: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 0,
+    borderWidth: 1,
     marginBottom: 12,
   },
   statusBadgeText: {
-    fontSize: 12,
+    fontSize: 10,
     fontWeight: "700",
-    letterSpacing: 0.3,
+    letterSpacing: 1.5,
   },
   heroDescription: {
     fontSize: 14,
@@ -1612,7 +1457,7 @@ const styles = StyleSheet.create({
   },
   heroStat: { alignItems: "center", flex: 1 },
   heroStatValue: { fontSize: 22, fontWeight: "800" },
-  heroStatLabel: { fontSize: 11, fontWeight: "600", letterSpacing: 1, textTransform: "uppercase", marginTop: 2 },
+  heroStatLabel: { fontSize: 10, fontWeight: "700", letterSpacing: 1.5, textTransform: "uppercase", marginTop: 2 },
   heroStatDivider: { width: 1, height: 32, alignSelf: "center" },
   followBtn: {
     marginTop: 16,
@@ -1630,7 +1475,7 @@ const styles = StyleSheet.create({
   },
 
   // ── Management Section ──────────────────────
-  managementSection: { paddingHorizontal: 16, marginTop: 16, gap: 12 },
+  managementSection: { paddingHorizontal: 16, marginTop: 16, gap: 10 },
   actionRow: { flexDirection: "row", gap: 10 },
   actionBtn: {
     flex: 1,
@@ -1639,12 +1484,12 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 8,
     paddingVertical: 14,
-    borderRadius: 14,
+    borderRadius: 0,
   },
-  actionBtnText: { fontSize: 14, fontWeight: "700" },
+  actionBtnText: { fontSize: 12, fontWeight: "700", letterSpacing: 0.5, textTransform: "uppercase" },
 
   statusCard: {
-    borderRadius: 16,
+    borderRadius: 0,
     padding: 16,
     borderWidth: 1,
   },
@@ -1665,10 +1510,10 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingHorizontal: 14,
     paddingVertical: 9,
-    borderRadius: 10,
-    borderWidth: 1.5,
+    borderRadius: 0,
+    borderWidth: 1,
   },
-  statusOptionText: { fontSize: 13, fontWeight: "600" },
+  statusOptionText: { fontSize: 12, fontWeight: "700", letterSpacing: 0.5 },
 
   // ── Search & Filter ─────────────────────────
   searchFilterRow: {
@@ -1681,23 +1526,23 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
-    borderRadius: 14,
+    borderRadius: 0,
     paddingHorizontal: 14,
     height: 46,
     borderWidth: 1,
   },
-  searchInput: { flex: 1, fontSize: 15, paddingVertical: 0 },
+  searchInput: { flex: 1, fontSize: 14, paddingVertical: 0 },
   clearSearchBtn: {
     width: 22,
     height: 22,
-    borderRadius: 11,
+    borderRadius: 0,
     alignItems: "center",
     justifyContent: "center",
   },
   filterBtn: {
     width: 46,
     height: 46,
-    borderRadius: 14,
+    borderRadius: 0,
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
@@ -1706,9 +1551,9 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: -4,
     right: -4,
-    width: 18,
-    height: 18,
-    borderRadius: 9,
+    width: 16,
+    height: 16,
+    borderRadius: 0,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -1720,10 +1565,10 @@ const styles = StyleSheet.create({
   sortChip: {
     paddingHorizontal: 14,
     paddingVertical: 8,
-    borderRadius: 10,
+    borderRadius: 0,
     borderWidth: 1,
   },
-  sortChipText: { fontSize: 13, fontWeight: "600" },
+  sortChipText: { fontSize: 11, fontWeight: "700", letterSpacing: 0.5, textTransform: "uppercase" },
 
   // ── Products Header ─────────────────────────
   productsHeader: {
@@ -1731,23 +1576,23 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "baseline",
     paddingHorizontal: 16,
-    marginTop: 20,
+    marginTop: 24,
     marginBottom: 14,
   },
-  productsTitle: { fontSize: 20, fontWeight: "800", letterSpacing: -0.3 },
-  productCount: { fontSize: 13, fontWeight: "500" },
+  productsTitle: { fontSize: 12, fontWeight: "800", letterSpacing: 2, textTransform: "uppercase" },
+  productCount: { fontSize: 12, fontWeight: "500" },
 
   // ── Products List ───────────────────────────
   productsList: { paddingHorizontal: 16, paddingBottom: 8 },
   productsLoadingWrap: { paddingVertical: 48, alignItems: "center" },
   loadMoreBtn: {
-    borderRadius: 14,
+    borderRadius: 0,
     paddingVertical: 14,
     alignItems: "center",
     marginTop: 12,
     borderWidth: 1,
   },
-  loadMoreText: { fontSize: 14, fontWeight: "600" },
+  loadMoreText: { fontSize: 12, fontWeight: "700", letterSpacing: 0.5, textTransform: "uppercase" },
 
   // ── Empty State ─────────────────────────────
   emptyState: {
@@ -1755,17 +1600,17 @@ const styles = StyleSheet.create({
     paddingVertical: 48,
     paddingHorizontal: 24,
     marginHorizontal: 16,
-    borderRadius: 18,
+    borderRadius: 0,
     borderWidth: 1,
     gap: 8,
   },
-  emptyTitle: { fontSize: 16, fontWeight: "600" },
-  emptySubtitle: { fontSize: 14, textAlign: "center" },
+  emptyTitle: { fontSize: 14, fontWeight: "700", letterSpacing: 0.5 },
+  emptySubtitle: { fontSize: 13, textAlign: "center" },
 
   // ── Danger Zone ─────────────────────────────
   dangerZone: { paddingHorizontal: 16, marginTop: 32 },
   dangerCard: {
-    borderRadius: 16,
+    borderRadius: 0,
     padding: 18,
     borderWidth: 1,
   },
@@ -1775,7 +1620,7 @@ const styles = StyleSheet.create({
     gap: 8,
     marginBottom: 8,
   },
-  dangerTitle: { fontSize: 14, fontWeight: "700" },
+  dangerTitle: { fontSize: 12, fontWeight: "800", letterSpacing: 1.5, textTransform: "uppercase" },
   dangerDescription: { fontSize: 13, lineHeight: 20, marginBottom: 14 },
   deleteBtn: {
     flexDirection: "row",
@@ -1783,16 +1628,16 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 8,
     paddingVertical: 12,
-    borderRadius: 12,
-    borderWidth: 1.5,
+    borderRadius: 0,
+    borderWidth: 1,
   },
-  deleteBtnText: { fontSize: 14, fontWeight: "700" },
+  deleteBtnText: { fontSize: 12, fontWeight: "700", letterSpacing: 0.5, textTransform: "uppercase" },
 
   // ── Filter Modal ────────────────────────────
   modalOverlay: { flex: 1, justifyContent: "flex-end" },
   modalContent: {
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    borderTopLeftRadius: 0,
+    borderTopRightRadius: 0,
     maxHeight: Dimensions.get("window").height * 0.8,
   },
   modalHeader: {
@@ -1803,35 +1648,59 @@ const styles = StyleSheet.create({
     paddingVertical: 18,
     borderBottomWidth: 1,
   },
-  modalTitle: { fontSize: 18, fontWeight: "700" },
+  modalTitle: { fontSize: 12, fontWeight: "800", letterSpacing: 2, textTransform: "uppercase" },
   filterSection: {
     paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingTop: 20,
+    paddingBottom: 4,
     borderBottomWidth: 1,
   },
-  filterSectionTitle: { fontSize: 15, fontWeight: "600", marginBottom: 12 },
-  filterChips: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  filterChip: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 10,
-    borderWidth: 1,
+  filterSectionTitle: {
+    fontSize: 10,
+    fontWeight: "700",
+    letterSpacing: 2,
+    textTransform: "uppercase",
+    marginBottom: 8,
   },
-  filterChipText: { fontSize: 13, fontWeight: "500" },
-  priceRow: {
+  filterRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
+    justifyContent: "space-between",
+    paddingVertical: 16,
+  },
+  filterRowLabel: {
+    fontSize: 15,
+    letterSpacing: 0.2,
+  },
+  priceRow: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+    gap: 0,
+    marginTop: 8,
+    marginBottom: 16,
+  },
+  priceInputGroup: {
+    flex: 1,
+    gap: 6,
+  },
+  priceLabel: {
+    fontSize: 10,
+    fontWeight: "700",
+    letterSpacing: 2,
   },
   priceInput: {
-    flex: 1,
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderWidth: 1,
-    fontSize: 14,
+    fontSize: 20,
+    fontWeight: "300",
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    paddingHorizontal: 0,
   },
-  priceDash: { fontSize: 16, fontWeight: "300" },
+  priceSeparator: {
+    width: 24,
+    height: 1,
+    marginHorizontal: 12,
+    marginBottom: 12,
+  },
   modalFooter: {
     flexDirection: "row",
     padding: 20,
@@ -1840,19 +1709,19 @@ const styles = StyleSheet.create({
   },
   modalResetBtn: {
     flex: 1,
-    borderRadius: 14,
+    borderRadius: 0,
     paddingVertical: 14,
     alignItems: "center",
     borderWidth: 1,
   },
-  modalResetText: { fontSize: 15, fontWeight: "600" },
+  modalResetText: { fontSize: 12, fontWeight: "700", letterSpacing: 0.5, textTransform: "uppercase" },
   modalApplyBtn: {
     flex: 1,
-    borderRadius: 14,
+    borderRadius: 0,
     paddingVertical: 14,
     alignItems: "center",
   },
-  modalApplyText: { fontSize: 15, fontWeight: "700" },
+  modalApplyText: { fontSize: 12, fontWeight: "700", letterSpacing: 0.5, textTransform: "uppercase" },
 
   scrollContent: { paddingBottom: 20 },
 });

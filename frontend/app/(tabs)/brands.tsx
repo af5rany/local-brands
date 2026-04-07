@@ -122,11 +122,8 @@ const BrandsTab = () => {
       if (product.images && product.images.length > 0) {
         return product.images[0];
       }
-      if (product.variants && product.variants.length > 0) {
-        const variant = product.variants[0];
-        if (variant.images && variant.images.length > 0) {
-          return variant.images[0];
-        }
+      if (product.mainImage) {
+        return product.mainImage;
       }
     }
     return null;
@@ -301,7 +298,7 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
   },
   listContent: {
-    paddingBottom: 32,
+    paddingBottom: 110,
   },
   brandCard: {
     marginHorizontal: 20,

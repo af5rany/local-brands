@@ -29,6 +29,7 @@ export interface User {
   isEmailVerified: boolean;
   isPhoneVerified: boolean;
   avatar?: string;
+  lastLoginAt?: string;
   createdAt: string;
   updatedAt: string;
   brandUsers?: BrandUser[];

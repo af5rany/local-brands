@@ -1,12 +1,16 @@
-import React from "react";
+import React, { useRef, useCallback } from "react";
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
+  Pressable,
+  Animated,
   Dimensions,
 } from "react-native";
 import { useRouter } from "expo-router";
+import { useAuth } from "@/context/AuthContext";
+import { useToast } from "@/context/ToastContext";
 import { useThemeColor, useThemeColors } from "@/hooks/useThemeColor";
 import { Ionicons } from "@expo/vector-icons";
 import { Product } from "@/types/product";
@@ -23,9 +27,37 @@ interface ProductCardProps {
   onToggleWishlist?: (productId: number) => void;
 }
 
-const ProductCard: React.FC<ProductCardProps> = ({ product, onEdit, isWishlisted = false, onToggleWishlist }) => {
+const ProductCard: React.FC<ProductCardProps> = ({
+  product,
+  onEdit,
+  isWishlisted = false,
+  onToggleWishlist,
+}) => {
   const router = useRouter();
-  // console.log("ProductCard rendered with product:", JSON.stringify(product));
+  const [isNotified, setIsNotified] = React.useState(false);
+
+  // Press animation — subtle scale like App Store cards
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+
+  const onPressIn = useCallback(() => {
+    Animated.spring(scaleAnim, {
+      toValue: 0.97,
+      useNativeDriver: true,
+      speed: 50,
+      bounciness: 4,
+    }).start();
+  }, [scaleAnim]);
+
+  const onPressOut = useCallback(() => {
+    Animated.spring(scaleAnim, {
+      toValue: 1,
+      useNativeDriver: true,
+      speed: 20,
+      bounciness: 4,
+    }).start();
+  }, [scaleAnim]);
+  const { token } = useAuth();
+  const { showToast } = useToast();
   // Theme colors
   const backgroundColor = useThemeColor({}, "background");
   const textColor = useThemeColor({}, "text");
@@ -59,24 +91,15 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onEdit, isWishlisted
     router.push(`/products/${product.id}`);
   };
 
-  // Collect all images: variant images → product images → mainImage fallback
+  // Collect all images from product level
   const getAllProductImages = (): string[] => {
-    const images: string[] = [];
-    if (product.variants && product.variants.length > 0) {
-      for (const variant of product.variants) {
-        const imgs = variant.variantImages || variant.images || [];
-        if (imgs.length > 0) {
-          images.push(...imgs);
-        }
-      }
+    if (product.images && product.images.length > 0) {
+      return product.images;
     }
-    if (images.length === 0 && product.images && product.images.length > 0) {
-      images.push(...product.images);
+    if (product.mainImage) {
+      return [product.mainImage];
     }
-    if (images.length === 0 && product.mainImage) {
-      images.push(product.mainImage);
-    }
-    return images;
+    return [];
   };
 
   // Calculate discount percentage
@@ -200,12 +223,6 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onEdit, isWishlisted
             ? colors.textTertiary
             : colors.discountBadge,
     },
-    statusText: {
-      fontSize: 10,
-      fontWeight: "700",
-      color: colors.primaryForeground,
-      textTransform: "uppercase",
-    },
     productDetails: {
       flex: 1,
     },
@@ -273,7 +290,6 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onEdit, isWishlisted
       alignItems: "center",
       justifyContent: "center",
       flexDirection: "row",
-      opacity: product.stock > 0 ? 1 : 0.5,
     },
     addToCartText: {
       color: cardBackground,
@@ -283,6 +299,26 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onEdit, isWishlisted
       textTransform: "uppercase",
       letterSpacing: 1,
     },
+    notifyButton: {
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: accentColor,
+      paddingVertical: 14,
+      paddingHorizontal: 16,
+      borderRadius: 0,
+      alignItems: "center",
+      justifyContent: "center",
+      flexDirection: "row",
+    },
+    notifyButtonText: {
+      color: accentColor,
+      fontSize: 13,
+      fontWeight: "600",
+      marginLeft: 6,
+      textTransform: "uppercase",
+      letterSpacing: 1,
+    },
+
     decorativeElements: {
       position: "absolute",
       top: 0,
@@ -324,161 +360,232 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onEdit, isWishlisted
   });
 
   return (
-    <TouchableOpacity onPress={handlePress} style={styles.cardContainer}>
-      {/* Product Image Carousel */}
-      <View style={styles.imageContainer}>
-        <AutoSwipeImages
-          images={productImages}
-          width={width - 32 - 32}
-          height={width - 32 - 32}
-          borderRadius={16}
-        />
-
-        {/* Product Type Tag */}
-        {product.productType && (
-          <View style={styles.typeTag}>
-            <Text style={styles.typeText}>{product.productType}</Text>
-          </View>
-        )}
-
-        {/* Discount Badge */}
-        {hasDiscount && !onEdit && (
-          <View style={styles.discountBadge}>
-            <Text style={styles.discountText}>{discountPercentage}% OFF</Text>
-          </View>
-        )}
-
-        {/* Status Badge (for Management Mode) */}
-        {product.status && (
-          <View style={styles.statusBadge}>
-            <Text style={styles.statusText}>{product.status}</Text>
-          </View>
-        )}
-
-        {/* Stock Indicator */}
-        <View style={styles.stockIndicator}>
-          <Ionicons
-            name={product.stock > 0 ? "checkmark-circle" : "close-circle"}
-            size={10}
-            color={colors.primaryForeground}
+    <Pressable
+      onPress={handlePress}
+      onPressIn={onPressIn}
+      onPressOut={onPressOut}
+    >
+      <Animated.View
+        style={[styles.cardContainer, { transform: [{ scale: scaleAnim }] }]}
+      >
+        {/* Product Image Carousel */}
+        <View style={styles.imageContainer}>
+          <AutoSwipeImages
+            images={productImages}
+            width={width - 32}
+            height={width - 32}
+            borderRadius={0}
           />
-          <Text style={styles.stockText}>
-            {product.stock > 0 ? `${product.stock}` : "Out"}
-          </Text>
-        </View>
 
-        {/* Favorite Button */}
-        <TouchableOpacity
-          style={styles.favoriteButton}
-          onPress={(e) => {
-            e.stopPropagation();
-            onToggleWishlist?.(product.id);
-          }}
-        >
-          <Ionicons
-            name={isWishlisted ? "heart" : "heart-outline"}
-            size={16}
-            color={isWishlisted ? colors.wishlistHeart : textColor}
-          />
-        </TouchableOpacity>
+          {/* Product Type Tag */}
+          {product.productType && (
+            <View style={styles.typeTag}>
+              <Text style={styles.typeText}>{product.productType}</Text>
+            </View>
+          )}
 
-        {/* Edit Button for Management */}
-        {onEdit && (
+          {/* Discount Badge */}
+          {hasDiscount && !onEdit && (
+            <View style={styles.discountBadge}>
+              <Text style={styles.discountText}>{discountPercentage}% OFF</Text>
+            </View>
+          )}
+
+          {/* Stock Indicator */}
+          <View style={styles.stockIndicator}>
+            <Ionicons
+              name={product.stock > 0 ? "checkmark-circle" : "close-circle"}
+              size={10}
+              color={colors.primaryForeground}
+            />
+            <Text style={styles.stockText}>
+              {product.stock > 0 ? `${product.stock}` : "Out"}
+            </Text>
+          </View>
+
+          {/* Favorite Button */}
           <TouchableOpacity
-            style={[
-              styles.favoriteButton,
-              { top: 12, right: 12, bottom: undefined },
-            ]}
+            style={styles.favoriteButton}
             onPress={(e) => {
               e.stopPropagation();
-              onEdit(product.id);
+              if (!token) {
+                router.push("/auth/login");
+                return;
+              }
+              onToggleWishlist?.(product.id);
             }}
           >
-            <Ionicons name="create-outline" size={16} color={buttonColor} />
+            <Ionicons
+              name={isWishlisted ? "heart" : "heart-outline"}
+              size={16}
+              color={isWishlisted ? colors.wishlistHeart : textColor}
+            />
           </TouchableOpacity>
-        )}
-      </View>
 
-      {/* Product Details */}
-      <View style={styles.productDetails}>
-        {/* Brand Name */}
-        <Text style={styles.brandName}>{product.brandName}</Text>
-
-        {/* Product Name */}
-        <Text style={styles.productName} numberOfLines={2}>
-          {product.name}
-        </Text>
-
-        {/* Price Container */}
-        <View style={styles.priceContainer}>
-          <Text style={styles.productPrice}>${displayPrice}</Text>
-          {hasDiscount && (
-            <Text style={styles.originalPrice}>${product.price}</Text>
+          {/* Edit Button for Management */}
+          {onEdit && (
+            <TouchableOpacity
+              style={[
+                styles.favoriteButton,
+                { top: 12, right: 12, bottom: undefined },
+              ]}
+              onPress={(e) => {
+                e.stopPropagation();
+                onEdit(product.id);
+              }}
+            >
+              <Ionicons name="create-outline" size={16} color={buttonColor} />
+            </TouchableOpacity>
           )}
         </View>
 
-        {/* Product Info */}
-        <View style={styles.productInfo}>
-          {product.gender && (
-            <View style={styles.infoItem}>
-              <Ionicons
-                name="person-outline"
-                size={12}
-                color={secondaryTextColor}
-              />
-              <Text style={styles.infoText}>{product.gender}</Text>
-            </View>
-          )}
-          {product.season && (
-            <View style={styles.infoItem}>
-              <Ionicons
-                name="sunny-outline"
-                size={12}
-                color={secondaryTextColor}
-              />
-              <Text style={styles.infoText}>{product.season}</Text>
-            </View>
-          )}
-          {product.isFeatured && (
-            <View style={styles.infoItem}>
-              <Ionicons name="star" size={12} color={colors.text} />
-              <Text style={styles.infoText}>Featured</Text>
-            </View>
-          )}
-        </View>
+        {/* Product Details */}
+        <View style={styles.productDetails}>
+          {/* Brand Name */}
+          <Text style={styles.brandName}>{product.brandName}</Text>
 
-        {/* Color Preview */}
-        {product.variants && product.variants.length > 0 && (
-          <View style={styles.colorPreview}>
-            {product.variants.slice(0, 4).map((variant, index) => (
-              <View
-                key={index}
-                style={[
-                  styles.colorDot,
-                  { backgroundColor: variant.colorHex || variant.color },
-                ]}
-              />
-            ))}
-            {product.variants.length > 4 && (
-              <Text style={styles.infoText}>
-                +{product.variants.length - 4}
-              </Text>
+          {/* Product Name */}
+          <Text style={styles.productName} numberOfLines={2}>
+            {product.name}
+          </Text>
+
+          {/* Price Container */}
+          <View style={styles.priceContainer}>
+            <Text style={styles.productPrice}>${displayPrice}</Text>
+            {hasDiscount && (
+              <Text style={styles.originalPrice}>${product.price}</Text>
             )}
           </View>
-        )}
 
-        {/* Add to Cart Button */}
-        <TouchableOpacity
-          style={styles.addToCartButton}
-          disabled={product.stock === 0}
-        >
-          <Ionicons name="bag-outline" size={16} color={cardBackground} />
-          <Text style={styles.addToCartText}>
-            {product.stock > 0 ? "Add to Cart" : "Out of Stock"}
-          </Text>
-        </TouchableOpacity>
-      </View>
-    </TouchableOpacity>
+          {/* Product Info */}
+          <View style={styles.productInfo}>
+            {product.gender && (
+              <View style={styles.infoItem}>
+                <Ionicons
+                  name="person-outline"
+                  size={12}
+                  color={secondaryTextColor}
+                />
+                <Text style={styles.infoText}>{product.gender}</Text>
+              </View>
+            )}
+            {product.season && (
+              <View style={styles.infoItem}>
+                <Ionicons
+                  name="sunny-outline"
+                  size={12}
+                  color={secondaryTextColor}
+                />
+                <Text style={styles.infoText}>{product.season}</Text>
+              </View>
+            )}
+            {product.isFeatured && (
+              <View style={styles.infoItem}>
+                <Ionicons name="star" size={12} color={colors.text} />
+                <Text style={styles.infoText}>Featured</Text>
+              </View>
+            )}
+          </View>
+
+          {/* Color Preview */}
+          {product.color && (
+            <View style={styles.colorPreview}>
+              <View
+                style={[styles.colorDot, { backgroundColor: product.color }]}
+              />
+            </View>
+          )}
+
+          {/* Add to Cart / Notify Me */}
+          {product.stock > 0 ? (
+            <TouchableOpacity style={styles.addToCartButton}>
+              <Ionicons name="bag-outline" size={16} color={cardBackground} />
+              <Text style={styles.addToCartText}>Add to Cart</Text>
+            </TouchableOpacity>
+          ) : (
+            <View>
+              {/* Status indicator — inform first, then offer action */}
+              <View
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  paddingHorizontal: 16,
+                  marginBottom: 12,
+                }}
+              >
+                <View
+                  style={{
+                    height: StyleSheet.hairlineWidth,
+                    flex: 1,
+                    backgroundColor: borderColor,
+                  }}
+                />
+                <Text
+                  style={{
+                    fontSize: 9,
+                    color: colors.textTertiary,
+                    textTransform: "uppercase",
+                    letterSpacing: 3,
+                    fontWeight: "600",
+                    paddingHorizontal: 12,
+                  }}
+                >
+                  Sold Out
+                </Text>
+                <View
+                  style={{
+                    height: StyleSheet.hairlineWidth,
+                    flex: 1,
+                    backgroundColor: borderColor,
+                  }}
+                />
+              </View>
+
+              {/* CTA — flush bottom, matching Add to Cart placement */}
+              <TouchableOpacity
+                style={[
+                  styles.notifyButton,
+                  isNotified && {
+                    opacity: 0.5,
+                    borderColor: colors.textTertiary,
+                  },
+                ]}
+                disabled={isNotified}
+                onPress={() => {
+                  if (!token) {
+                    router.push("/auth/login");
+                    return;
+                  }
+                  setIsNotified(true);
+                  showToast(
+                    "You'll be notified when it's back in stock",
+                    "success",
+                  );
+                }}
+              >
+                <Ionicons
+                  name={
+                    isNotified
+                      ? "checkmark-circle-outline"
+                      : "notifications-outline"
+                  }
+                  size={14}
+                  color={isNotified ? colors.textTertiary : accentColor}
+                />
+                <Text
+                  style={[
+                    styles.notifyButtonText,
+                    isNotified && { color: colors.textTertiary },
+                  ]}
+                >
+                  {isNotified ? "Subscribed" : "Notify Me"}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
+      </Animated.View>
+    </Pressable>
   );
 };
 

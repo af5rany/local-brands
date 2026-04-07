@@ -24,7 +24,8 @@ export class AuthService {
   ) {}
 
   async validateUser(email: string, pass: string): Promise<User | null> {
-    const user = await this.usersService.findByEmail(email);
+    const normalizedEmail = email.trim().toLowerCase();
+    const user = await this.usersService.findByEmail(normalizedEmail);
     if (user && (await bcrypt.compare(pass, user.password))) {
       user.password = '';
       return user;
@@ -87,6 +88,8 @@ export class AuthService {
         `Registration as ${dto.role} is not allowed through this endpoint`,
       );
     }
+
+    dto.email = dto.email.trim().toLowerCase();
 
     const hashed = await bcrypt.hash(dto.password, 10);
     let newUser: User;

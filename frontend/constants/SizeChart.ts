@@ -12,6 +12,7 @@ export const SIZE_CHART: Record<string, string[]> = {
   [ProductType.HATS]: ["S", "M", "L"],
   [ProductType.BAGS]: [],
   [ProductType.ACCESSORIES]: [],
+  [ProductType.TSHIRTS]: ["XS", "S", "M", "L", "XL", "XXL"],
 };
 
 // Color palette for variant color picker

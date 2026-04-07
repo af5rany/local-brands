@@ -298,10 +298,10 @@ const ProductsListScreen = () => {
       <View style={styles.productContent}>
         <View style={styles.productHeader}>
           <View style={styles.imageContainer}>
-            {item.variants?.[0]?.variantImages?.[0] ? (
+            {item.images?.[0] || item.mainImage ? (
               <Image
                 style={styles.productImage}
-                source={{ uri: item.variants[0].variantImages[0] }}
+                source={{ uri: item.images?.[0] || item.mainImage }}
                 defaultSource={require("@/assets/images/placeholder-logo.png")}
               />
             ) : (

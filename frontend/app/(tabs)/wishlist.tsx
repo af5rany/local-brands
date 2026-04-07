@@ -141,9 +141,9 @@ const WishlistTab = () => {
 
   const renderProductItem = ({ item }: { item: any }) => {
     const product = item.product;
-    const firstVariant = product.variants?.[0];
+    if (!product) return null;
     const image =
-      product.mainImage || firstVariant?.images?.[0] || firstVariant?.variantImages?.[0] || product.images?.[0] || "";
+      product.mainImage || product.images?.[0] || "";
 
     return (
       <TouchableOpacity

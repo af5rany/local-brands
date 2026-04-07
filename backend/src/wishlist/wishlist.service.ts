@@ -86,11 +86,16 @@ export class WishlistService {
       throw new NotFoundException(`User with ID ${userId} not found`);
     }
 
-    return this.wishlistRepository.find({
-      where: { user: { id: userId } },
-      relations: ['product'],
-      order: { createdAt: 'DESC' },
-    });
+    return this.wishlistRepository
+      .createQueryBuilder('wishlist')
+      .innerJoinAndSelect(
+        'wishlist.product',
+        'product',
+        'product.deletedAt IS NULL',
+      )
+      .where('wishlist.userId = :userId', { userId })
+      .orderBy('wishlist.createdAt', 'DESC')
+      .getMany();
   }
 
   async findByProduct(productId: number): Promise<Wishlist[]> {

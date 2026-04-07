@@ -121,11 +121,8 @@ const CartScreen = () => {
     const variant = item.variant;
     const product = item.product;
     const image =
-      variant?.images?.[0] ||
-      product?.productVariants?.[0]?.images?.[0] ||
       product?.images?.[0] ||
-      product?.variants?.[0]?.variantImages?.[0] ||
-      product?.variants?.[0]?.images?.[0] ||
+      product?.mainImage ||
       "";
 
     return (
@@ -138,9 +135,9 @@ const CartScreen = () => {
           >
             {product.name}
           </Text>
-          {variant && (
+          {(product?.color || variant?.size) && (
             <Text style={[styles.itemVariant, { color: secondaryTextColor }]}>
-              {variant.attributes?.color || "Default"}
+              {[product?.color ? `Color` : null, variant?.size ? `Size: ${variant.size}` : null].filter(Boolean).join(" • ")}
             </Text>
           )}
           <Text style={[styles.itemPrice, { color: textColor }]}>
@@ -225,7 +222,7 @@ const CartScreen = () => {
           </Text>
           <TouchableOpacity
             style={styles.discoverBtn}
-            onPress={() => router.push("/")}
+            onPress={() => router.push("/shop")}
           >
             <Text style={styles.discoverBtnText}>DISCOVER PRODUCTS</Text>
           </TouchableOpacity>

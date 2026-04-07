@@ -52,8 +52,8 @@ const ProductManagementCard: React.FC<ProductManagementCardProps> = ({
   );
 
   const thumbnail =
-    product.variants?.[0]?.variantImages?.[0] ??
-    product.variants?.[0]?.images?.[0] ??
+    product.images?.[0] ??
+    product.mainImage ??
     null;
 
   const displayPrice =
@@ -111,23 +111,15 @@ const ProductManagementCard: React.FC<ProductManagementCardProps> = ({
           </Text>
         ) : null}
 
-        {/* Color dots */}
-        {product.variants && product.variants.length > 0 && (
+        {/* Color dot */}
+        {product.color && (
           <View style={styles.colorRow}>
-            {product.variants.slice(0, 5).map((v, i) => (
-              <View
-                key={i}
-                style={[
-                  styles.colorDot,
-                  { backgroundColor: v.colorHex ?? v.color ?? "#ccc", borderColor },
-                ]}
-              />
-            ))}
-            {product.variants.length > 5 && (
-              <Text style={[styles.meta, { color: secondaryTextColor }]}>
-                +{product.variants.length - 5}
-              </Text>
-            )}
+            <View
+              style={[
+                styles.colorDot,
+                { backgroundColor: product.color, borderColor },
+              ]}
+            />
           </View>
         )}
       </View>

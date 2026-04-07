@@ -242,11 +242,9 @@ export class CartService {
     }
 
     // Determine unit price (Server-owned pricing)
-    const unitPrice = variant?.priceOverride
-      ? Number(variant.priceOverride)
-      : product.salePrice
-        ? Number(product.salePrice)
-        : Number(product.price);
+    const unitPrice = product.salePrice
+      ? Number(product.salePrice)
+      : Number(product.price);
 
     // Check if item already exists with same variant
     let cartItem = await this.cartItemRepository.findOne({
@@ -289,8 +287,8 @@ export class CartService {
         unitPrice: unitPrice,
         totalPrice: newQuantity * unitPrice,
         // Snapshot attributes if available for display
-        selectedColor: variant?.attributes?.color,
-        selectedSize: variant?.attributes?.size,
+        selectedColor: product.color,
+        selectedSize: variant?.size,
       });
     }
 

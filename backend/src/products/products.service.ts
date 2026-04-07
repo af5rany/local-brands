@@ -61,6 +61,9 @@ export class ProductsService {
 
     const qb = this.productsRepository.createQueryBuilder('product');
 
+    // Exclude soft-deleted products
+    qb.andWhere('product.deletedAt IS NULL');
+
     // Always join with brand and productVariants tables
     qb.leftJoinAndSelect('product.brand', 'brand');
     qb.leftJoinAndSelect('product.productVariants', 'productVariants');
@@ -205,7 +208,8 @@ export class ProductsService {
     const categoriesQuery = await this.productsRepository
       .createQueryBuilder('product')
       .select('DISTINCT(product.subcategory)', 'category')
-      .where("product.subcategory IS NOT NULL AND product.subcategory != ''")
+      .where('product.deletedAt IS NULL')
+      .andWhere("product.subcategory IS NOT NULL AND product.subcategory != ''")
       .getRawMany();
 
     const categories = categoriesQuery.map((item) => item.category);
@@ -268,7 +272,8 @@ export class ProductsService {
       .createQueryBuilder('product')
       .leftJoinAndSelect('product.brand', 'brand')
       .leftJoinAndSelect('product.productVariants', 'productVariants')
-      .where('product.id != :id', { id })
+      .where('product.deletedAt IS NULL')
+      .andWhere('product.id != :id', { id })
       .andWhere('product.status = :status', { status: ProductStatus.PUBLISHED })
       .andWhere('product.isAvailable = true');
 
@@ -336,10 +341,7 @@ export class ProductsService {
     const isLowStock =
       inStock && totalStock <= (product.lowStockThreshold || 10);
 
-    // For variant images fallback to product images
-    const mainImage = hasVariants
-      ? pvs[0]?.images?.[0] || product.images?.[0] || ''
-      : product.images?.[0] || '';
+    const mainImage = product.images?.[0] || '';
 
     return {
       id: product.id,
@@ -352,6 +354,7 @@ export class ProductsService {
       currency: product.currency,
       mainImage,
       images: product.images || [],
+      color: product.color || null,
       brand: {
         id: product.brand?.id,
         name: product.brand?.name,
@@ -367,16 +370,8 @@ export class ProductsService {
       variants: pvs.map((pv) => ({
         id: pv.id,
         productId: pv.productId,
-        sku: pv.sku,
-        attributes: pv.attributes || {},
-        color: pv.attributes?.color,
-        size: pv.attributes?.size,
-        priceOverride: pv.priceOverride
-          ? Number(pv.priceOverride)
-          : undefined,
+        size: pv.size,
         stock: pv.stock,
-        images: pv.images || [],
-        variantImages: pv.images || [],
         isAvailable: pv.isAvailable,
       })),
       rating: Number(product.averageRating),
@@ -416,19 +411,13 @@ export class ProductsService {
       const product = this.productsRepository.create(productData);
       const saved = await manager.save(Product, product);
 
-      // Create ProductVariant rows if variants provided
+      // Create ProductVariant rows if variants provided (size + stock)
       if (variantsInput && Array.isArray(variantsInput) && variantsInput.length > 0) {
         const variantEntities = variantsInput.map((v: any) =>
           this.variantRepository.create({
             productId: saved.id,
-            attributes: {
-              ...(v.attributes ?? {}),
-              ...(v.color ? { color: v.color } : {}),
-              ...(v.size ? { size: v.size } : {}),
-            },
+            size: v.size,
             stock: v.stock || 0,
-            priceOverride: v.priceOverride || null,
-            images: v.variantImages || v.images || [],
             isAvailable: true,
           }),
         );
@@ -499,19 +488,14 @@ export class ProductsService {
     await this.dataSource.transaction(async (manager) => {
       await manager.update(Product, id, updatePayload);
 
-      // Sync ProductVariant rows when variants are provided
+      // Sync ProductVariant rows when variants are provided (size + stock)
       if (variantsInput && Array.isArray(variantsInput)) {
         await manager.delete(ProductVariant, { productId: id });
         const variantEntities = variantsInput.map((v: any) =>
           this.variantRepository.create({
             productId: id,
-            attributes: {
-              ...(v.attributes ?? {}),
-              ...(v.color ? { color: v.color } : {}),
-              ...(v.size ? { size: v.size } : {}),
-            },
+            size: v.size,
             stock: v.stock || 0,
-            images: v.variantImages || v.images || [],
             isAvailable: true,
           }),
         );
@@ -565,7 +549,11 @@ export class ProductsService {
   }
 
   async remove(id: number): Promise<void> {
-    await this.productsRepository.softDelete(id);
+    const result = await this.productsRepository.softDelete(id);
+    console.log(`[ProductsService] softDelete id=${id}, affected=${result.affected}`);
+    if (result.affected === 0) {
+      throw new NotFoundException(`Product with ID ${id} not found`);
+    }
   }
 
   async batchCreate(
@@ -630,13 +618,8 @@ export class ProductsService {
           const variantEntities = (data.variants as any[]).map((v: any) =>
             this.variantRepository.create({
               productId: savedProduct.id,
-              attributes: {
-                ...(v.attributes ?? {}),
-                ...(v.color ? { color: v.color } : {}),
-                ...(v.size ? { size: v.size } : {}),
-              },
+              size: v.size,
               stock: v.stock || 0,
-              images: v.variantImages || v.images || [],
               isAvailable: true,
             }),
           );

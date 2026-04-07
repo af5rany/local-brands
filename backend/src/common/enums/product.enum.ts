@@ -17,6 +17,7 @@ export enum ProductType {
   JACKETS = 'Jackets',
   BAGS = 'Bags',
   HATS = 'Hats',
+  TSHIRTS = 'T-Shirts',
 }
 export enum SortBy {
   NAME = 'name',

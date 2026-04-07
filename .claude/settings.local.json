@@ -65,7 +65,11 @@
       "Bash(./node_modules/.bin/tsc --noEmit)",
       "Bash(node_modules/.bin/tsc --noEmit)",
       "Bash(curl -s http://localhost:5000/feed)",
-      "Bash(grep -E \"\\\\.\\(tsx|ts\\)$\")"
+      "Bash(grep -E \"\\\\.\\(tsx|ts\\)$\")",
+      "Bash(./node_modules/.bin/nest build:*)",
+      "Bash(curl:*)",
+      "Bash(psql:*)",
+      "Bash(docker ps:*)"
     ]
   }
 }

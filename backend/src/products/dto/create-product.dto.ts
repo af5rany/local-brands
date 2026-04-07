@@ -6,10 +6,6 @@ import {
   IsArray,
   IsOptional,
   ValidateNested,
-  IsUrl,
-  ArrayMinSize,
-  ArrayMaxSize,
-  Matches,
   Min,
 } from 'class-validator';
 import { Type, Transform } from 'class-transformer';
@@ -22,28 +18,11 @@ import { Gender } from 'src/common/enums/user.enum';
 
 export class CreateProductVariantDto {
   @IsString()
-  color: string;
-
-  @IsOptional()
-  @IsString()
-  size?: string;
-
-  @IsArray()
-  @ArrayMinSize(1)
-  @ArrayMaxSize(5)
-  @Matches(/^https:\/\/res\.cloudinary\.com\/.*$/, {
-    each: true,
-    message: 'Each image must be a valid Cloudinary URL',
-  })
-  variantImages: string[];
+  size: string;
 
   @IsNumber()
   @Min(0)
   stock: number;
-
-  @IsOptional()
-  @IsNumber()
-  priceOverride?: number;
 }
 
 export class CreateProductDto {
@@ -139,6 +118,10 @@ export class CreateProductDto {
   brandId: number;
 
   @IsOptional()
+  @IsString()
+  color?: string;
+
+  @IsOptional()
   @IsNumber()
   @Min(0)
   stock?: number;
@@ -150,7 +133,6 @@ export class CreateProductDto {
 
   @IsOptional()
   @IsArray()
-  @ArrayMaxSize(20)
   @ValidateNested({ each: true })
   @Type(() => CreateProductVariantDto)
   variants?: CreateProductVariantDto[];

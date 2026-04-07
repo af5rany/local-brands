@@ -78,11 +78,8 @@ export class RolesGuard implements CanActivate {
       throw new ForbiddenException('User not authenticated');
     }
 
-    // Check user status - Blocked or Suspended users cannot perform actions
-    if (
-      user.status === UserStatus.BLOCKED ||
-      user.status === UserStatus.SUSPENDED
-    ) {
+    // Check user status - Blocked users cannot perform actions
+    if (user.status === UserStatus.BLOCKED) {
       throw new ForbiddenException(
         `Access denied. Your account is ${user.status}.`,
       );

@@ -8,6 +8,7 @@ export enum ProductType {
   JACKETS = "Jackets",
   BAGS = "Bags",
   HATS = "Hats",
+  TSHIRTS = "T-Shirts",
 }
 
 // Gender Enum
@@ -40,7 +41,6 @@ export enum UserRole {
 // UserStatus Enum
 export enum UserStatus {
   APPROVED = "approved",
-  SUSPENDED = "suspended",
   BLOCKED = "blocked",
 }
 

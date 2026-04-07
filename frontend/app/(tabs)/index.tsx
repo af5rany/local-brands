@@ -34,6 +34,7 @@ const CATEGORIES = [
   { label: "Bags", type: "Bags", icon: "bag-handle-outline" },
   { label: "Accessories", type: "Accessories", icon: "watch-outline" },
   { label: "Hats", type: "Hats", icon: "sunny-outline" },
+  { label: "T-Shirts", type: "T-Shirts", icon: "shirt-outline" },
 ];
 
 // ── Promotional Banners ─────────────────────────────────────
@@ -318,11 +319,9 @@ const searchBarScale = useRef(new Animated.Value(1));
     // Use product images if available, else first variant's images (don't mix across variants)
     const cardImages: string[] = item.images?.length
       ? item.images
-      : item.variants?.[0]?.images?.length
-        ? item.variants[0].images
-        : item.mainImage
-          ? [item.mainImage]
-          : [];
+      : item.mainImage
+        ? [item.mainImage]
+        : [];
 
     const hasDiscount = item.salePrice && item.salePrice < item.price;
     const discountPercent = hasDiscount
@@ -836,6 +835,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
+    paddingBottom: 110,
   },
   loadingContainer: {
     flex: 1,

@@ -1,10 +1,9 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import {
   View,
   Text,
   TextInput,
   StyleSheet,
-  Pressable,
   Image,
   Alert,
   ActivityIndicator,
@@ -14,63 +13,50 @@ import {
   StatusBar,
   Platform,
   KeyboardAvoidingView,
+  useColorScheme,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { Dropdown } from "react-native-element-dropdown";
 import { Ionicons } from "@expo/vector-icons";
-import { LinearGradient } from "expo-linear-gradient";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import getApiUrl from "@/helpers/getApiUrl";
-import { useThemeColor } from "@/hooks/useThemeColor";
 import { useAuth } from "@/context/AuthContext";
 import { Brand } from "@/types/brand";
 import { BrandUser } from "@/types/user";
-import { BrandStatus, BrandRole } from "@/types/enums";
+import { BrandStatus, BrandRole, UserRole } from "@/types/enums";
 import { useCloudinaryUpload } from "@/hooks/useCloudinaryUpload";
 import { ImageUploadProgress } from "@/components/ImageUploadProgress";
-import * as ImageManipulator from "expo-image-manipulator";
 
 const EditBrandScreen = () => {
   const { token, user } = useAuth();
   const router = useRouter();
   const { brandId } = useLocalSearchParams();
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === "dark";
 
-  const [name, setName] = useState<string>("");
-  const [description, setDescription] = useState<string>("");
-  const [logoUrl, setLogoUrl] = useState<string>("");
-  const [location, setLocation] = useState<string>("");
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+  const [logoUrl, setLogoUrl] = useState("");
+  const [location, setLocation] = useState("");
   const [status, setStatus] = useState<BrandStatus>(BrandStatus.DRAFT);
   const [brandMembers, setBrandMembers] = useState<BrandUser[]>([]);
-  const [allUsers, setAllUsers] = useState<{ label: string; value: number }[]>([]);
+  const [allUsers, setAllUsers] = useState<
+    { label: string; value: number; role: string }[]
+  >([]);
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
   const [selectedRole, setSelectedRole] = useState<BrandRole>(BrandRole.STAFF);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [submitting, setSubmitting] = useState<boolean>(false);
+  const [roleFilter, setRoleFilter] = useState<string>("all");
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
   const { uploads, uploadImage } = useCloudinaryUpload();
+  const dropdownRef = useRef<any>(null);
 
-  // Theme colors
-  const backgroundColor = useThemeColor({}, "background");
-  const textColor = useThemeColor({}, "text");
-  const buttonColor = useThemeColor(
-    { light: "#007AFF", dark: "#0A84FF" },
-    "primary",
-  );
-  const cardBackground = useThemeColor(
-    { light: "#ffffff", dark: "#1c1c1e" },
-    "background",
-  );
-  const secondaryTextColor = useThemeColor(
-    { light: "#8e8e93", dark: "#98989d" },
-    "text",
-  );
-  const inputBackground = useThemeColor(
-    { light: "#f2f2f7", dark: "#2c2c2e" },
-    "background",
-  );
-  const inputBorderColor = useThemeColor(
-    { light: "#e5e5ea", dark: "#3a3a3c" },
-    "background",
-  );
+  // B&W theme
+  const bg = isDark ? "#000000" : "#FFFFFF";
+  const text = isDark ? "#FFFFFF" : "#000000";
+  const secondary = isDark ? "#8E8E93" : "#6B6B6B";
+  const border = isDark ? "#2C2C2E" : "#E5E5E5";
+  const inputBg = isDark ? "#1C1C1E" : "#F5F5F5";
 
   const fetchBrandData = useCallback(async () => {
     try {
@@ -100,14 +86,18 @@ const EditBrandScreen = () => {
 
   const fetchUsers = useCallback(async () => {
     try {
-      const response = await fetch(`${getApiUrl()}/users`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await fetch(
+        `${getApiUrl()}/users?excludeGuests=true`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
       const data = await response.json();
       setAllUsers(
         data.map((u: any) => ({
           label: u.name ? `${u.name} (${u.email})` : u.email || "Unknown",
           value: u.id,
+          role: u.role || "",
         })),
       );
     } catch (error) {
@@ -186,7 +176,7 @@ const EditBrandScreen = () => {
         return;
       }
 
-      let result = await ImagePicker.launchImageLibraryAsync({
+      const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ["images"],
         allowsEditing: true,
         aspect: [1, 1],
@@ -252,10 +242,30 @@ const EditBrandScreen = () => {
     }
   };
 
+  const roleFilters = [
+    { key: "all", label: "ALL" },
+    { key: "brandOwner", label: "BRAND OWNERS" },
+    { key: "customer", label: "CUSTOMERS" },
+    { key: "admin", label: "ADMINS" },
+  ];
+
+  const availableUsers = allUsers.filter(
+    (u) => !brandMembers.some((m) => m.user?.id === u.value),
+  );
+
+  const filteredUsers =
+    roleFilter === "all"
+      ? availableUsers
+      : availableUsers.filter((u) => u.role === roleFilter);
+
+  const isUploading = Object.values(uploads).some(
+    (u) => u.status === "uploading",
+  );
+
   if (loading) {
     return (
-      <View style={[styles.center, { backgroundColor }]}>
-        <ActivityIndicator size="large" color={buttonColor} />
+      <View style={[styles.center, { backgroundColor: bg }]}>
+        <ActivityIndicator size="small" color={text} />
       </View>
     );
   }
@@ -266,325 +276,384 @@ const EditBrandScreen = () => {
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
       <StatusBar
-        barStyle={Platform.OS === "ios" ? "dark-content" : "default"}
+        barStyle={isDark ? "light-content" : "dark-content"}
+        backgroundColor={bg}
       />
       <ScrollView
-        style={[styles.container, { backgroundColor }]}
+        style={[styles.container, { backgroundColor: bg }]}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
       >
+        {/* Header */}
         <View style={styles.headerContainer}>
           <TouchableOpacity
-            style={[styles.backButton, { backgroundColor: cardBackground }]}
             onPress={() => router.replace(`/brands/${brandId}`)}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
-            <Ionicons name="chevron-back" size={24} color={textColor} />
+            <Ionicons name="arrow-back" size={22} color={text} />
           </TouchableOpacity>
-          <View style={styles.headerTextContainer}>
-            <Text style={[styles.header, { color: textColor }]}>
-              Edit Brand
-            </Text>
-            <Text style={[styles.subtitle, { color: secondaryTextColor }]}>
-              Update your brand information
-            </Text>
+          <Text style={[styles.header, { color: text }]}>EDIT BRAND</Text>
+          <View style={{ width: 22 }} />
+        </View>
+
+        {/* Logo */}
+        <View style={styles.section}>
+          <Text style={[styles.label, { color: secondary }]}>LOGO</Text>
+          <TouchableOpacity
+            style={[
+              styles.logoUpload,
+              {
+                borderColor: logoUrl ? text : border,
+                backgroundColor: inputBg,
+              },
+            ]}
+            onPress={handleImagePick}
+          >
+            {uploads[
+              Object.keys(uploads)
+                .reverse()
+                .find((k) => !logoUrl.includes(k)) || ""
+            ] ? (
+              <ImageUploadProgress
+                upload={uploads[Object.keys(uploads).reverse()[0]]}
+                size={100}
+              />
+            ) : logoUrl ? (
+              <View style={styles.logoPreviewWrap}>
+                <Image source={{ uri: logoUrl }} style={styles.logoPreview} />
+                <View
+                  style={[
+                    styles.logoOverlay,
+                    { backgroundColor: isDark ? "#FFFFFF" : "#000000" },
+                  ]}
+                >
+                  <Ionicons
+                    name="camera-outline"
+                    size={14}
+                    color={isDark ? "#000000" : "#FFFFFF"}
+                  />
+                </View>
+              </View>
+            ) : (
+              <View style={styles.logoPlaceholder}>
+                <Ionicons name="image-outline" size={28} color={secondary} />
+                <Text
+                  style={[styles.logoPlaceholderText, { color: secondary }]}
+                >
+                  Tap to upload
+                </Text>
+              </View>
+            )}
+          </TouchableOpacity>
+        </View>
+
+        {/* Name */}
+        <View style={styles.section}>
+          <Text style={[styles.label, { color: secondary }]}>
+            BRAND NAME <Text style={{ color: "#C41E3A" }}>*</Text>
+          </Text>
+          <TextInput
+            style={[
+              styles.input,
+              { backgroundColor: inputBg, color: text, borderColor: border },
+            ]}
+            placeholder="Enter brand name"
+            placeholderTextColor={secondary}
+            value={name}
+            onChangeText={setName}
+          />
+        </View>
+
+        {/* Description */}
+        <View style={styles.section}>
+          <Text style={[styles.label, { color: secondary }]}>DESCRIPTION</Text>
+          <TextInput
+            style={[
+              styles.input,
+              styles.textArea,
+              { backgroundColor: inputBg, color: text, borderColor: border },
+            ]}
+            placeholder="Tell us about this brand"
+            placeholderTextColor={secondary}
+            value={description}
+            onChangeText={setDescription}
+            multiline
+            textAlignVertical="top"
+          />
+        </View>
+
+        {/* Location */}
+        <View style={styles.section}>
+          <Text style={[styles.label, { color: secondary }]}>LOCATION</Text>
+          <TextInput
+            style={[
+              styles.input,
+              { backgroundColor: inputBg, color: text, borderColor: border },
+            ]}
+            placeholder="Headquarters location"
+            placeholderTextColor={secondary}
+            value={location}
+            onChangeText={setLocation}
+          />
+        </View>
+
+        {/* Status */}
+        <View style={styles.section}>
+          <Text style={[styles.label, { color: secondary }]}>STATUS</Text>
+          <View style={styles.chipRow}>
+            {Object.values(BrandStatus).map((s) => {
+              const isSelected = status === s;
+              return (
+                <TouchableOpacity
+                  key={s}
+                  onPress={() => setStatus(s)}
+                  style={[
+                    styles.chip,
+                    {
+                      backgroundColor: isSelected ? text : "transparent",
+                      borderColor: isSelected ? text : border,
+                    },
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.chipText,
+                      { color: isSelected ? bg : secondary },
+                    ]}
+                  >
+                    {s.toUpperCase()}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
           </View>
         </View>
 
-        <View style={[styles.card, { backgroundColor: cardBackground }]}>
-          <View style={styles.logoSection}>
-            <View style={styles.sectionHeader}>
-              <Ionicons name="image-outline" size={20} color={buttonColor} />
-              <Text style={[styles.sectionTitle, { color: textColor }]}>
-                Brand Identity
-              </Text>
-            </View>
+        {/* Divider */}
+        <View style={[styles.divider, { backgroundColor: border }]} />
 
-            <TouchableOpacity
-              style={[
-                styles.logoUploadContainer,
-                {
-                  backgroundColor: inputBackground,
-                  borderColor: logoUrl ? buttonColor : inputBorderColor,
-                  borderStyle: logoUrl ? "solid" : "dashed",
-                },
-              ]}
-              onPress={handleImagePick}
+        {/* Team Members */}
+        <View style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: text }]}>
+            TEAM MEMBERS
+          </Text>
+
+          {brandMembers.map((member) => (
+            <View
+              key={member.id}
+              style={[styles.memberCard, { borderBottomColor: border }]}
             >
-              {uploads[
-                Object.keys(uploads)
-                  .reverse()
-                  .find((k) => !logoUrl.includes(k)) || ""
-              ] ? (
-                <View style={styles.uploadingContainer}>
-                  <ImageUploadProgress
-                    upload={uploads[Object.keys(uploads).reverse()[0]]}
-                    size={150}
-                  />
-                </View>
-              ) : logoUrl ? (
-                <View style={styles.logoPreviewContainer}>
-                  <Image source={{ uri: logoUrl }} style={styles.logoPreview} />
-                  <View style={styles.logoBadge}>
-                    <Ionicons name="camera" size={16} color="white" />
-                  </View>
-                </View>
-              ) : (
-                <View style={styles.logoPlaceholder}>
-                  <View
+              <View
+                style={[styles.memberAvatar, { backgroundColor: inputBg }]}
+              >
+                <Text style={[styles.memberAvatarText, { color: secondary }]}>
+                  {(
+                    member.user?.name?.charAt(0) ||
+                    member.user?.email?.charAt(0) ||
+                    "?"
+                  ).toUpperCase()}
+                </Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text
+                  style={[styles.memberName, { color: text }]}
+                  numberOfLines={1}
+                >
+                  {member.user?.name || "Unknown"}
+                </Text>
+                <Text
+                  style={[styles.memberEmail, { color: secondary }]}
+                  numberOfLines={1}
+                >
+                  {member.user?.email || ""}
+                </Text>
+              </View>
+              <View
+                style={[
+                  styles.roleBadge,
+                  {
+                    backgroundColor:
+                      member.role === BrandRole.OWNER ? text : inputBg,
+                  },
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.roleBadgeText,
+                    {
+                      color:
+                        member.role === BrandRole.OWNER ? bg : secondary,
+                    },
+                  ]}
+                >
+                  {member.role.toUpperCase()}
+                </Text>
+              </View>
+              {(member.role !== BrandRole.OWNER ||
+                user?.role === UserRole.ADMIN) &&
+                member.user?.id !== user?.id && (
+                  <TouchableOpacity
+                    onPress={() => handleRemoveMember(member)}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    style={{ marginLeft: 10 }}
+                  >
+                    <Ionicons name="close" size={16} color="#C41E3A" />
+                  </TouchableOpacity>
+                )}
+            </View>
+          ))}
+        </View>
+
+        {/* Add Member */}
+        <View style={styles.section}>
+          <Text style={[styles.label, { color: secondary }]}>
+            ADD MEMBER
+          </Text>
+
+          {/* Role filter chips */}
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={[styles.filterRow, { zIndex: 2 }]}
+            contentContainerStyle={styles.filterRowContent}
+          >
+            {roleFilters.map((f) => {
+              const isActive = roleFilter === f.key;
+              const count =
+                f.key === "all"
+                  ? availableUsers.length
+                  : availableUsers.filter((u) => u.role === f.key).length;
+              return (
+                <TouchableOpacity
+                  key={f.key}
+                  style={[
+                    styles.chip,
+                    {
+                      backgroundColor: isActive ? text : "transparent",
+                      borderColor: isActive ? text : border,
+                    },
+                  ]}
+                  onPress={() => {
+                    dropdownRef.current?.close();
+                    setRoleFilter(f.key);
+                  }}
+                >
+                  <Text
                     style={[
-                      styles.iconCircle,
-                      { backgroundColor: cardBackground },
+                      styles.chipText,
+                      { color: isActive ? bg : secondary },
                     ]}
                   >
-                    <Ionicons
-                      name="cloud-upload-outline"
-                      size={28}
-                      color={buttonColor}
-                    />
-                  </View>
-                  <Text
-                    style={[styles.logoPlaceholderText, { color: textColor }]}
-                  >
-                    Upload Brand Logo
+                    {f.label} ({count})
                   </Text>
-                </View>
-              )}
-            </TouchableOpacity>
-          </View>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
 
-          <View style={styles.formFields}>
-            <InputField
-              label="Brand Name"
-              value={name}
-              onChangeText={setName}
-              placeholder="Enter brand name"
-              icon="business"
-              textColor={textColor}
-              secondaryTextColor={secondaryTextColor}
-              inputBorderColor={inputBorderColor}
-              inputBackground={inputBackground}
-            />
-
-            <InputField
-              label="Description"
-              value={description}
-              onChangeText={setDescription}
-              placeholder="Tell us about your brand"
-              multiline={true}
-              icon="document-text"
-              textColor={textColor}
-              secondaryTextColor={secondaryTextColor}
-              inputBorderColor={inputBorderColor}
-              inputBackground={inputBackground}
-            />
-
-            <InputField
-              label="Location"
-              value={location}
-              onChangeText={setLocation}
-              placeholder="Headquarters location"
-              icon="location"
-              textColor={textColor}
-              secondaryTextColor={secondaryTextColor}
-              inputBorderColor={inputBorderColor}
-              inputBackground={inputBackground}
-            />
-
-            <View style={styles.inputContainer}>
-              <Text style={[styles.inputLabel, { color: textColor }]}>
-                Status
-              </Text>
-              <View style={styles.statusRow}>
-                {Object.values(BrandStatus).map((s) => {
-                  const isSelected = status === s;
-                  const statusColor =
-                    s === BrandStatus.ACTIVE
-                      ? "#10b981"
-                      : s === BrandStatus.SUSPENDED
-                        ? "#ef4444"
-                        : s === BrandStatus.ARCHIVED
-                          ? "#6b7280"
-                          : "#f59e0b";
-                  return (
-                    <TouchableOpacity
-                      key={s}
-                      onPress={() => setStatus(s)}
+          {/* User dropdown */}
+          <View style={{ zIndex: 1 }}>
+          <Dropdown
+            ref={dropdownRef}
+            mode="default"
+            labelField="label"
+            valueField="value"
+            data={filteredUsers}
+            value={selectedUserId}
+            onChange={(item) => setSelectedUserId(item.value)}
+            placeholder={
+              filteredUsers.length === 0
+                ? "No users found"
+                : `Select from ${filteredUsers.length} user${filteredUsers.length !== 1 ? "s" : ""}`
+            }
+            search
+            searchPlaceholder="Search by name or email..."
+            style={[
+              styles.dropdown,
+              { backgroundColor: inputBg, borderColor: border },
+            ]}
+            placeholderStyle={[styles.dropdownPlaceholder, { color: secondary }]}
+            selectedTextStyle={[styles.dropdownSelected, { color: text }]}
+            inputSearchStyle={[
+              styles.dropdownSearch,
+              {
+                backgroundColor: inputBg,
+                color: text,
+                borderColor: border,
+              },
+            ]}
+            containerStyle={[
+              styles.dropdownContainer,
+              { backgroundColor: bg, borderColor: border },
+            ]}
+            itemTextStyle={{ color: text, fontSize: 14 }}
+            activeColor={inputBg}
+            renderItem={(item) => {
+              const isSelected = item.value === selectedUserId;
+              const roleLabel =
+                item.role === "brandOwner"
+                  ? "BRAND OWNER"
+                  : item.role?.toUpperCase();
+              return (
+                <View
+                  style={[
+                    styles.dropdownItem,
+                    { borderBottomColor: border },
+                    isSelected && { backgroundColor: inputBg },
+                  ]}
+                >
+                  <View style={styles.dropdownItemLeft}>
+                    <View
                       style={[
-                        styles.statusChip,
-                        {
-                          backgroundColor: isSelected
-                            ? statusColor
-                            : inputBackground,
-                          borderColor: isSelected
-                            ? statusColor
-                            : inputBorderColor,
-                        },
+                        styles.dropdownAvatar,
+                        { backgroundColor: isSelected ? text : inputBg },
                       ]}
                     >
                       <Text
                         style={[
-                          styles.statusChipText,
-                          { color: isSelected ? "#fff" : secondaryTextColor },
+                          styles.dropdownAvatarText,
+                          { color: isSelected ? bg : secondary },
                         ]}
                       >
-                        {s.charAt(0).toUpperCase() + s.slice(1)}
+                        {(item.label?.charAt(0) || "?").toUpperCase()}
                       </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-            </View>
-          </View>
-        </View>
-
-        {/* Team Management */}
-        <View style={[styles.card, { backgroundColor: cardBackground }]}>
-          <View style={styles.sectionHeader}>
-            <Ionicons name="people-outline" size={20} color={buttonColor} />
-            <Text style={[styles.sectionTitle, { color: textColor }]}>
-              Team Members
-            </Text>
-          </View>
-
-          {/* Current Members */}
-          {brandMembers.map((member) => {
-            const roleColor =
-              member.role === BrandRole.OWNER
-                ? "#10b981"
-                : member.role === BrandRole.MANAGER
-                  ? "#3b82f6"
-                  : member.role === BrandRole.STAFF
-                    ? "#f59e0b"
-                    : "#6b7280";
-            return (
-              <View
-                key={member.id}
-                style={[
-                  styles.memberCard,
-                  {
-                    backgroundColor: inputBackground,
-                    borderColor: inputBorderColor,
-                  },
-                ]}
-              >
-                <View style={styles.memberInfo}>
-                  <View
-                    style={[styles.memberAvatar, { backgroundColor: roleColor + "20" }]}
-                  >
-                    <Ionicons
-                      name="person"
-                      size={18}
-                      color={roleColor}
-                    />
+                    </View>
+                    <View style={styles.dropdownItemContent}>
+                      <Text
+                        style={[
+                          styles.dropdownItemName,
+                          { color: text },
+                          isSelected && { fontWeight: "800" },
+                        ]}
+                        numberOfLines={1}
+                      >
+                        {item.label}
+                      </Text>
+                      {roleLabel && (
+                        <Text
+                          style={[styles.dropdownItemRole, { color: secondary }]}
+                        >
+                          {roleLabel}
+                        </Text>
+                      )}
+                    </View>
                   </View>
-                  <View style={{ flex: 1 }}>
-                    <Text
-                      style={[styles.memberName, { color: textColor }]}
-                      numberOfLines={1}
-                    >
-                      {member.user?.name || "Unknown"}
-                    </Text>
-                    <Text
-                      style={[styles.memberEmail, { color: secondaryTextColor }]}
-                      numberOfLines={1}
-                    >
-                      {member.user?.email || ""}
-                    </Text>
-                  </View>
-                  <View
-                    style={[
-                      styles.roleBadge,
-                      { backgroundColor: roleColor + "20" },
-                    ]}
-                  >
-                    <Text style={[styles.roleBadgeText, { color: roleColor }]}>
-                      {member.role.toUpperCase()}
-                    </Text>
-                  </View>
-                  {member.role !== BrandRole.OWNER && (
-                    <TouchableOpacity
-                      onPress={() => handleRemoveMember(member)}
-                      style={styles.removeMemberBtn}
-                    >
-                      <Ionicons
-                        name="close-circle"
-                        size={22}
-                        color="#ef4444"
-                      />
-                    </TouchableOpacity>
+                  {isSelected && (
+                    <Ionicons name="checkmark" size={16} color={text} />
                   )}
                 </View>
-              </View>
-            );
-          })}
+              );
+            }}
+          />
+          </View>
 
-          {/* Add Member */}
-          <View style={styles.addMemberSection}>
-            <Text
-              style={[
-                styles.inputLabel,
-                { color: textColor, marginBottom: 8 },
-              ]}
-            >
-              Add Member
-            </Text>
-            <View
-              style={[
-                styles.addMemberRow,
-              ]}
-            >
-              <View style={{ flex: 1 }}>
-                <View
-                  style={[
-                    styles.dropdownWrapper,
-                    {
-                      backgroundColor: inputBackground,
-                      borderColor: inputBorderColor,
-                    },
-                  ]}
-                >
-                  <Dropdown
-                    labelField="label"
-                    valueField="value"
-                    data={allUsers.filter(
-                      (u) => !brandMembers.some((m) => m.user?.id === u.value),
-                    )}
-                    value={selectedUserId}
-                    onChange={(item) => setSelectedUserId(item.value)}
-                    placeholder="Select user"
-                    search={true}
-                    searchPlaceholder="Search..."
-                    style={styles.dropdown}
-                    placeholderStyle={[
-                      styles.placeholderStyle,
-                      { color: secondaryTextColor },
-                    ]}
-                    selectedTextStyle={[
-                      styles.selectedTextStyle,
-                      { color: textColor },
-                    ]}
-                    inputSearchStyle={[
-                      styles.inputSearchStyle,
-                      {
-                        backgroundColor: cardBackground,
-                        color: textColor,
-                        borderColor: inputBorderColor,
-                      },
-                    ]}
-                    containerStyle={[
-                      styles.dropdownContainer,
-                      {
-                        backgroundColor: cardBackground,
-                        borderColor: inputBorderColor,
-                      },
-                    ]}
-                    itemTextStyle={{ color: textColor, fontSize: 14 }}
-                    activeColor={inputBackground}
-                  />
-                </View>
-              </View>
-            </View>
-            <View style={[styles.roleAndAddRow, { marginTop: 10 }]}>
+          {/* Role selection + Add button */}
+          {selectedUserId && (
+            <View style={styles.assignRow}>
+              <Text style={[styles.assignLabel, { color: secondary }]}>
+                ASSIGN AS
+              </Text>
               <View style={styles.roleChips}>
                 {Object.values(BrandRole).map((r) => {
                   const isSelected = selectedRole === r;
@@ -593,26 +662,20 @@ const EditBrandScreen = () => {
                       key={r}
                       onPress={() => setSelectedRole(r)}
                       style={[
-                        styles.roleChip,
+                        styles.chip,
                         {
-                          backgroundColor: isSelected
-                            ? buttonColor
-                            : inputBackground,
-                          borderColor: isSelected
-                            ? buttonColor
-                            : inputBorderColor,
+                          backgroundColor: isSelected ? text : "transparent",
+                          borderColor: isSelected ? text : border,
                         },
                       ]}
                     >
                       <Text
                         style={[
-                          styles.roleChipText,
-                          {
-                            color: isSelected ? "#fff" : secondaryTextColor,
-                          },
+                          styles.chipText,
+                          { color: isSelected ? bg : secondary },
                         ]}
                       >
-                        {r.charAt(0).toUpperCase() + r.slice(1)}
+                        {r.toUpperCase()}
                       </Text>
                     </TouchableOpacity>
                   );
@@ -620,350 +683,316 @@ const EditBrandScreen = () => {
               </View>
               <TouchableOpacity
                 onPress={handleAssignUser}
-                disabled={!selectedUserId}
-                style={[
-                  styles.addMemberBtn,
-                  {
-                    backgroundColor: selectedUserId
-                      ? buttonColor
-                      : inputBackground,
-                  },
-                ]}
+                style={[styles.addButton, { backgroundColor: text }]}
               >
-                <Ionicons
-                  name="add"
-                  size={20}
-                  color={selectedUserId ? "#fff" : secondaryTextColor}
-                />
+                <Text style={[styles.addButtonText, { color: bg }]}>
+                  ADD MEMBER
+                </Text>
               </TouchableOpacity>
             </View>
-          </View>
+          )}
         </View>
 
+        {/* Submit */}
         <TouchableOpacity
-          style={[styles.createButton, submitting && styles.buttonDisabled]}
+          style={[
+            styles.submitButton,
+            { backgroundColor: text },
+            (submitting || isUploading) && styles.submitDisabled,
+          ]}
           onPress={handleUpdateBrand}
-          disabled={
-            submitting ||
-            Object.values(uploads).some((u) => u.status === "uploading")
-          }
-          activeOpacity={0.9}
+          disabled={submitting || isUploading}
+          activeOpacity={0.7}
         >
-          <LinearGradient
-            colors={submitting ? ["#bbb", "#999"] : [buttonColor, "#1B6ED9"]}
-            style={styles.gradientButton}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-          >
-            {submitting ? (
-              <ActivityIndicator size="small" color="#fff" />
-            ) : (
-              <>
-                <Text style={styles.buttonText}>Save Changes</Text>
-                <Ionicons
-                  name="checkmark-circle-outline"
-                  size={20}
-                  color="white"
-                  style={styles.buttonIcon}
-                />
-              </>
-            )}
-          </LinearGradient>
+          {submitting ? (
+            <ActivityIndicator size="small" color={bg} />
+          ) : (
+            <Text style={[styles.submitText, { color: bg }]}>
+              SAVE CHANGES
+            </Text>
+          )}
         </TouchableOpacity>
+
+        <View style={{ height: 40 }} />
       </ScrollView>
     </KeyboardAvoidingView>
   );
 };
-
-const InputField = ({
-  label,
-  value,
-  onChangeText,
-  placeholder,
-  multiline = false,
-  icon,
-  textColor,
-  secondaryTextColor,
-  inputBorderColor,
-  inputBackground,
-}: {
-  label: string;
-  value: string;
-  onChangeText: (text: string) => void;
-  placeholder: string;
-  multiline?: boolean;
-  icon: string;
-  textColor: string;
-  secondaryTextColor: string;
-  inputBorderColor: string;
-  inputBackground: string;
-}) => (
-  <View style={styles.inputContainer}>
-    <Text style={[styles.inputLabel, { color: textColor }]}>{label}</Text>
-    <View
-      style={[
-        styles.inputWrapper,
-        { borderColor: inputBorderColor, backgroundColor: inputBackground },
-      ]}
-    >
-      <Ionicons
-        name={`${icon}-outline` as any}
-        size={20}
-        color={useThemeColor({ light: "#007AFF", dark: "#0A84FF" }, "primary")}
-        style={styles.inputIcon}
-      />
-      <TextInput
-        style={[
-          styles.input,
-          { color: textColor, height: multiline ? 100 : 56 },
-          multiline && { textAlignVertical: "top", paddingTop: 16 },
-        ]}
-        placeholder={placeholder}
-        value={value}
-        onChangeText={onChangeText}
-        placeholderTextColor={secondaryTextColor}
-        multiline={multiline}
-      />
-    </View>
-  </View>
-);
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
   center: { flex: 1, justifyContent: "center", alignItems: "center" },
   scrollContent: {
     paddingHorizontal: 20,
-    paddingTop: Platform.OS === "ios" ? 60 : 20,
+    paddingTop: Platform.OS === "ios" ? 60 : 24,
     paddingBottom: 40,
   },
+
+  // Header
   headerContainer: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 32,
+    justifyContent: "space-between",
+    marginBottom: 36,
   },
-  backButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
+  header: {
+    fontSize: 18,
+    fontWeight: "800",
+    letterSpacing: 2,
+  },
+
+  // Sections
+  section: {
+    marginBottom: 24,
+  },
+  sectionTitle: {
+    fontSize: 14,
+    fontWeight: "800",
+    letterSpacing: 2,
+    marginBottom: 16,
+  },
+  label: {
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 1.5,
+    marginBottom: 10,
+  },
+  divider: {
+    height: 1,
+    marginBottom: 24,
+  },
+
+  // Input
+  input: {
+    height: 50,
+    borderWidth: 1,
+    borderRadius: 0,
+    paddingHorizontal: 16,
+    fontSize: 15,
+    fontWeight: "500",
+  },
+  textArea: {
+    height: 110,
+    paddingTop: 14,
+    paddingBottom: 14,
+  },
+
+  // Logo
+  logoUpload: {
+    height: 140,
+    borderWidth: 1,
+    borderStyle: "dashed",
+    borderRadius: 0,
     alignItems: "center",
     justifyContent: "center",
-    marginRight: 16,
-    elevation: 2,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    overflow: "hidden",
   },
-  headerTextContainer: { flex: 1 },
-  header: { fontSize: 32, fontWeight: "800", letterSpacing: -0.5 },
-  subtitle: { fontSize: 15, marginTop: 4, letterSpacing: 0.2 },
-  card: {
-    borderRadius: 24,
-    padding: 24,
-    marginBottom: 24,
-    elevation: 5,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.05,
-    shadowRadius: 20,
+  logoPreviewWrap: {
+    width: "100%",
+    height: "100%",
+    position: "relative",
   },
-  sectionHeader: {
-    flexDirection: "row",
+  logoPreview: {
+    width: "100%",
+    height: "100%",
+    resizeMode: "cover",
+  },
+  logoOverlay: {
+    position: "absolute",
+    bottom: 10,
+    right: 10,
+    width: 30,
+    height: 30,
     alignItems: "center",
-    marginBottom: 16,
+    justifyContent: "center",
+  },
+  logoPlaceholder: {
+    alignItems: "center",
     gap: 8,
   },
-  sectionTitle: { fontSize: 18, fontWeight: "700" },
-  logoSection: { marginBottom: 32 },
-  logoUploadContainer: {
-    height: 180,
-    borderRadius: 20,
-    borderWidth: 1.5,
-    alignItems: "center",
-    justifyContent: "center",
-    overflow: "hidden",
+  logoPlaceholderText: {
+    fontSize: 13,
+    fontWeight: "500",
+    letterSpacing: 0.5,
   },
-  logoPreviewContainer: { width: "100%", height: "100%", position: "relative" },
-  logoPreview: { width: "100%", height: "100%", resizeMode: "cover" },
-  logoBadge: {
-    position: "absolute",
-    bottom: 12,
-    right: 12,
-    backgroundColor: "rgba(0,0,0,0.6)",
-    padding: 8,
-    borderRadius: 12,
-  },
-  logoPlaceholder: { alignItems: "center", padding: 20 },
-  iconCircle: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 12,
-    elevation: 3,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-  },
-  logoPlaceholderText: { fontSize: 16, fontWeight: "600", marginBottom: 4 },
-  formFields: { gap: 24 },
-  inputContainer: { width: "100%" },
-  inputLabel: {
-    fontSize: 15,
-    fontWeight: "700",
-    marginBottom: 10,
-    marginLeft: 4,
-  },
-  inputWrapper: {
-    flexDirection: "row",
-    alignItems: "center",
-    borderWidth: 1.5,
-    borderRadius: 16,
-  },
-  inputIcon: { marginLeft: 16, marginRight: 4 },
-  input: { flex: 1, fontSize: 16, paddingHorizontal: 12, fontWeight: "500" },
-  createButton: {
-    borderRadius: 20,
-    overflow: "hidden",
-    elevation: 8,
-    shadowColor: "#007AFF",
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-  },
-  gradientButton: {
-    paddingVertical: 18,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 10,
-  },
-  buttonText: { color: "#ffffff", fontSize: 18, fontWeight: "700" },
-  buttonIcon: { marginTop: 2 },
-  buttonDisabled: { opacity: 0.7 },
-  uploadingContainer: { alignItems: "center", gap: 12 },
-  uploadingText: { fontSize: 15, fontWeight: "600" },
-  statusRow: {
+
+  // Chips
+  chipRow: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 10,
+    gap: 8,
   },
-  statusChip: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 12,
-    borderWidth: 1.5,
-  },
-  statusChipText: {
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  memberCard: {
-    borderRadius: 14,
-    padding: 12,
-    marginBottom: 10,
+  chip: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
     borderWidth: 1,
+    borderRadius: 0,
   },
-  memberInfo: {
+  chipText: {
+    fontSize: 10,
+    fontWeight: "700",
+    letterSpacing: 1,
+  },
+
+  // Members
+  memberCard: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
   },
   memberAvatar: {
     width: 36,
     height: 36,
-    borderRadius: 18,
     alignItems: "center",
     justifyContent: "center",
+    marginRight: 12,
+  },
+  memberAvatarText: {
+    fontSize: 14,
+    fontWeight: "800",
   },
   memberName: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: "600",
   },
   memberEmail: {
-    fontSize: 12,
+    fontSize: 11,
     marginTop: 1,
   },
   roleBadge: {
     paddingHorizontal: 8,
     paddingVertical: 3,
-    borderRadius: 8,
+    borderRadius: 0,
   },
   roleBadgeText: {
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: "800",
-    letterSpacing: 0.5,
+    letterSpacing: 1,
   },
-  removeMemberBtn: {
-    padding: 2,
+
+  // Filter
+  filterRow: {
+    marginBottom: 10,
   },
-  addMemberSection: {
-    marginTop: 16,
-    paddingTop: 16,
-    borderTopWidth: 1,
-    borderTopColor: "rgba(0,0,0,0.06)",
+  filterRowContent: {
+    gap: 8,
   },
-  addMemberRow: {
-    flexDirection: "row",
-    gap: 10,
+
+  // Dropdown
+  dropdown: {
+    height: 50,
+    paddingHorizontal: 16,
+    borderWidth: 1,
+    borderRadius: 0,
   },
-  roleAndAddRow: {
+  dropdownPlaceholder: {
+    fontSize: 14,
+    fontWeight: "500",
+  },
+  dropdownSelected: {
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  dropdownSearch: {
+    height: 50,
+    fontSize: 14,
+    borderRadius: 0,
+    borderWidth: 0,
+    borderBottomWidth: 1,
+    margin: 0,
+    paddingHorizontal: 16,
+  },
+  dropdownContainer: {
+    borderRadius: 0,
+    borderWidth: 1,
+    borderTopWidth: 0,
+    marginTop: 0,
+    maxHeight: 300,
+    overflow: "hidden",
+  },
+  dropdownItem: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
+    justifyContent: "space-between",
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+  },
+  dropdownItemLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+    marginRight: 12,
+  },
+  dropdownAvatar: {
+    width: 32,
+    height: 32,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 12,
+  },
+  dropdownAvatarText: {
+    fontSize: 13,
+    fontWeight: "800",
+  },
+  dropdownItemContent: {
+    flex: 1,
+  },
+  dropdownItemName: {
+    fontSize: 13,
+    fontWeight: "500",
+  },
+  dropdownItemRole: {
+    fontSize: 9,
+    fontWeight: "700",
+    letterSpacing: 1,
+    marginTop: 2,
+  },
+
+  // Assign row
+  assignRow: {
+    marginTop: 14,
+  },
+  assignLabel: {
+    fontSize: 10,
+    fontWeight: "700",
+    letterSpacing: 1.5,
+    marginBottom: 8,
   },
   roleChips: {
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 8,
-    flex: 1,
+    marginBottom: 12,
   },
-  roleChip: {
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 10,
-    borderWidth: 1.5,
-  },
-  roleChipText: {
-    fontSize: 12,
-    fontWeight: "600",
-  },
-  addMemberBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
+  addButton: {
+    height: 44,
     alignItems: "center",
     justifyContent: "center",
+    borderRadius: 0,
   },
-  dropdownWrapper: {
-    borderWidth: 1.5,
-    borderRadius: 16,
+  addButtonText: {
+    fontSize: 12,
+    fontWeight: "800",
+    letterSpacing: 2,
   },
-  dropdown: {
-    height: 48,
-    paddingHorizontal: 14,
-  },
-  dropdownContainer: {
-    borderRadius: 16,
-    borderWidth: 1,
+
+  // Submit
+  submitButton: {
+    height: 52,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 0,
     marginTop: 8,
-    overflow: "hidden",
-    maxHeight: 250,
   },
-  placeholderStyle: {
-    fontSize: 15,
-    color: "#999",
-  },
-  selectedTextStyle: {
-    fontSize: 15,
-  },
-  inputSearchStyle: {
-    height: 40,
+  submitText: {
     fontSize: 14,
-    borderRadius: 10,
-    margin: 8,
+    fontWeight: "800",
+    letterSpacing: 2,
+  },
+  submitDisabled: {
+    opacity: 0.4,
   },
 });
 

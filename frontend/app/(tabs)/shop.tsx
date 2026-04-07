@@ -39,6 +39,7 @@ const CATEGORIES = [
   { key: "Jackets", label: "Jackets", icon: "cloudy-outline" as const },
   { key: "Bags", label: "Bags", icon: "bag-handle-outline" as const },
   { key: "Hats", label: "Hats", icon: "ribbon-outline" as const },
+  { key: "T-Shirts", label: "T-Shirts", icon: "shirt-outline" as const },
 ];
 
 const GENDERS = ["All", "Men", "Women"];
@@ -66,11 +67,9 @@ const CompactProductCard = React.memo(
     // Use product images if available, else first variant's images (don't mix across variants)
     const cardImages: string[] = item.images?.length
       ? item.images
-      : item.variants?.[0]?.images?.length
-        ? item.variants[0].images
-        : item.mainImage
-          ? [item.mainImage]
-          : [];
+      : item.mainImage
+        ? [item.mainImage]
+        : [];
 
     const hasDiscount = item.salePrice != null && item.salePrice < item.price;
     const discountPct = hasDiscount
@@ -146,44 +145,49 @@ const CompactProductCard = React.memo(
                   { backgroundColor: colors.discountBadge },
                 ]}
               >
-                <Text style={[cardStyles.discountText, { color: colors.textInverse }]}>-{discountPct}%</Text>
+                <Text
+                  style={[
+                    cardStyles.discountText,
+                    { color: colors.textInverse },
+                  ]}
+                >
+                  -{discountPct}%
+                </Text>
               </View>
             )}
           </View>
 
           <View style={cardStyles.content}>
-              <Text
-                style={[cardStyles.brandLabel, { color: colors.textTertiary }]}
-                numberOfLines={1}
-              >
-                {item.brand?.name || item.brandName || "Local Brand"}
-              </Text>
+            <Text
+              style={[cardStyles.brandLabel, { color: colors.textTertiary }]}
+              numberOfLines={1}
+            >
+              {item.brand?.name || item.brandName || "Local Brand"}
+            </Text>
 
-              <Text
-                style={[cardStyles.productName, { color: colors.text }]}
-                numberOfLines={2}
-              >
-                {item.name}
-              </Text>
+            <Text
+              style={[cardStyles.productName, { color: colors.text }]}
+              numberOfLines={2}
+            >
+              {item.name}
+            </Text>
 
-              {/* Price row */}
-              <View style={cardStyles.priceRow}>
+            {/* Price row */}
+            <View style={cardStyles.priceRow}>
+              <Text style={[cardStyles.price, { color: colors.priceCurrent }]}>
+                {formatCurrency(hasDiscount ? item.salePrice! : item.price)}
+              </Text>
+              {hasDiscount && (
                 <Text
-                  style={[cardStyles.price, { color: colors.priceCurrent }]}
+                  style={[
+                    cardStyles.originalPrice,
+                    { color: colors.priceOriginal },
+                  ]}
                 >
-                  {formatCurrency(hasDiscount ? item.salePrice! : item.price)}
+                  {formatCurrency(item.price)}
                 </Text>
-                {hasDiscount && (
-                  <Text
-                    style={[
-                      cardStyles.originalPrice,
-                      { color: colors.priceOriginal },
-                    ]}
-                  >
-                    {formatCurrency(item.price)}
-                  </Text>
-                )}
-              </View>
+              )}
+            </View>
           </View>
         </Pressable>
       </View>
@@ -258,9 +262,7 @@ const ShopScreen = () => {
       if (selectedGender !== "All")
         params.set("gender", selectedGender.toLowerCase());
 
-      activeFilters.categories.forEach((c) =>
-        params.append("productTypes", c),
-      );
+      activeFilters.categories.forEach((c) => params.append("productTypes", c));
       activeFilters.brandIds.forEach((id) => params.append("brandIds", id));
       params.set("sortBy", activeFilters.sortBy);
       params.set("sortOrder", activeFilters.sortOrder);
@@ -269,15 +271,11 @@ const ShopScreen = () => {
         params.set("minPrice", activeFilters.priceMin.toString());
       if (activeFilters.priceMax < 500)
         params.set("maxPrice", activeFilters.priceMax.toString());
-      if (activeFilters.inStockOnly)
-        params.set("inStock", "true");
+      if (activeFilters.inStockOnly) params.set("inStock", "true");
 
-      const res = await fetch(
-        `${getApiUrl()}/products?${params.toString()}`,
-        {
-          headers: { ...(token && { Authorization: `Bearer ${token}` }) },
-        },
-      );
+      const res = await fetch(`${getApiUrl()}/products?${params.toString()}`, {
+        headers: { ...(token && { Authorization: `Bearer ${token}` }) },
+      });
 
       if (!res.ok) throw new Error("Failed to fetch products");
       const data = await res.json();
@@ -599,9 +597,7 @@ const ShopScreen = () => {
       </View>
 
       {/* Separator */}
-      <View
-        style={[styles.separator, { backgroundColor: colors.border }]}
-      />
+      <View style={[styles.separator, { backgroundColor: colors.border }]} />
 
       {/* Category Horizontal Scroll */}
       <ScrollView
@@ -651,9 +647,7 @@ const ShopScreen = () => {
       </ScrollView>
 
       {/* Separator */}
-      <View
-        style={[styles.separator, { backgroundColor: colors.border }]}
-      />
+      <View style={[styles.separator, { backgroundColor: colors.border }]} />
 
       {/* Filter + Sort Bar */}
       <View style={styles.filterBar}>
@@ -791,9 +785,7 @@ const ShopScreen = () => {
                 size={11}
                 color={colors.primary}
               />
-              <Text
-                style={[styles.activeChipText, { color: colors.primary }]}
-              >
+              <Text style={[styles.activeChipText, { color: colors.primary }]}>
                 {cat}
               </Text>
               <TouchableOpacity
@@ -827,9 +819,7 @@ const ShopScreen = () => {
                 size={11}
                 color={colors.primary}
               />
-              <Text
-                style={[styles.activeChipText, { color: colors.primary }]}
-              >
+              <Text style={[styles.activeChipText, { color: colors.primary }]}>
                 {filterLabels.brands[id] || id}
               </Text>
               <TouchableOpacity
@@ -868,9 +858,7 @@ const ShopScreen = () => {
                 size={11}
                 color={colors.primary}
               />
-              <Text
-                style={[styles.activeChipText, { color: colors.primary }]}
-              >
+              <Text style={[styles.activeChipText, { color: colors.primary }]}>
                 {filterLabels.sort || "Oldest First"}
               </Text>
               <TouchableOpacity
@@ -905,9 +893,7 @@ const ShopScreen = () => {
                 size={11}
                 color={colors.primary}
               />
-              <Text
-                style={[styles.activeChipText, { color: colors.primary }]}
-              >
+              <Text style={[styles.activeChipText, { color: colors.primary }]}>
                 ${activeFilters.priceMin} – ${activeFilters.priceMax}
               </Text>
               <TouchableOpacity
@@ -946,10 +932,7 @@ const ShopScreen = () => {
     if (!hasMore && products.length > 0) {
       return (
         <View
-          style={[
-            styles.endOfContent,
-            { borderTopColor: colors.borderLight },
-          ]}
+          style={[styles.endOfContent, { borderTopColor: colors.borderLight }]}
         >
           <View
             style={[styles.endDot, { backgroundColor: colors.textTertiary }]}
@@ -971,11 +954,7 @@ const ShopScreen = () => {
     if (productsLoading) return null;
     return (
       <View style={styles.emptyContainer}>
-        <Ionicons
-          name="cube-outline"
-          size={48}
-          color={colors.textTertiary}
-        />
+        <Ionicons name="cube-outline" size={48} color={colors.textTertiary} />
         <Text style={[styles.emptyTitle, { color: colors.textSecondary }]}>
           No products found
         </Text>
@@ -998,11 +977,14 @@ const ShopScreen = () => {
   }
 
   return (
-    <View
-      style={[styles.safeArea, { backgroundColor: colors.surface }]}
-    >
+    <View style={[styles.safeArea, { backgroundColor: colors.surface }]}>
       {/* Search Bar */}
-      <View style={[styles.searchSection, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
+      <View
+        style={[
+          styles.searchSection,
+          { backgroundColor: colors.surface, borderBottomColor: colors.border },
+        ]}
+      >
         <View
           style={[
             styles.searchContainer,
@@ -1068,7 +1050,10 @@ const ShopScreen = () => {
               >
                 <View style={styles.suggestionLeft}>
                   <View
-                    style={[styles.suggestionIconCircle, { backgroundColor: colors.primarySoft }]}
+                    style={[
+                      styles.suggestionIconCircle,
+                      { backgroundColor: colors.primarySoft },
+                    ]}
                   >
                     <Ionicons
                       name={
@@ -1153,6 +1138,32 @@ const ShopScreen = () => {
         }))}
         onApply={handlePanelApply}
       />
+
+      {/* Floating Wishlist Button */}
+      <TouchableOpacity
+        style={[
+          styles.floatingWishlistBtn,
+          {
+            backgroundColor: colors.primary,
+            shadowColor: colors.primary,
+          },
+        ]}
+        onPress={() => router.push("/(tabs)/wishlist" as any)}
+        activeOpacity={0.85}
+      >
+        <Ionicons name="heart" size={22} color={colors.primaryForeground} />
+        {wishlistProductIds.length > 0 && (
+          <View
+            style={[styles.wishlistBadge, { backgroundColor: colors.danger }]}
+          >
+            <Text style={styles.wishlistBadgeText}>
+              {wishlistProductIds.length > 99
+                ? "99+"
+                : wishlistProductIds.length}
+            </Text>
+          </View>
+        )}
+      </TouchableOpacity>
     </View>
   );
 };
@@ -1533,6 +1544,41 @@ const styles = StyleSheet.create({
   },
   emptySubtitle: {
     fontSize: 14,
+  },
+
+  // ── Floating Wishlist Button ───────────────
+  floatingWishlistBtn: {
+    position: "absolute",
+    bottom: 24,
+    right: 20,
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    justifyContent: "center",
+    alignItems: "center",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 8,
+    elevation: 8,
+    zIndex: 100,
+  },
+  wishlistBadge: {
+    position: "absolute",
+    top: -2,
+    right: -2,
+    minWidth: 20,
+    height: 20,
+    borderRadius: 10,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 4,
+    borderWidth: 2,
+    borderColor: "#fff",
+  },
+  wishlistBadgeText: {
+    color: "#fff",
+    fontSize: 10,
+    fontWeight: "800",
   },
 });
 

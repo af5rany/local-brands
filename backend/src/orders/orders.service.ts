@@ -136,11 +136,9 @@ export class OrdersService {
           }
         }
 
-        const unitPrice = variant?.priceOverride
-          ? Number(variant.priceOverride)
-          : product.salePrice
-            ? Number(product.salePrice)
-            : Number(product.price);
+        const unitPrice = product.salePrice
+          ? Number(product.salePrice)
+          : Number(product.price);
 
         const itemTotal = unitPrice * item.quantity;
         subtotal += itemTotal;
@@ -153,11 +151,11 @@ export class OrdersService {
           unitPrice,
           totalPrice: itemTotal,
           productName: product.name,
-          productColor: variant?.attributes?.color || item.color,
-          productSize: variant?.attributes?.size || item.size,
-          productImage: variant?.images?.[0] || product.images?.[0],
+          productColor: product.color || item.color,
+          productSize: variant?.size || item.size,
+          productImage: product.images?.[0],
           brandName: brand?.name,
-          productSku: variant?.sku || product.sku || `SKU-${product.id}`,
+          productSku: product.sku || `SKU-${product.id}`,
         });
       }
 

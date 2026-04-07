@@ -10,8 +10,9 @@ export class UsersService {
     private usersRepository: Repository<User>,
   ) {}
 
-  findAll(): Promise<User[]> {
+  findAll(excludeGuests?: boolean): Promise<User[]> {
     return this.usersRepository.find({
+      where: excludeGuests ? { isGuest: false } : undefined,
       relations: ['brandUsers', 'brandUsers.brand'],
       select: {
         id: true,
@@ -21,6 +22,8 @@ export class UsersService {
         status: true,
         avatar: true,
         isGuest: true,
+        isEmailVerified: true,
+        lastLoginAt: true,
         createdAt: true,
         updatedAt: true,
         brandUsers: {
@@ -52,6 +55,8 @@ export class UsersService {
         status: true,
         avatar: true,
         isGuest: true,
+        isEmailVerified: true,
+        lastLoginAt: true,
         createdAt: true,
         updatedAt: true,
         brandUsers: {

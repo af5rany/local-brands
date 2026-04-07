@@ -1,10 +1,9 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
   TextInput,
   StyleSheet,
-  Pressable,
   Image,
   Alert,
   ActivityIndicator,
@@ -14,79 +13,71 @@ import {
   StatusBar,
   Platform,
   KeyboardAvoidingView,
+  useColorScheme,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { Dropdown } from "react-native-element-dropdown";
 import { Ionicons } from "@expo/vector-icons";
-import { LinearGradient } from "expo-linear-gradient";
 import getApiUrl from "@/helpers/getApiUrl";
 import { useRouter } from "expo-router";
-import { useThemeColor } from "@/hooks/useThemeColor";
 import { useAuth } from "@/context/AuthContext";
 import { useCloudinaryUpload } from "@/hooks/useCloudinaryUpload";
 import { ImageUploadProgress } from "@/components/ImageUploadProgress";
-import * as ImageManipulator from "expo-image-manipulator";
 
 type User = {
   id: string;
   name?: string;
   email?: string;
+  role?: string;
 };
 
 const CreateBrandScreen = () => {
   const { token } = useAuth();
   const router = useRouter();
-  const [name, setName] = useState<string>("");
-  const [description, setDescription] = useState<string>("");
-  const [logoUrl, setLogoUrl] = useState<string>("");
-  const [owner, setOwner] = useState<string>("");
-  const [location, setLocation] = useState<string>("");
-  const [users, setUsers] = useState<any[]>([]);
-  const [loading, setLoading] = useState<boolean>(false);
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === "dark";
+
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+  const [logoUrl, setLogoUrl] = useState("");
+  const [owner, setOwner] = useState("");
+  const [location, setLocation] = useState("");
+  const [users, setUsers] = useState<{ label: string; value: string; role: string }[]>([]);
+  const [roleFilter, setRoleFilter] = useState<string>("all");
+  const [loading, setLoading] = useState(false);
+  const dropdownRef = useRef<any>(null);
   const { uploads, uploadImage } = useCloudinaryUpload();
 
-  // Theme colors
-  const backgroundColor = useThemeColor({}, "background");
-  const textColor = useThemeColor({}, "text");
-  const buttonColor = useThemeColor(
-    { light: "#007AFF", dark: "#0A84FF" },
-    "primary",
-  );
-  const cardBackground = useThemeColor(
-    { light: "#ffffff", dark: "#1c1c1e" },
-    "background",
-  );
-  const secondaryTextColor = useThemeColor(
-    { light: "#8e8e93", dark: "#98989d" },
-    "text",
-  );
-  const inputBackground = useThemeColor(
-    { light: "#f2f2f7", dark: "#2c2c2e" },
-    "background",
-  );
-  const inputBorderColor = useThemeColor(
-    { light: "#e5e5ea", dark: "#3a3a3c" },
-    "background",
-  );
+  // B&W theme
+  const bg = isDark ? "#000000" : "#FFFFFF";
+  const text = isDark ? "#FFFFFF" : "#000000";
+  const secondary = isDark ? "#8E8E93" : "#6B6B6B";
+  const border = isDark ? "#2C2C2E" : "#E5E5E5";
+  const inputBg = isDark ? "#1C1C1E" : "#F5F5F5";
 
-  // Fetch users from backend
+  // Fetch non-guest users
   const fetchUsers = async () => {
     try {
-      const response = await fetch(`${getApiUrl()}/users`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
+      const response = await fetch(
+        `${getApiUrl()}/users?excludeGuests=true`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
         },
-      });
+      );
       const data = await response.json();
-      const formattedUsers = data.map((user: User) => ({
-        label: user.name ? `${user.name} (${user.email})` : user.email || "Unknown",
-        value: user.id,
+      const formatted = data.map((u: User) => ({
+        label: u.name
+          ? `${u.name} (${u.email})`
+          : u.email || "Unknown",
+        value: u.id,
+        role: u.role || "",
       }));
-      setUsers(formattedUsers);
+      setUsers(formatted);
     } catch (error) {
       console.error("Error fetching users:", error);
-      Alert.alert("Error", "Failed to fetch users.");
     }
   };
 
@@ -106,7 +97,7 @@ const CreateBrandScreen = () => {
         return;
       }
 
-      let result = await ImagePicker.launchImageLibraryAsync({
+      const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ["images"],
         allowsEditing: true,
         aspect: [1, 1],
@@ -175,7 +166,7 @@ const CreateBrandScreen = () => {
         Alert.alert("Success", "Brand created successfully!", [
           {
             text: "OK",
-            onPress: () => router.replace("/(tabs)/brands"),
+            onPress: () => router.replace("/brands"),
           },
         ]);
       } else {
@@ -192,319 +183,357 @@ const CreateBrandScreen = () => {
     }
   };
 
+  const selectedUser = users.find((u) => u.value === owner);
+
+  const roleFilters = [
+    { key: "all", label: "ALL" },
+    { key: "brandOwner", label: "BRAND OWNERS" },
+    { key: "customer", label: "CUSTOMERS" },
+    { key: "admin", label: "ADMINS" },
+  ];
+
+  const filteredUsers =
+    roleFilter === "all"
+      ? users
+      : users.filter((u) => u.role === roleFilter);
+
+  const isUploading = Object.values(uploads).some(
+    (u) => u.status === "uploading",
+  );
+
   return (
     <KeyboardAvoidingView
       style={{ flex: 1 }}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
       <StatusBar
-        barStyle={Platform.OS === "ios" ? "dark-content" : "default"}
+        barStyle={isDark ? "light-content" : "dark-content"}
+        backgroundColor={bg}
       />
       <ScrollView
-        style={[styles.container, { backgroundColor }]}
+        style={[styles.container, { backgroundColor: bg }]}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
       >
         {/* Header */}
         <View style={styles.headerContainer}>
           <TouchableOpacity
-            style={[styles.backButton, { backgroundColor: cardBackground }]}
             onPress={() => router.back()}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
-            <Ionicons name="chevron-back" size={24} color={textColor} />
+            <Ionicons name="arrow-back" size={22} color={text} />
           </TouchableOpacity>
-          <View style={styles.headerTextContainer}>
-            <Text style={[styles.header, { color: textColor }]}>
-              Create Brand
-            </Text>
-            <Text style={[styles.subtitle, { color: secondaryTextColor }]}>
-              Add a new brand to your collection
-            </Text>
-          </View>
+          <Text style={[styles.header, { color: text }]}>NEW BRAND</Text>
+          <View style={{ width: 22 }} />
         </View>
 
-        {/* Form Card */}
-        <View style={[styles.card, { backgroundColor: cardBackground }]}>
-          {/* Logo Section */}
-          <View style={styles.logoSection}>
-            <View style={styles.sectionHeader}>
-              <Ionicons name="image-outline" size={20} color={buttonColor} />
-              <Text style={[styles.sectionTitle, { color: textColor }]}>
-                Brand Identity
-              </Text>
-            </View>
-
-            <TouchableOpacity
-              style={[
-                styles.logoUploadContainer,
-                {
-                  backgroundColor: inputBackground,
-                  borderColor: logoUrl ? buttonColor : inputBorderColor,
-                  borderStyle: logoUrl ? "solid" : "dashed",
-                },
-              ]}
-              onPress={handleImagePick}
-            >
-              {uploads[
-                Object.keys(uploads)
-                  .reverse()
-                  .find((k) => !logoUrl.includes(k)) || ""
-              ] ? (
-                <View style={styles.uploadingContainer}>
-                  <ImageUploadProgress
-                    upload={uploads[Object.keys(uploads).reverse()[0]]}
-                    size={150}
+        {/* Logo */}
+        <View style={styles.section}>
+          <Text style={[styles.label, { color: secondary }]}>LOGO</Text>
+          <TouchableOpacity
+            style={[
+              styles.logoUpload,
+              {
+                borderColor: logoUrl ? text : border,
+                backgroundColor: inputBg,
+              },
+            ]}
+            onPress={handleImagePick}
+          >
+            {uploads[
+              Object.keys(uploads)
+                .reverse()
+                .find((k) => !logoUrl.includes(k)) || ""
+            ] ? (
+              <ImageUploadProgress
+                upload={uploads[Object.keys(uploads).reverse()[0]]}
+                size={100}
+              />
+            ) : logoUrl ? (
+              <View style={styles.logoPreviewWrap}>
+                <Image source={{ uri: logoUrl }} style={styles.logoPreview} />
+                <View
+                  style={[
+                    styles.logoOverlay,
+                    { backgroundColor: isDark ? "#FFFFFF" : "#000000" },
+                  ]}
+                >
+                  <Ionicons
+                    name="camera-outline"
+                    size={14}
+                    color={isDark ? "#000000" : "#FFFFFF"}
                   />
                 </View>
-              ) : logoUrl ? (
-                <View style={styles.logoPreviewContainer}>
-                  <Image source={{ uri: logoUrl }} style={styles.logoPreview} />
-                  <View style={styles.logoBadge}>
-                    <Ionicons name="camera" size={16} color="white" />
-                  </View>
-                </View>
-              ) : (
-                <View style={styles.logoPlaceholder}>
-                  <View
+              </View>
+            ) : (
+              <View style={styles.logoPlaceholder}>
+                <Ionicons name="image-outline" size={28} color={secondary} />
+                <Text style={[styles.logoPlaceholderText, { color: secondary }]}>
+                  Tap to upload
+                </Text>
+              </View>
+            )}
+          </TouchableOpacity>
+        </View>
+
+        {/* Name */}
+        <View style={styles.section}>
+          <Text style={[styles.label, { color: secondary }]}>
+            BRAND NAME <Text style={{ color: "#C41E3A" }}>*</Text>
+          </Text>
+          <TextInput
+            style={[
+              styles.input,
+              { backgroundColor: inputBg, color: text, borderColor: border },
+            ]}
+            placeholder="Enter brand name"
+            placeholderTextColor={secondary}
+            value={name}
+            onChangeText={setName}
+          />
+        </View>
+
+        {/* Owner */}
+        <View style={styles.section}>
+          <Text style={[styles.label, { color: secondary }]}>
+            ASSIGN OWNER <Text style={{ color: "#C41E3A" }}>*</Text>
+          </Text>
+
+          {/* Role filter chips */}
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={[styles.filterRow, { zIndex: 2 }]}
+            contentContainerStyle={styles.filterRowContent}
+          >
+            {roleFilters.map((f) => {
+              const isActive = roleFilter === f.key;
+              const count =
+                f.key === "all"
+                  ? users.length
+                  : users.filter((u) => u.role === f.key).length;
+              return (
+                <TouchableOpacity
+                  key={f.key}
+                  style={[
+                    styles.filterChip,
+                    {
+                      backgroundColor: isActive ? text : "transparent",
+                      borderColor: isActive ? text : border,
+                    },
+                  ]}
+                  onPress={() => {
+                    dropdownRef.current?.close();
+                    setRoleFilter(f.key);
+                  }}
+                >
+                  <Text
                     style={[
-                      styles.iconCircle,
-                      { backgroundColor: cardBackground },
+                      styles.filterChipText,
+                      { color: isActive ? bg : secondary },
                     ]}
                   >
-                    <Ionicons
-                      name="cloud-upload-outline"
-                      size={28}
-                      color={buttonColor}
-                    />
-                  </View>
-                  <Text
-                    style={[styles.logoPlaceholderText, { color: textColor }]}
-                  >
-                    Upload Brand Logo
+                    {f.label} ({count})
                   </Text>
-                  <Text
-                    style={[styles.logoHintText, { color: secondaryTextColor }]}
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+
+          {/* Dropdown */}
+          <View style={{ zIndex: 1 }}>
+            <Dropdown
+              ref={dropdownRef}
+              mode="default"
+              labelField="label"
+              valueField="value"
+              data={filteredUsers}
+              value={owner}
+              onChange={(item) => setOwner(item.value)}
+              placeholder={
+                filteredUsers.length === 0
+                  ? "No users found"
+                  : `Select from ${filteredUsers.length} user${filteredUsers.length !== 1 ? "s" : ""}`
+              }
+              search
+              searchPlaceholder="Search by name or email..."
+              style={[
+                styles.dropdown,
+                { backgroundColor: inputBg, borderColor: border },
+              ]}
+              placeholderStyle={[styles.dropdownPlaceholder, { color: secondary }]}
+              selectedTextStyle={[styles.dropdownSelected, { color: text }]}
+              inputSearchStyle={[
+                styles.dropdownSearch,
+                {
+                  backgroundColor: inputBg,
+                  color: text,
+                  borderColor: border,
+                },
+              ]}
+              containerStyle={[
+                styles.dropdownContainer,
+                { backgroundColor: bg, borderColor: border },
+              ]}
+              itemTextStyle={{ color: text, fontSize: 14 }}
+              activeColor={inputBg}
+              renderItem={(item) => {
+                const isSelected = item.value === owner;
+                const roleLabel =
+                  item.role === "brandOwner"
+                    ? "BRAND OWNER"
+                    : item.role?.toUpperCase();
+                return (
+                  <View
+                    style={[
+                      styles.dropdownItem,
+                      { borderBottomColor: border },
+                      isSelected && { backgroundColor: inputBg },
+                    ]}
                   >
-                    Square image recommended
-                  </Text>
-                </View>
-              )}
-            </TouchableOpacity>
-          </View>
-
-          {/* Form Fields */}
-          <View style={styles.formFields}>
-            <InputField
-              label="Brand Name"
-              value={name}
-              onChangeText={setName}
-              placeholder="Enter brand name"
-              icon="business"
-              textColor={textColor}
-              secondaryTextColor={secondaryTextColor}
-              inputBorderColor={inputBorderColor}
-              inputBackground={inputBackground}
-            />
-
-            {/* Owner Dropdown */}
-            <View style={styles.inputContainer}>
-              <Text style={[styles.inputLabel, { color: textColor }]}>
-                Assign Owner
-              </Text>
-              <View
-                style={[
-                  styles.dropdownWrapper,
-                  {
-                    backgroundColor: inputBackground,
-                    borderColor: inputBorderColor,
-                  },
-                ]}
-              >
-                <Ionicons
-                  name="person-outline"
-                  size={20}
-                  color={buttonColor}
-                  style={styles.inputIcon}
-                />
-                <Dropdown
-                  labelField="label"
-                  valueField="value"
-                  data={users}
-                  value={owner}
-                  onChange={(item) => setOwner(item.value)}
-                  placeholder="Select owner"
-                  search={true}
-                  searchPlaceholder="Search by name or email..."
-                  style={styles.dropdown}
-                  placeholderStyle={[
-                    styles.placeholderStyle,
-                    { color: secondaryTextColor },
-                  ]}
-                  selectedTextStyle={[
-                    styles.selectedTextStyle,
-                    { color: textColor },
-                  ]}
-                  inputSearchStyle={[
-                    styles.inputSearchStyle,
-                    {
-                      backgroundColor: cardBackground,
-                      color: textColor,
-                      borderColor: inputBorderColor,
-                    },
-                  ]}
-                  containerStyle={[
-                    styles.dropdownContainer,
-                    {
-                      backgroundColor: cardBackground,
-                      borderColor: inputBorderColor,
-                    },
-                  ]}
-                  itemTextStyle={{ color: textColor, fontSize: 15 }}
-                  activeColor={inputBackground}
-                  renderItem={(item) => (
-                    <View style={styles.dropdownItem}>
-                      <Ionicons
-                        name="person-circle-outline"
-                        size={24}
-                        color={buttonColor}
-                      />
-                      <View style={{ flex: 1 }}>
+                    <View style={styles.dropdownItemLeft}>
+                      <View
+                        style={[
+                          styles.dropdownAvatar,
+                          { backgroundColor: isSelected ? text : inputBg },
+                        ]}
+                      >
                         <Text
-                          style={[styles.dropdownItemName, { color: textColor }]}
+                          style={[
+                            styles.dropdownAvatarText,
+                            { color: isSelected ? bg : secondary },
+                          ]}
+                        >
+                          {(item.label?.charAt(0) || "?").toUpperCase()}
+                        </Text>
+                      </View>
+                      <View style={styles.dropdownItemContent}>
+                        <Text
+                          style={[
+                            styles.dropdownItemName,
+                            { color: text },
+                            isSelected && { fontWeight: "800" },
+                          ]}
                           numberOfLines={1}
                         >
                           {item.label}
                         </Text>
+                        {roleLabel && (
+                          <Text
+                            style={[styles.dropdownItemRole, { color: secondary }]}
+                          >
+                            {roleLabel}
+                          </Text>
+                        )}
                       </View>
                     </View>
-                  )}
-                />
-              </View>
-            </View>
-
-            <InputField
-              label="Description"
-              value={description}
-              onChangeText={setDescription}
-              placeholder="Tell us about your brand"
-              multiline={true}
-              icon="document-text"
-              textColor={textColor}
-              secondaryTextColor={secondaryTextColor}
-              inputBorderColor={inputBorderColor}
-              inputBackground={inputBackground}
-            />
-
-            <InputField
-              label="Location"
-              value={location}
-              onChangeText={setLocation}
-              placeholder="Headquarters location"
-              icon="location"
-              textColor={textColor}
-              secondaryTextColor={secondaryTextColor}
-              inputBorderColor={inputBorderColor}
-              inputBackground={inputBackground}
+                    {isSelected && (
+                      <Ionicons name="checkmark" size={16} color={text} />
+                    )}
+                  </View>
+                );
+              }}
             />
           </View>
+
+          {/* Selected user info */}
+          {selectedUser && (
+            <View style={[styles.selectedInfo, { borderColor: border }]}>
+              <View
+                style={[styles.selectedAvatar, { backgroundColor: text }]}
+              >
+                <Text style={[styles.selectedAvatarText, { color: bg }]}>
+                  {(selectedUser.label?.charAt(0) || "?").toUpperCase()}
+                </Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text
+                  style={[styles.selectedName, { color: text }]}
+                  numberOfLines={1}
+                >
+                  {selectedUser.label}
+                </Text>
+                <Text style={[styles.selectedRole, { color: secondary }]}>
+                  {selectedUser.role === "brandOwner"
+                    ? "BRAND OWNER"
+                    : selectedUser.role?.toUpperCase()}
+                  {selectedUser.role === "customer" &&
+                    "  \u2192  BRAND OWNER"}
+                </Text>
+              </View>
+              <TouchableOpacity
+                onPress={() => setOwner("")}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Ionicons name="close" size={16} color={secondary} />
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
 
-        {/* Action Button */}
+        {/* Description */}
+        <View style={styles.section}>
+          <Text style={[styles.label, { color: secondary }]}>
+            DESCRIPTION <Text style={{ color: "#C41E3A" }}>*</Text>
+          </Text>
+          <TextInput
+            style={[
+              styles.input,
+              styles.textArea,
+              { backgroundColor: inputBg, color: text, borderColor: border },
+            ]}
+            placeholder="Tell us about this brand"
+            placeholderTextColor={secondary}
+            value={description}
+            onChangeText={setDescription}
+            multiline
+            textAlignVertical="top"
+          />
+        </View>
+
+        {/* Location */}
+        <View style={styles.section}>
+          <Text style={[styles.label, { color: secondary }]}>
+            LOCATION <Text style={{ color: "#C41E3A" }}>*</Text>
+          </Text>
+          <TextInput
+            style={[
+              styles.input,
+              { backgroundColor: inputBg, color: text, borderColor: border },
+            ]}
+            placeholder="Headquarters location"
+            placeholderTextColor={secondary}
+            value={location}
+            onChangeText={setLocation}
+          />
+        </View>
+
+        {/* Submit */}
         <TouchableOpacity
-          style={[styles.createButton, loading && styles.buttonDisabled]}
+          style={[
+            styles.submitButton,
+            { backgroundColor: text },
+            (loading || isUploading) && styles.submitDisabled,
+          ]}
           onPress={handleCreateBrand}
-          disabled={
-            loading ||
-            Object.values(uploads).some((u) => u.status === "uploading")
-          }
-          activeOpacity={0.9}
+          disabled={loading || isUploading}
+          activeOpacity={0.7}
         >
-          <LinearGradient
-            colors={loading ? ["#bbb", "#999"] : [buttonColor, "#1B6ED9"]}
-            style={styles.gradientButton}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-          >
-            {loading ? (
-              <ActivityIndicator size="small" color="#fff" />
-            ) : (
-              <>
-                <Text style={styles.buttonText}>Publish Brand</Text>
-                <Ionicons
-                  name="arrow-forward"
-                  size={20}
-                  color="white"
-                  style={styles.buttonIcon}
-                />
-              </>
-            )}
-          </LinearGradient>
+          {loading ? (
+            <ActivityIndicator size="small" color={bg} />
+          ) : (
+            <Text style={[styles.submitText, { color: bg }]}>
+              CREATE BRAND
+            </Text>
+          )}
         </TouchableOpacity>
+
+        <View style={{ height: 40 }} />
       </ScrollView>
     </KeyboardAvoidingView>
   );
 };
-
-// Extracted InputField for stability
-const InputField = ({
-  label,
-  value,
-  onChangeText,
-  placeholder,
-  multiline = false,
-  icon,
-  textColor,
-  secondaryTextColor,
-  inputBorderColor,
-  inputBackground,
-}: {
-  label: string;
-  value: string;
-  onChangeText: (text: string) => void;
-  placeholder: string;
-  multiline?: boolean;
-  icon: string;
-  textColor: string;
-  secondaryTextColor: string;
-  inputBorderColor: string;
-  inputBackground: string;
-}) => (
-  <View style={styles.inputContainer}>
-    <Text style={[styles.inputLabel, { color: textColor }]}>{label}</Text>
-    <View
-      style={[
-        styles.inputWrapper,
-        {
-          borderColor: inputBorderColor,
-          backgroundColor: inputBackground,
-        },
-      ]}
-    >
-      <Ionicons
-        name={`${icon}-outline` as any}
-        size={20}
-        color={useThemeColor({ light: "#007AFF", dark: "#0A84FF" }, "primary")}
-        style={styles.inputIcon}
-      />
-      <TextInput
-        style={[
-          styles.input,
-          { color: textColor, height: multiline ? 100 : 56 },
-          multiline && { textAlignVertical: "top", paddingTop: 16 },
-        ]}
-        placeholder={placeholder}
-        value={value}
-        onChangeText={onChangeText}
-        placeholderTextColor={secondaryTextColor}
-        multiline={multiline}
-        selectionColor={useThemeColor(
-          { light: "#007AFF", dark: "#0A84FF" },
-          "primary",
-        )}
-      />
-    </View>
-  </View>
-);
 
 const styles = StyleSheet.create({
   container: {
@@ -512,72 +541,60 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: 20,
-    paddingTop: Platform.OS === "ios" ? 60 : 20,
+    paddingTop: Platform.OS === "ios" ? 60 : 24,
     paddingBottom: 40,
   },
+
+  // Header
   headerContainer: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 32,
-  },
-  backButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 16,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  headerTextContainer: {
-    flex: 1,
+    justifyContent: "space-between",
+    marginBottom: 36,
   },
   header: {
-    fontSize: 32,
-    fontWeight: "800",
-    letterSpacing: -0.5,
-  },
-  subtitle: {
-    fontSize: 15,
-    marginTop: 4,
-    letterSpacing: 0.2,
-  },
-  card: {
-    borderRadius: 24,
-    padding: 24,
-    marginBottom: 24,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.05,
-    shadowRadius: 20,
-    elevation: 5,
-  },
-  sectionHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 16,
-    gap: 8,
-  },
-  sectionTitle: {
     fontSize: 18,
+    fontWeight: "800",
+    letterSpacing: 2,
+  },
+
+  // Sections
+  section: {
+    marginBottom: 24,
+  },
+  label: {
+    fontSize: 11,
     fontWeight: "700",
+    letterSpacing: 1.5,
+    marginBottom: 10,
   },
-  logoSection: {
-    marginBottom: 32,
+
+  // Input
+  input: {
+    height: 50,
+    borderWidth: 1,
+    borderRadius: 0,
+    paddingHorizontal: 16,
+    fontSize: 15,
+    fontWeight: "500",
   },
-  logoUploadContainer: {
-    height: 180,
-    borderRadius: 20,
-    borderWidth: 1.5,
+  textArea: {
+    height: 110,
+    paddingTop: 14,
+    paddingBottom: 14,
+  },
+
+  // Logo
+  logoUpload: {
+    height: 140,
+    borderWidth: 1,
+    borderStyle: "dashed",
+    borderRadius: 0,
     alignItems: "center",
     justifyContent: "center",
     overflow: "hidden",
   },
-  logoPreviewContainer: {
+  logoPreviewWrap: {
     width: "100%",
     height: "100%",
     position: "relative",
@@ -587,143 +604,161 @@ const styles = StyleSheet.create({
     height: "100%",
     resizeMode: "cover",
   },
-  logoBadge: {
+  logoOverlay: {
     position: "absolute",
-    bottom: 12,
-    right: 12,
-    backgroundColor: "rgba(0,0,0,0.6)",
-    padding: 8,
-    borderRadius: 12,
+    bottom: 10,
+    right: 10,
+    width: 30,
+    height: 30,
+    alignItems: "center",
+    justifyContent: "center",
   },
   logoPlaceholder: {
     alignItems: "center",
-    padding: 20,
-  },
-  iconCircle: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 12,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    gap: 8,
   },
   logoPlaceholderText: {
-    fontSize: 16,
-    fontWeight: "600",
-    marginBottom: 4,
-  },
-  logoHintText: {
     fontSize: 13,
+    fontWeight: "500",
+    letterSpacing: 0.5,
   },
-  formFields: {
-    gap: 24,
-  },
-  inputContainer: {
-    width: "100%",
-  },
-  inputLabel: {
-    fontSize: 15,
-    fontWeight: "700",
+
+  // Filter chips
+  filterRow: {
     marginBottom: 10,
-    marginLeft: 4,
   },
-  inputWrapper: {
-    flexDirection: "row",
-    alignItems: "center",
-    borderWidth: 1.5,
-    borderRadius: 16,
+  filterRowContent: {
+    gap: 8,
   },
-  inputIcon: {
-    marginLeft: 16,
-    marginRight: 4,
+  filterChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderRadius: 0,
   },
-  input: {
-    flex: 1,
-    fontSize: 16,
-    paddingHorizontal: 12,
+  filterChipText: {
+    fontSize: 10,
+    fontWeight: "700",
+    letterSpacing: 1,
+  },
+
+  // Dropdown
+  dropdown: {
+    height: 50,
+    paddingHorizontal: 16,
+    borderWidth: 1,
+    borderRadius: 0,
+  },
+  dropdownPlaceholder: {
+    fontSize: 14,
     fontWeight: "500",
   },
-  dropdownWrapper: {
-    flexDirection: "row",
-    alignItems: "center",
-    borderWidth: 1.5,
-    borderRadius: 16,
+  dropdownSelected: {
+    fontSize: 14,
+    fontWeight: "600",
   },
-  dropdown: {
-    flex: 1,
-    height: 56,
+  dropdownSearch: {
+    height: 50,
+    fontSize: 14,
+    borderRadius: 0,
+    borderWidth: 0,
+    borderBottomWidth: 1,
+    margin: 0,
+    paddingHorizontal: 16,
   },
   dropdownContainer: {
-    borderRadius: 16,
+    borderRadius: 0,
     borderWidth: 1,
-    marginTop: 8,
-    overflow: "hidden",
+    borderTopWidth: 0,
+    marginTop: 0,
     maxHeight: 300,
+    overflow: "hidden",
   },
   dropdownItem: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 16,
+    justifyContent: "space-between",
+    paddingHorizontal: 14,
     paddingVertical: 12,
-    gap: 12,
+    borderBottomWidth: 1,
   },
-  dropdownItemName: {
-    fontSize: 15,
-    fontWeight: "500",
-  },
-  placeholderStyle: {
-    fontSize: 16,
-    paddingLeft: 8,
-  },
-  selectedTextStyle: {
-    fontSize: 16,
-    paddingLeft: 8,
-  },
-  inputSearchStyle: {
-    height: 44,
-    fontSize: 15,
-    borderRadius: 10,
-    margin: 8,
-  },
-  createButton: {
-    borderRadius: 20,
-    overflow: "hidden",
-    shadowColor: "#007AFF",
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 8,
-  },
-  gradientButton: {
-    paddingVertical: 18,
+  dropdownItemLeft: {
     flexDirection: "row",
     alignItems: "center",
+    flex: 1,
+    marginRight: 12,
+  },
+  dropdownAvatar: {
+    width: 32,
+    height: 32,
+    alignItems: "center",
     justifyContent: "center",
-    gap: 10,
+    marginRight: 12,
   },
-  buttonText: {
-    color: "#ffffff",
-    fontSize: 18,
+  dropdownAvatarText: {
+    fontSize: 13,
+    fontWeight: "800",
+  },
+  dropdownItemContent: {
+    flex: 1,
+  },
+  dropdownItemName: {
+    fontSize: 13,
+    fontWeight: "500",
+  },
+  dropdownItemRole: {
+    fontSize: 9,
     fontWeight: "700",
-  },
-  buttonIcon: {
+    letterSpacing: 1,
     marginTop: 2,
   },
-  buttonDisabled: {
-    opacity: 0.7,
-  },
-  uploadingContainer: {
+
+  // Selected user card
+  selectedInfo: {
+    flexDirection: "row",
     alignItems: "center",
-    gap: 12,
+    marginTop: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderWidth: 1,
   },
-  uploadingText: {
-    fontSize: 15,
+  selectedAvatar: {
+    width: 36,
+    height: 36,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 12,
+  },
+  selectedAvatarText: {
+    fontSize: 14,
+    fontWeight: "800",
+  },
+  selectedName: {
+    fontSize: 13,
+    fontWeight: "700",
+  },
+  selectedRole: {
+    fontSize: 10,
     fontWeight: "600",
+    letterSpacing: 0.8,
+    marginTop: 2,
+  },
+
+  // Submit
+  submitButton: {
+    height: 52,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 0,
+    marginTop: 8,
+  },
+  submitText: {
+    fontSize: 14,
+    fontWeight: "800",
+    letterSpacing: 2,
+  },
+  submitDisabled: {
+    opacity: 0.4,
   },
 });
 
