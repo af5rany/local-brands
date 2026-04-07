@@ -79,10 +79,6 @@ function RootLayoutNav() {
         name="brands/[brandId]/edit"
         options={{ headerShown: false, title: "Edit Brand" }}
       />
-      <Stack.Screen
-        name="brands/[brandId]/products"
-        options={{ title: "Brand Products", headerBackTitle: "Brand" }}
-      />
 
       {/* Products */}
       <Stack.Screen
@@ -190,6 +186,24 @@ function RootLayoutNav() {
           title: "Management",
           presentation: "modal",
         }}
+      />
+
+      {/* Info */}
+      <Stack.Screen
+        name="info/shipping"
+        options={{ headerShown: false, title: "Shipping" }}
+      />
+      <Stack.Screen
+        name="info/returns"
+        options={{ headerShown: false, title: "Returns & Refunds" }}
+      />
+      <Stack.Screen
+        name="info/about"
+        options={{ headerShown: false, title: "About Us" }}
+      />
+      <Stack.Screen
+        name="info/contact"
+        options={{ headerShown: false, title: "Contact Us" }}
       />
     </Stack>
   );

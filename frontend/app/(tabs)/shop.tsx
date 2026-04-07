@@ -1549,7 +1549,7 @@ const styles = StyleSheet.create({
   // ── Floating Wishlist Button ───────────────
   floatingWishlistBtn: {
     position: "absolute",
-    bottom: 24,
+    bottom: 100,
     right: 20,
     width: 54,
     height: 54,

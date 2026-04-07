@@ -80,7 +80,7 @@ const BrandSelectionScreen = () => {
 
   const handleBrandSelect = (brandId: number) => {
     setSelectedBrandId(brandId);
-    router.push(`/brands/${brandId}/products`);
+    router.push(`/brands/${brandId}`);
   };
 
   const handleViewAllProducts = () => {

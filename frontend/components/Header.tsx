@@ -35,11 +35,14 @@ const MENU_ITEMS: MenuItem[] = [
   { label: "Shop", icon: "grid-outline", route: "/(tabs)/shop" },
   { label: "Feed", icon: "images-outline", route: "/(tabs)/feed" },
   { label: "Brands", icon: "storefront-outline", route: "/(tabs)/brands" },
-  { label: "Wishlist", icon: "heart-outline", route: "/(tabs)/wishlist" },
-  { label: "Cart", icon: "bag-handle-outline", route: "/cart" },
   { label: "Orders", icon: "receipt-outline", route: "/orders" },
-  { label: "Notifications", icon: "notifications-outline", route: "/notifications" },
-  { label: "Profile", icon: "person-outline", route: "/(tabs)/profile" },
+];
+
+const INFO_ITEMS: MenuItem[] = [
+  { label: "Shipping", icon: "cube-outline", route: "/info/shipping" },
+  { label: "Returns & Refunds", icon: "refresh-circle-outline", route: "/info/returns" },
+  { label: "About Us", icon: "information-circle-outline", route: "/info/about" },
+  { label: "Contact Us", icon: "headset-outline", route: "/info/contact" },
 ];
 
 const STAGGER_DELAY = 50;
@@ -329,6 +332,25 @@ const Header: React.FC<HeaderProps> = ({ notificationCount = 0 }) => {
                   ))}
                 </View>
 
+                {/* Info Section */}
+                <AnimatedSection menuOpen={menuVisible} delay={150 + MENU_ITEMS.length * STAGGER_DELAY}>
+                  <View style={[styles.menuDivider, { backgroundColor: colors.border, marginVertical: 8 }]} />
+                  <Text style={[styles.menuSectionLabel, { color: colors.textTertiary }]}>INFO</Text>
+                </AnimatedSection>
+                <View style={styles.menuItems}>
+                  {INFO_ITEMS.map((item, index) => (
+                    <AnimatedMenuItem
+                      key={`info-${index}`}
+                      index={MENU_ITEMS.length + index}
+                      menuOpen={menuVisible}
+                      item={item}
+                      active={isActiveRoute(item.route)}
+                      colors={colors}
+                      onPress={() => handleMenuItemPress(item.route)}
+                    />
+                  ))}
+                </View>
+
                 {/* Menu Footer */}
                 <AnimatedSection menuOpen={menuVisible} delay={150 + MENU_ITEMS.length * STAGGER_DELAY + 100} style={{ marginTop: "auto" }}>
                   <View style={styles.menuFooter}>
@@ -545,6 +567,13 @@ const styles = StyleSheet.create({
   menuItems: {
     paddingTop: 12,
     paddingHorizontal: 16,
+  },
+  menuSectionLabel: {
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 1.2,
+    paddingHorizontal: 24,
+    paddingBottom: 4,
   },
   menuItem: {
     flexDirection: "row",

@@ -69,7 +69,9 @@
       "Bash(./node_modules/.bin/nest build:*)",
       "Bash(curl:*)",
       "Bash(psql:*)",
-      "Bash(docker ps:*)"
+      "Bash(docker ps:*)",
+      "Bash(lsof:*)",
+      "Bash(kill:*)"
     ]
   }
 }

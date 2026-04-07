@@ -10,67 +10,21 @@ import {
   TouchableOpacity,
   ScrollView,
   TextInput,
-  Modal,
-  Dimensions,
-  RefreshControl,
   Alert,
+  RefreshControl,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import getApiUrl from "@/helpers/getApiUrl";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import ProductCard from "@/components/ProductCard";
 import ProductManagementCard from "@/components/ProductManagementCard";
+import { ProductFilterModal } from "@/components/ProductFilterModal";
 import { useThemeColors } from "@/hooks/useThemeColor";
 import { Ionicons } from "@expo/vector-icons";
-import { Brand } from "@/types/brand";
-import { Product } from "@/types/product";
-import {
-  Gender,
-  ProductType,
-  Season,
-  BrandStatus,
-  ProductStatus,
-} from "@/types/enums";
+import { BrandStatus } from "@/types/enums";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/context/ToastContext";
-
-interface ProductFilters {
-  search: string;
-  productType?: ProductType;
-  gender?: Gender;
-  season?: Season;
-  minPrice?: number;
-  maxPrice?: number;
-  status?: ProductStatus;
-}
-
-interface PaginatedResponse {
-  items: Product[];
-  total: number;
-  page: number;
-  limit: number;
-}
-
-enum SortBy {
-  NAME = "name",
-  PRICE = "price",
-  CREATED_AT = "createdAt",
-  UPDATED_AT = "updatedAt",
-  BRAND_NAME = "brandName",
-  POPULARITY = "popularity",
-}
-
-enum SortOrder {
-  ASC = "ASC",
-  DESC = "DESC",
-}
-
-interface SortOption {
-  key: string;
-  label: string;
-  sortBy: SortBy;
-  sortOrder: SortOrder;
-}
+import { useBrandDetails, sortOptions, SortOption } from "@/hooks/useBrandDetails";
 
 const STATUS_CONFIG: Record<
   BrandStatus,
@@ -82,58 +36,6 @@ const STATUS_CONFIG: Record<
   [BrandStatus.ARCHIVED]: { label: "Archived", icon: "archive-outline" },
 };
 
-const sortOptions: SortOption[] = [
-  {
-    key: "newest",
-    label: "Newest",
-    sortBy: SortBy.CREATED_AT,
-    sortOrder: SortOrder.DESC,
-  },
-  {
-    key: "oldest",
-    label: "Oldest",
-    sortBy: SortBy.CREATED_AT,
-    sortOrder: SortOrder.ASC,
-  },
-  {
-    key: "price_asc",
-    label: "Price: Low to High",
-    sortBy: SortBy.PRICE,
-    sortOrder: SortOrder.ASC,
-  },
-  {
-    key: "price_desc",
-    label: "Price: High to Low",
-    sortBy: SortBy.PRICE,
-    sortOrder: SortOrder.DESC,
-  },
-  {
-    key: "name_asc",
-    label: "Name: A-Z",
-    sortBy: SortBy.NAME,
-    sortOrder: SortOrder.ASC,
-  },
-  {
-    key: "name_desc",
-    label: "Name: Z-A",
-    sortBy: SortBy.NAME,
-    sortOrder: SortOrder.DESC,
-  },
-  {
-    key: "popularity",
-    label: "Most Popular",
-    sortBy: SortBy.POPULARITY,
-    sortOrder: SortOrder.DESC,
-  },
-];
-
-const filterOptions = {
-  productTypes: Object.values(ProductType),
-  genders: Object.values(Gender),
-  seasons: Object.values(Season),
-  statuses: Object.values(ProductStatus),
-};
-
 const BrandDetailScreen = () => {
   const router = useRouter();
   const { brandId, refresh } = useLocalSearchParams();
@@ -142,120 +44,45 @@ const BrandDetailScreen = () => {
   const colors = useThemeColors();
   const userRole = user?.role || user?.userRole;
 
-  const [brand, setBrand] = useState<Brand | null>(null);
+  const {
+    brand,
+    products,
+    loading,
+    productsLoading,
+    error,
+    filters,
+    setFilters,
+    sortBy,
+    setSortBy,
+    sortOrder,
+    setSortOrder,
+    selectedSortOption,
+    setSelectedSortOption,
+    pagination,
+    isFollowing,
+    followerCount,
+    followLoading,
+    refreshing,
+    setRefreshing,
+    fetchBrandDetails,
+    fetchProducts,
+    fetchFollowState,
+    toggleFollow,
+    setBrand,
+  } = useBrandDetails(brandId, token, user);
+
   const isOwnerOrAdmin =
     userRole === "admin" ||
     (user?.id && brand?.owner?.id && user.id === brand.owner.id);
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [productsLoading, setProductsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+
   const [showFilters, setShowFilters] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
   const [changingStatus, setChangingStatus] = useState(false);
-
-  const [pagination, setPagination] = useState({
-    page: 1,
-    limit: 10,
-    total: 0,
-  });
-
-  const [filters, setFilters] = useState<ProductFilters>({ search: "" });
-  const [sortBy, setSortBy] = useState<SortBy>(SortBy.CREATED_AT);
-  const [sortOrder, setSortOrder] = useState<SortOrder>(SortOrder.DESC);
-  const [selectedSortOption, setSelectedSortOption] = useState(sortOptions[0]);
-
-  // Follow state
-  const [isFollowing, setIsFollowing] = useState(false);
-  const [followerCount, setFollowerCount] = useState(0);
-  const [followLoading, setFollowLoading] = useState(false);
 
   // ── Status color helpers ─────────────────────
   const getStatusColors = (_status: BrandStatus) => ({
     bg: "transparent",
     fg: colors.textSecondary,
   });
-
-  // ── Data fetching ────────────────────────────
-  const fetchBrandDetails = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const response = await fetch(`${getApiUrl()}/brands/${brandId}`, {
-        headers: {
-          ...(token && { Authorization: `Bearer ${token}` }),
-          "Content-Type": "application/json",
-        },
-      });
-      if (!response.ok) throw new Error("Failed to fetch brand details");
-      const data = await response.json();
-      setBrand(data);
-
-      // Pre-select product status filter based on brand status
-      const statusMap: Record<string, ProductStatus> = {
-        [BrandStatus.ACTIVE]: ProductStatus.PUBLISHED,
-        [BrandStatus.DRAFT]: ProductStatus.DRAFT,
-        [BrandStatus.ARCHIVED]: ProductStatus.ARCHIVED,
-      };
-      const mappedStatus = statusMap[data.status];
-      if (mappedStatus) {
-        setFilters((prev) => ({ ...prev, status: mappedStatus }));
-      }
-    } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchFollowState = async () => {
-    if (!token || !brandId) return;
-    try {
-      const [followRes, countRes] = await Promise.all([
-        fetch(`${getApiUrl()}/brands/follow/${brandId}/check`, {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
-        fetch(`${getApiUrl()}/brands/follow/${brandId}/count`),
-      ]);
-      if (followRes.ok) {
-        const data = await followRes.json();
-        setIsFollowing(data.following);
-      }
-      if (countRes.ok) {
-        const data = await countRes.json();
-        setFollowerCount(data.count);
-      }
-    } catch (err) {
-      console.error("Error fetching follow state:", err);
-    }
-  };
-
-  const toggleFollow = async () => {
-    if (!token) {
-      router.push("/auth/login");
-      return;
-    }
-    setFollowLoading(true);
-    try {
-      const response = await fetch(
-        `${getApiUrl()}/brands/follow/${brandId}`,
-        {
-          method: isFollowing ? "DELETE" : "POST",
-          headers: { Authorization: `Bearer ${token}` },
-        },
-      );
-      const data = await response.text();
-      console.log('[Follow] status:', response.status, 'body:', data);
-      if (response.ok) {
-        setIsFollowing(!isFollowing);
-        setFollowerCount((prev) => (isFollowing ? prev - 1 : prev + 1));
-      }
-    } catch (err) {
-      console.error("Error toggling follow:", err);
-    } finally {
-      setFollowLoading(false);
-    }
-  };
 
   const handleDeleteBrand = () => {
     Alert.alert(
@@ -312,91 +139,22 @@ const BrandDetailScreen = () => {
     }
   };
 
-  const fetchProducts = useCallback(
-    async (page: number = 1, reset: boolean = false) => {
-      if (reset) setProductsLoading(true);
-      try {
-        const queryParams = new URLSearchParams({
-          page: page.toString(),
-          limit: pagination.limit.toString(),
-          brandIds: brandId as string,
-          sortBy: sortBy,
-          sortOrder: sortOrder,
-        });
-        if (filters.search) queryParams.append("search", filters.search);
-        if (filters.productType)
-          queryParams.append("productTypes", filters.productType);
-        if (filters.gender) queryParams.append("gender", filters.gender);
-        if (filters.season) queryParams.append("season", filters.season);
-        if (filters.minPrice)
-          queryParams.append("minPrice", filters.minPrice.toString());
-        if (filters.maxPrice)
-          queryParams.append("maxPrice", filters.maxPrice.toString());
-        if (filters.status) queryParams.append("status", filters.status);
-
-        const response = await fetch(
-          `${getApiUrl()}/products?${queryParams.toString()}`,
-          {
-            headers: {
-              ...(token && { Authorization: `Bearer ${token}` }),
-              "Content-Type": "application/json",
-              "Cache-Control": "no-cache, no-store",
-              Pragma: "no-cache",
-            },
-          },
-        );
-        if (!response.ok) throw new Error("Failed to fetch products");
-        const data: PaginatedResponse = await response.json();
-
-        data.items.forEach((product) => {
-          product["brandName"] = brand?.name || "Unknown Brand";
-        });
-
-        if (reset || page === 1) {
-          setProducts(data.items);
-        } else {
-          setProducts((prev) => [...prev, ...data.items]);
-        }
-        setPagination({
-          page: data.page,
-          limit: data.limit,
-          total: data.total,
-        });
-      } catch (err: any) {
-        setError(err.message);
-      } finally {
-        setProductsLoading(false);
-        setRefreshing(false);
-      }
-    },
-    [brandId, filters, sortBy, sortOrder, pagination.limit, brand?.name],
-  );
+  useEffect(() => {
+    if (brandId) fetchBrandDetails();
+  }, [brandId, fetchBrandDetails]);
 
   useEffect(() => {
     if (brandId) {
-      fetchBrandDetails();
+      fetchFollowState();
     }
-  }, [brandId]);
+  }, [brandId, token, fetchFollowState]);
 
   useEffect(() => {
-    if (brandId) {
-      // Follower count is public - always fetch
-      fetch(`${getApiUrl()}/brands/follow/${brandId}/count`)
-        .then((r) => r.ok ? r.json() : null)
-        .then((data) => { if (data) setFollowerCount(data.count); })
-        .catch(() => {});
-
-      if (token) {
-        fetchFollowState();
-      } else {
-        setIsFollowing(false);
-      }
+    if (brandId && brand?.name) {
+      fetchProducts(1, true);
     }
-  }, [brandId, token]);
-
-  useEffect(() => {
-    if (brandId && brand) fetchProducts(1, true);
-  }, [fetchProducts]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [brandId, filters, sortBy, sortOrder]); // Remove brand object itself to avoid rapid re-fetches
 
   const fetchProductsRef = useRef(fetchProducts);
   fetchProductsRef.current = fetchProducts;
@@ -413,10 +171,10 @@ const BrandDetailScreen = () => {
       fetchProducts(1, true);
       router.setParams({ refresh: "" });
     }
-  }, [refresh]);
+  }, [refresh, fetchBrandDetails, fetchProducts, router]);
 
   // ── Handlers ─────────────────────────────────
-  const handleFilterChange = (key: keyof ProductFilters, value: any) => {
+  const handleFilterChange = (key: keyof typeof filters, value: any) => {
     setFilters((prev) => ({ ...prev, [key]: value }));
   };
 
@@ -447,8 +205,6 @@ const BrandDetailScreen = () => {
     setSelectedSortOption(option);
     setSortBy(option.sortBy);
     setSortOrder(option.sortOrder);
-    // No direct fetchProducts call — useEffect([fetchProducts]) handles re-fetch
-    // when sortBy/sortOrder state updates cause fetchProducts to get a new reference.
   };
 
   const getActiveFiltersCount = () => {
@@ -458,6 +214,7 @@ const BrandDetailScreen = () => {
     if (filters.gender) count++;
     if (filters.season) count++;
     if (filters.minPrice || filters.maxPrice) count++;
+    if (filters.status && isOwnerOrAdmin) count++;
     return count;
   };
 
@@ -518,7 +275,6 @@ const BrandDetailScreen = () => {
   const totalPages = Math.ceil(pagination.total / pagination.limit);
   const hasNext = pagination.page < totalPages;
   const statusCfg = STATUS_CONFIG[brand.status] || { label: brand.status || "Unknown", icon: "ellipse-outline" as const };
-  const statusColors = getStatusColors(brand.status);
 
   return (
     <SafeAreaView
@@ -645,7 +401,12 @@ const BrandDetailScreen = () => {
                   ? { borderColor: colors.border, borderWidth: 1 }
                   : { backgroundColor: colors.primary },
               ]}
-              onPress={toggleFollow}
+              onPress={async () => {
+                const wasSuccess = await toggleFollow();
+                if (wasSuccess) {
+                  showToast(isFollowing ? "Unfollowed" : "Following", "success");
+                }
+              }}
               disabled={followLoading}
             >
               {followLoading ? (
@@ -783,66 +544,7 @@ const BrandDetailScreen = () => {
             </TouchableOpacity>
 
             {/* Status Changer */}
-            {/* <View
-              style={[
-                styles.statusCard,
-                {
-                  backgroundColor: colors.surface,
-                  borderColor: colors.border,
-                },
-              ]}
-            >
-              <Text
-                style={[styles.statusCardTitle, { color: colors.textTertiary }]}
-              >
-                BRAND STATUS
-              </Text>
-              <View style={styles.statusOptions}>
-                {Object.values(BrandStatus).map((s) => {
-                  const isSelected = brand.status === s;
-                  const sc = getStatusColors(s);
-                  const cfg = STATUS_CONFIG[s];
-                  return (
-                    <TouchableOpacity
-                      key={s}
-                      disabled={changingStatus}
-                      onPress={() => handleStatusChange(s)}
-                      style={[
-                        styles.statusOption,
-                        {
-                          backgroundColor: isSelected ? sc.bg : "transparent",
-                          borderColor: isSelected ? sc.fg : colors.border,
-                          opacity: changingStatus ? 0.6 : 1,
-                        },
-                      ]}
-                    >
-                      <Ionicons
-                        name={cfg.icon}
-                        size={14}
-                        color={isSelected ? sc.fg : colors.textTertiary}
-                      />
-                      <Text
-                        style={[
-                          styles.statusOptionText,
-                          {
-                            color: isSelected ? sc.fg : colors.textSecondary,
-                          },
-                        ]}
-                      >
-                        {cfg.label}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-              {changingStatus && (
-                <ActivityIndicator
-                  size="small"
-                  color={colors.primary}
-                  style={{ marginTop: 10 }}
-                />
-              )}
-            </View> */}
+            {/* Status options are commented out in original file, kept hidden if needed */}
           </View>
         )}
 
@@ -993,7 +695,7 @@ const BrandDetailScreen = () => {
                   onEdit={(id) => router.push(`/products/edit/${id}`)}
                 />
               ) : (
-                <ProductCard product={item} />
+                <ProductCard product={item} mode="view" />
               )
             }
             contentContainerStyle={styles.productsList}
@@ -1116,231 +818,15 @@ const BrandDetailScreen = () => {
       </ScrollView>
 
       {/* ── Filter Modal ──────────────────────────── */}
-      <Modal
+      <ProductFilterModal
         visible={showFilters}
-        animationType="slide"
-        transparent
-        onRequestClose={() => setShowFilters(false)}
-      >
-        <View
-          style={[
-            styles.modalOverlay,
-            { backgroundColor: colors.surfaceOverlay },
-          ]}
-        >
-          <View
-            style={[
-              styles.modalContent,
-              { backgroundColor: colors.surface },
-            ]}
-          >
-            {/* Modal Header */}
-            <View
-              style={[
-                styles.modalHeader,
-                { borderBottomColor: colors.border },
-              ]}
-            >
-              <Text style={[styles.modalTitle, { color: colors.text }]}>
-                Filters
-              </Text>
-              <TouchableOpacity
-                onPress={() => setShowFilters(false)}
-                hitSlop={8}
-              >
-                <Ionicons name="close" size={22} color={colors.text} />
-              </TouchableOpacity>
-            </View>
-
-            <ScrollView showsVerticalScrollIndicator={false}>
-              {/* Product Type */}
-              <View style={[styles.filterSection, { borderBottomColor: colors.border }]}>
-                <Text style={[styles.filterSectionTitle, { color: colors.textTertiary }]}>
-                  Product Type
-                </Text>
-                {filterOptions.productTypes.map((type, i) => {
-                  const active = filters.productType === type;
-                  const isLast = i === filterOptions.productTypes.length - 1;
-                  return (
-                    <TouchableOpacity
-                      key={type}
-                      style={[
-                        styles.filterRow,
-                        !isLast && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border },
-                      ]}
-                      onPress={() => handleFilterChange("productType", active ? undefined : type)}
-                      activeOpacity={0.5}
-                    >
-                      <Text style={[styles.filterRowLabel, { color: colors.text, fontWeight: active ? "700" : "400" }]}>
-                        {type}
-                      </Text>
-                      {active && <Ionicons name="checkmark" size={16} color={colors.text} />}
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-
-              {/* Gender */}
-              <View style={[styles.filterSection, { borderBottomColor: colors.border }]}>
-                <Text style={[styles.filterSectionTitle, { color: colors.textTertiary }]}>
-                  Gender
-                </Text>
-                {filterOptions.genders.map((gender, i) => {
-                  const active = filters.gender === gender;
-                  const isLast = i === filterOptions.genders.length - 1;
-                  return (
-                    <TouchableOpacity
-                      key={gender}
-                      style={[
-                        styles.filterRow,
-                        !isLast && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border },
-                      ]}
-                      onPress={() => handleFilterChange("gender", active ? undefined : gender)}
-                      activeOpacity={0.5}
-                    >
-                      <Text style={[styles.filterRowLabel, { color: colors.text, fontWeight: active ? "700" : "400" }]}>
-                        {gender}
-                      </Text>
-                      {active && <Ionicons name="checkmark" size={16} color={colors.text} />}
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-
-              {/* Season */}
-              <View style={[styles.filterSection, { borderBottomColor: colors.border }]}>
-                <Text style={[styles.filterSectionTitle, { color: colors.textTertiary }]}>
-                  Season
-                </Text>
-                {filterOptions.seasons.map((season, i) => {
-                  const active = filters.season === season;
-                  const isLast = i === filterOptions.seasons.length - 1;
-                  return (
-                    <TouchableOpacity
-                      key={season}
-                      style={[
-                        styles.filterRow,
-                        !isLast && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border },
-                      ]}
-                      onPress={() => handleFilterChange("season", active ? undefined : season)}
-                      activeOpacity={0.5}
-                    >
-                      <Text style={[styles.filterRowLabel, { color: colors.text, fontWeight: active ? "700" : "400" }]}>
-                        {season}
-                      </Text>
-                      {active && <Ionicons name="checkmark" size={16} color={colors.text} />}
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-
-              {/* Status */}
-              <View style={[styles.filterSection, { borderBottomColor: colors.border }]}>
-                <Text style={[styles.filterSectionTitle, { color: colors.textTertiary }]}>
-                  Status
-                </Text>
-                {filterOptions.statuses.map((status, i) => {
-                  const active = filters.status === status;
-                  const isLast = i === filterOptions.statuses.length - 1;
-                  return (
-                    <TouchableOpacity
-                      key={status}
-                      style={[
-                        styles.filterRow,
-                        !isLast && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border },
-                      ]}
-                      onPress={() => handleFilterChange("status", active ? undefined : status)}
-                      activeOpacity={0.5}
-                    >
-                      <Text style={[styles.filterRowLabel, { color: colors.text, fontWeight: active ? "700" : "400" }]}>
-                        {status}
-                      </Text>
-                      {active && <Ionicons name="checkmark" size={16} color={colors.text} />}
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-
-              {/* Price Range */}
-              <View style={[styles.filterSection, { borderBottomColor: colors.border }]}>
-                <Text style={[styles.filterSectionTitle, { color: colors.textTertiary }]}>
-                  Price Range
-                </Text>
-                <View style={styles.priceRow}>
-                  <View style={styles.priceInputGroup}>
-                    <Text style={[styles.priceLabel, { color: colors.textTertiary }]}>MIN</Text>
-                    <TextInput
-                      style={[styles.priceInput, { borderBottomColor: colors.text, color: colors.text }]}
-                      placeholder="0"
-                      placeholderTextColor={colors.textTertiary}
-                      keyboardType="numeric"
-                      value={filters.minPrice?.toString() || ""}
-                      onChangeText={(text) =>
-                        handleFilterChange("minPrice", text ? parseFloat(text) : undefined)
-                      }
-                    />
-                  </View>
-                  <View style={[styles.priceSeparator, { backgroundColor: colors.border }]} />
-                  <View style={styles.priceInputGroup}>
-                    <Text style={[styles.priceLabel, { color: colors.textTertiary }]}>MAX</Text>
-                    <TextInput
-                      style={[styles.priceInput, { borderBottomColor: colors.text, color: colors.text }]}
-                      placeholder="∞"
-                      placeholderTextColor={colors.textTertiary}
-                      keyboardType="numeric"
-                      value={filters.maxPrice?.toString() || ""}
-                      onChangeText={(text) =>
-                        handleFilterChange("maxPrice", text ? parseFloat(text) : undefined)
-                      }
-                    />
-                  </View>
-                </View>
-              </View>
-            </ScrollView>
-
-            {/* Modal Footer */}
-            <View
-              style={[
-                styles.modalFooter,
-                { borderTopColor: colors.border },
-              ]}
-            >
-              <TouchableOpacity
-                style={[
-                  styles.modalResetBtn,
-                  {
-                    backgroundColor: colors.surfaceRaised,
-                    borderColor: colors.border,
-                  },
-                ]}
-                onPress={resetFilters}
-              >
-                <Text
-                  style={[styles.modalResetText, { color: colors.text }]}
-                >
-                  Reset
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[
-                  styles.modalApplyBtn,
-                  { backgroundColor: colors.primary },
-                ]}
-                onPress={applyFilters}
-              >
-                <Text
-                  style={[
-                    styles.modalApplyText,
-                    { color: colors.primaryForeground },
-                  ]}
-                >
-                  Apply Filters
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
+        filters={filters}
+        isOwnerOrAdmin={isOwnerOrAdmin}
+        onFiltersChange={handleFilterChange}
+        onApply={applyFilters}
+        onReset={resetFilters}
+        onClose={() => setShowFilters(false)}
+      />
     </SafeAreaView>
   );
 };
@@ -1348,6 +834,7 @@ const BrandDetailScreen = () => {
 // ── Styles (static, outside component) ─────────
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  scrollContent: { paddingBottom: 40 },
   center: {
     flex: 1,
     alignItems: "center",
@@ -1597,31 +1084,26 @@ const styles = StyleSheet.create({
   // ── Empty State ─────────────────────────────
   emptyState: {
     alignItems: "center",
-    paddingVertical: 48,
-    paddingHorizontal: 24,
+    padding: 32,
     marginHorizontal: 16,
     borderRadius: 0,
     borderWidth: 1,
-    gap: 8,
+    marginTop: 12,
   },
-  emptyTitle: { fontSize: 14, fontWeight: "700", letterSpacing: 0.5 },
-  emptySubtitle: { fontSize: 13, textAlign: "center" },
+  emptyTitle: { fontSize: 14, fontWeight: "700", marginTop: 16, marginBottom: 8 },
+  emptySubtitle: { fontSize: 13, textAlign: "center", lineHeight: 20 },
 
   // ── Danger Zone ─────────────────────────────
-  dangerZone: { paddingHorizontal: 16, marginTop: 32 },
+  dangerZone: { paddingHorizontal: 16, marginTop: 40 },
   dangerCard: {
+    padding: 20,
     borderRadius: 0,
-    padding: 18,
     borderWidth: 1,
+    gap: 12,
   },
-  dangerHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    marginBottom: 8,
-  },
-  dangerTitle: { fontSize: 12, fontWeight: "800", letterSpacing: 1.5, textTransform: "uppercase" },
-  dangerDescription: { fontSize: 13, lineHeight: 20, marginBottom: 14 },
+  dangerHeader: { flexDirection: "row", alignItems: "center", gap: 8 },
+  dangerTitle: { fontSize: 12, fontWeight: "800", letterSpacing: 1, textTransform: "uppercase" },
+  dangerDescription: { fontSize: 13, lineHeight: 20 },
   deleteBtn: {
     flexDirection: "row",
     alignItems: "center",
@@ -1630,100 +1112,9 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 0,
     borderWidth: 1,
+    marginTop: 8,
   },
   deleteBtnText: { fontSize: 12, fontWeight: "700", letterSpacing: 0.5, textTransform: "uppercase" },
-
-  // ── Filter Modal ────────────────────────────
-  modalOverlay: { flex: 1, justifyContent: "flex-end" },
-  modalContent: {
-    borderTopLeftRadius: 0,
-    borderTopRightRadius: 0,
-    maxHeight: Dimensions.get("window").height * 0.8,
-  },
-  modalHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 20,
-    paddingVertical: 18,
-    borderBottomWidth: 1,
-  },
-  modalTitle: { fontSize: 12, fontWeight: "800", letterSpacing: 2, textTransform: "uppercase" },
-  filterSection: {
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 4,
-    borderBottomWidth: 1,
-  },
-  filterSectionTitle: {
-    fontSize: 10,
-    fontWeight: "700",
-    letterSpacing: 2,
-    textTransform: "uppercase",
-    marginBottom: 8,
-  },
-  filterRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingVertical: 16,
-  },
-  filterRowLabel: {
-    fontSize: 15,
-    letterSpacing: 0.2,
-  },
-  priceRow: {
-    flexDirection: "row",
-    alignItems: "flex-end",
-    gap: 0,
-    marginTop: 8,
-    marginBottom: 16,
-  },
-  priceInputGroup: {
-    flex: 1,
-    gap: 6,
-  },
-  priceLabel: {
-    fontSize: 10,
-    fontWeight: "700",
-    letterSpacing: 2,
-  },
-  priceInput: {
-    fontSize: 20,
-    fontWeight: "300",
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    paddingHorizontal: 0,
-  },
-  priceSeparator: {
-    width: 24,
-    height: 1,
-    marginHorizontal: 12,
-    marginBottom: 12,
-  },
-  modalFooter: {
-    flexDirection: "row",
-    padding: 20,
-    gap: 10,
-    borderTopWidth: 1,
-  },
-  modalResetBtn: {
-    flex: 1,
-    borderRadius: 0,
-    paddingVertical: 14,
-    alignItems: "center",
-    borderWidth: 1,
-  },
-  modalResetText: { fontSize: 12, fontWeight: "700", letterSpacing: 0.5, textTransform: "uppercase" },
-  modalApplyBtn: {
-    flex: 1,
-    borderRadius: 0,
-    paddingVertical: 14,
-    alignItems: "center",
-  },
-  modalApplyText: { fontSize: 12, fontWeight: "700", letterSpacing: 0.5, textTransform: "uppercase" },
-
-  scrollContent: { paddingBottom: 20 },
 });
 
 export default BrandDetailScreen;

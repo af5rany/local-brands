@@ -22,6 +22,7 @@ const { width } = Dimensions.get("window");
 
 interface ProductCardProps {
   product: Product;
+  mode?: "view" | "manage";
   onEdit?: (productId: number) => void;
   isWishlisted?: boolean;
   onToggleWishlist?: (productId: number) => void;
@@ -29,6 +30,7 @@ interface ProductCardProps {
 
 const ProductCard: React.FC<ProductCardProps> = ({
   product,
+  mode = "view",
   onEdit,
   isWishlisted = false,
   onToggleWishlist,
@@ -385,7 +387,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
           )}
 
           {/* Discount Badge */}
-          {hasDiscount && !onEdit && (
+          {hasDiscount && mode === "view" && (
             <View style={styles.discountBadge}>
               <Text style={styles.discountText}>{discountPercentage}% OFF</Text>
             </View>
@@ -404,26 +406,28 @@ const ProductCard: React.FC<ProductCardProps> = ({
           </View>
 
           {/* Favorite Button */}
-          <TouchableOpacity
-            style={styles.favoriteButton}
-            onPress={(e) => {
-              e.stopPropagation();
-              if (!token) {
-                router.push("/auth/login");
-                return;
-              }
-              onToggleWishlist?.(product.id);
-            }}
-          >
-            <Ionicons
-              name={isWishlisted ? "heart" : "heart-outline"}
-              size={16}
-              color={isWishlisted ? colors.wishlistHeart : textColor}
-            />
-          </TouchableOpacity>
+          {mode === "view" && (
+            <TouchableOpacity
+              style={styles.favoriteButton}
+              onPress={(e) => {
+                e.stopPropagation();
+                if (!token) {
+                  router.push("/auth/login");
+                  return;
+                }
+                onToggleWishlist?.(product.id);
+              }}
+            >
+              <Ionicons
+                name={isWishlisted ? "heart" : "heart-outline"}
+                size={16}
+                color={isWishlisted ? colors.wishlistHeart : textColor}
+              />
+            </TouchableOpacity>
+          )}
 
           {/* Edit Button for Management */}
-          {onEdit && (
+          {mode === "manage" && onEdit && (
             <TouchableOpacity
               style={[
                 styles.favoriteButton,
