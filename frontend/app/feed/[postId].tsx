@@ -14,14 +14,16 @@ import {
   Platform,
   Alert,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/context/AuthContext";
 import getApiUrl from "@/helpers/getApiUrl";
 import { useThemeColors } from "@/hooks/useThemeColor";
 import Header from "@/components/Header";
-
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
 export default function PostDetailScreen() {
@@ -29,6 +31,7 @@ export default function PostDetailScreen() {
   const router = useRouter();
   const colors = useThemeColors();
   const { token, user } = useAuth();
+  const insets = useSafeAreaInsets();
 
   const [post, setPost] = useState<any>(null);
   const [comments, setComments] = useState<any[]>([]);
@@ -121,13 +124,10 @@ export default function PostDetailScreen() {
 
   const handleDeleteComment = async (commentId: number) => {
     try {
-      const res = await fetch(
-        `${getApiUrl()}/feed/comments/${commentId}`,
-        {
-          method: "DELETE",
-          headers: { Authorization: `Bearer ${token}` },
-        },
-      );
+      const res = await fetch(`${getApiUrl()}/feed/comments/${commentId}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
       if (res.ok) {
         setComments((prev) => prev.filter((c) => c.id !== commentId));
         setPost((p: any) => ({
@@ -177,7 +177,10 @@ export default function PostDetailScreen() {
   if (loading) {
     return (
       <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <SafeAreaView edges={["top"]} style={{ backgroundColor: colors.surface }}>
+        <SafeAreaView
+          edges={["top"]}
+          style={{ backgroundColor: colors.surface }}
+        >
           <Header />
         </SafeAreaView>
         <View style={styles.center}>
@@ -190,7 +193,10 @@ export default function PostDetailScreen() {
   if (!post) {
     return (
       <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <SafeAreaView edges={["top"]} style={{ backgroundColor: colors.surface }}>
+        <SafeAreaView
+          edges={["top"]}
+          style={{ backgroundColor: colors.surface }}
+        >
           <Header />
         </SafeAreaView>
         <View style={styles.center}>
@@ -222,9 +228,17 @@ export default function PostDetailScreen() {
               activeOpacity={0.7}
             >
               {post.brand.logo ? (
-                <Image source={{ uri: post.brand.logo }} style={styles.brandAvatar} />
+                <Image
+                  source={{ uri: post.brand.logo }}
+                  style={styles.brandAvatar}
+                />
               ) : (
-                <View style={[styles.brandAvatar, { backgroundColor: colors.surfaceRaised }]}>
+                <View
+                  style={[
+                    styles.brandAvatar,
+                    { backgroundColor: colors.surfaceRaised },
+                  ]}
+                >
                   <Text style={[styles.brandInitial, { color: colors.text }]}>
                     {post.brand.name?.charAt(0)}
                   </Text>
@@ -257,7 +271,12 @@ export default function PostDetailScreen() {
                   }}
                 >
                   {post.images.map((uri: string, i: number) => (
-                    <Image key={i} source={{ uri }} style={styles.postImage} resizeMode="cover" />
+                    <Image
+                      key={i}
+                      source={{ uri }}
+                      style={styles.postImage}
+                      resizeMode="cover"
+                    />
                   ))}
                 </ScrollView>
                 <View style={styles.dots}>
@@ -266,7 +285,9 @@ export default function PostDetailScreen() {
                       key={i}
                       style={[
                         styles.dot,
-                        i === imageIndex ? styles.dotActive : styles.dotInactive,
+                        i === imageIndex
+                          ? styles.dotActive
+                          : styles.dotInactive,
                       ]}
                     />
                   ))}
@@ -283,7 +304,12 @@ export default function PostDetailScreen() {
                   color={post.isLiked ? "#ef4444" : colors.text}
                 />
                 {post.likeCount > 0 && (
-                  <Text style={[styles.actionCount, { color: post.isLiked ? "#ef4444" : colors.text }]}>
+                  <Text
+                    style={[
+                      styles.actionCount,
+                      { color: post.isLiked ? "#ef4444" : colors.text },
+                    ]}
+                  >
                     {post.likeCount}
                   </Text>
                 )}
@@ -292,7 +318,11 @@ export default function PostDetailScreen() {
                 style={styles.actionBtn}
                 onPress={() => inputRef.current?.focus()}
               >
-                <Ionicons name="chatbubble-outline" size={22} color={colors.text} />
+                <Ionicons
+                  name="chatbubble-outline"
+                  size={22}
+                  color={colors.text}
+                />
                 {post.commentCount > 0 && (
                   <Text style={[styles.actionCount, { color: colors.text }]}>
                     {post.commentCount}
@@ -319,8 +349,13 @@ export default function PostDetailScreen() {
                 {post.postProducts.map((pp: any) => (
                   <TouchableOpacity
                     key={pp.product.id}
-                    style={[styles.taggedProduct, { borderColor: colors.border }]}
-                    onPress={() => router.push(`/products/${pp.product.id}` as any)}
+                    style={[
+                      styles.taggedProduct,
+                      { borderColor: colors.border },
+                    ]}
+                    onPress={() =>
+                      router.push(`/products/${pp.product.id}` as any)
+                    }
                     activeOpacity={0.7}
                   >
                     {pp.product.images?.[0] && (
@@ -331,12 +366,20 @@ export default function PostDetailScreen() {
                     )}
                     <View style={styles.taggedProductInfo}>
                       <Text
-                        style={[styles.taggedProductName, { color: colors.text }]}
+                        style={[
+                          styles.taggedProductName,
+                          { color: colors.text },
+                        ]}
                         numberOfLines={1}
                       >
                         {pp.product.name}
                       </Text>
-                      <Text style={[styles.taggedProductPrice, { color: colors.textTertiary }]}>
+                      <Text
+                        style={[
+                          styles.taggedProductPrice,
+                          { color: colors.textTertiary },
+                        ]}
+                      >
                         ${Number(pp.product.price).toFixed(2)}
                       </Text>
                     </View>
@@ -349,7 +392,9 @@ export default function PostDetailScreen() {
             <View
               style={[styles.commentsHeader, { borderTopColor: colors.border }]}
             >
-              <Text style={[styles.commentsTitle, { color: colors.textTertiary }]}>
+              <Text
+                style={[styles.commentsTitle, { color: colors.textTertiary }]}
+              >
                 COMMENTS
               </Text>
             </View>
@@ -358,9 +403,17 @@ export default function PostDetailScreen() {
         renderItem={({ item }) => (
           <View style={styles.commentRow}>
             {item.user?.avatar ? (
-              <Image source={{ uri: item.user.avatar }} style={styles.commentAvatar} />
+              <Image
+                source={{ uri: item.user.avatar }}
+                style={styles.commentAvatar}
+              />
             ) : (
-              <View style={[styles.commentAvatar, { backgroundColor: colors.surfaceRaised }]}>
+              <View
+                style={[
+                  styles.commentAvatar,
+                  { backgroundColor: colors.surfaceRaised },
+                ]}
+              >
                 <Ionicons name="person" size={14} color={colors.textTertiary} />
               </View>
             )}
@@ -371,7 +424,9 @@ export default function PostDetailScreen() {
               <Text style={[styles.commentText, { color: colors.text }]}>
                 {item.text}
               </Text>
-              <Text style={[styles.commentTime, { color: colors.textTertiary }]}>
+              <Text
+                style={[styles.commentTime, { color: colors.textTertiary }]}
+              >
                 {getTimeAgo(item.createdAt)}
               </Text>
             </View>
@@ -380,14 +435,21 @@ export default function PostDetailScreen() {
                 onPress={() => showCommentOptions(item.id)}
                 style={styles.commentMenu}
               >
-                <Ionicons name="ellipsis-horizontal" size={16} color={colors.textTertiary} />
+                <Ionicons
+                  name="ellipsis-horizontal"
+                  size={16}
+                  color={colors.textTertiary}
+                />
               </TouchableOpacity>
             )}
           </View>
         )}
         ListFooterComponent={
           hasMoreComments ? (
-            <TouchableOpacity onPress={loadMoreComments} style={styles.loadMore}>
+            <TouchableOpacity
+              onPress={loadMoreComments}
+              style={styles.loadMore}
+            >
               <Text style={{ color: colors.textTertiary, fontSize: 13 }}>
                 Load more comments
               </Text>
@@ -404,13 +466,19 @@ export default function PostDetailScreen() {
           {
             backgroundColor: colors.surface,
             borderTopColor: colors.border,
+            paddingBottom: insets.bottom + 10,
           },
         ]}
       >
         {user?.avatar ? (
           <Image source={{ uri: user.avatar }} style={styles.inputAvatar} />
         ) : (
-          <View style={[styles.inputAvatar, { backgroundColor: colors.surfaceRaised }]}>
+          <View
+            style={[
+              styles.inputAvatar,
+              { backgroundColor: colors.surfaceRaised },
+            ]}
+          >
             <Ionicons name="person" size={14} color={colors.textTertiary} />
           </View>
         )}
@@ -578,7 +646,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 12,
     paddingVertical: 10,
-    paddingBottom: Platform.OS === "ios" ? 28 : 10,
     borderTopWidth: 0.5,
     gap: 10,
   },

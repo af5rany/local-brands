@@ -84,6 +84,7 @@ const ManageScreen = () => {
 
   return (
     <SafeAreaView
+      edges={["top", "bottom"]}
       style={[styles.container, { backgroundColor: colors.background }]}
     >
       {/* Header */}

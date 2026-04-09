@@ -117,9 +117,11 @@ const RegisterScreen = () => {
 
       if (!response.ok) throw new Error(data.message || "Registration failed");
 
-      Alert.alert("Success", "Account created! Please check your email to verify your account.", [
-        { text: "OK", onPress: () => router.push("/auth/login") },
-      ]);
+      Alert.alert(
+        "Success",
+        "Account created! Please check your email to verify your account.",
+        [{ text: "OK", onPress: () => router.push("/auth/login") }],
+      );
     } catch (error: any) {
       Alert.alert(
         "Registration Error",
@@ -250,7 +252,10 @@ const RegisterScreen = () => {
   };
 
   return (
-    <View style={[styles.safeArea, { backgroundColor: colors.background }]}>
+    <SafeAreaView
+      edges={["bottom"]}
+      style={[styles.safeArea, { backgroundColor: colors.background }]}
+    >
       <SafeAreaView edges={["top"]} style={{ backgroundColor: colors.surface }}>
         <Header />
       </SafeAreaView>
@@ -488,10 +493,7 @@ const RegisterScreen = () => {
               ]}
             />
             <Text
-              style={[
-                styles.socialDividerText,
-                { color: colors.textTertiary },
-              ]}
+              style={[styles.socialDividerText, { color: colors.textTertiary }]}
             >
               Or continue with
             </Text>
@@ -569,7 +571,7 @@ const RegisterScreen = () => {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
-    </View>
+    </SafeAreaView>
   );
 };
 

@@ -355,6 +355,23 @@ const CreateProductScreen = () => {
 
   const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor },
+    navHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      borderBottomWidth: 1,
+    },
+    backBtn: { padding: 2 },
+    backCircle: {
+      width: 36,
+      height: 36,
+      borderRadius: 12,
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    navTitle: { fontSize: 16, fontWeight: "700", letterSpacing: 0.2 },
     scrollContainer: { padding: 20, paddingBottom: 100 },
     header: {
       fontSize: 32,
@@ -527,7 +544,18 @@ const CreateProductScreen = () => {
   });
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView edges={["top"]} style={styles.container}>
+      {/* Nav header */}
+      <View style={[styles.navHeader, { borderBottomColor: borderColor }]}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} activeOpacity={0.7}>
+          <View style={[styles.backCircle, { backgroundColor: cardBackground }]}>
+            <Ionicons name="chevron-back" size={22} color={textColor} />
+          </View>
+        </TouchableOpacity>
+        <Text style={[styles.navTitle, { color: textColor }]}>Create Product</Text>
+        <View style={{ width: 40 }} />
+      </View>
+
       {loading && (
         <View style={styles.screenOverlay}>
           <ActivityIndicator size="large" color="#fff" />

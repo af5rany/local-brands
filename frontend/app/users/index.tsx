@@ -17,7 +17,7 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 
 import getApiUrl from "@/helpers/getApiUrl";
 import { useAuth } from "@/context/AuthContext";
@@ -43,6 +43,7 @@ const getRelativeTime = (dateStr?: string | null): string => {
 const UsersListScreen = () => {
   const { token, user: currentUser } = useAuth();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
 
@@ -537,7 +538,7 @@ const UsersListScreen = () => {
         data={filteredUsers}
         keyExtractor={(item) => item.id.toString()}
         renderItem={renderUser}
-        contentContainerStyle={styles.list}
+        contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 20 }]}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -695,7 +696,7 @@ const styles = StyleSheet.create({
     textDecorationLine: "underline",
   },
 
-  list: { paddingHorizontal: 20, paddingBottom: 40 },
+  list: { paddingHorizontal: 20 },
 
   userCard: {
     borderRadius: 12,

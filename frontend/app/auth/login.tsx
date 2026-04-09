@@ -91,7 +91,10 @@ const LoginScreen = () => {
   const isAnyLoading = loading || guestLoading;
 
   return (
-    <View style={[styles.safeArea, { backgroundColor: colors.background }]}>
+    <SafeAreaView
+      edges={["bottom"]}
+      style={[styles.safeArea, { backgroundColor: colors.background }]}
+    >
       <SafeAreaView edges={["top"]} style={{ backgroundColor: colors.surface }}>
         <Header />
       </SafeAreaView>
@@ -353,7 +356,7 @@ const LoginScreen = () => {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
-    </View>
+    </SafeAreaView>
   );
 };
 

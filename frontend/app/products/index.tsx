@@ -314,6 +314,12 @@ const ProductsListScreen = () => {
 
     return (
       <View style={styles.listHeader}>
+        {/* Back button */}
+        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} activeOpacity={0.7}>
+          <View style={[styles.backCircle, { backgroundColor: colors.surfaceRaised }]}>
+            <Ionicons name="chevron-back" size={22} color={colors.text} />
+          </View>
+        </TouchableOpacity>
         {/* Page title */}
         <View style={styles.titleRow}>
           <View>
@@ -802,7 +808,7 @@ const ProductsListScreen = () => {
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.surface }]}>
+    <SafeAreaView edges={["top"]} style={[styles.container, { backgroundColor: colors.surface }]}>
       <FlatList
         data={productsData?.items || []}
         keyExtractor={(item) => item.id.toString()}
@@ -825,13 +831,21 @@ const ProductsListScreen = () => {
 
       {renderFilterModal()}
       {renderSortModal()}
-    </View>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  backBtn: { padding: 2, marginBottom: 8 },
+  backCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    justifyContent: "center",
+    alignItems: "center",
   },
   listContent: {
     paddingHorizontal: 16,

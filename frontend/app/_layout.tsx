@@ -9,20 +9,29 @@ import { NetworkProvider } from "@/context/NetworkContext";
 import { ThemeProvider } from "@/context/ThemeContext";
 import GlobalErrorBoundary from "@/components/GlobalErrorBoundary";
 import { useEffect } from "react";
+import { SafeAreaProvider } from "react-native-safe-area-context";
 
-// Tabs (home, shop, wishlist, brands, profile) handle their own auth state internally.
-// Only standalone stack routes that hard-require auth are listed here.
-const PROTECTED_SEGMENTS = ['checkout', 'users', 'manage', 'orders', 'referral'];
+const PROTECTED_SEGMENTS = [
+  "checkout",
+  "users",
+  "manage",
+  "orders",
+  "referral",
+];
 
-// This component will handle the conditional routing
 function RootLayoutNav() {
   const { token, loading } = useAuth();
   const router = useRouter();
   const segments = useSegments();
 
   useEffect(() => {
-    if (!loading && !token && segments.length > 0 && PROTECTED_SEGMENTS.includes(segments[0])) {
-      router.replace('/auth/login');
+    if (
+      !loading &&
+      !token &&
+      segments.length > 0 &&
+      PROTECTED_SEGMENTS.includes(segments[0])
+    ) {
+      router.replace("/auth/login");
     }
   }, [token, segments, loading]);
 
@@ -91,7 +100,7 @@ function RootLayoutNav() {
       />
       <Stack.Screen
         name="products/create/[brandId]"
-        options={{ title: "Create Product", headerBackTitle: "Brand" }}
+        options={{ headerShown: false, title: "Create Product" }}
       />
       <Stack.Screen
         name="products/[productId]"
@@ -99,13 +108,8 @@ function RootLayoutNav() {
       />
       <Stack.Screen
         name="products/edit/[productId]"
-        options={{ title: "Edit Product", headerBackTitle: "Product" }}
+        options={{ headerShown: false, title: "Edit Product" }}
       />
-      <Stack.Screen
-        name="products/draft_[productId]"
-        options={{ headerShown: false, title: "Draft" }}
-      />
-
       {/* Profile */}
       <Stack.Screen
         name="profile/edit"
@@ -184,7 +188,6 @@ function RootLayoutNav() {
         options={{
           headerShown: false,
           title: "Management",
-          presentation: "modal",
         }}
       />
 
@@ -212,21 +215,23 @@ function RootLayoutNav() {
 export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <GlobalErrorBoundary>
-        <ThemeProvider>
-          <NetworkProvider>
-            <ToastProvider>
-              <AuthProvider>
-                <BrandProvider>
-                  <CartProvider>
-                    <RootLayoutNav />
-                  </CartProvider>
-                </BrandProvider>
-              </AuthProvider>
-            </ToastProvider>
-          </NetworkProvider>
-        </ThemeProvider>
-      </GlobalErrorBoundary>
+      <SafeAreaProvider>
+        <GlobalErrorBoundary>
+          <ThemeProvider>
+            <NetworkProvider>
+              <ToastProvider>
+                <AuthProvider>
+                  <BrandProvider>
+                    <CartProvider>
+                      <RootLayoutNav />
+                    </CartProvider>
+                  </BrandProvider>
+                </AuthProvider>
+              </ToastProvider>
+            </NetworkProvider>
+          </ThemeProvider>
+        </GlobalErrorBoundary>
+      </SafeAreaProvider>
     </GestureHandlerRootView>
   );
 }

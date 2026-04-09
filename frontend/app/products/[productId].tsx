@@ -25,6 +25,7 @@ import ProductReviews from "@/components/ProductReviews";
 import TryOnModal from "@/components/TryOnModal";
 import { useThemeColors } from "@/hooks/useThemeColor";
 import { ProductVariant } from "@/types/product";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const { width: W, height: H } = Dimensions.get("window");
 const GALLERY_HEIGHT = H * 0.58;
@@ -38,6 +39,7 @@ const ProductDetailScreen = () => {
   const { refresh: refreshCart } = useCart();
   const { showToast } = useToast();
   const userRole = user?.role || user?.userRole;
+  const insets = useSafeAreaInsets();
 
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
@@ -56,6 +58,7 @@ const ProductDetailScreen = () => {
   >({ details: true });
   const [similarProducts, setSimilarProducts] = useState<Product[]>([]);
   const [showTryOn, setShowTryOn] = useState(false);
+  const [barHeight, setBarHeight] = useState(120);
 
   const scrollY = useRef(new Animated.Value(0)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -185,9 +188,7 @@ const ProductDetailScreen = () => {
   // Get available sizes from variants
   const getAvailableSizes = (): string[] => {
     if (!product?.variants?.length) return [];
-    return product.variants
-      .map((v) => v.size || "")
-      .filter(Boolean);
+    return product.variants.map((v) => v.size || "").filter(Boolean);
   };
 
   const addToCart = async () => {
@@ -430,7 +431,7 @@ const ProductDetailScreen = () => {
         backgroundColor="transparent"
       />
 
-      {/* ── Try On Modal ──────────────────────── */}
+      {/* ── Try On Modal ── */}
       {showTryOn && displayImages.length > 0 && (
         <TryOnModal
           visible={showTryOn}
@@ -439,7 +440,7 @@ const ProductDetailScreen = () => {
         />
       )}
 
-      {/* ── Added to Bag Confirmation ──────────── */}
+      {/* ── Added to Bag Confirmation ── */}
       {showAddedConfirm && (
         <View style={styles.addedOverlay}>
           <View style={styles.addedCard}>
@@ -467,7 +468,7 @@ const ProductDetailScreen = () => {
         </View>
       )}
 
-      {/* ── Sticky Header ─────────────────────── */}
+      {/* ── Sticky Header ── */}
       <Animated.View
         style={[
           styles.stickyHeader,
@@ -494,7 +495,7 @@ const ProductDetailScreen = () => {
         </View>
       </Animated.View>
 
-      {/* ── Floating Nav ──────────────────────── */}
+      {/* ── Floating Nav ── */}
       <View style={styles.floatingNav}>
         <TouchableOpacity
           onPress={() => router.back()}
@@ -509,805 +510,803 @@ const ProductDetailScreen = () => {
         </TouchableOpacity>
       </View>
 
-      <Animated.ScrollView
-        showsVerticalScrollIndicator={false}
-        onScroll={Animated.event(
-          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
-          { useNativeDriver: false },
-        )}
-        scrollEventThrottle={16}
-      >
-        {/* ── Gallery ─────────────────────────── */}
-        <View style={styles.galleryWrap}>
-          <Animated.ScrollView
-            horizontal
-            pagingEnabled
-            showsHorizontalScrollIndicator={false}
-            onMomentumScrollEnd={(e) =>
-              setSelectedImage(Math.round(e.nativeEvent.contentOffset.x / W))
-            }
-          >
-            {displayImages.map((uri: string, i: number) => (
-              <Animated.View
-                key={i}
-                style={[
-                  styles.imgFrame,
-                  {
-                    transform: [
-                      { translateY: parallax },
-                      { scale: galleryScale },
-                    ],
-                  },
-                ]}
-              >
-                <Image source={{ uri }} style={styles.img} resizeMode="cover" />
-              </Animated.View>
-            ))}
-          </Animated.ScrollView>
-
-          {/* Image indicator bars */}
-          <View style={styles.indicatorRow}>
-            {displayImages.map((_: string, i: number) => (
-              <View
-                key={i}
-                style={[
-                  styles.indicatorBar,
-                  selectedImage === i && styles.indicatorActive,
-                ]}
-              />
-            ))}
-          </View>
-
-          {/* Counter chip */}
-          <View style={styles.counterChip}>
-            <Text style={styles.counterText}>
-              {selectedImage + 1}/{displayImages.length || 0}
-            </Text>
-          </View>
-
-          {/* Try-on icon */}
-          {displayImages.length > 0 && (
-            <TouchableOpacity
-              style={styles.tryOnBtn}
-              onPress={() => setShowTryOn(true)}
-              activeOpacity={0.85}
-            >
-              <Ionicons name="body-outline" size={16} color="#fff" />
-              <Text style={styles.tryOnBtnText}>TRY ON</Text>
-            </TouchableOpacity>
+      {/* ── Scroll + Bottom Bar (flex column, no absolute) ── */}
+      <View style={{ flex: 1, flexDirection: "column" }}>
+        <Animated.ScrollView
+          style={{ flex: 1 }}
+          showsVerticalScrollIndicator={false}
+          onScroll={Animated.event(
+            [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+            { useNativeDriver: false },
           )}
-        </View>
-
-        {/* ── Content ─────────────────────────── */}
-        <Animated.View
-          style={[
-            styles.content,
-            {
-              backgroundColor: colors.background,
-              opacity: fadeAnim,
-              transform: [{ scale: scaleAnim }],
-            },
-          ]}
+          scrollEventThrottle={16}
         >
-          {/* Brand + Title */}
-          <TouchableOpacity
-            onPress={() => router.push(`/brands/${product.brand.id}`)}
-            activeOpacity={0.7}
-          >
-            <Text style={[styles.brandLabel, { color: colors.text }]}>
-              {product.brand.name?.toUpperCase()}
-            </Text>
-          </TouchableOpacity>
-
-          <Text style={[styles.productName, { color: colors.text }]}>
-            {product.name}
-          </Text>
-
-          {/* Status chip */}
-          {product.status !== "published" && (
-            <View
-              style={[
-                styles.statusChip,
-                { backgroundColor: colors.warningSoft },
-              ]}
+          {/* ── Gallery ── */}
+          <View style={styles.galleryWrap}>
+            <Animated.ScrollView
+              horizontal
+              pagingEnabled
+              showsHorizontalScrollIndicator={false}
+              onMomentumScrollEnd={(e) =>
+                setSelectedImage(Math.round(e.nativeEvent.contentOffset.x / W))
+              }
             >
-              <Text style={[styles.statusChipText, { color: colors.warning }]}>
-                {(product.status || "draft").toUpperCase()}
-              </Text>
-            </View>
-          )}
-
-          {/* ── Price Block ───────────────────── */}
-          <View style={styles.priceBlock}>
-            <View style={styles.priceLeft}>
-              <Text
-                style={[
-                  styles.priceMain,
-                  { color: hasDiscount ? colors.danger : colors.text },
-                ]}
-              >
-                ${price?.toFixed(2)}
-              </Text>
-              {hasDiscount && (
-                <Text
-                  style={[styles.priceStrike, { color: colors.textTertiary }]}
-                >
-                  ${product.price.toFixed(2)}
-                </Text>
-              )}
-            </View>
-            {hasDiscount && (
-              <View
-                style={[styles.saveBadge, { backgroundColor: colors.danger }]}
-              >
-                <Text style={styles.saveBadgeText}>
-                  {Math.round(
-                    ((product.price - product.salePrice!) / product.price) *
-                      100,
-                  )}
-                  % OFF
-                </Text>
-              </View>
-            )}
-          </View>
-
-          {/* Stock */}
-          <View style={styles.stockRow}>
-            <View
-              style={[
-                styles.stockDot,
-                { backgroundColor: inStock ? colors.success : colors.danger },
-              ]}
-            />
-            <Text style={[styles.stockLabel, { color: colors.textSecondary }]}>
-              {inStock ? `${currentStock} in stock` : "Out of stock"}
-            </Text>
-          </View>
-
-          {/* ── Divider ───────────────────────── */}
-          <View
-            style={[styles.divider, { backgroundColor: colors.borderLight }]}
-          />
-
-          {/* ── Color Display (product-level) ──── */}
-          {product.color && (
-            <>
-              <View style={styles.section}>
-                <View style={styles.sectionRow}>
-                  <Text
-                    style={[
-                      styles.sectionLabel,
-                      { color: colors.textTertiary },
-                    ]}
-                  >
-                    COLOR
-                  </Text>
-                </View>
-                <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: 8 }}>
-                  <View
-                    style={[
-                      styles.colorRing,
-                      { borderColor: colors.text },
-                    ]}
-                  >
-                    <View
-                      style={[styles.colorDot, { backgroundColor: product.color }]}
-                    />
-                  </View>
-                </View>
-              </View>
-
-              <View
-                style={[
-                  styles.divider,
-                  { backgroundColor: colors.borderLight },
-                ]}
-              />
-            </>
-          )}
-
-          {/* ── Size Selector (from variants) ──── */}
-          {hasVariants && availableSizes.length > 0 && (
-            <>
-              <View style={styles.section}>
-                <View style={styles.sectionRow}>
-                  <Text
-                    style={[
-                      styles.sectionLabel,
-                      { color: colors.textTertiary },
-                    ]}
-                  >
-                    SIZE
-                  </Text>
-                  <Text style={[styles.sectionValue, { color: colors.text }]}>
-                    {selectedSize}
-                  </Text>
-                </View>
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={styles.colorRow}
-                >
-                  {availableSizes.map((size) => {
-                    const active = selectedSize === size;
-                    const sizeVariant = product.variants.find(
-                      (v) => v.size === size,
-                    );
-                    const sizeInStock = (sizeVariant?.stock || 0) > 0;
-                    return (
-                      <TouchableOpacity
-                        key={size}
-                        onPress={() => sizeInStock && setSelectedSize(size)}
-                        disabled={!sizeInStock}
-                        style={[
-                          styles.sizeChip,
-                          {
-                            borderColor: active
-                              ? colors.text
-                              : colors.borderLight,
-                            backgroundColor: active
-                              ? colors.text
-                              : "transparent",
-                            opacity: sizeInStock ? 1 : 0.35,
-                          },
-                        ]}
-                      >
-                        <Text
-                          style={[
-                            styles.sizeChipText,
-                            {
-                              color: active ? colors.background : colors.text,
-                            },
-                          ]}
-                        >
-                          {size}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </ScrollView>
-              </View>
-
-              <View
-                style={[
-                  styles.divider,
-                  { backgroundColor: colors.borderLight },
-                ]}
-              />
-            </>
-          )}
-
-          {/* ── Accordion: DETAILS ────────────── */}
-          <TouchableOpacity
-            style={styles.accordionHeader}
-            onPress={() => toggleSection("details")}
-            activeOpacity={0.7}
-          >
-            <Text style={[styles.accordionTitle, { color: colors.text }]}>
-              DETAILS
-            </Text>
-            <Ionicons
-              name={expandedSections.details ? "remove" : "add"}
-              size={20}
-              color={colors.text}
-            />
-          </TouchableOpacity>
-          {expandedSections.details && (
-            <View style={styles.accordionBody}>
-              <Text style={[styles.descText, { color: colors.textSecondary }]}>
-                {product.description}
-              </Text>
-            </View>
-          )}
-
-          <View
-            style={[styles.divider, { backgroundColor: colors.borderLight }]}
-          />
-
-          {/* ── Accordion: SIZE & FIT ─────────── */}
-          <TouchableOpacity
-            style={styles.accordionHeader}
-            onPress={() => toggleSection("sizeFit")}
-            activeOpacity={0.7}
-          >
-            <Text style={[styles.accordionTitle, { color: colors.text }]}>
-              SIZE & FIT
-            </Text>
-            <Ionicons
-              name={expandedSections.sizeFit ? "remove" : "add"}
-              size={20}
-              color={colors.text}
-            />
-          </TouchableOpacity>
-          {expandedSections.sizeFit && (
-            <View style={styles.accordionBody}>
-              {[
-                { k: "Type", v: product.productType },
-                { k: "Season", v: product.season },
-              ].map((item) => (
-                <View key={item.k} style={styles.accordionRow}>
-                  <Text
-                    style={[
-                      styles.accordionKey,
-                      { color: colors.textTertiary },
-                    ]}
-                  >
-                    {item.k}
-                  </Text>
-                  <Text style={[styles.accordionVal, { color: colors.text }]}>
-                    {item.v}
-                  </Text>
-                </View>
-              ))}
-            </View>
-          )}
-
-          <View
-            style={[styles.divider, { backgroundColor: colors.borderLight }]}
-          />
-
-          {/* ── Accordion: COMPOSITION & CARE ─── */}
-          <TouchableOpacity
-            style={styles.accordionHeader}
-            onPress={() => toggleSection("composition")}
-            activeOpacity={0.7}
-          >
-            <Text style={[styles.accordionTitle, { color: colors.text }]}>
-              COMPOSITION & CARE
-            </Text>
-            <Ionicons
-              name={expandedSections.composition ? "remove" : "add"}
-              size={20}
-              color={colors.text}
-            />
-          </TouchableOpacity>
-          {expandedSections.composition && (
-            <View style={styles.accordionBody}>
-              {[
-                { k: "Material", v: product.material || "\u2014" },
-                { k: "Origin", v: product.origin || "Locally Made" },
-              ].map((item) => (
-                <View key={item.k} style={styles.accordionRow}>
-                  <Text
-                    style={[
-                      styles.accordionKey,
-                      { color: colors.textTertiary },
-                    ]}
-                  >
-                    {item.k}
-                  </Text>
-                  <Text style={[styles.accordionVal, { color: colors.text }]}>
-                    {item.v}
-                  </Text>
-                </View>
-              ))}
-            </View>
-          )}
-
-          <View
-            style={[styles.divider, { backgroundColor: colors.borderLight }]}
-          />
-
-          {/* ── Accordion: DELIVERY & RETURNS ─── */}
-          <TouchableOpacity
-            style={styles.accordionHeader}
-            onPress={() => toggleSection("delivery")}
-            activeOpacity={0.7}
-          >
-            <Text style={[styles.accordionTitle, { color: colors.text }]}>
-              DELIVERY & RETURNS
-            </Text>
-            <Ionicons
-              name={expandedSections.delivery ? "remove" : "add"}
-              size={20}
-              color={colors.text}
-            />
-          </TouchableOpacity>
-          {expandedSections.delivery && (
-            <View style={styles.accordionBody}>
-              <View style={styles.deliveryRow}>
-                <Ionicons name="cube-outline" size={18} color={colors.text} />
-                <Text
-                  style={[styles.deliveryText, { color: colors.textSecondary }]}
-                >
-                  Free standard delivery on all orders
-                </Text>
-              </View>
-              <View style={styles.deliveryRow}>
-                <Ionicons
-                  name="refresh-outline"
-                  size={18}
-                  color={colors.text}
-                />
-                <Text
-                  style={[styles.deliveryText, { color: colors.textSecondary }]}
-                >
-                  Easy returns within 30 days
-                </Text>
-              </View>
-              <View style={styles.deliveryRow}>
-                <Ionicons
-                  name="shield-checkmark-outline"
-                  size={18}
-                  color={colors.text}
-                />
-                <Text
-                  style={[styles.deliveryText, { color: colors.textSecondary }]}
-                >
-                  Secure checkout guaranteed
-                </Text>
-              </View>
-            </View>
-          )}
-
-          <View
-            style={[styles.divider, { backgroundColor: colors.borderLight }]}
-          />
-
-          {/* ── Trust Signals ─────────────────── */}
-          <View style={styles.trustRow}>
-            <View style={styles.trustItem}>
-              <Ionicons name="cube-outline" size={20} color={colors.text} />
-              <Text style={[styles.trustText, { color: colors.textSecondary }]}>
-                Free Delivery
-              </Text>
-            </View>
-            <View style={styles.trustItem}>
-              <Ionicons
-                name="shield-checkmark-outline"
-                size={20}
-                color={colors.text}
-              />
-              <Text style={[styles.trustText, { color: colors.textSecondary }]}>
-                Secure Payment
-              </Text>
-            </View>
-            <View style={styles.trustItem}>
-              <Ionicons name="refresh-outline" size={20} color={colors.text} />
-              <Text style={[styles.trustText, { color: colors.textSecondary }]}>
-                Easy Returns
-              </Text>
-            </View>
-          </View>
-
-          <View
-            style={[styles.divider, { backgroundColor: colors.borderLight }]}
-          />
-
-          {/* ── Reviews ───────────────────────── */}
-          <ProductReviews productId={product.id} />
-
-          {/* ── You May Also Like ───────────────── */}
-          {similarProducts.length > 0 && (
-            <>
-              <View
-                style={[
-                  styles.divider,
-                  { backgroundColor: colors.borderLight },
-                ]}
-              />
-              <View style={styles.section}>
-                <Text
+              {displayImages.map((uri: string, i: number) => (
+                <Animated.View
+                  key={i}
                   style={[
-                    styles.sectionLabel,
-                    { color: colors.textTertiary, marginBottom: 14 },
-                  ]}
-                >
-                  YOU MAY ALSO LIKE
-                </Text>
-                <FlatList
-                  data={similarProducts}
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={{ gap: 12 }}
-                  keyExtractor={(item) => `similar-${item.id}`}
-                  renderItem={({ item }) => {
-                    const img =
-                      item.images?.[0] ||
-                      item.mainImage ||
-                      "";
-                    const hasItemDiscount =
-                      item.salePrice && item.salePrice < item.price;
-                    return (
-                      <TouchableOpacity
-                        style={{
-                          width: 140,
-                          backgroundColor: colors.surface,
-                        }}
-                        onPress={() =>
-                          router.push(`/products/${item.id}` as any)
-                        }
-                        activeOpacity={0.7}
-                      >
-                        <Image
-                          source={{ uri: img }}
-                          style={{
-                            width: 140,
-                            height: 180,
-                            backgroundColor: colors.surfaceRaised,
-                          }}
-                        />
-                        <View style={{ padding: 8 }}>
-                          <Text
-                            style={{
-                              fontSize: 10,
-                              fontWeight: "600",
-                              textTransform: "uppercase",
-                              letterSpacing: 0.8,
-                              color: colors.textTertiary,
-                              marginBottom: 2,
-                            }}
-                            numberOfLines={1}
-                          >
-                            {item.brand?.name || ""}
-                          </Text>
-                          <Text
-                            style={{
-                              fontSize: 12,
-                              fontWeight: "600",
-                              color: colors.text,
-                              marginBottom: 4,
-                            }}
-                            numberOfLines={2}
-                          >
-                            {item.name}
-                          </Text>
-                          <View
-                            style={{
-                              flexDirection: "row",
-                              alignItems: "center",
-                              gap: 4,
-                            }}
-                          >
-                            <Text
-                              style={{
-                                fontSize: 13,
-                                fontWeight: "800",
-                                color: hasItemDiscount
-                                  ? colors.priceCurrent
-                                  : colors.text,
-                              }}
-                            >
-                              ${(item.salePrice || item.price)?.toFixed(2)}
-                            </Text>
-                            {hasItemDiscount && (
-                              <Text
-                                style={{
-                                  fontSize: 11,
-                                  color: colors.textTertiary,
-                                  textDecorationLine: "line-through",
-                                }}
-                              >
-                                ${item.price?.toFixed(2)}
-                              </Text>
-                            )}
-                          </View>
-                        </View>
-                      </TouchableOpacity>
-                    );
-                  }}
-                />
-              </View>
-            </>
-          )}
-
-          {/* ── Admin Controls ────────────────── */}
-          {isOwnerOrAdmin && (
-            <>
-              <View
-                style={[
-                  styles.divider,
-                  { backgroundColor: colors.borderLight },
-                ]}
-              />
-              <View style={styles.section}>
-                <Text
-                  style={[
-                    styles.sectionLabel,
-                    { color: colors.textTertiary, marginBottom: 14 },
-                  ]}
-                >
-                  MANAGE
-                </Text>
-                <View style={styles.adminRow}>
-                  <TouchableOpacity
-                    onPress={() => router.push(`/products/edit/${productId}`)}
-                    style={[
-                      styles.adminBtn,
-                      {
-                        backgroundColor: colors.primarySoft,
-                        borderColor: colors.primary,
-                      },
-                    ]}
-                  >
-                    <Ionicons
-                      name="create-outline"
-                      size={16}
-                      color={colors.primary}
-                    />
-                    <Text
-                      style={[styles.adminBtnLabel, { color: colors.primary }]}
-                    >
-                      Edit
-                    </Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    onPress={handleDelete}
-                    style={[
-                      styles.adminBtn,
-                      {
-                        backgroundColor: colors.dangerSoft,
-                        borderColor: colors.danger,
-                      },
-                    ]}
-                  >
-                    <Ionicons
-                      name="trash-outline"
-                      size={16}
-                      color={colors.danger}
-                    />
-                    <Text
-                      style={[styles.adminBtnLabel, { color: colors.danger }]}
-                    >
-                      Delete
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            </>
-          )}
-
-          <View style={{ height: 140 }} />
-        </Animated.View>
-      </Animated.ScrollView>
-
-      {/* ── Bottom Bar ────────────────────────── */}
-      <View
-        style={[
-          styles.bottomBar,
-          {
-            backgroundColor: colors.surface,
-            borderTopColor: colors.borderLight,
-          },
-        ]}
-      >
-        <TouchableOpacity
-          style={[
-            styles.wishBtn,
-            {
-              borderColor: isInWishlist ? colors.text : colors.border,
-              backgroundColor: isInWishlist
-                ? colors.primarySoft
-                : "transparent",
-            },
-          ]}
-          onPress={toggleWishlist}
-          disabled={wishlistLoading}
-        >
-          {wishlistLoading ? (
-            <ActivityIndicator size="small" color={colors.text} />
-          ) : (
-            <Ionicons
-              name={isInWishlist ? "heart" : "heart-outline"}
-              size={22}
-              color={colors.text}
-            />
-          )}
-        </TouchableOpacity>
-
-        {allOutOfStock ? (
-          <TouchableOpacity
-            style={[
-              styles.notifyBtn,
-              {
-                backgroundColor: isSubscribedNotify
-                  ? colors.successSoft
-                  : colors.accent,
-                borderColor: isSubscribedNotify
-                  ? colors.success
-                  : colors.accent,
-              },
-            ]}
-            onPress={handleNotifyMe}
-            disabled={notifyMeLoading || isSubscribedNotify}
-            activeOpacity={0.85}
-          >
-            {notifyMeLoading ? (
-              <ActivityIndicator
-                size="small"
-                color={
-                  isSubscribedNotify ? colors.success : colors.textInverse
-                }
-              />
-            ) : (
-              <>
-                <Ionicons
-                  name={
-                    isSubscribedNotify
-                      ? "checkmark-circle"
-                      : "notifications-outline"
-                  }
-                  size={18}
-                  color={
-                    isSubscribedNotify
-                      ? colors.success
-                      : colors.textInverse
-                  }
-                  style={{ marginRight: 8 }}
-                />
-                <Text
-                  style={[
-                    styles.cartBtnText,
+                    styles.imgFrame,
                     {
-                      color: isSubscribedNotify
-                        ? colors.success
-                        : colors.textInverse,
+                      transform: [
+                        { translateY: parallax },
+                        { scale: galleryScale },
+                      ],
                     },
                   ]}
                 >
-                  {isSubscribedNotify ? "SUBSCRIBED" : "NOTIFY ME"}
-                </Text>
-              </>
-            )}
-          </TouchableOpacity>
-        ) : (
-          <View style={styles.buyRow}>
-            <TouchableOpacity
-              style={[
-                styles.cartBtn,
-                {
-                  backgroundColor: inStock
-                    ? colors.primary
-                    : colors.textTertiary,
-                },
-              ]}
-              onPress={addToCart}
-              disabled={cartLoading || !inStock}
-              activeOpacity={0.85}
-            >
-              {cartLoading ? (
-                <ActivityIndicator
-                  size="small"
-                  color={inStock ? colors.primaryForeground : colors.text}
-                />
-              ) : (
-                <Text
+                  <Image
+                    source={{ uri }}
+                    style={styles.img}
+                    resizeMode="cover"
+                  />
+                </Animated.View>
+              ))}
+            </Animated.ScrollView>
+
+            <View style={styles.indicatorRow}>
+              {displayImages.map((_: string, i: number) => (
+                <View
+                  key={i}
                   style={[
-                    styles.cartBtnText,
-                    { color: colors.primaryForeground },
+                    styles.indicatorBar,
+                    selectedImage === i && styles.indicatorActive,
                   ]}
-                >
-                  ADD TO BAG
-                </Text>
-              )}
+                />
+              ))}
+            </View>
+
+            <View style={styles.counterChip}>
+              <Text style={styles.counterText}>
+                {selectedImage + 1}/{displayImages.length || 0}
+              </Text>
+            </View>
+
+            {displayImages.length > 0 && (
+              <TouchableOpacity
+                style={styles.tryOnBtn}
+                onPress={() => setShowTryOn(true)}
+                activeOpacity={0.85}
+              >
+                <Ionicons name="body-outline" size={16} color="#fff" />
+                <Text style={styles.tryOnBtnText}>TRY ON</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+
+          {/* ── Content ── */}
+          <Animated.View
+            style={[
+              styles.content,
+              {
+                backgroundColor: colors.background,
+                opacity: fadeAnim,
+                transform: [{ scale: scaleAnim }],
+              },
+            ]}
+          >
+            {/* Brand + Title */}
+            <TouchableOpacity
+              onPress={() => router.push(`/brands/${product.brand.id}`)}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.brandLabel, { color: colors.text }]}>
+                {product.brand.name?.toUpperCase()}
+              </Text>
             </TouchableOpacity>
 
-            <TouchableOpacity
-              style={[
-                styles.buyNowBtn,
-                {
-                  borderColor: inStock ? colors.text : colors.textTertiary,
-                },
-              ]}
-              onPress={buyNow}
-              disabled={buyNowLoading || !inStock}
-              activeOpacity={0.85}
-            >
-              {buyNowLoading ? (
-                <ActivityIndicator size="small" color={colors.text} />
-              ) : (
+            <Text style={[styles.productName, { color: colors.text }]}>
+              {product.name}
+            </Text>
+
+            {product.status !== "published" && (
+              <View
+                style={[
+                  styles.statusChip,
+                  { backgroundColor: colors.warningSoft },
+                ]}
+              >
+                <Text
+                  style={[styles.statusChipText, { color: colors.warning }]}
+                >
+                  {(product.status || "draft").toUpperCase()}
+                </Text>
+              </View>
+            )}
+
+            {/* Price */}
+            <View style={styles.priceBlock}>
+              <View style={styles.priceLeft}>
                 <Text
                   style={[
-                    styles.cartBtnText,
-                    { color: inStock ? colors.text : colors.textTertiary },
+                    styles.priceMain,
+                    { color: hasDiscount ? colors.danger : colors.text },
                   ]}
                 >
-                  BUY NOW
+                  ${price?.toFixed(2)}
                 </Text>
+                {hasDiscount && (
+                  <Text
+                    style={[styles.priceStrike, { color: colors.textTertiary }]}
+                  >
+                    ${product.price.toFixed(2)}
+                  </Text>
+                )}
+              </View>
+              {hasDiscount && (
+                <View
+                  style={[styles.saveBadge, { backgroundColor: colors.danger }]}
+                >
+                  <Text style={styles.saveBadgeText}>
+                    {Math.round(
+                      ((product.price - product.salePrice!) / product.price) *
+                        100,
+                    )}
+                    % OFF
+                  </Text>
+                </View>
+              )}
+            </View>
+
+            {/* Stock */}
+            <View style={styles.stockRow}>
+              <View
+                style={[
+                  styles.stockDot,
+                  { backgroundColor: inStock ? colors.success : colors.danger },
+                ]}
+              />
+              <Text
+                style={[styles.stockLabel, { color: colors.textSecondary }]}
+              >
+                {inStock ? `${currentStock} in stock` : "Out of stock"}
+              </Text>
+            </View>
+
+            <View
+              style={[styles.divider, { backgroundColor: colors.borderLight }]}
+            />
+
+            {/* Color */}
+            {product.color && (
+              <>
+                <View style={styles.section}>
+                  <View style={styles.sectionRow}>
+                    <Text
+                      style={[
+                        styles.sectionLabel,
+                        { color: colors.textTertiary },
+                      ]}
+                    >
+                      COLOR
+                    </Text>
+                  </View>
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      gap: 8,
+                      marginTop: 8,
+                    }}
+                  >
+                    <View
+                      style={[styles.colorRing, { borderColor: colors.text }]}
+                    >
+                      <View
+                        style={[
+                          styles.colorDot,
+                          { backgroundColor: product.color },
+                        ]}
+                      />
+                    </View>
+                  </View>
+                </View>
+                <View
+                  style={[
+                    styles.divider,
+                    { backgroundColor: colors.borderLight },
+                  ]}
+                />
+              </>
+            )}
+
+            {/* Size */}
+            {hasVariants && availableSizes.length > 0 && (
+              <>
+                <View style={styles.section}>
+                  <View style={styles.sectionRow}>
+                    <Text
+                      style={[
+                        styles.sectionLabel,
+                        { color: colors.textTertiary },
+                      ]}
+                    >
+                      SIZE
+                    </Text>
+                    <Text style={[styles.sectionValue, { color: colors.text }]}>
+                      {selectedSize}
+                    </Text>
+                  </View>
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={styles.colorRow}
+                  >
+                    {availableSizes.map((size) => {
+                      const active = selectedSize === size;
+                      const sizeVariant = product.variants.find(
+                        (v) => v.size === size,
+                      );
+                      const sizeInStock = (sizeVariant?.stock || 0) > 0;
+                      return (
+                        <TouchableOpacity
+                          key={size}
+                          onPress={() => sizeInStock && setSelectedSize(size)}
+                          disabled={!sizeInStock}
+                          style={[
+                            styles.sizeChip,
+                            {
+                              borderColor: active
+                                ? colors.text
+                                : colors.borderLight,
+                              backgroundColor: active
+                                ? colors.text
+                                : "transparent",
+                              opacity: sizeInStock ? 1 : 0.35,
+                            },
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.sizeChipText,
+                              {
+                                color: active ? colors.background : colors.text,
+                              },
+                            ]}
+                          >
+                            {size}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </ScrollView>
+                </View>
+                <View
+                  style={[
+                    styles.divider,
+                    { backgroundColor: colors.borderLight },
+                  ]}
+                />
+              </>
+            )}
+
+            {/* Accordion: DETAILS */}
+            <TouchableOpacity
+              style={styles.accordionHeader}
+              onPress={() => toggleSection("details")}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.accordionTitle, { color: colors.text }]}>
+                DETAILS
+              </Text>
+              <Ionicons
+                name={expandedSections.details ? "remove" : "add"}
+                size={20}
+                color={colors.text}
+              />
+            </TouchableOpacity>
+            {expandedSections.details && (
+              <View style={styles.accordionBody}>
+                <Text
+                  style={[styles.descText, { color: colors.textSecondary }]}
+                >
+                  {product.description}
+                </Text>
+              </View>
+            )}
+            <View
+              style={[styles.divider, { backgroundColor: colors.borderLight }]}
+            />
+
+            {/* Accordion: SIZE & FIT */}
+            <TouchableOpacity
+              style={styles.accordionHeader}
+              onPress={() => toggleSection("sizeFit")}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.accordionTitle, { color: colors.text }]}>
+                SIZE & FIT
+              </Text>
+              <Ionicons
+                name={expandedSections.sizeFit ? "remove" : "add"}
+                size={20}
+                color={colors.text}
+              />
+            </TouchableOpacity>
+            {expandedSections.sizeFit && (
+              <View style={styles.accordionBody}>
+                {[
+                  { k: "Type", v: product.productType },
+                  { k: "Season", v: product.season },
+                ].map((item) => (
+                  <View key={item.k} style={styles.accordionRow}>
+                    <Text
+                      style={[
+                        styles.accordionKey,
+                        { color: colors.textTertiary },
+                      ]}
+                    >
+                      {item.k}
+                    </Text>
+                    <Text style={[styles.accordionVal, { color: colors.text }]}>
+                      {item.v}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            )}
+            <View
+              style={[styles.divider, { backgroundColor: colors.borderLight }]}
+            />
+
+            {/* Accordion: COMPOSITION & CARE */}
+            <TouchableOpacity
+              style={styles.accordionHeader}
+              onPress={() => toggleSection("composition")}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.accordionTitle, { color: colors.text }]}>
+                COMPOSITION & CARE
+              </Text>
+              <Ionicons
+                name={expandedSections.composition ? "remove" : "add"}
+                size={20}
+                color={colors.text}
+              />
+            </TouchableOpacity>
+            {expandedSections.composition && (
+              <View style={styles.accordionBody}>
+                {[
+                  { k: "Material", v: product.material || "—" },
+                  { k: "Origin", v: product.origin || "Locally Made" },
+                ].map((item) => (
+                  <View key={item.k} style={styles.accordionRow}>
+                    <Text
+                      style={[
+                        styles.accordionKey,
+                        { color: colors.textTertiary },
+                      ]}
+                    >
+                      {item.k}
+                    </Text>
+                    <Text style={[styles.accordionVal, { color: colors.text }]}>
+                      {item.v}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            )}
+            <View
+              style={[styles.divider, { backgroundColor: colors.borderLight }]}
+            />
+
+            {/* Accordion: DELIVERY & RETURNS */}
+            <TouchableOpacity
+              style={styles.accordionHeader}
+              onPress={() => toggleSection("delivery")}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.accordionTitle, { color: colors.text }]}>
+                DELIVERY & RETURNS
+              </Text>
+              <Ionicons
+                name={expandedSections.delivery ? "remove" : "add"}
+                size={20}
+                color={colors.text}
+              />
+            </TouchableOpacity>
+            {expandedSections.delivery && (
+              <View style={styles.accordionBody}>
+                {[
+                  {
+                    icon: "cube-outline",
+                    text: "Free standard delivery on all orders",
+                  },
+                  {
+                    icon: "refresh-outline",
+                    text: "Easy returns within 30 days",
+                  },
+                  {
+                    icon: "shield-checkmark-outline",
+                    text: "Secure checkout guaranteed",
+                  },
+                ].map((item) => (
+                  <View key={item.text} style={styles.deliveryRow}>
+                    <Ionicons
+                      name={item.icon as any}
+                      size={18}
+                      color={colors.text}
+                    />
+                    <Text
+                      style={[
+                        styles.deliveryText,
+                        { color: colors.textSecondary },
+                      ]}
+                    >
+                      {item.text}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            )}
+            <View
+              style={[styles.divider, { backgroundColor: colors.borderLight }]}
+            />
+
+            {/* Trust Signals */}
+            <View style={styles.trustRow}>
+              {[
+                { icon: "cube-outline", label: "Free Delivery" },
+                { icon: "shield-checkmark-outline", label: "Secure Payment" },
+                { icon: "refresh-outline", label: "Easy Returns" },
+              ].map((item) => (
+                <View key={item.label} style={styles.trustItem}>
+                  <Ionicons
+                    name={item.icon as any}
+                    size={20}
+                    color={colors.text}
+                  />
+                  <Text
+                    style={[styles.trustText, { color: colors.textSecondary }]}
+                  >
+                    {item.label}
+                  </Text>
+                </View>
+              ))}
+            </View>
+            <View
+              style={[styles.divider, { backgroundColor: colors.borderLight }]}
+            />
+
+            {/* Reviews */}
+            <ProductReviews productId={product.id} />
+
+            {/* You May Also Like */}
+            {similarProducts.length > 0 && (
+              <>
+                <View
+                  style={[
+                    styles.divider,
+                    { backgroundColor: colors.borderLight },
+                  ]}
+                />
+                <View style={styles.section}>
+                  <Text
+                    style={[
+                      styles.sectionLabel,
+                      { color: colors.textTertiary, marginBottom: 14 },
+                    ]}
+                  >
+                    YOU MAY ALSO LIKE
+                  </Text>
+                  <FlatList
+                    data={similarProducts}
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={{ gap: 12 }}
+                    keyExtractor={(item) => `similar-${item.id}`}
+                    renderItem={({ item }) => {
+                      const img = item.images?.[0] || item.mainImage || "";
+                      const hasItemDiscount =
+                        item.salePrice && item.salePrice < item.price;
+                      return (
+                        <TouchableOpacity
+                          style={{
+                            width: 140,
+                            backgroundColor: colors.surface,
+                          }}
+                          onPress={() =>
+                            router.push(`/products/${item.id}` as any)
+                          }
+                          activeOpacity={0.7}
+                        >
+                          <Image
+                            source={{ uri: img }}
+                            style={{
+                              width: 140,
+                              height: 180,
+                              backgroundColor: colors.surfaceRaised,
+                            }}
+                          />
+                          <View style={{ padding: 8 }}>
+                            <Text
+                              style={{
+                                fontSize: 10,
+                                fontWeight: "600",
+                                textTransform: "uppercase",
+                                letterSpacing: 0.8,
+                                color: colors.textTertiary,
+                                marginBottom: 2,
+                              }}
+                              numberOfLines={1}
+                            >
+                              {item.brand?.name || ""}
+                            </Text>
+                            <Text
+                              style={{
+                                fontSize: 12,
+                                fontWeight: "600",
+                                color: colors.text,
+                                marginBottom: 4,
+                              }}
+                              numberOfLines={2}
+                            >
+                              {item.name}
+                            </Text>
+                            <View
+                              style={{
+                                flexDirection: "row",
+                                alignItems: "center",
+                                gap: 4,
+                              }}
+                            >
+                              <Text
+                                style={{
+                                  fontSize: 13,
+                                  fontWeight: "800",
+                                  color: hasItemDiscount
+                                    ? colors.priceCurrent
+                                    : colors.text,
+                                }}
+                              >
+                                ${(item.salePrice || item.price)?.toFixed(2)}
+                              </Text>
+                              {hasItemDiscount && (
+                                <Text
+                                  style={{
+                                    fontSize: 11,
+                                    color: colors.textTertiary,
+                                    textDecorationLine: "line-through",
+                                  }}
+                                >
+                                  ${item.price?.toFixed(2)}
+                                </Text>
+                              )}
+                            </View>
+                          </View>
+                        </TouchableOpacity>
+                      );
+                    }}
+                  />
+                </View>
+              </>
+            )}
+
+            {/* Admin Controls */}
+            {isOwnerOrAdmin && (
+              <>
+                <View
+                  style={[
+                    styles.divider,
+                    { backgroundColor: colors.borderLight },
+                  ]}
+                />
+                <View style={styles.section}>
+                  <Text
+                    style={[
+                      styles.sectionLabel,
+                      { color: colors.textTertiary, marginBottom: 14 },
+                    ]}
+                  >
+                    MANAGE
+                  </Text>
+                  <View style={styles.adminRow}>
+                    <TouchableOpacity
+                      onPress={() => router.push(`/products/edit/${productId}`)}
+                      style={[
+                        styles.adminBtn,
+                        {
+                          backgroundColor: colors.primarySoft,
+                          borderColor: colors.primary,
+                        },
+                      ]}
+                    >
+                      <Ionicons
+                        name="create-outline"
+                        size={16}
+                        color={colors.primary}
+                      />
+                      <Text
+                        style={[
+                          styles.adminBtnLabel,
+                          { color: colors.primary },
+                        ]}
+                      >
+                        Edit
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={handleDelete}
+                      style={[
+                        styles.adminBtn,
+                        {
+                          backgroundColor: colors.dangerSoft,
+                          borderColor: colors.danger,
+                        },
+                      ]}
+                    >
+                      <Ionicons
+                        name="trash-outline"
+                        size={16}
+                        color={colors.danger}
+                      />
+                      <Text
+                        style={[styles.adminBtnLabel, { color: colors.danger }]}
+                      >
+                        Delete
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </>
+            )}
+          </Animated.View>
+        </Animated.ScrollView>
+
+        {/* ── Bottom Bar — in flow, not absolute ── */}
+        <View
+          style={[
+            styles.bottomBar,
+            {
+              backgroundColor: colors.surface,
+              borderTopColor: colors.borderLight,
+              paddingBottom: insets.bottom + 12,
+            },
+          ]}
+        >
+          <TouchableOpacity
+            style={[
+              styles.wishBtn,
+              {
+                borderColor: isInWishlist ? colors.text : colors.border,
+                backgroundColor: isInWishlist
+                  ? colors.primarySoft
+                  : "transparent",
+              },
+            ]}
+            onPress={toggleWishlist}
+            disabled={wishlistLoading}
+          >
+            {wishlistLoading ? (
+              <ActivityIndicator size="small" color={colors.text} />
+            ) : (
+              <Ionicons
+                name={isInWishlist ? "heart" : "heart-outline"}
+                size={22}
+                color={colors.text}
+              />
+            )}
+          </TouchableOpacity>
+
+          {allOutOfStock ? (
+            <TouchableOpacity
+              style={[
+                styles.notifyBtn,
+                {
+                  backgroundColor: isSubscribedNotify
+                    ? colors.successSoft
+                    : colors.accent,
+                  borderColor: isSubscribedNotify
+                    ? colors.success
+                    : colors.accent,
+                },
+              ]}
+              onPress={handleNotifyMe}
+              disabled={notifyMeLoading || isSubscribedNotify}
+              activeOpacity={0.85}
+            >
+              {notifyMeLoading ? (
+                <ActivityIndicator
+                  size="small"
+                  color={
+                    isSubscribedNotify ? colors.success : colors.textInverse
+                  }
+                />
+              ) : (
+                <>
+                  <Ionicons
+                    name={
+                      isSubscribedNotify
+                        ? "checkmark-circle"
+                        : "notifications-outline"
+                    }
+                    size={18}
+                    color={
+                      isSubscribedNotify ? colors.success : colors.textInverse
+                    }
+                    style={{ marginRight: 8 }}
+                  />
+                  <Text
+                    style={[
+                      styles.cartBtnText,
+                      {
+                        color: isSubscribedNotify
+                          ? colors.success
+                          : colors.textInverse,
+                      },
+                    ]}
+                  >
+                    {isSubscribedNotify ? "SUBSCRIBED" : "NOTIFY ME"}
+                  </Text>
+                </>
               )}
             </TouchableOpacity>
-          </View>
-        )}
+          ) : (
+            <View style={styles.buyRow}>
+              <TouchableOpacity
+                style={[
+                  styles.cartBtn,
+                  {
+                    backgroundColor: inStock
+                      ? colors.primary
+                      : colors.textTertiary,
+                  },
+                ]}
+                onPress={addToCart}
+                disabled={cartLoading || !inStock}
+                activeOpacity={0.85}
+              >
+                {cartLoading ? (
+                  <ActivityIndicator
+                    size="small"
+                    color={inStock ? colors.primaryForeground : colors.text}
+                  />
+                ) : (
+                  <Text
+                    style={[
+                      styles.cartBtnText,
+                      { color: colors.primaryForeground },
+                    ]}
+                  >
+                    ADD TO BAG
+                  </Text>
+                )}
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.buyNowBtn,
+                  { borderColor: inStock ? colors.text : colors.textTertiary },
+                ]}
+                onPress={buyNow}
+                disabled={buyNowLoading || !inStock}
+                activeOpacity={0.85}
+              >
+                {buyNowLoading ? (
+                  <ActivityIndicator size="small" color={colors.text} />
+                ) : (
+                  <Text
+                    style={[
+                      styles.cartBtnText,
+                      { color: inStock ? colors.text : colors.textTertiary },
+                    ]}
+                  >
+                    BUY NOW
+                  </Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
       </View>
     </View>
   );
@@ -1663,11 +1662,6 @@ const styles = StyleSheet.create({
 
   // ── Bottom Bar ────────────────────────────
   bottomBar: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    paddingBottom: Platform.OS === "ios" ? 34 : 20,
     paddingTop: 16,
     paddingHorizontal: 20,
     borderTopWidth: 1,
@@ -1698,6 +1692,7 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: "row",
     gap: 10,
+    alignItems: "stretch", // add this
   },
   buyNowBtn: {
     flex: 1,

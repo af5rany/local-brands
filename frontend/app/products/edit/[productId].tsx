@@ -15,7 +15,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as ImagePicker from "expo-image-picker";
-import { useRouter, useLocalSearchParams, Stack } from "expo-router";
+import { useRouter, useLocalSearchParams } from "expo-router";
 import getApiUrl from "@/helpers/getApiUrl";
 import { Dropdown } from "react-native-element-dropdown";
 import { useThemeColor } from "@/hooks/useThemeColor";
@@ -394,8 +394,17 @@ const EditProductScreen = () => {
   }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor }]}>
-      <Stack.Screen options={{ title: "Edit Product", headerShown: true }} />
+    <SafeAreaView edges={["top"]} style={[styles.container, { backgroundColor }]}>
+      {/* Nav header */}
+      <View style={[styles.navHeader, { borderBottomColor: borderColor }]}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} activeOpacity={0.7}>
+          <View style={[styles.backCircle, { backgroundColor: cardBackground }]}>
+            <Ionicons name="chevron-back" size={22} color={textColor} />
+          </View>
+        </TouchableOpacity>
+        <Text style={[styles.navTitle, { color: textColor }]}>Edit Product</Text>
+        <View style={{ width: 40 }} />
+      </View>
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={{ flex: 1 }}
@@ -766,6 +775,23 @@ const EditProductScreen = () => {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   center: { flex: 1, justifyContent: "center", alignItems: "center" },
+  navHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+  },
+  backBtn: { padding: 2 },
+  backCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  navTitle: { fontSize: 16, fontWeight: "700", letterSpacing: 0.2 },
   scrollContainer: { padding: 20, paddingBottom: 60 },
   header: { fontSize: 24, fontWeight: "bold", marginBottom: 20 },
   card: {
