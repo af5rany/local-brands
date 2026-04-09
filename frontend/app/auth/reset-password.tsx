@@ -92,8 +92,8 @@ const ResetPasswordScreen = () => {
             style={styles.logo}
             resizeMode="contain"
           />
-          <View style={[styles.iconCircle, { backgroundColor: "#d1fae5" }]}>
-            <Ionicons name="checkmark-circle" size={48} color="#10b981" />
+          <View style={[styles.iconCircle, { backgroundColor: "#F5F5F5" }]}>
+            <Ionicons name="checkmark-circle" size={48} color="#1A1A1A" />
           </View>
           <Text style={styles.title}>Password Reset!</Text>
           <Text style={styles.subtitle}>
@@ -140,7 +140,7 @@ const ResetPasswordScreen = () => {
           {/* Error banner */}
           {status === "error" && (
             <View style={styles.errorBanner}>
-              <Ionicons name="alert-circle-outline" size={18} color="#ef4444" />
+              <Ionicons name="alert-circle-outline" size={18} color="#C41E3A" />
               <Text style={styles.errorText}>{errorMessage}</Text>
             </View>
           )}
@@ -243,7 +243,7 @@ const styles = StyleSheet.create({
   iconCircle: {
     width: 88,
     height: 88,
-    borderRadius: 44,
+    borderRadius: 0,
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 20,
@@ -283,16 +283,16 @@ const styles = StyleSheet.create({
   errorBanner: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#fef2f2",
+    backgroundColor: "#F5F5F5",
     borderWidth: 1,
-    borderColor: "#fecaca",
-    borderRadius: 10,
+    borderColor: "#E5E5E5",
+    borderRadius: 0,
     padding: 12,
     marginBottom: 16,
     width: "100%",
     gap: 8,
   },
-  errorText: { flex: 1, color: "#ef4444", fontSize: 14 },
+  errorText: { flex: 1, color: "#C41E3A", fontSize: 14 },
 
   // Inputs
   inputContainer: { width: "100%", marginBottom: 16 },
@@ -300,10 +300,10 @@ const styles = StyleSheet.create({
   inputWrapper: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#f8fafc",
+    backgroundColor: "#F5F5F5",
     borderWidth: 1,
-    borderColor: "#e2e8f0",
-    borderRadius: 12,
+    borderColor: "#E5E5E5",
+    borderRadius: 0,
     paddingHorizontal: 12,
     height: 48,
   },
@@ -313,20 +313,15 @@ const styles = StyleSheet.create({
 
   // Button
   button: {
-    backgroundColor: "#346beb",
+    backgroundColor: "#000000",
     paddingVertical: 14,
-    borderRadius: 12,
+    borderRadius: 0,
     marginTop: 8,
     width: "100%",
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "#346beb",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 4,
   },
-  buttonDisabled: { backgroundColor: "#94a3b8", shadowOpacity: 0, elevation: 0 },
+  buttonDisabled: { backgroundColor: "#999999" },
   buttonText: { color: "#fff", fontSize: 16, fontWeight: "600" },
 });
 

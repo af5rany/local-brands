@@ -41,7 +41,6 @@ const StatsCard: React.FC<StatsCardProps> = ({
         {
           backgroundColor: colors.surface,
           borderColor: colors.cardBorder,
-          shadowColor: colors.cardShadow,
         },
         isSmall && styles.cardSmall,
         isTablet && styles.cardTablet,
@@ -76,7 +75,7 @@ const StatsCard: React.FC<StatsCardProps> = ({
         <View
           style={[
             styles.iconBox,
-            { backgroundColor: color + "18" },
+            { backgroundColor: colors.surfaceRaised },
             isSmall && styles.iconBoxSmall,
             isTablet && styles.iconBoxTablet,
           ]}
@@ -97,14 +96,10 @@ const StatsCard: React.FC<StatsCardProps> = ({
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: 16,
+    borderRadius: 0,
     padding: 18,
     marginBottom: 8,
     borderWidth: 1,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 1,
-    shadowRadius: 12,
-    elevation: 3,
     overflow: "hidden",
   },
   cardSmall: {
@@ -149,19 +144,19 @@ const styles = StyleSheet.create({
   iconBox: {
     width: 48,
     height: 48,
-    borderRadius: 14,
+    borderRadius: 0,
     justifyContent: "center",
     alignItems: "center",
   },
   iconBoxSmall: {
     width: 40,
     height: 40,
-    borderRadius: 12,
+    borderRadius: 0,
   },
   iconBoxTablet: {
     width: 60,
     height: 60,
-    borderRadius: 18,
+    borderRadius: 0,
   },
   accentBar: {
     position: "absolute",
@@ -169,8 +164,6 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: 3,
-    borderBottomLeftRadius: 16,
-    borderBottomRightRadius: 16,
   },
 });
 

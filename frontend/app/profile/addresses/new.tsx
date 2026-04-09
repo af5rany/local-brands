@@ -288,14 +288,14 @@ const styles = StyleSheet.create({
   backCircle: {
     width: 36,
     height: 36,
-    borderRadius: 12,
+    borderRadius: 0,
     justifyContent: "center",
     alignItems: "center",
   },
   title: { fontSize: 17, fontWeight: "700" },
   scrollContent: { padding: 16, paddingBottom: 40 },
   formCard: {
-    borderRadius: 16,
+    borderRadius: 0,
     padding: 20,
     borderWidth: 1,
     gap: 18,
@@ -304,7 +304,7 @@ const styles = StyleSheet.create({
   label: { fontSize: 13, fontWeight: "600", letterSpacing: 0.2 },
   input: {
     borderWidth: 1,
-    borderRadius: 12,
+    borderRadius: 0,
     paddingHorizontal: 16,
     paddingVertical: 13,
     fontSize: 15,
@@ -320,7 +320,7 @@ const styles = StyleSheet.create({
   checkbox: {
     width: 24,
     height: 24,
-    borderRadius: 7,
+    borderRadius: 0,
     borderWidth: 2,
     justifyContent: "center",
     alignItems: "center",
@@ -329,7 +329,7 @@ const styles = StyleSheet.create({
   footer: { padding: 16, borderTopWidth: 1 },
   saveButton: {
     paddingVertical: 15,
-    borderRadius: 14,
+    borderRadius: 0,
     alignItems: "center",
   },
   saveButtonText: { fontSize: 16, fontWeight: "700" },

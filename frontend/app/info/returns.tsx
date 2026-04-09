@@ -189,7 +189,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   hero: {
-    borderRadius: 16,
+    borderRadius: 0,
     padding: 24,
     alignItems: "center",
     gap: 8,
@@ -219,7 +219,7 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
     gap: 14,
     padding: 16,
-    borderRadius: 14,
+    borderRadius: 0,
     borderWidth: 0.5,
   },
   stepNumber: {
@@ -241,7 +241,7 @@ const styles = StyleSheet.create({
     lineHeight: 19,
   },
   conditionsCard: {
-    borderRadius: 14,
+    borderRadius: 0,
     borderWidth: 0.5,
     overflow: "hidden",
   },
@@ -261,7 +261,7 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
     gap: 12,
     padding: 16,
-    borderRadius: 14,
+    borderRadius: 0,
     borderWidth: 0.5,
     marginTop: 4,
   },

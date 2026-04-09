@@ -269,7 +269,7 @@ const styles = StyleSheet.create({
   categoryUnderline: {
     height: 2,
     marginTop: 6,
-    borderRadius: 1,
+    borderRadius: 0,
   },
   searchSection: {
     paddingHorizontal: 20,
@@ -279,7 +279,7 @@ const styles = StyleSheet.create({
   searchInputWrapper: {
     flexDirection: "row",
     alignItems: "center",
-    borderRadius: 10,
+    borderRadius: 0,
     borderWidth: 1,
     paddingHorizontal: 12,
     height: 42,
@@ -303,7 +303,7 @@ const styles = StyleSheet.create({
   brandCard: {
     marginHorizontal: 20,
     marginBottom: 12,
-    borderRadius: 12,
+    borderRadius: 0,
     paddingVertical: 20,
     paddingHorizontal: 16,
   },
@@ -325,7 +325,7 @@ const styles = StyleSheet.create({
   brandImage: {
     width: 64,
     height: 64,
-    borderRadius: 4,
+    borderRadius: 0,
   },
 });
 

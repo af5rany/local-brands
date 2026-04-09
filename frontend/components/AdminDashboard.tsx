@@ -89,7 +89,7 @@ const AdminDashboard = ({
       title: "System Analytics",
       description: "View system reports and analytics",
       icon: "analytics" as const,
-      color: "#8b5cf6",
+      color: colors.text,
       onPress: showComingSoon,
     },
     {

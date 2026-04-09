@@ -97,7 +97,6 @@ const CompactProductCard = React.memo(
             {
               backgroundColor: colors.surface,
               borderColor: colors.cardBorder,
-              shadowColor: colors.cardShadow,
             },
           ]}
           onPress={onPress}
@@ -1031,7 +1030,6 @@ const ShopScreen = () => {
               {
                 backgroundColor: colors.surface,
                 borderColor: colors.border,
-                shadowColor: colors.cardShadow,
               },
             ]}
           >
@@ -1145,7 +1143,6 @@ const ShopScreen = () => {
           styles.floatingWishlistBtn,
           {
             backgroundColor: colors.primary,
-            shadowColor: colors.primary,
           },
         ]}
         onPress={() => router.push("/(tabs)/wishlist" as any)}
@@ -1176,10 +1173,6 @@ const cardStyles = StyleSheet.create({
   },
   card: {
     overflow: "hidden",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 1,
-    shadowRadius: 12,
-    elevation: 4,
   },
   imageBox: {
     position: "relative",
@@ -1199,16 +1192,11 @@ const cardStyles = StyleSheet.create({
     position: "absolute",
     top: 8,
     right: 8,
-    borderRadius: 14,
+    borderRadius: 0,
     width: 30,
     height: 30,
     justifyContent: "center",
     alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 2,
   },
   discountBadge: {
     position: "absolute",
@@ -1216,7 +1204,7 @@ const cardStyles = StyleSheet.create({
     left: 8,
     paddingHorizontal: 7,
     paddingVertical: 3,
-    borderRadius: 8,
+    borderRadius: 0,
   },
   discountText: {
     fontSize: 10,
@@ -1269,7 +1257,7 @@ const styles = StyleSheet.create({
   searchContainer: {
     flexDirection: "row",
     alignItems: "center",
-    borderRadius: 16,
+    borderRadius: 0,
     paddingLeft: 6,
     paddingRight: 14,
     height: 44,
@@ -1278,7 +1266,7 @@ const styles = StyleSheet.create({
   searchIconWrap: {
     width: 32,
     height: 32,
-    borderRadius: 10,
+    borderRadius: 0,
     justifyContent: "center",
     alignItems: "center",
     marginRight: 8,
@@ -1291,7 +1279,7 @@ const styles = StyleSheet.create({
   clearBtn: {
     width: 24,
     height: 24,
-    borderRadius: 12,
+    borderRadius: 0,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -1300,11 +1288,7 @@ const styles = StyleSheet.create({
     top: 62,
     left: 16,
     right: 16,
-    borderRadius: 16,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.1,
-    shadowRadius: 16,
-    elevation: 8,
+    borderRadius: 0,
     borderWidth: 1,
     maxHeight: 280,
     overflow: "hidden",
@@ -1327,7 +1311,7 @@ const styles = StyleSheet.create({
   suggestionIconCircle: {
     width: 30,
     height: 30,
-    borderRadius: 10,
+    borderRadius: 0,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -1339,7 +1323,7 @@ const styles = StyleSheet.create({
   typeBadge: {
     paddingHorizontal: 8,
     paddingVertical: 3,
-    borderRadius: 6,
+    borderRadius: 0,
     marginLeft: 8,
   },
   typeText: {
@@ -1367,7 +1351,7 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center" as const,
     paddingVertical: 10,
-    borderRadius: 24,
+    borderRadius: 0,
     borderWidth: 1,
   },
   genderPillSmall: {
@@ -1401,7 +1385,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     height: 32,
     paddingHorizontal: 12,
-    borderRadius: 20,
+    borderRadius: 0,
     borderWidth: 1,
     gap: 5,
   },
@@ -1432,7 +1416,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 14,
     paddingVertical: 9,
-    borderRadius: 24,
+    borderRadius: 0,
     borderWidth: 1,
     gap: 6,
   },
@@ -1442,7 +1426,7 @@ const styles = StyleSheet.create({
   filterBadge: {
     minWidth: 18,
     height: 18,
-    borderRadius: 9,
+    borderRadius: 0,
     justifyContent: "center",
     alignItems: "center",
     paddingHorizontal: 4,
@@ -1456,7 +1440,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 14,
     paddingVertical: 9,
-    borderRadius: 24,
+    borderRadius: 0,
     borderWidth: 1,
     gap: 6,
   },
@@ -1482,7 +1466,7 @@ const styles = StyleSheet.create({
     paddingLeft: 10,
     paddingRight: 6,
     paddingVertical: 6,
-    borderRadius: 24,
+    borderRadius: 0,
     borderWidth: 1.5,
     gap: 4,
   },
@@ -1524,7 +1508,7 @@ const styles = StyleSheet.create({
   endDot: {
     width: 4,
     height: 4,
-    borderRadius: 2,
+    borderRadius: 0,
   },
   endText: {
     fontSize: 13,
@@ -1549,17 +1533,13 @@ const styles = StyleSheet.create({
   // ── Floating Wishlist Button ───────────────
   floatingWishlistBtn: {
     position: "absolute",
-    bottom: 10,
+    bottom: 100,
     right: 20,
     width: 54,
     height: 54,
-    borderRadius: 27,
+    borderRadius: 0,
     justifyContent: "center",
     alignItems: "center",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.35,
-    shadowRadius: 8,
-    elevation: 8,
     zIndex: 100,
   },
   wishlistBadge: {
@@ -1568,12 +1548,12 @@ const styles = StyleSheet.create({
     right: -2,
     minWidth: 20,
     height: 20,
-    borderRadius: 10,
+    borderRadius: 0,
     justifyContent: "center",
     alignItems: "center",
     paddingHorizontal: 4,
     borderWidth: 2,
-    borderColor: "#fff",
+    borderColor: "#FFFFFF",
   },
   wishlistBadgeText: {
     color: "#fff",

@@ -58,7 +58,7 @@ const BrandOwnerDashboard = ({
       title: "Brand Analytics",
       description: "View your brand performance",
       icon: "bar-chart" as const,
-      color: "#8b5cf6",
+      color: colors.text,
       onPress: showComingSoon,
     },
     {

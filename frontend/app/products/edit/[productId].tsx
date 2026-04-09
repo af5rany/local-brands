@@ -488,7 +488,7 @@ const EditProductScreen = () => {
                   Product Type <Text style={styles.required}>*</Text>
                 </Text>
                 {autoDetectedType && (
-                  <View style={{ backgroundColor: "#34c759", paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8 }}>
+                  <View style={{ backgroundColor: "#000000", paddingHorizontal: 8, paddingVertical: 2, borderRadius: 0 }}>
                     <Text style={{ color: "#fff", fontSize: 11, fontWeight: "600" }}>Auto-detected</Text>
                   </View>
                 )}
@@ -639,7 +639,7 @@ const EditProductScreen = () => {
                             borderWidth: 1.5,
                             borderColor: isSelected ? primaryColor : borderColor,
                             backgroundColor: isSelected ? primaryColor : "transparent",
-                            borderRadius: 8,
+                            borderRadius: 0,
                           }}
                         >
                           <Text
@@ -787,7 +787,7 @@ const styles = StyleSheet.create({
   backCircle: {
     width: 36,
     height: 36,
-    borderRadius: 12,
+    borderRadius: 0,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -795,14 +795,9 @@ const styles = StyleSheet.create({
   scrollContainer: { padding: 20, paddingBottom: 60 },
   header: { fontSize: 24, fontWeight: "bold", marginBottom: 20 },
   card: {
-    borderRadius: 16,
+    borderRadius: 0,
     padding: 20,
     marginBottom: 20,
-    elevation: 3,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
   },
   sectionTitle: { fontSize: 18, fontWeight: "600", marginBottom: 15 },
   inputContainer: { marginBottom: 15 },
@@ -811,7 +806,7 @@ const styles = StyleSheet.create({
   input: {
     height: 50,
     borderWidth: 1,
-    borderRadius: 10,
+    borderRadius: 0,
     paddingHorizontal: 15,
     fontSize: 16,
   },
@@ -821,7 +816,7 @@ const styles = StyleSheet.create({
   dropdown: {
     height: 50,
     borderWidth: 1,
-    borderRadius: 10,
+    borderRadius: 0,
     paddingHorizontal: 15,
   },
   colorPaletteContainer: {
@@ -833,7 +828,7 @@ const styles = StyleSheet.create({
   colorOption: {
     width: 36,
     height: 36,
-    borderRadius: 18,
+    borderRadius: 0,
     justifyContent: "center",
     alignItems: "center",
     borderWidth: 1,
@@ -842,13 +837,13 @@ const styles = StyleSheet.create({
   selectedColor: { borderWidth: 3, borderColor: "#000" },
   imageGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
   imageContainer: { position: "relative" },
-  imagePreview: { width: 70, height: 70, borderRadius: 8 },
+  imagePreview: { width: 70, height: 70, borderRadius: 0 },
   removeImageButton: {
     position: "absolute",
     top: -5,
     right: -5,
     backgroundColor: "rgba(0,0,0,0.5)",
-    borderRadius: 10,
+    borderRadius: 0,
     width: 20,
     height: 20,
     justifyContent: "center",
@@ -862,7 +857,7 @@ const styles = StyleSheet.create({
   },
   createButton: {
     height: 55,
-    borderRadius: 12,
+    borderRadius: 0,
     justifyContent: "center",
     alignItems: "center",
   },

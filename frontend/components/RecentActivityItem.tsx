@@ -96,12 +96,7 @@ const styles = StyleSheet.create({
   },
   activityContainer: {
     backgroundColor: "#fff",
-    borderRadius: 12,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    borderRadius: 0,
   },
   activityItem: {
     flexDirection: "row",
@@ -113,7 +108,7 @@ const styles = StyleSheet.create({
   activityIcon: {
     width: 40,
     height: 40,
-    borderRadius: 20,
+    borderRadius: 0,
     justifyContent: "center",
     alignItems: "center",
     marginRight: 12,

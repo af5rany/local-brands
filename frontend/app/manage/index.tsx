@@ -174,7 +174,7 @@ const styles = StyleSheet.create({
   closeBtn: {
     width: 32,
     height: 32,
-    borderRadius: 16,
+    borderRadius: 0,
     justifyContent: "center",
     alignItems: "center",
   },

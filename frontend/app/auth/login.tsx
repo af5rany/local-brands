@@ -210,7 +210,7 @@ const LoginScreen = () => {
           <Pressable
             style={[
               styles.button,
-              { backgroundColor: colors.primary, shadowColor: colors.primary },
+              { backgroundColor: colors.primary },
               loading && { opacity: 0.7 },
             ]}
             onPress={handleLogin}
@@ -301,7 +301,7 @@ const LoginScreen = () => {
             <Ionicons
               name="logo-google"
               size={20}
-              color="#DB4437"
+              color={colors.text}
               style={styles.socialIcon}
             />
             <Text style={[styles.socialButtonText, { color: colors.text }]}>
@@ -313,8 +313,8 @@ const LoginScreen = () => {
             style={[
               styles.socialButton,
               {
-                backgroundColor: "#1877F2",
-                borderColor: "#1877F2",
+                backgroundColor: colors.surfaceRaised,
+                borderColor: colors.border,
               },
             ]}
             onPress={() =>
@@ -325,10 +325,10 @@ const LoginScreen = () => {
             <Ionicons
               name="logo-facebook"
               size={20}
-              color="#ffffff"
+              color={colors.text}
               style={styles.socialIcon}
             />
-            <Text style={[styles.socialButtonText, { color: "#ffffff" }]}>
+            <Text style={[styles.socialButtonText, { color: colors.text }]}>
               Continue with Facebook
             </Text>
           </Pressable>
@@ -385,7 +385,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     borderWidth: 1,
-    borderRadius: 14,
+    borderRadius: 0,
     paddingHorizontal: 14,
     height: 50,
   },
@@ -400,15 +400,11 @@ const styles = StyleSheet.create({
   // ── Buttons ───────────────────────────────
   button: {
     paddingVertical: 15,
-    borderRadius: 14,
+    borderRadius: 0,
     marginTop: 20,
     width: "100%",
     alignItems: "center",
     justifyContent: "center",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 4,
   },
   buttonText: { fontSize: 16, fontWeight: "700" },
   divider: {
@@ -421,7 +417,7 @@ const styles = StyleSheet.create({
   dividerText: { marginHorizontal: 16, fontSize: 13, fontWeight: "500" },
   guestButton: {
     paddingVertical: 15,
-    borderRadius: 14,
+    borderRadius: 0,
     borderWidth: 1,
     width: "100%",
     alignItems: "center",
@@ -434,7 +430,7 @@ const styles = StyleSheet.create({
   // ── Social Auth ────────────────────────────
   socialButton: {
     paddingVertical: 15,
-    borderRadius: 14,
+    borderRadius: 0,
     borderWidth: 1,
     width: "100%",
     alignItems: "center",

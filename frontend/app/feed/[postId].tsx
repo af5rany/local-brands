@@ -301,13 +301,13 @@ export default function PostDetailScreen() {
                 <Ionicons
                   name={post.isLiked ? "heart" : "heart-outline"}
                   size={24}
-                  color={post.isLiked ? "#ef4444" : colors.text}
+                  color={post.isLiked ? "#C41E3A" : colors.text}
                 />
                 {post.likeCount > 0 && (
                   <Text
                     style={[
                       styles.actionCount,
-                      { color: post.isLiked ? "#ef4444" : colors.text },
+                      { color: post.isLiked ? "#C41E3A" : colors.text },
                     ]}
                   >
                     {post.likeCount}
@@ -549,7 +549,7 @@ const styles = StyleSheet.create({
   brandAvatar: {
     width: 36,
     height: 36,
-    borderRadius: 18,
+    borderRadius: 0,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -569,9 +569,9 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     gap: 5,
   },
-  dot: { width: 6, height: 6, borderRadius: 3 },
-  dotActive: { backgroundColor: "#000" },
-  dotInactive: { backgroundColor: "#ccc" },
+  dot: { width: 6, height: 6, borderRadius: 0 },
+  dotActive: { backgroundColor: "#000000" },
+  dotInactive: { backgroundColor: "#E5E5E5" },
 
   // Actions
   actions: {
@@ -627,7 +627,7 @@ const styles = StyleSheet.create({
   commentAvatar: {
     width: 32,
     height: 32,
-    borderRadius: 16,
+    borderRadius: 0,
     justifyContent: "center",
     alignItems: "center",
     marginRight: 10,
@@ -652,7 +652,7 @@ const styles = StyleSheet.create({
   inputAvatar: {
     width: 32,
     height: 32,
-    borderRadius: 16,
+    borderRadius: 0,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -662,7 +662,7 @@ const styles = StyleSheet.create({
     maxHeight: 80,
     paddingHorizontal: 14,
     paddingVertical: 10,
-    borderRadius: 20,
+    borderRadius: 0,
     borderWidth: 0.5,
   },
   sendBtn: { padding: 6 },

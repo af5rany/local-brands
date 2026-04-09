@@ -55,12 +55,11 @@ const QuickActionCard: React.FC<QuickActionCardProps> = ({
           {
             backgroundColor: colors.surface,
             borderColor: colors.cardBorder,
-            shadowColor: colors.cardShadow,
           },
         ]}
         onPress={onPress}
       >
-        <View style={[styles.iconBox, { backgroundColor: color + "18" }]}>
+        <View style={[styles.iconBox, { backgroundColor: colors.surfaceRaised }]}>
           <Ionicons name={icon} size={26} color={color} />
         </View>
         <View style={styles.content}>
@@ -81,20 +80,16 @@ const QuickActionCard: React.FC<QuickActionCardProps> = ({
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: 16,
+    borderRadius: 0,
     padding: 16,
     flexDirection: "row",
     alignItems: "center",
     borderWidth: 1,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 1,
-    shadowRadius: 12,
-    elevation: 3,
   },
   iconBox: {
     width: 50,
     height: 50,
-    borderRadius: 14,
+    borderRadius: 0,
     justifyContent: "center",
     alignItems: "center",
     marginRight: 14,
@@ -115,7 +110,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     flex: 1,
     justifyContent: "center",
-    borderRadius: 16,
+    borderRadius: 0,
     width: 80,
     marginVertical: 4,
     marginRight: 4,

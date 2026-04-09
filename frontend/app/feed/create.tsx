@@ -372,7 +372,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     gap: 8,
   },
-  brandChipLogo: { width: 24, height: 24, borderRadius: 12 },
+  brandChipLogo: { width: 24, height: 24, borderRadius: 0 },
   brandChipName: { fontSize: 14, fontWeight: "500", maxWidth: 150 },
 
   sectionTitle: {
@@ -393,7 +393,7 @@ const styles = StyleSheet.create({
     right: 4,
     width: 22,
     height: 22,
-    borderRadius: 11,
+    borderRadius: 0,
     justifyContent: "center",
     alignItems: "center",
   },

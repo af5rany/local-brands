@@ -255,7 +255,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   hero: {
-    borderRadius: 16,
+    borderRadius: 0,
     padding: 24,
     alignItems: "center",
     gap: 8,
@@ -285,13 +285,13 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
     gap: 14,
     padding: 16,
-    borderRadius: 14,
+    borderRadius: 0,
     borderWidth: 0.5,
   },
   iconCircle: {
     width: 40,
     height: 40,
-    borderRadius: 12,
+    borderRadius: 0,
     justifyContent: "center",
     alignItems: "center",
     flexShrink: 0,
@@ -318,14 +318,14 @@ const styles = StyleSheet.create({
   subjectPill: {
     paddingHorizontal: 14,
     paddingVertical: 8,
-    borderRadius: 20,
+    borderRadius: 0,
     borderWidth: 0.5,
   },
   subjectPillText: {
     fontSize: 13,
   },
   inputWrap: {
-    borderRadius: 14,
+    borderRadius: 0,
     borderWidth: 0.5,
     padding: 14,
     gap: 8,
@@ -345,7 +345,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 8,
     paddingVertical: 14,
-    borderRadius: 14,
+    borderRadius: 0,
     marginTop: 4,
   },
   sendBtnText: {

@@ -1547,7 +1547,7 @@ const styles = StyleSheet.create({
     marginBottom: 24,
     gap: 8,
   },
-  stockDot: { width: 7, height: 7, borderRadius: 4 },
+  stockDot: { width: 7, height: 7, borderRadius: 0 },
   stockLabel: { fontSize: 13, fontWeight: "500" },
 
   // ── Shared ────────────────────────────────

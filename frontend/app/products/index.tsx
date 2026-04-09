@@ -201,7 +201,6 @@ const ProductsListScreen = () => {
           {
             backgroundColor: colors.surface,
             borderColor: colors.border,
-            shadowColor: colors.cardShadow,
           },
         ]}
         onPress={() => router.push(`/products/${item.id}`)}
@@ -843,7 +842,7 @@ const styles = StyleSheet.create({
   backCircle: {
     width: 36,
     height: 36,
-    borderRadius: 12,
+    borderRadius: 0,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -875,7 +874,7 @@ const styles = StyleSheet.create({
     gap: 4,
     paddingHorizontal: 10,
     paddingVertical: 4,
-    borderRadius: 8,
+    borderRadius: 0,
     borderWidth: 0.5,
     alignSelf: "flex-start",
   },
@@ -893,7 +892,7 @@ const styles = StyleSheet.create({
   searchBar: {
     flexDirection: "row",
     alignItems: "center",
-    borderRadius: 12,
+    borderRadius: 0,
     borderWidth: 0.5,
     paddingHorizontal: 10,
     paddingVertical: 8,
@@ -902,7 +901,7 @@ const styles = StyleSheet.create({
   searchIconWrap: {
     width: 28,
     height: 28,
-    borderRadius: 8,
+    borderRadius: 0,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -914,7 +913,7 @@ const styles = StyleSheet.create({
   clearBtn: {
     width: 20,
     height: 20,
-    borderRadius: 10,
+    borderRadius: 0,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -930,7 +929,7 @@ const styles = StyleSheet.create({
     gap: 5,
     paddingHorizontal: 12,
     paddingVertical: 8,
-    borderRadius: 10,
+    borderRadius: 0,
     borderWidth: 0.5,
   },
   controlBtnText: {
@@ -939,7 +938,7 @@ const styles = StyleSheet.create({
   filterDot: {
     width: 6,
     height: 6,
-    borderRadius: 3,
+    borderRadius: 0,
     marginLeft: 2,
   },
 
@@ -950,7 +949,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 8,
     paddingVertical: 13,
-    borderRadius: 12,
+    borderRadius: 0,
     marginTop: 4,
   },
   createBtnText: {
@@ -964,18 +963,14 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
     gap: 12,
     padding: 14,
-    borderRadius: 14,
+    borderRadius: 0,
     borderWidth: 0.5,
     marginTop: 10,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 6,
-    elevation: 2,
   },
   cardImage: {
     width: 72,
     height: 72,
-    borderRadius: 10,
+    borderRadius: 0,
     justifyContent: "center",
     alignItems: "center",
     flexShrink: 0,
@@ -1034,7 +1029,7 @@ const styles = StyleSheet.create({
   statusBadge: {
     paddingHorizontal: 8,
     paddingVertical: 3,
-    borderRadius: 6,
+    borderRadius: 0,
   },
   statusText: {
     fontSize: 11,
@@ -1065,7 +1060,7 @@ const styles = StyleSheet.create({
   endDot: {
     width: 4,
     height: 4,
-    borderRadius: 2,
+    borderRadius: 0,
   },
   endText: {
     fontSize: 12,
@@ -1090,7 +1085,7 @@ const styles = StyleSheet.create({
   clearChip: {
     paddingHorizontal: 16,
     paddingVertical: 8,
-    borderRadius: 20,
+    borderRadius: 0,
     borderWidth: 0.5,
     marginTop: 8,
   },
@@ -1119,7 +1114,7 @@ const styles = StyleSheet.create({
   retryBtn: {
     paddingHorizontal: 24,
     paddingVertical: 12,
-    borderRadius: 12,
+    borderRadius: 0,
     marginTop: 8,
   },
   retryBtnText: {
@@ -1176,7 +1171,7 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingHorizontal: 10,
     paddingVertical: 6,
-    borderRadius: 8,
+    borderRadius: 0,
     borderWidth: 0.5,
     width: "58%",
   },
@@ -1191,7 +1186,7 @@ const styles = StyleSheet.create({
   chip: {
     paddingHorizontal: 14,
     paddingVertical: 8,
-    borderRadius: 20,
+    borderRadius: 0,
     borderWidth: 0.5,
     marginRight: 8,
   },
@@ -1204,7 +1199,7 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingHorizontal: 14,
     paddingVertical: 12,
-    borderRadius: 12,
+    borderRadius: 0,
     borderWidth: 0.5,
   },
   textInputField: {

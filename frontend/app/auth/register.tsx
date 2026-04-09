@@ -467,7 +467,7 @@ const RegisterScreen = () => {
           <Pressable
             style={[
               styles.button,
-              { backgroundColor: colors.primary, shadowColor: colors.primary },
+              { backgroundColor: colors.primary },
               (loading || isUploading) && { opacity: 0.7 },
             ]}
             onPress={handleRegister}
@@ -522,7 +522,7 @@ const RegisterScreen = () => {
             <Ionicons
               name="logo-google"
               size={20}
-              color="#DB4437"
+              color={colors.text}
               style={styles.socialIcon}
             />
             <Text style={[styles.socialButtonText, { color: colors.text }]}>
@@ -534,8 +534,8 @@ const RegisterScreen = () => {
             style={[
               styles.socialButton,
               {
-                backgroundColor: "#1877F2",
-                borderColor: "#1877F2",
+                backgroundColor: colors.surfaceRaised,
+                borderColor: colors.border,
               },
             ]}
             onPress={() =>
@@ -546,10 +546,10 @@ const RegisterScreen = () => {
             <Ionicons
               name="logo-facebook"
               size={20}
-              color="#ffffff"
+              color={colors.text}
               style={styles.socialIcon}
             />
-            <Text style={[styles.socialButtonText, { color: "#ffffff" }]}>
+            <Text style={[styles.socialButtonText, { color: colors.text }]}>
               Continue with Facebook
             </Text>
           </Pressable>
@@ -586,7 +586,7 @@ const styles = StyleSheet.create({
   backCircle: {
     width: 36,
     height: 36,
-    borderRadius: 12,
+    borderRadius: 0,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -603,7 +603,7 @@ const styles = StyleSheet.create({
   avatarBtn: {
     width: 96,
     height: 96,
-    borderRadius: 48,
+    borderRadius: 0,
     borderWidth: 1,
     justifyContent: "center",
     alignItems: "center",
@@ -616,7 +616,7 @@ const styles = StyleSheet.create({
 
   // ── Form ──────────────────────────────────
   formCard: {
-    borderRadius: 16,
+    borderRadius: 0,
     padding: 20,
     borderWidth: 1,
     gap: 16,
@@ -628,7 +628,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     borderWidth: 1,
-    borderRadius: 14,
+    borderRadius: 0,
     paddingHorizontal: 14,
     height: 50,
   },
@@ -644,7 +644,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     padding: 14,
-    borderRadius: 14,
+    borderRadius: 0,
     borderWidth: 1,
     borderLeftWidth: 4,
     gap: 10,
@@ -655,14 +655,10 @@ const styles = StyleSheet.create({
   // ── Button ────────────────────────────────
   button: {
     paddingVertical: 16,
-    borderRadius: 14,
+    borderRadius: 0,
     alignItems: "center",
     justifyContent: "center",
     marginTop: 20,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 4,
   },
   buttonText: { fontSize: 16, fontWeight: "700" },
 
@@ -677,7 +673,7 @@ const styles = StyleSheet.create({
   socialDividerText: { marginHorizontal: 16, fontSize: 13, fontWeight: "500" },
   socialButton: {
     paddingVertical: 15,
-    borderRadius: 14,
+    borderRadius: 0,
     borderWidth: 1,
     width: "100%",
     alignItems: "center",

@@ -501,13 +501,13 @@ const styles = StyleSheet.create({
   resultImageSmall: {
     width: 100,
     height: 140,
-    borderRadius: 8,
+    borderRadius: 0,
   },
 
   resultImage: {
     width: 200,
     height: 280,
-    borderRadius: 8,
+    borderRadius: 0,
   },
 
   actionRow: {

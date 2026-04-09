@@ -324,7 +324,7 @@ const styles = StyleSheet.create({
   backCircle: {
     width: 36,
     height: 36,
-    borderRadius: 12,
+    borderRadius: 0,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -370,12 +370,12 @@ const styles = StyleSheet.create({
     left: 8,
     width: 8,
     height: 8,
-    borderRadius: 4,
+    borderRadius: 0,
   },
   notificationIcon: {
     width: 40,
     height: 40,
-    borderRadius: 12,
+    borderRadius: 0,
     justifyContent: "center",
     alignItems: "center",
     marginRight: 12,
@@ -412,7 +412,7 @@ const styles = StyleSheet.create({
   emptyIconCircle: {
     width: 100,
     height: 100,
-    borderRadius: 50,
+    borderRadius: 0,
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 20,

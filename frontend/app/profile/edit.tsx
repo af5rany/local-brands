@@ -393,7 +393,7 @@ const styles = StyleSheet.create({
   backCircle: {
     width: 36,
     height: 36,
-    borderRadius: 12,
+    borderRadius: 0,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -417,7 +417,7 @@ const styles = StyleSheet.create({
   avatar: {
     width: 90,
     height: 90,
-    borderRadius: 45,
+    borderRadius: 0,
     justifyContent: "center",
     alignItems: "center",
     overflow: "hidden",
@@ -432,7 +432,7 @@ const styles = StyleSheet.create({
     right: -2,
     width: 32,
     height: 32,
-    borderRadius: 16,
+    borderRadius: 0,
     justifyContent: "center",
     alignItems: "center",
     borderWidth: 3,
@@ -445,7 +445,7 @@ const styles = StyleSheet.create({
   // ── Form ──────────────────────────────────
   formCard: {
     marginHorizontal: 16,
-    borderRadius: 16,
+    borderRadius: 0,
     padding: 20,
     borderWidth: 1,
     gap: 20,
@@ -460,7 +460,7 @@ const styles = StyleSheet.create({
   },
   input: {
     borderWidth: 1,
-    borderRadius: 12,
+    borderRadius: 0,
     paddingHorizontal: 16,
     paddingVertical: 13,
     fontSize: 15,
@@ -485,7 +485,7 @@ const styles = StyleSheet.create({
   },
   saveButton: {
     paddingVertical: 15,
-    borderRadius: 14,
+    borderRadius: 0,
     alignItems: "center",
   },
   saveButtonText: {

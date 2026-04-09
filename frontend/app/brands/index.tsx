@@ -827,7 +827,7 @@ const styles = StyleSheet.create({
   filterDot: {
     width: 5,
     height: 5,
-    borderRadius: 3,
+    borderRadius: 0,
     marginLeft: 2,
   },
 

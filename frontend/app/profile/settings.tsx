@@ -357,7 +357,7 @@ const styles = StyleSheet.create({
   backCircle: {
     width: 36,
     height: 36,
-    borderRadius: 12,
+    borderRadius: 0,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -380,7 +380,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   section: {
-    borderRadius: 16,
+    borderRadius: 0,
     overflow: "hidden",
     borderWidth: 1,
   },
@@ -409,7 +409,7 @@ const styles = StyleSheet.create({
   settingIcon: {
     width: 34,
     height: 34,
-    borderRadius: 10,
+    borderRadius: 0,
     justifyContent: "center",
     alignItems: "center",
   },

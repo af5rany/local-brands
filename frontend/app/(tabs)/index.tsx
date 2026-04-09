@@ -926,7 +926,7 @@ const styles = StyleSheet.create({
     alignSelf: "flex-start",
     paddingHorizontal: 16,
     paddingVertical: 9,
-    borderRadius: 20,
+    borderRadius: 0,
     marginTop: 16,
     gap: 6,
   },
@@ -942,7 +942,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   bannerDot: {
-    borderRadius: 4,
+    borderRadius: 0,
   },
   bannerDotActive: {
     width: 24,
@@ -968,7 +968,7 @@ const styles = StyleSheet.create({
   categoryIcon: {
     width: 56,
     height: 56,
-    borderRadius: 28,
+    borderRadius: 0,
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 8,
@@ -1025,7 +1025,7 @@ const styles = StyleSheet.create({
   brandLogoRing: {
     width: 60,
     height: 60,
-    borderRadius: 30,
+    borderRadius: 0,
     borderWidth: 1.5,
     justifyContent: "center",
     alignItems: "center",
@@ -1034,19 +1034,19 @@ const styles = StyleSheet.create({
   brandLogo: {
     width: 54,
     height: 54,
-    borderRadius: 27,
+    borderRadius: 0,
   },
   brandLogoPlaceholder: {
     width: 54,
     height: 54,
-    borderRadius: 27,
+    borderRadius: 0,
     justifyContent: "center",
     alignItems: "center",
   },
   brandBadge: {
     paddingHorizontal: 8,
     paddingVertical: 3,
-    borderRadius: 8,
+    borderRadius: 0,
     marginBottom: 6,
   },
   brandBadgeText: {

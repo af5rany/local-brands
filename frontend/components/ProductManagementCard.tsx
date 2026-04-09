@@ -151,20 +151,15 @@ const styles = StyleSheet.create({
   card: {
     flexDirection: "row",
     alignItems: "center",
-    borderRadius: 14,
+    borderRadius: 0,
     borderWidth: 1,
     padding: 12,
     gap: 12,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    elevation: 2,
   },
   thumbnail: {
     width: 64,
     height: 64,
-    borderRadius: 10,
+    borderRadius: 0,
     overflow: "hidden",
     justifyContent: "center",
     alignItems: "center",
@@ -212,7 +207,7 @@ const styles = StyleSheet.create({
   colorDot: {
     width: 12,
     height: 12,
-    borderRadius: 6,
+    borderRadius: 0,
     borderWidth: 1,
   },
   actions: {
@@ -223,7 +218,7 @@ const styles = StyleSheet.create({
   statusBadge: {
     paddingHorizontal: 7,
     paddingVertical: 3,
-    borderRadius: 6,
+    borderRadius: 0,
   },
   statusText: {
     fontSize: 9,
@@ -235,7 +230,7 @@ const styles = StyleSheet.create({
   editButton: {
     width: 30,
     height: 30,
-    borderRadius: 8,
+    borderRadius: 0,
     borderWidth: 1,
     justifyContent: "center",
     alignItems: "center",

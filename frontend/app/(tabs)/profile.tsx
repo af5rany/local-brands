@@ -291,7 +291,7 @@ const styles = StyleSheet.create({
   guestAvatar: {
     width: 100,
     height: 100,
-    borderRadius: 50,
+    borderRadius: 0,
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 24,
@@ -314,7 +314,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingVertical: 16,
     paddingHorizontal: 48,
-    borderRadius: 30,
+    borderRadius: 0,
     gap: 8,
     marginBottom: 12,
   },
@@ -326,7 +326,7 @@ const styles = StyleSheet.create({
   registerBtn: {
     paddingVertical: 14,
     paddingHorizontal: 40,
-    borderRadius: 30,
+    borderRadius: 0,
     borderWidth: 1.5,
   },
   registerBtnText: {
@@ -346,12 +346,12 @@ const styles = StyleSheet.create({
   avatar: {
     width: 100,
     height: 100,
-    borderRadius: 50,
+    borderRadius: 0,
   },
   initialsAvatar: {
     width: 100,
     height: 100,
-    borderRadius: 50,
+    borderRadius: 0,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -372,7 +372,7 @@ const styles = StyleSheet.create({
   roleBadge: {
     paddingHorizontal: 14,
     paddingVertical: 5,
-    borderRadius: 20,
+    borderRadius: 0,
   },
   roleText: {
     fontSize: 12,
@@ -381,7 +381,7 @@ const styles = StyleSheet.create({
   },
   menuContainer: {
     marginHorizontal: 16,
-    borderRadius: 16,
+    borderRadius: 0,
     overflow: "hidden",
     marginBottom: 24,
     borderWidth: 1,
@@ -395,7 +395,7 @@ const styles = StyleSheet.create({
   iconBox: {
     width: 40,
     height: 40,
-    borderRadius: 12,
+    borderRadius: 0,
     justifyContent: "center",
     alignItems: "center",
     marginRight: 14,
@@ -417,7 +417,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginHorizontal: 16,
     paddingVertical: 16,
-    borderRadius: 16,
+    borderRadius: 0,
     borderWidth: 1,
     marginBottom: 24,
     gap: 8,

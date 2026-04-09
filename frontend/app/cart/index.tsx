@@ -42,7 +42,7 @@ const CartScreen = () => {
     "text",
   );
   const accentColor = useThemeColor(
-    { light: "#DC2626", dark: "#EF4444" },
+    { light: "#C41E3A", dark: "#C41E3A" },
     "primary",
   );
 

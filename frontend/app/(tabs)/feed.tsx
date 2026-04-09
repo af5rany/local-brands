@@ -370,7 +370,7 @@ const styles = StyleSheet.create({
   brandAvatar: {
     width: 36,
     height: 36,
-    borderRadius: 18,
+    borderRadius: 0,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -387,9 +387,9 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     gap: 5,
   },
-  dot: { width: 6, height: 6, borderRadius: 3 },
+  dot: { width: 6, height: 6, borderRadius: 0 },
   dotActive: { backgroundColor: "#000" },
-  dotInactive: { backgroundColor: "#ccc" },
+  dotInactive: { backgroundColor: "#E5E5E5" },
 
   // Actions
   actions: {
@@ -444,13 +444,8 @@ const styles = StyleSheet.create({
     right: 20,
     width: 56,
     height: 56,
-    borderRadius: 28,
+    borderRadius: 0,
     justifyContent: "center",
     alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 6,
   },
 });

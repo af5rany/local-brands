@@ -661,7 +661,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 14,
     height: 44,
-    borderRadius: 10,
+    borderRadius: 0,
     marginBottom: 14,
   },
   searchInput: { flex: 1, marginLeft: 10, fontSize: 15 },
@@ -676,7 +676,7 @@ const styles = StyleSheet.create({
   filterChip: {
     paddingHorizontal: 14,
     paddingVertical: 6,
-    borderRadius: 20,
+    borderRadius: 0,
     borderWidth: 1,
     marginRight: 8,
   },
@@ -699,7 +699,7 @@ const styles = StyleSheet.create({
   list: { paddingHorizontal: 20 },
 
   userCard: {
-    borderRadius: 12,
+    borderRadius: 0,
     borderWidth: 1,
     marginBottom: 12,
     overflow: "hidden",
@@ -714,14 +714,14 @@ const styles = StyleSheet.create({
   avatar: {
     width: 40,
     height: 40,
-    borderRadius: 20,
+    borderRadius: 0,
     justifyContent: "center",
     alignItems: "center",
   },
   avatarImage: {
     width: 40,
     height: 40,
-    borderRadius: 20,
+    borderRadius: 0,
   },
   avatarText: { fontSize: 16, fontWeight: "700" },
   userDetails: { flex: 1, marginRight: 10 },
@@ -731,7 +731,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     paddingHorizontal: 5,
     paddingVertical: 1,
-    borderRadius: 3,
+    borderRadius: 0,
   },
   youText: { fontSize: 9, fontWeight: "700", letterSpacing: 0.5 },
   emailRow: {
@@ -752,7 +752,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     paddingHorizontal: 8,
     paddingVertical: 4,
-    borderRadius: 4,
+    borderRadius: 0,
   },
   roleText: { fontSize: 9, fontWeight: "700", letterSpacing: 0.5 },
 
@@ -784,7 +784,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     paddingHorizontal: 10,
     paddingVertical: 5,
-    borderRadius: 6,
+    borderRadius: 0,
     gap: 6,
   },
   brandChipText: { fontSize: 12, fontWeight: "500" },
@@ -811,7 +811,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     padding: 24,
   },
-  modalContent: { borderRadius: 16, overflow: "hidden" },
+  modalContent: { borderRadius: 0, overflow: "hidden" },
   modalTitle: {
     fontSize: 14,
     fontWeight: "700",

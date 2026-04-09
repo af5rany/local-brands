@@ -130,20 +130,12 @@ const RecentOrderCard = ({ order, onPress }: RecentOrderCardProps) => {
 const styles = StyleSheet.create({
   card: {
     backgroundColor: "#ffffff",
-    borderRadius: 12,
+    borderRadius: 0,
     padding: 16,
     marginRight: 16,
     width: 240,
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
     borderWidth: 1,
-    borderColor: "#f1f5f9",
+    borderColor: "#E5E5E5",
   },
   tabletCard: {
     width: 320,
@@ -165,7 +157,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 8,
     paddingVertical: 4,
-    borderRadius: 12,
+    borderRadius: 0,
   },
   statusIcon: {
     marginRight: 4,

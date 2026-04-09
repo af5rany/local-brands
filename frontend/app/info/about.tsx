@@ -181,7 +181,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   hero: {
-    borderRadius: 16,
+    borderRadius: 0,
     padding: 24,
     alignItems: "center",
     gap: 8,
@@ -213,7 +213,7 @@ const styles = StyleSheet.create({
   statCard: {
     flex: 1,
     minWidth: "44%",
-    borderRadius: 14,
+    borderRadius: 0,
     borderWidth: 0.5,
     padding: 16,
     alignItems: "center",
@@ -229,7 +229,7 @@ const styles = StyleSheet.create({
     fontWeight: "500",
   },
   missionCard: {
-    borderRadius: 14,
+    borderRadius: 0,
     borderWidth: 0.5,
     padding: 20,
     gap: 8,
@@ -257,13 +257,13 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
     gap: 14,
     padding: 16,
-    borderRadius: 14,
+    borderRadius: 0,
     borderWidth: 0.5,
   },
   iconCircle: {
     width: 40,
     height: 40,
-    borderRadius: 12,
+    borderRadius: 0,
     justifyContent: "center",
     alignItems: "center",
     flexShrink: 0,

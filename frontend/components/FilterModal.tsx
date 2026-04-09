@@ -442,11 +442,6 @@ const styles = StyleSheet.create({
     width: "100%",
     position: "absolute",
     top: SCREEN_HEIGHT,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: -8 },
-    shadowOpacity: 0.12,
-    shadowRadius: 16,
-    elevation: 24,
   },
   dragHandleArea: {
     width: "100%",
@@ -461,7 +456,7 @@ const styles = StyleSheet.create({
   dragHandle: {
     width: 36,
     height: 4,
-    borderRadius: 2,
+    borderRadius: 0,
   },
   header: {
     flexDirection: "row",
@@ -493,7 +488,7 @@ const styles = StyleSheet.create({
   closeButtonCircle: {
     width: 32,
     height: 32,
-    borderRadius: 16,
+    borderRadius: 0,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -504,7 +499,7 @@ const styles = StyleSheet.create({
     marginTop: 16,
     marginBottom: 8,
     paddingHorizontal: 14,
-    borderRadius: 14,
+    borderRadius: 0,
     height: 46,
     borderWidth: 1,
   },
@@ -529,7 +524,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingVertical: 16,
     paddingHorizontal: 14,
-    borderRadius: 14,
+    borderRadius: 0,
     marginVertical: 2,
   },
   optionLabel: {
@@ -542,14 +537,14 @@ const styles = StyleSheet.create({
   checkCircle: {
     width: 24,
     height: 24,
-    borderRadius: 12,
+    borderRadius: 0,
     justifyContent: "center",
     alignItems: "center",
   },
   checkbox: {
     width: 22,
     height: 22,
-    borderRadius: 6,
+    borderRadius: 0,
     borderWidth: 2,
     justifyContent: "center",
     alignItems: "center",
@@ -573,7 +568,7 @@ const styles = StyleSheet.create({
     right: 0,
   },
   applyButton: {
-    borderRadius: 14,
+    borderRadius: 0,
     paddingVertical: 16,
     alignItems: "center",
   },

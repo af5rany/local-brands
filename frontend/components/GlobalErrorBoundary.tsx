@@ -44,7 +44,7 @@ class GlobalErrorBoundary extends Component<Props, State> {
         <View style={styles.container}>
           <ScrollView contentContainerStyle={styles.content}>
             <View style={styles.iconContainer}>
-              <Ionicons name="alert-circle" size={80} color="#ef4444" />
+              <Ionicons name="alert-circle" size={80} color="#C41E3A" />
             </View>
             <Text style={styles.title}>Oops! Something went wrong</Text>
             <Text style={styles.subtitle}>
@@ -73,7 +73,7 @@ class GlobalErrorBoundary extends Component<Props, State> {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f8fafc",
+    backgroundColor: "#FFFFFF",
   },
   content: {
     flexGrow: 1,
@@ -83,43 +83,43 @@ const styles = StyleSheet.create({
   },
   iconContainer: {
     marginBottom: 24,
-    backgroundColor: "#fee2e2",
+    backgroundColor: "#F5F5F5",
     padding: 20,
-    borderRadius: 60,
+    borderRadius: 0,
   },
   title: {
     fontSize: 24,
     fontWeight: "700",
-    color: "#1e293b",
+    color: "#1A1A1A",
     marginBottom: 12,
     textAlign: "center",
   },
   subtitle: {
     fontSize: 16,
-    color: "#64748b",
+    color: "#666666",
     marginBottom: 32,
     textAlign: "center",
     lineHeight: 24,
   },
   errorBox: {
     width: "100%",
-    backgroundColor: "#f1f5f9",
+    backgroundColor: "#F5F5F5",
     padding: 16,
-    borderRadius: 12,
+    borderRadius: 0,
     borderWidth: 1,
-    borderColor: "#e2e8f0",
+    borderColor: "#E5E5E5",
     marginBottom: 32,
   },
   errorText: {
-    color: "#475569",
+    color: "#666666",
     fontSize: 12,
     fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace",
   },
   button: {
-    backgroundColor: "#346beb",
+    backgroundColor: "#000000",
     paddingVertical: 14,
     paddingHorizontal: 32,
-    borderRadius: 12,
+    borderRadius: 0,
     width: "100%",
     alignItems: "center",
   },

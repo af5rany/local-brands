@@ -319,7 +319,7 @@ const styles = StyleSheet.create({
   backCircle: {
     width: 36,
     height: 36,
-    borderRadius: 12,
+    borderRadius: 0,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -348,13 +348,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     paddingVertical: 32,
-    borderRadius: 20,
+    borderRadius: 0,
     marginBottom: 24,
   },
   giftCircle: {
     width: 80,
     height: 80,
-    borderRadius: 40,
+    borderRadius: 0,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -378,7 +378,7 @@ const styles = StyleSheet.create({
   // Code box
   codeContainer: {
     padding: 20,
-    borderRadius: 16,
+    borderRadius: 0,
     borderWidth: 1,
     marginBottom: 16,
     alignItems: "center",
@@ -404,7 +404,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingVertical: 8,
     paddingHorizontal: 14,
-    borderRadius: 20,
+    borderRadius: 0,
     gap: 4,
   },
   copyText: {
@@ -418,7 +418,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     paddingVertical: 16,
-    borderRadius: 30,
+    borderRadius: 0,
     gap: 8,
     marginBottom: 28,
   },
@@ -444,7 +444,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     marginHorizontal: 16,
     padding: 14,
-    borderRadius: 14,
+    borderRadius: 0,
     borderWidth: 1,
     marginBottom: 8,
   },
@@ -456,7 +456,7 @@ const styles = StyleSheet.create({
   referralAvatar: {
     width: 36,
     height: 36,
-    borderRadius: 18,
+    borderRadius: 0,
     justifyContent: "center",
     alignItems: "center",
     marginRight: 12,
@@ -475,7 +475,7 @@ const styles = StyleSheet.create({
   statusBadge: {
     paddingHorizontal: 10,
     paddingVertical: 4,
-    borderRadius: 12,
+    borderRadius: 0,
   },
   statusText: {
     fontSize: 11,

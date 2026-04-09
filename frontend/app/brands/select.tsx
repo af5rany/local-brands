@@ -241,7 +241,7 @@ const styles = StyleSheet.create({
   subtitle: { fontSize: 14, marginTop: 2 },
   list: { padding: 16, paddingBottom: 40 },
   brandCard: {
-    borderRadius: 16,
+    borderRadius: 0,
     borderWidth: 1,
     marginBottom: 12,
     overflow: "hidden",
@@ -257,12 +257,12 @@ const styles = StyleSheet.create({
   brandImage: {
     width: 64,
     height: 64,
-    borderRadius: 12,
+    borderRadius: 0,
   },
   brandImagePlaceholder: {
     width: 64,
     height: 64,
-    borderRadius: 12,
+    borderRadius: 0,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -310,7 +310,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     paddingVertical: 16,
-    borderRadius: 12,
+    borderRadius: 0,
     borderWidth: 1,
     marginTop: 8,
     gap: 8,

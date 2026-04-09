@@ -146,18 +146,13 @@ const styles = StyleSheet.create({
   dot: {
     width: 6,
     height: 6,
-    borderRadius: 3,
+    borderRadius: 0,
   },
   dotActive: {
     backgroundColor: "#FFFFFF",
     width: 8,
     height: 8,
-    borderRadius: 4,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.3,
-    shadowRadius: 2,
-    elevation: 2,
+    borderRadius: 0,
   },
   dotInactive: {
     backgroundColor: "rgba(255, 255, 255, 0.5)",

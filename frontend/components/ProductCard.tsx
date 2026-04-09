@@ -181,18 +181,10 @@ const ProductCard: React.FC<ProductCardProps> = ({
       right: 12,
       width: 32,
       height: 32,
-      borderRadius: 16,
+      borderRadius: 0,
       backgroundColor: cardBackground,
       justifyContent: "center",
       alignItems: "center",
-      shadowColor: "#000",
-      shadowOffset: {
-        width: 0,
-        height: 2,
-      },
-      shadowOpacity: 0.1,
-      shadowRadius: 4,
-      elevation: 3,
     },
     stockIndicator: {
       position: "absolute",
@@ -203,7 +195,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
       backgroundColor: product.stock > 0 ? colors.primary : colors.textTertiary,
       paddingHorizontal: 6,
       paddingVertical: 3,
-      borderRadius: 6,
+      borderRadius: 0,
     },
     stockText: {
       fontSize: 9,
@@ -217,7 +209,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
       right: onEdit ? 48 : 12, // Offset if edit button exists
       paddingHorizontal: 8,
       paddingVertical: 4,
-      borderRadius: 8,
+      borderRadius: 0,
       backgroundColor:
         product.status === ProductStatus.PUBLISHED
           ? colors.primary
@@ -279,7 +271,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
     colorDot: {
       width: 16,
       height: 16,
-      borderRadius: 8,
+      borderRadius: 0,
       marginRight: 6,
       borderWidth: 1,
       borderColor: borderColor,
@@ -321,44 +313,6 @@ const ProductCard: React.FC<ProductCardProps> = ({
       letterSpacing: 1,
     },
 
-    decorativeElements: {
-      position: "absolute",
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      pointerEvents: "none",
-    },
-    circle1: {
-      position: "absolute",
-      top: 20,
-      right: 30,
-      width: 8,
-      height: 8,
-      borderRadius: 4,
-      backgroundColor: secondaryTextColor,
-      opacity: 0.3,
-    },
-    circle2: {
-      position: "absolute",
-      top: 40,
-      right: 50,
-      width: 4,
-      height: 4,
-      borderRadius: 2,
-      backgroundColor: secondaryTextColor,
-      opacity: 0.2,
-    },
-    wave: {
-      position: "absolute",
-      bottom: 30,
-      right: 20,
-      width: 20,
-      height: 2,
-      backgroundColor: secondaryTextColor,
-      opacity: 0.2,
-      borderRadius: 1,
-    },
   });
 
   return (
