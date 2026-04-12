@@ -13,6 +13,7 @@ import { AuthService } from './auth.service';
 import { LocalAuthGuard } from './local-auth.guard';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { CreateUserDto } from './dto/create-user.dto';
+import { SocialLoginDto } from './dto/social-login.dto';
 import { User } from 'src/users/user.entity';
 
 @Controller('auth')
@@ -66,6 +67,12 @@ export class AuthController {
     },
   ) {
     return { message: 'This is protected!', user: req.user };
+  }
+
+  @Post('social')
+  @UsePipes(new ValidationPipe({ whitelist: true }))
+  async socialLogin(@Body() dto: SocialLoginDto) {
+    return this.authService.socialLogin(dto.provider, dto.token);
   }
 
   @Post('forgot-password')

@@ -259,6 +259,113 @@ export class ProductsService {
     return products.map((p) => this.mapToPublicDto(p));
   }
 
+  async getForYou(userId: number, limit = 10): Promise<PublicProductDto[]> {
+    // Collect signals from wishlist
+    const wishlistSignals: Array<{
+      productId: number;
+      subcategory: string;
+      productType: string;
+      gender: string;
+      brandId: number;
+    }> = await this.dataSource.query(
+      `SELECT w."productId", p.subcategory, p."productType", p.gender, p."brandId"
+       FROM wishlist w
+       JOIN product p ON p.id = w."productId" AND p."deletedAt" IS NULL
+       WHERE w."userId" = $1`,
+      [userId],
+    );
+
+    // Collect signals from order history
+    const orderSignals: Array<{
+      productId: number;
+      subcategory: string;
+      productType: string;
+      gender: string;
+      brandId: number;
+    }> = await this.dataSource.query(
+      `SELECT oi."productId", p.subcategory, p."productType", p.gender, p."brandId"
+       FROM order_item oi
+       JOIN product p ON p.id = oi."productId" AND p."deletedAt" IS NULL
+       JOIN "order" o ON o.id = oi."orderId" AND o."userId" = $1`,
+      [userId],
+    );
+
+    const allSignals = [...wishlistSignals, ...orderSignals];
+
+    // No history → fall back to trending
+    if (allSignals.length === 0) {
+      return this.getTrending(limit);
+    }
+
+    // Build preference sets (weighted: wishlist signals count twice vs orders)
+    const excludedIds = [...new Set(allSignals.map((s) => s.productId))];
+    const brandIds = [
+      ...new Set(wishlistSignals.flatMap((s) => (s.brandId ? [s.brandId, s.brandId] : [])).concat(
+        orderSignals.map((s) => s.brandId).filter(Boolean),
+      )),
+    ];
+    const subcategories = [
+      ...new Set(allSignals.map((s) => s.subcategory).filter(Boolean)),
+    ];
+    const productTypes = [
+      ...new Set(allSignals.map((s) => s.productType).filter(Boolean)),
+    ];
+    const genders = [...new Set(allSignals.map((s) => s.gender).filter(Boolean))];
+
+    const qb = this.productsRepository
+      .createQueryBuilder('product')
+      .leftJoinAndSelect('product.brand', 'brand')
+      .leftJoinAndSelect('product.productVariants', 'productVariants')
+      .where('product.deletedAt IS NULL')
+      .andWhere('product.status = :status', { status: ProductStatus.PUBLISHED })
+      .andWhere('product.isAvailable = true')
+      .andWhere('product.id NOT IN (:...excludedIds)', { excludedIds });
+
+    const scoreParts: string[] = [];
+    const params: Record<string, any> = {};
+    const orFilters: string[] = [];
+
+    if (brandIds.length > 0) {
+      scoreParts.push('CASE WHEN product.brandId IN (:...fBrandIds) THEN 3 ELSE 0 END');
+      params.fBrandIds = brandIds;
+      orFilters.push('product.brandId IN (:...fBrandIds)');
+    }
+    if (subcategories.length > 0) {
+      scoreParts.push('CASE WHEN product.subcategory IN (:...fSubcategories) THEN 2 ELSE 0 END');
+      params.fSubcategories = subcategories;
+      orFilters.push('product.subcategory IN (:...fSubcategories)');
+    }
+    if (productTypes.length > 0) {
+      scoreParts.push('CASE WHEN product.productType IN (:...fProductTypes) THEN 2 ELSE 0 END');
+      params.fProductTypes = productTypes;
+      orFilters.push('product.productType IN (:...fProductTypes)');
+    }
+    if (genders.length > 0) {
+      scoreParts.push('CASE WHEN product.gender IN (:...fGenders) THEN 1 ELSE 0 END');
+      params.fGenders = genders;
+      orFilters.push('product.gender IN (:...fGenders)');
+    }
+
+    if (orFilters.length > 0) {
+      qb.andWhere(`(${orFilters.join(' OR ')})`, params);
+    }
+
+    if (scoreParts.length > 0) {
+      qb.addSelect(`(${scoreParts.join(' + ')})`, 'relevance_score');
+      qb.orderBy('relevance_score', 'DESC');
+    }
+
+    qb.addOrderBy('product.salesCount', 'DESC').take(limit);
+
+    const products = await qb.getMany();
+
+    if (products.length === 0) {
+      return this.getTrending(limit);
+    }
+
+    return products.map((p) => this.mapToPublicDto(p));
+  }
+
   async getSimilar(id: number, limit = 10): Promise<PublicProductDto[]> {
     const product = await this.productsRepository.findOne({
       where: { id },

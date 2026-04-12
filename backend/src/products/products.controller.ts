@@ -64,6 +64,14 @@ export class ProductsController {
     return this.productsService.getBestsellers(limit || 10);
   }
 
+  @Get('for-you')
+  async getForYou(
+    @Req() req,
+    @Query('limit') limit?: number,
+  ): Promise<PublicProductDto[]> {
+    return this.productsService.getForYou(req.user.id, limit || 10);
+  }
+
   @Public()
   @Header('Cache-Control', 'public, max-age=600')
   @Get(':id/similar')

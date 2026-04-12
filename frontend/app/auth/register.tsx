@@ -24,10 +24,13 @@ import { useCloudinaryUpload } from "@/hooks/useCloudinaryUpload";
 import { ImageUploadProgress } from "@/components/ImageUploadProgress";
 import { useThemeColors } from "@/hooks/useThemeColor";
 import Header from "@/components/Header";
+import { useAuth } from "@/context/AuthContext";
+import { useSocialAuth } from "@/hooks/useSocialAuth";
 
 const RegisterScreen = () => {
   const router = useRouter();
   const colors = useThemeColors();
+  const { login } = useAuth();
   const [formData, setFormData] = useState({
     name: "",
     username: "",
@@ -44,6 +47,12 @@ const RegisterScreen = () => {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+
+  const { handleGoogle, handleFacebook, googleLoading, facebookLoading } =
+    useSocialAuth((token) => {
+      login(token);
+      router.replace("/(tabs)");
+    });
 
   const validateForm = () => {
     let valid = true;
@@ -513,21 +522,26 @@ const RegisterScreen = () => {
                 backgroundColor: colors.surfaceRaised,
                 borderColor: colors.border,
               },
+              googleLoading && { opacity: 0.7 },
             ]}
-            onPress={() =>
-              Alert.alert("Coming Soon", "Google sign-in coming soon")
-            }
-            disabled={loading}
+            onPress={handleGoogle}
+            disabled={loading || googleLoading || facebookLoading}
           >
-            <Ionicons
-              name="logo-google"
-              size={20}
-              color={colors.text}
-              style={styles.socialIcon}
-            />
-            <Text style={[styles.socialButtonText, { color: colors.text }]}>
-              Continue with Google
-            </Text>
+            {googleLoading ? (
+              <ActivityIndicator color={colors.text} />
+            ) : (
+              <>
+                <Ionicons
+                  name="logo-google"
+                  size={20}
+                  color={colors.text}
+                  style={styles.socialIcon}
+                />
+                <Text style={[styles.socialButtonText, { color: colors.text }]}>
+                  Continue with Google
+                </Text>
+              </>
+            )}
           </Pressable>
 
           <Pressable
@@ -537,21 +551,26 @@ const RegisterScreen = () => {
                 backgroundColor: colors.surfaceRaised,
                 borderColor: colors.border,
               },
+              facebookLoading && { opacity: 0.7 },
             ]}
-            onPress={() =>
-              Alert.alert("Coming Soon", "Facebook sign-in coming soon")
-            }
-            disabled={loading}
+            onPress={handleFacebook}
+            disabled={loading || googleLoading || facebookLoading}
           >
-            <Ionicons
-              name="logo-facebook"
-              size={20}
-              color={colors.text}
-              style={styles.socialIcon}
-            />
-            <Text style={[styles.socialButtonText, { color: colors.text }]}>
-              Continue with Facebook
-            </Text>
+            {facebookLoading ? (
+              <ActivityIndicator color={colors.text} />
+            ) : (
+              <>
+                <Ionicons
+                  name="logo-facebook"
+                  size={20}
+                  color={colors.text}
+                  style={styles.socialIcon}
+                />
+                <Text style={[styles.socialButtonText, { color: colors.text }]}>
+                  Continue with Facebook
+                </Text>
+              </>
+            )}
           </Pressable>
 
           {/* Footer */}

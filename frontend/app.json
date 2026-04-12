@@ -13,7 +13,12 @@
       "bundleIdentifier": "com.fakharanii.localbrands",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
-        "NSCameraUsageDescription": "Used for virtual try-on feature"
+        "NSCameraUsageDescription": "Used for virtual try-on feature",
+        "CFBundleURLTypes": [
+          {
+            "CFBundleURLSchemes": ["com.googleusercontent.apps.3176566169-2hod2vokk278ra01ejlls4chh93pah46"]
+          }
+        ]
       }
     },
     "android": {

@@ -5,16 +5,19 @@ import { AuthController } from './auth.controller';
 import { UsersModule } from '../users/users.module';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
+import { TypeOrmModule } from '@nestjs/typeorm';
 import { JwtStrategy } from './jwt.strategy';
 import { LocalStrategy } from './local.strategy';
 import { RolesGuard } from './roles.guard';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { GuestAuthGuard } from './guest-auth.guard';
 import { RegisteredUsersOnlyGuard } from './registered-users-only.guard';
+import { SocialAuth } from './social-auth.entity';
 
 @Module({
   imports: [
     UsersModule,
+    TypeOrmModule.forFeature([SocialAuth]),
     PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.register({
       secret: process.env.JWT_SECRET || 'local-brands',

@@ -4,9 +4,13 @@ import {
   ConflictException,
   InternalServerErrorException,
   ForbiddenException,
+  UnauthorizedException,
 } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import { User } from '../users/user.entity';
 import { CreateUserDto } from './dto/create-user.dto';
+import { SocialAuth, SocialProvider } from './social-auth.entity';
 import * as bcrypt from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
 import { UsersService } from 'src/users/users.service';
@@ -21,6 +25,8 @@ export class AuthService {
     private usersService: UsersService,
     private jwtService: JwtService,
     private mailService: MailService,
+    @InjectRepository(SocialAuth)
+    private socialAuthRepository: Repository<SocialAuth>,
   ) {}
 
   async validateUser(email: string, pass: string): Promise<User | null> {
@@ -210,5 +216,99 @@ export class AuthService {
     });
 
     return { message: 'Password has been reset successfully' };
+  }
+
+  async socialLogin(
+    provider: 'google' | 'facebook',
+    token: string,
+  ): Promise<{ token: string }> {
+    let providerProfile: {
+      id: string;
+      email: string;
+      name: string;
+      avatar?: string;
+    };
+
+    if (provider === 'google') {
+      const res = await fetch(
+        'https://www.googleapis.com/oauth2/v3/userinfo',
+        { headers: { Authorization: `Bearer ${token}` } },
+      );
+      if (!res.ok) throw new UnauthorizedException('Invalid Google token');
+      const data: any = await res.json();
+      if (!data.email)
+        throw new UnauthorizedException('Google token missing email');
+      providerProfile = {
+        id: data.sub,
+        email: data.email,
+        name: data.name,
+        avatar: data.picture,
+      };
+    } else {
+      const res = await fetch(
+        `https://graph.facebook.com/me?fields=id,name,email,picture&access_token=${token}`,
+      );
+      if (!res.ok) throw new UnauthorizedException('Invalid Facebook token');
+      const data: any = await res.json();
+      if (!data.email)
+        throw new UnauthorizedException(
+          'Facebook token missing email — ensure email permission is granted',
+        );
+      providerProfile = {
+        id: data.id,
+        email: data.email,
+        name: data.name,
+        avatar: data.picture?.data?.url,
+      };
+    }
+
+    // Check if this social account is already linked
+    const existing = await this.socialAuthRepository.findOne({
+      where: {
+        provider: provider as SocialProvider,
+        providerId: providerProfile.id,
+      },
+      relations: ['user'],
+    });
+
+    let user: User | null = null;
+
+    if (existing) {
+      user = existing.user;
+    } else {
+      // Find user by email or create a new one
+      user = await this.usersService.findByEmail(providerProfile.email);
+      if (!user) {
+        user = await this.usersService.create({
+          name: providerProfile.name,
+          email: providerProfile.email,
+          avatar: providerProfile.avatar,
+          role: UserRole.CUSTOMER,
+          status: UserStatus.APPROVED,
+          isGuest: false,
+          isEmailVerified: true,
+        });
+      }
+      // Link the social account
+      const socialAuth = this.socialAuthRepository.create({
+        provider: provider as SocialProvider,
+        providerId: providerProfile.id,
+        user,
+        profile: {
+          email: providerProfile.email,
+          name: providerProfile.name,
+          avatar: providerProfile.avatar,
+        },
+      });
+      await this.socialAuthRepository.save(socialAuth);
+    }
+
+    const payload: JwtPayload = {
+      id: user!.id,
+      role: user!.role,
+      isGuest: false,
+    };
+    const jwt = await this.jwtService.signAsync(payload);
+    return { token: jwt };
   }
 }

@@ -84,6 +84,7 @@ const HomeScreen = () => {
   const [newArrivals, setNewArrivals] = useState<Product[]>([]);
   const [trendingProducts, setTrendingProducts] = useState<Product[]>([]);
   const [bestsellers, setBestsellers] = useState<Product[]>([]);
+  const [forYouProducts, setForYouProducts] = useState<Product[]>([]);
   const [loadingData, setLoadingData] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const hasLoadedOnce = useRef(false);
@@ -124,16 +125,25 @@ const HomeScreen = () => {
 
     if (token) {
       try {
-        const response = await fetch(`${apiUrl}/statistics`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (response.ok) {
-          const data = await response.json();
-          console.log("[HomeStats]", data);
+        const [statsRes, forYouRes] = await Promise.all([
+          fetch(`${apiUrl}/statistics`, {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+          fetch(`${apiUrl}/products/for-you?limit=10`, {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+        ]);
+
+        if (statsRes.ok) {
+          const data = await statsRes.json();
           setStats((prev) => ({ ...prev, ...data }));
         }
+        if (forYouRes.ok) {
+          const data = await forYouRes.json();
+          setForYouProducts(Array.isArray(data) ? data : []);
+        }
       } catch (error) {
-        console.error("Error fetching stats:", error);
+        console.error("Error fetching user data:", error);
       }
     }
 
@@ -580,6 +590,59 @@ const searchBarScale = useRef(new Animated.Value(1));
           </ScrollView>
         </View>
 
+        {/* ── For You ────────────────────────────────────────── */}
+        {token && (loadingData && !hasLoadedOnce.current
+          ? true
+          : forYouProducts.length > 0) && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <View>
+                <Text style={[styles.sectionTitle, { color: colors.text }]}>
+                  For You
+                </Text>
+                <Text
+                  style={[
+                    styles.forYouSubtitle,
+                    { color: colors.textTertiary },
+                  ]}
+                >
+                  Based on your saves & purchases
+                </Text>
+              </View>
+              <TouchableOpacity onPress={navigateToShop} activeOpacity={0.7}>
+                <Text
+                  style={[
+                    styles.seeAllText,
+                    { color: colors.text, textDecorationLine: "underline" },
+                  ]}
+                >
+                  See All
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {loadingData && !hasLoadedOnce.current ? (
+              <ActivityIndicator
+                size="small"
+                color={colors.primary}
+                style={styles.sectionLoader}
+              />
+            ) : (
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.horizontalList}
+              >
+                {forYouProducts.map((item) => (
+                  <React.Fragment key={`for-you-${item.id}`}>
+                    {renderProductCard(item)}
+                  </React.Fragment>
+                ))}
+              </ScrollView>
+            )}
+          </View>
+        )}
+
         {/* ── Flash Deals ────────────────────────────────────── */}
         {(loadingData && !hasLoadedOnce.current
           ? true
@@ -1000,6 +1063,12 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "500",
     letterSpacing: 0.5,
+  },
+  forYouSubtitle: {
+    fontSize: 11,
+    fontWeight: "400",
+    marginTop: 2,
+    letterSpacing: 0.2,
   },
   sectionLoader: {
     paddingVertical: 32,

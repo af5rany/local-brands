@@ -5,10 +5,35 @@ The frontend is a high-performance, cross-platform mobile application built with
 ## Core Technologies
 - **Framework**: React Native (via Expo 54+)
 - **Navigation**: Expo Router (Typed Routes)
-- **State Management**: React Context (Auth, Brand, Toast)
-- **Networking**: Native `fetch` with Bearer token attachment from `AuthContext`.
-- **Styling**: React Native Stylesheets with **Dynamic Theming** support.
+- **State Management**: React Context (Auth, Brand, Cart, Toast)
+- **Networking**: Native `fetch` and Axios with Bearer token attachment from `AuthContext`.
+- **Styling**: React Native Stylesheets with **Dynamic Theming** support (light/dark mode).
 - **Media**: Cloudinary integration via `useCloudinaryUpload` hook with client-side compression.
+
+---
+
+## Design System
+
+### B&W Minimalist (current as of April 2026)
+
+The entire UI follows a strict black-and-white minimalist aesthetic inspired by high-end fashion retail (Celine, SSENSE):
+
+| Rule | Value |
+|------|-------|
+| **Primary / CTA** | `#000000` black |
+| **Background** | `#FFFFFF` white |
+| **Surface / Cards** | `#FFFFFF` with `#E5E5E5` border |
+| **Raised surfaces / Inputs** | `#F5F5F5` |
+| **Text primary** | `#1A1A1A` |
+| **Text secondary** | `#666666` |
+| **Text tertiary** | `#999999` |
+| **Danger / Error / Sale price** | `#C41E3A` deep red — only for errors and delete actions |
+| **Border radius** | `0` everywhere — sharp edges on all cards, buttons, badges, avatars, modals |
+| **Shadows** | None — no `shadowColor`, `shadowOpacity`, `shadowRadius`, `elevation` anywhere |
+| **CTA text** | Uppercase with `letterSpacing` (e.g. `SHOP NOW`, `ADD TO CART`) |
+| **Gradients** | None — no gradients or colored backgrounds |
+
+Theme values are defined in `frontend/constants/Colors.ts` and accessed via `useThemeColors()` / `useThemeColor()` hooks throughout all components.
 
 ---
 
@@ -17,54 +42,74 @@ The frontend is a high-performance, cross-platform mobile application built with
 ### 1. Root Layout & Contexts
 - `_layout.tsx`: Wraps the app in `AuthProvider`, `BrandProvider`, and `ToastProvider`. Handles initial session restoration.
 
-### 2. Main Discovery (`(tabs)/`)
-- **Home (`index`)**: Role-based dashboards:
-  - **Admin**: Platform-wide stats, user/brand/product management shortcuts.
-  - **Brand Owner**: Brand-specific stats, product/order management.
-  - **Customer/Guest**: Segmented Products/Brands view with filter chips, featured brands carousel, paginated product grid.
-- **Explore (`explore`)**: Real-time search with entity badges.
+### 2. Main Tabs (`(tabs)/`)
+Six bottom tabs (with label-less icons):
+
+| Tab | File | Role |
+|-----|------|------|
+| **Home** | `index.tsx` | Customer/guest product & brand discovery; role-based dashboards for admin/brand owner |
+| **Shop** | `shop.tsx` | Full product & brand browsing with search, filters, sort, and pagination |
+| **Feed** | `feed.tsx` | Social feed of posts from brands; brand owners see FAB to create posts |
+| **Wishlist** | `wishlist.tsx` | Saved products grid; shows sign-in prompt for guests |
+| **Brands** | `brands.tsx` | Brand discovery and listing |
+| **Profile** | `profile.tsx` | User profile overview with menu navigation; guest prompts for sign-in |
 
 ### 3. Authentication (`auth/`)
 - `login.tsx` — Email/password login with JWT.
 - `register.tsx` — Multi-field registration with avatar upload.
 - `forgot-password.tsx` — Password recovery via email.
-- `reset-password.tsx` — Password reset with token.
+- `reset-password.tsx` — Password reset with token; shows success screen on completion.
 
 ### 4. User Profile (`profile/`)
-- `profile/index.tsx` — Personal details, avatar, account info.
+- `profile/edit.tsx` — Edit name, phone, DOB, avatar.
+- `profile/settings.tsx` — Notification toggles, change password, privacy/terms, delete account.
 - `profile/addresses/index.tsx` — Shipping address listing.
 - `profile/addresses/new.tsx` — Add new address form.
 - `profile/addresses/[id].tsx` — Edit existing address.
 
 ### 5. Brands (`brands/`)
 - `brands/index.tsx` — Paginated brand listing with search, filters, sort.
-- `brands/create.tsx` — Create new brand.
+- `brands/create.tsx` — Create new brand (admin only).
 - `brands/select.tsx` — Multi-brand owner context switcher.
-- `brands/[brandId]/index.tsx` — Brand detail with products.
+- `brands/[brandId]/index.tsx` — Brand detail with products. **[TODO]** Add "Posts" tab (see Planned Features).
 - `brands/[brandId]/edit.tsx` — Edit brand identity & location.
 - `brands/[brandId]/products.tsx` — Brand's product listing.
 
 ### 6. Products (`products/`)
 - `products/index.tsx` — All products listing with advanced search, filters, pagination.
-- `products/[productId].tsx` — Product detail: image gallery, variant color picker, pricing, stock status, reviews, admin controls (edit/delete).
+- `products/[productId].tsx` — Product detail: image gallery, variant color picker, pricing, stock status, reviews, try-on modal, admin controls.
 - `products/create/[brandId].tsx` — Product creation with variants (color, images, stock), Cloudinary upload, status selection.
 - `products/edit/[productId].tsx` — Full product edit with variant management.
-- `products/draft_[productId].tsx` — Draft product preview.
 
 ### 7. Shopping Cart (`cart/`)
 - `cart/index.tsx` — Cart with item listing, quantity adjustment, variant display, total calculation, checkout navigation.
 
 ### 8. Checkout (`checkout/`)
 - `checkout/index.tsx` — Order placement with address selection, order summary, idempotency key generation.
+- `checkout/confirmation.tsx` — Order confirmation screen shown after successful order placement.
 
 ### 9. Orders (`orders/`)
-- `orders/index.tsx` — Order history listing with status badges, order details.
+- `orders/index.tsx` — Order history listing with status badges.
+- `orders/[orderId].tsx` — Order detail with item breakdown, shipping address, price summary, and status timeline.
 
-### 10. Wishlist (`wishlist/`)
-- `wishlist/index.tsx` — Saved products grid with remove toggle, product photos, navigation to product detail.
+### 10. Feed (`feed/`)
+- `feed/create.tsx` — Create a new feed post. Brand owners select which brand to post for, write a caption, upload images, and tag products from the selected brand.
+- `feed/[postId].tsx` — Post detail screen with full comment list, like/comment actions, three-dot menu on own comments.
 
 ### 11. Admin (`users/`)
 - `users/index.tsx` — Admin user management: listing, role assignment, brand association.
+
+### 12. Notifications (`notifications/`)
+- `notifications/index.tsx` — Notification list with unread indicators, mark-all-read.
+
+### 13. Referral (`referral/`)
+- `referral/index.tsx` — Referral program screen with share code, copy button, and referral history list.
+
+### 14. Info / Static Screens (`info/`)
+- `info/about.tsx` — About the platform (stats, mission, values).
+- `info/contact.tsx` — Contact channels, message form.
+- `info/shipping.tsx` — Shipping policy cards.
+- `info/returns.tsx` — Returns & refunds policy steps and conditions.
 
 ---
 
@@ -74,7 +119,7 @@ Centralized via `useCloudinaryUpload` hook:
 1. **Selection**: `expo-image-picker` with multi-select support (up to 5 images per variant).
 2. **Compression**: `expo-image-manipulator` resizes to max 1200px width, 0.8 quality.
 3. **Upload**: POST to Cloudinary with progress tracking.
-4. **Component**: `ImageUploadProgress` — circular progress ring over thumbnail.
+4. **Component**: `ImageUploadProgress` — progress bar overlay over thumbnail.
 
 ---
 
@@ -84,7 +129,45 @@ Centralized via `useCloudinaryUpload` hook:
 |---------|---------------|
 | `AuthContext` | JWT storage (AsyncStorage), user state, token expiration polling (5-min interval), login/logout/refreshUser |
 | `BrandContext` | Active brand selection for multi-brand owners, management mode toggle |
+| `CartContext` | Cart item count tracking, `useCartCount` hook for header badge |
 | `ToastContext` | Global toast notifications |
+
+---
+
+## Key Components
+
+### Product Display Cards
+
+| Component | Use Case | Key Features |
+|-----------|----------|-------------|
+| **RecommendationCard** | Product grids on home/shop | Image, wishlist heart, discount badge, brand name, product name, star rating, price, add-to-cart button |
+| **ProductCard** | Browse/management grids | Image with overlays (type tag, discount, status badge, stock indicator, favorite, edit), brand name, price, color dots, add-to-cart |
+| **ProductManagementCard** | Brand owner product lists | Thumbnail, product name, price/sale price, stock, color dots, status badge, edit button |
+
+### Filter Components
+
+| Component | Purpose |
+|-----------|---------|
+| **FilterPanel** | Full-screen animated bottom sheet for filtering (sort, categories, brands, price range) |
+| **FilterChips** | Horizontal bar of active filters with clear (×) buttons |
+| **FilterModal** | Generic select modal: single-select or multi-select, optional search |
+| **SearchModal** | Full-screen search modal (slide-up animation), product grid with debounced search, caches trending products |
+
+### UI Components
+
+| Component | Purpose |
+|-----------|---------|
+| **Header** | Logo, greeting, search bar (opens SearchModal), cart badge, hamburger menu |
+| **Toast** | Success/Error/Info notifications — slide animation, auto-dismiss |
+| **Pagination** | Prev/next arrows, smart page numbers with ellipsis |
+| **AutoSwipeImages** | Auto-swiping image carousel (3s interval) with dot indicators |
+| **BrandCard** | Brand logo, name, location |
+| **StatsCard** | Stat value, title, icon, accent bar |
+| **QuickActionCard** | Icon, title, description, chevron, swipeable "Go" action |
+| **ImageUploadProgress** | Upload state overlay: compressing, uploading (% bar), success, error |
+| **ProductReviews** | Review list + write review form (star selector, image upload, submit) |
+| **TryOnModal** | Full-screen AI virtual try-on: camera/gallery picker, Cloudinary upload, job polling, before/after result view with download |
+| **ScreenWrapper** | Standard screen wrapper with safe area and theme background |
 
 ---
 
@@ -96,44 +179,125 @@ Centralized via `useCloudinaryUpload` hook:
 |---------|-------------|
 | **Authentication** | Login, register, forgot/reset password, JWT token management, guest browsing |
 | **Brand Management** | Full CRUD, multi-brand ownership, brand listing with search/sort/filter |
-| **Product Management** | Full CRUD, variant system (color + images + stock), status lifecycle (DRAFT/PUBLISHED/ARCHIVED), Cloudinary image upload |
-| **Product Discovery** | Home dashboard with product/brand tabs, filter chips (category, type, brand, sort), pagination, debounced search |
-| **Product Detail** | Image gallery with parallax, variant color picker, pricing with discount display, stock status, reviews, admin edit/delete controls |
+| **Product Management** | Full CRUD, variant system (color + images + stock), status lifecycle, Cloudinary image upload |
+| **Product Discovery** | Home dashboard, filter chips, pagination, debounced search |
+| **Product Detail** | Image gallery, variant color picker, pricing with discount, stock status, reviews, TryOn modal |
 | **Shopping Cart** | Add/remove items, quantity updates, variant-aware, total calculation |
-| **Wishlist** | Toggle add/remove, product card photos, heart highlight on dashboard product cards (real-time sync) |
-| **Orders** | Order placement with idempotency, order history with status badges, order detail with timeline |
-| **Order Detail** | Full order detail screen with items, price breakdown, shipping address, and status timeline from `OrderStatusHistory` |
-| **Shipping Addresses** | Full CRUD screens (`profile/addresses/`), address selection in checkout, set default address |
-| **Checkout** | Address selection, order summary, idempotency key generation, mock payment |
-| **Product Reviews** | Review display per product, `can-review` permission check (verified purchase), star rating, review submission |
+| **Wishlist** | Toggle add/remove, product card hearts, heart highlight on dashboard cards |
+| **Orders** | Order placement with idempotency, order history, order detail with status timeline |
+| **Shipping Addresses** | Full CRUD, address selection in checkout, set default |
+| **Checkout** | Address selection, order summary, idempotency key, confirmation screen |
+| **Product Reviews** | Review display, can-review check (verified purchase), star rating, photo upload, submission |
 | **User Profile** | Personal details, avatar upload, shipping addresses, settings |
-| **Settings** | Notification preferences, change password link, privacy/terms placeholders, delete account |
+| **Settings** | Notification toggles, change password link, privacy/terms placeholders, delete account |
 | **Admin Dashboard** | Platform-wide stats (brands, products, users, revenue) |
 | **Brand Owner Dashboard** | Brand-specific stats, product/order management |
-| **Statistics** | Role-based analytics on home dashboard |
 | **User Management** | Admin user listing, role management, brand assignment |
 | **Image Upload** | Cloudinary pipeline with compression, progress tracking, multi-image per variant |
 | **Dark Mode** | Full theme support via `useThemeColor` hook |
+| **Feed** | Social feed with posts, like/comment/share, brand owner post creation, post detail with comment avatars |
+| **Brand Follow** | Follow/unfollow brands, feed filters to show only followed brands' posts |
+| **Header Side Menu** | Animated slide-in menu with navigation, cart badge, user actions |
+| **Search Modal** | Full-page search with trending products cache and debounced live search |
+| **Notifications** | Notification list with unread indicators and mark-all-read |
+| **Referral** | Referral program with share code, copy, and referral history |
+| **AI Try-On** | Virtual try-on via Cloudinary upload + backend job polling + before/after result display |
+| **Info / Static Pages** | About, Contact, Shipping Policy, Returns Policy screens |
+| **Order Confirmation** | Dedicated confirmation screen after order placement |
 
 ### Developed But Not Working / Incomplete
 
 | Feature | Issue |
 |---------|-------|
-| **ProductVariant Entity Migration** | New `ProductVariant` entity table exists but the system still uses the deprecated `variants` JSON column on the `Product` entity. Data is saved/read from JSON, not the relational table. Backend normalizes `variantImages → images` on read. |
-| **Auth Route Protection** | Login redirect in `_layout.tsx` is commented out — guests can navigate to protected screens (cart, orders, etc.) without being redirected to login. Individual screens handle auth checks independently (showing sign-in prompts). |
+| **ProductVariant Entity Migration** | New `ProductVariant` entity table exists but the system still uses the deprecated `variants` JSON column. Backend normalizes `variantImages → images` on read. |
+| **Auth Route Protection** | Login redirect in `_layout.tsx` is commented out — individual screens handle auth checks independently. |
 
 ### Not Started
 
 | Feature | Notes |
 |---------|-------|
 | **Payment Integration** | No payment gateway — checkout creates orders but no payment processing |
-| **Push Notifications** | Not implemented |
-| **Product Search Autocomplete** | Partial — local filtering of loaded data only, no server-side autocomplete endpoint |
+| **Push Notifications** | Not implemented (toggles in settings are UI-only) |
+| **Product Search Autocomplete** | Debounced search calls API; no dedicated autocomplete/suggestion endpoint |
+
+---
+
+## Planned Features — To Be Done
+
+### [TODO] Visual Product Tagging on Post Images
+
+**Goal:** Let brand owners tap a location on a post image during creation to pin a product tag there. In the feed and post detail, readers tap the pin to see a product card popup.
+
+**Screens affected:**
+- `feed/create.tsx` — image editing step after upload: overlay tap handler captures `(x%, y%)` → opens product picker modal → pin placed at that coordinate; pins shown as small dots over the image preview with product name label
+- `feed/[postId].tsx` and feed post cards — render `taggedProducts` pins as tappable dots overlaid on the image; tap reveals a compact product card (image, brand, name, price, "View" CTA)
+
+**New component needed:** `ProductTagPin` — absolute-positioned touchable dot rendered over an image, receives `{ x, y, product }` props, shows label, on press shows inline product card or navigates to product detail.
+
+**State:** `taggedProducts` in create form changes from `number[]` (product IDs) to `{ productId, imageIndex, x, y }[]`.
+
+---
+
+### [TODO] Brand Posts Tab on Brand Detail
+
+**Goal:** Add a "Posts" tab to the Brand Detail screen so users can browse a brand's social content directly from the brand profile.
+
+**Screen affected:** `brands/[brandId]/index.tsx`
+
+**UI changes:**
+- Add a two-tab switcher below the brand header: **"Products"** | **"Posts"**
+- "Products" tab — existing product grid (no change)
+- "Posts" tab — vertically scrollable list of the brand's feed posts
+  - Each post card: images carousel, caption (2 lines truncated), like count, comment count, tagged product chips, timestamp
+  - Tap post → `router.push('/feed/${postId}')`
+  - Pull-to-refresh
+  - Infinite scroll via `useInfiniteScroll` hook
+  - Empty state: "No posts yet"
+- Tab switcher uses the same B&W underline style as other tab bars in the app
+
+**Data:** `GET /feed?brandId=:brandId&page=:page&limit=10`
+
+---
+
+### [TODO] "For You" Personalized Section on Home Screen
+
+**Status: DONE ✓** — Implemented in `frontend/app/(tabs)/index.tsx`.
+
+**What was built:**
+- `forYouProducts` state added alongside existing product sections
+- Fetched via `GET /products/for-you` with the user's auth token (parallel with statistics fetch)
+- Section rendered after the Categories row, before Flash Deals — highest-value position for personalized content
+- Only shown for logged-in users; hidden when empty
+- Section header: "FOR YOU" (uppercase, matching section title style) + subtitle "Based on your saves & purchases"
+- Same `renderProductCard` used as all other product sections
+
+---
+
+### [TODO — Later] Search by Image
+
+**Goal:** Camera icon in SearchModal lets users photograph or upload any clothing item and find visually similar products.
+
+**Entry point:** SearchModal — camera icon button beside the text input.
+
+**Flow:**
+1. Tap camera icon → action sheet: "Take Photo" / "Choose from Gallery"
+2. Image compressed via `expo-image-manipulator` and uploaded to Cloudinary
+3. `POST /products/search-by-image` called with Cloudinary URL
+4. Results replace the product grid in SearchModal
+5. Loading state: spinner + "Analyzing your image…"
+6. Error state: "No matches found — try a different photo"
+7. User can still apply standard filters (category, price) to narrow results
+
+**New component needed:** None — reuses SearchModal's existing product grid and loading states.
+
+**Priority:** Low — deferred to a later phase.
 
 ---
 
 ## Performance Optimizations
 - **Debounced Search**: 300ms debounce on search inputs before triggering API calls.
 - **List Virtualization**: `FlatList` with `numColumns` for responsive grids.
-- **Optimistic Updates**: Wishlist toggle updates UI instantly before API confirmation.
-- **Pagination**: Server-side pagination on products, brands, and orders.
+- **Optimistic Updates**: Wishlist toggle and like toggle update UI instantly before API confirmation.
+- **Pagination**: Server-side pagination on products, brands, orders, and feed posts.
+- **Infinite Scroll**: `useInfiniteScroll` hook for feed and other paginated lists.
+- **Search Caching**: SearchModal caches trending products to avoid re-fetching on modal reopen.

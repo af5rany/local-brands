@@ -20,6 +20,7 @@ import getApiUrl from "@/helpers/getApiUrl";
 import { useRouter } from "expo-router";
 import { useThemeColors } from "@/hooks/useThemeColor";
 import Header from "@/components/Header";
+import { useSocialAuth } from "@/hooks/useSocialAuth";
 
 const LoginScreen = () => {
   const router = useRouter();
@@ -30,6 +31,12 @@ const LoginScreen = () => {
   const [loading, setLoading] = useState(false);
   const [guestLoading, setGuestLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+
+  const { handleGoogle, handleFacebook, googleLoading, facebookLoading } =
+    useSocialAuth((token) => {
+      login(token);
+      router.replace("/(tabs)");
+    });
 
   const handleLogin = async () => {
     Keyboard.dismiss();
@@ -88,7 +95,7 @@ const LoginScreen = () => {
     }
   };
 
-  const isAnyLoading = loading || guestLoading;
+  const isAnyLoading = loading || guestLoading || googleLoading || facebookLoading;
 
   return (
     <SafeAreaView
@@ -292,21 +299,26 @@ const LoginScreen = () => {
                 backgroundColor: colors.surfaceRaised,
                 borderColor: colors.border,
               },
+              googleLoading && { opacity: 0.7 },
             ]}
-            onPress={() =>
-              Alert.alert("Coming Soon", "Google sign-in coming soon")
-            }
+            onPress={handleGoogle}
             disabled={isAnyLoading}
           >
-            <Ionicons
-              name="logo-google"
-              size={20}
-              color={colors.text}
-              style={styles.socialIcon}
-            />
-            <Text style={[styles.socialButtonText, { color: colors.text }]}>
-              Continue with Google
-            </Text>
+            {googleLoading ? (
+              <ActivityIndicator color={colors.text} />
+            ) : (
+              <>
+                <Ionicons
+                  name="logo-google"
+                  size={20}
+                  color={colors.text}
+                  style={styles.socialIcon}
+                />
+                <Text style={[styles.socialButtonText, { color: colors.text }]}>
+                  Continue with Google
+                </Text>
+              </>
+            )}
           </Pressable>
 
           <Pressable
@@ -316,21 +328,26 @@ const LoginScreen = () => {
                 backgroundColor: colors.surfaceRaised,
                 borderColor: colors.border,
               },
+              facebookLoading && { opacity: 0.7 },
             ]}
-            onPress={() =>
-              Alert.alert("Coming Soon", "Facebook sign-in coming soon")
-            }
+            onPress={handleFacebook}
             disabled={isAnyLoading}
           >
-            <Ionicons
-              name="logo-facebook"
-              size={20}
-              color={colors.text}
-              style={styles.socialIcon}
-            />
-            <Text style={[styles.socialButtonText, { color: colors.text }]}>
-              Continue with Facebook
-            </Text>
+            {facebookLoading ? (
+              <ActivityIndicator color={colors.text} />
+            ) : (
+              <>
+                <Ionicons
+                  name="logo-facebook"
+                  size={20}
+                  color={colors.text}
+                  style={styles.socialIcon}
+                />
+                <Text style={[styles.socialButtonText, { color: colors.text }]}>
+                  Continue with Facebook
+                </Text>
+              </>
+            )}
           </Pressable>
 
           {/* Footer */}
