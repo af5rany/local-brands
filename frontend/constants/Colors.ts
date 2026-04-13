@@ -85,6 +85,16 @@ export const Colors = {
     // ── Misc ─────────────────────────────────────────────
     icon: "#000000",
     tint: "#000000",
+
+    // ── Monolith Design System Surfaces ──────────────────
+    surfaceContainer: "#eeeeee",
+    surfaceContainerLow: "#f3f3f4",
+    surfaceContainerHighest: "#e2e2e2",
+    outlineVariant: "#c6c6c6",
+    tertiary: "#7d001d",
+    tertiaryFixed: "#ba1434",
+    accentRed: "#C41E3A",
+    onSurfaceVariant: "#474747",
   },
 
   dark: {
@@ -157,6 +167,16 @@ export const Colors = {
     // ── Misc ─────────────────────────────────────────────
     icon: "#FFFFFF",
     tint: "#FFFFFF",
+
+    // ── Monolith Design System Surfaces ──────────────────
+    surfaceContainer: "#1a1a1a",
+    surfaceContainerLow: "#111111",
+    surfaceContainerHighest: "#222222",
+    outlineVariant: "#333333",
+    tertiary: "#ff4d6a",
+    tertiaryFixed: "#ff6b82",
+    accentRed: "#ff4d6a",
+    onSurfaceVariant: "#aaaaaa",
   },
 } as const;
 

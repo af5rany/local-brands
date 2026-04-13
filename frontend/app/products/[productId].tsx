@@ -11,9 +11,8 @@ import {
   Alert,
   Animated,
   Platform,
-  StatusBar,
-  FlatList,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import getApiUrl from "@/helpers/getApiUrl";
@@ -23,17 +22,17 @@ import { useCart } from "@/context/CartContext";
 import { useToast } from "@/context/ToastContext";
 import ProductReviews from "@/components/ProductReviews";
 import TryOnModal from "@/components/TryOnModal";
-import { useThemeColors } from "@/hooks/useThemeColor";
+import Header from "@/components/Header";
 import { ProductVariant } from "@/types/product";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-const { width: W, height: H } = Dimensions.get("window");
-const GALLERY_HEIGHT = H * 0.58;
-const STATUS_H = StatusBar.currentHeight || 44;
+const { width: W } = Dimensions.get("window");
+
+const MARQUEE_TEXT =
+  "COMPLIMENTARY GIFT WRAPPING  ·  FREE RETURNS WITHIN 30 DAYS  ·  ARCHIVAL RELEASE #001  ·  ";
 
 const ProductDetailScreen = () => {
   const router = useRouter();
-  const colors = useThemeColors();
   const { productId } = useLocalSearchParams();
   const { token, user } = useAuth();
   const { refresh: refreshCart } = useCart();
@@ -53,16 +52,22 @@ const ProductDetailScreen = () => {
   const [showAddedConfirm, setShowAddedConfirm] = useState(false);
   const [notifyMeLoading, setNotifyMeLoading] = useState(false);
   const [isSubscribedNotify, setIsSubscribedNotify] = useState(false);
-  const [expandedSections, setExpandedSections] = useState<
-    Record<string, boolean>
-  >({ details: true });
-  const [similarProducts, setSimilarProducts] = useState<Product[]>([]);
   const [showTryOn, setShowTryOn] = useState(false);
-  const [barHeight, setBarHeight] = useState(120);
 
-  const scrollY = useRef(new Animated.Value(0)).current;
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const scaleAnim = useRef(new Animated.Value(0.97)).current;
+  const marqueeAnim = useRef(new Animated.Value(0)).current;
+  const marqueeWidth = useRef(0);
+
+  useEffect(() => {
+    const anim = Animated.loop(
+      Animated.timing(marqueeAnim, {
+        toValue: -1,
+        duration: 18000,
+        useNativeDriver: true,
+      }),
+    );
+    anim.start();
+    return () => anim.stop();
+  }, []);
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -81,7 +86,6 @@ const ProductDetailScreen = () => {
         const data = await res.json();
         setProduct(data);
 
-        // Set initial color/size selection
         if (data.variants?.length > 0) {
           const firstVariant = data.variants[0];
           setSelectedColor(
@@ -118,27 +122,6 @@ const ProductDetailScreen = () => {
             }
           } catch (_) {}
         }
-
-        // Fetch similar products in background
-        fetch(`${getApiUrl()}/products/${productId}/similar?limit=8`)
-          .then((r) => (r.ok ? r.json() : []))
-          .then((items) =>
-            setSimilarProducts(Array.isArray(items) ? items : []),
-          )
-          .catch(() => {});
-
-        Animated.parallel([
-          Animated.timing(fadeAnim, {
-            toValue: 1,
-            duration: 700,
-            useNativeDriver: true,
-          }),
-          Animated.spring(scaleAnim, {
-            toValue: 1,
-            friction: 8,
-            useNativeDriver: true,
-          }),
-        ]).start();
       } catch (e) {
         console.error(e);
       } finally {
@@ -179,16 +162,22 @@ const ProductDetailScreen = () => {
     }
   };
 
-  // Derive active variant from selected size
   const getActiveVariant = (): ProductVariant | undefined => {
     if (!product?.variants?.length || !selectedSize) return undefined;
     return product.variants.find((v) => v.size === selectedSize);
   };
 
-  // Get available sizes from variants
   const getAvailableSizes = (): string[] => {
     if (!product?.variants?.length) return [];
     return product.variants.map((v) => v.size || "").filter(Boolean);
+  };
+
+  const getVariantColors = (): string[] => {
+    if (!product?.variants?.length) return [];
+    const colors = product.variants
+      .map((v: any) => v.color || v.attributes?.color)
+      .filter(Boolean);
+    return [...new Set(colors)] as string[];
   };
 
   const addToCart = async () => {
@@ -332,13 +321,11 @@ const ProductDetailScreen = () => {
               headers: { Authorization: `Bearer ${token}` },
             });
             const text = await res.text();
-            console.log("[DELETE] status:", res.status, "body:", text);
             if (!res.ok) throw new Error(text || "Failed to delete product");
             Alert.alert("Success", "Product deleted.", [
               { text: "OK", onPress: () => router.back() },
             ]);
           } catch (e: any) {
-            console.error("[DELETE] Error:", e);
             Alert.alert("Error", e.message);
           }
         },
@@ -346,53 +333,31 @@ const ProductDetailScreen = () => {
     ]);
   };
 
-  const toggleSection = (key: string) =>
-    setExpandedSections((s) => ({ ...s, [key]: !s[key] }));
-
-  // ── Interpolations ───────────────────────────
-  const headerOpacity = scrollY.interpolate({
-    inputRange: [GALLERY_HEIGHT - 150, GALLERY_HEIGHT - 50],
-    outputRange: [0, 1],
-    extrapolate: "clamp",
-  });
-  const parallax = scrollY.interpolate({
-    inputRange: [-200, 0],
-    outputRange: [100, 0],
-    extrapolate: "clamp",
-  });
-  const galleryScale = scrollY.interpolate({
-    inputRange: [-300, 0],
-    outputRange: [1.3, 1],
-    extrapolate: "clamp",
-  });
-
   // ── Loading / Error ──────────────────────────
   if (loading) {
     return (
-      <View style={[styles.center, { backgroundColor: colors.background }]}>
-        <ActivityIndicator size="large" color={colors.primary} />
-        <Text style={[styles.loadingLabel, { color: colors.textTertiary }]}>
-          LOADING
-        </Text>
-      </View>
+      <SafeAreaView style={styles.safeArea}>
+        <Header showBack={true} />
+        <View style={styles.center}>
+          <ActivityIndicator size="large" color="#000000" />
+          <Text style={styles.loadingLabel}>LOADING</Text>
+        </View>
+      </SafeAreaView>
     );
   }
+
   if (!product) {
     return (
-      <View style={[styles.center, { backgroundColor: colors.background }]}>
-        <Ionicons name="alert-circle-outline" size={48} color={colors.danger} />
-        <Text style={[styles.errorTitle, { color: colors.text }]}>
-          Product Not Found
-        </Text>
-        <TouchableOpacity
-          onPress={() => router.back()}
-          style={[styles.goBackBtn, { borderColor: colors.border }]}
-        >
-          <Text style={[styles.goBackText, { color: colors.text }]}>
-            GO BACK
-          </Text>
-        </TouchableOpacity>
-      </View>
+      <SafeAreaView style={styles.safeArea}>
+        <Header showBack={true} />
+        <View style={styles.center}>
+          <Ionicons name="alert-circle-outline" size={48} color="#C41E3A" />
+          <Text style={styles.errorTitle}>Product Not Found</Text>
+          <TouchableOpacity onPress={() => router.back()} style={styles.goBackBtn}>
+            <Text style={styles.goBackText}>GO BACK</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
     );
   }
 
@@ -400,6 +365,7 @@ const ProductDetailScreen = () => {
     product.hasVariants || (product.variants?.length || 0) > 0;
   const variant = hasVariants ? getActiveVariant() : undefined;
   const availableSizes = getAvailableSizes();
+  const variantColors = getVariantColors();
 
   const hasDiscount =
     product.salePrice !== undefined && product.salePrice < product.price;
@@ -410,7 +376,6 @@ const ProductDetailScreen = () => {
     ? product.variants.every((v) => v.stock <= 0)
     : product.stock <= 0;
 
-  // Images always come from product level
   const displayImages = product.images?.length
     ? product.images
     : product.mainImage
@@ -423,15 +388,11 @@ const ProductDetailScreen = () => {
       product?.brand?.owner?.id &&
       user.id === product.brand.owner.id);
 
-  return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <StatusBar
-        barStyle="light-content"
-        translucent
-        backgroundColor="transparent"
-      />
+  const heroImage = displayImages[selectedImage] || displayImages[0] || null;
 
-      {/* ── Try On Modal ── */}
+  return (
+    <SafeAreaView style={styles.safeArea} edges={["top"]}>
+      {/* Try On Modal */}
       {showTryOn && displayImages.length > 0 && (
         <TryOnModal
           visible={showTryOn}
@@ -440,11 +401,11 @@ const ProductDetailScreen = () => {
         />
       )}
 
-      {/* ── Added to Bag Confirmation ── */}
+      {/* Added to Bag Confirmation Overlay */}
       {showAddedConfirm && (
         <View style={styles.addedOverlay}>
           <View style={styles.addedCard}>
-            <View style={styles.addedCheckCircle}>
+            <View style={styles.addedCheckBox}>
               <Ionicons name="checkmark" size={28} color="#fff" />
             </View>
             <Text style={styles.addedTitle}>ADDED TO BAG</Text>
@@ -468,854 +429,403 @@ const ProductDetailScreen = () => {
         </View>
       )}
 
-      {/* ── Sticky Header ── */}
-      <Animated.View
-        style={[
-          styles.stickyHeader,
-          {
-            opacity: headerOpacity,
-            backgroundColor: colors.background,
-            borderBottomColor: colors.borderLight,
-          },
-        ]}
-      >
-        <View style={styles.stickyInner}>
-          <TouchableOpacity onPress={() => router.back()} hitSlop={12}>
-            <Ionicons name="arrow-back" size={20} color={colors.text} />
-          </TouchableOpacity>
-          <Text
-            style={[styles.stickyTitle, { color: colors.text }]}
-            numberOfLines={1}
-          >
-            {product.name}
-          </Text>
-          <TouchableOpacity hitSlop={12}>
-            <Ionicons name="share-outline" size={20} color={colors.text} />
-          </TouchableOpacity>
-        </View>
-      </Animated.View>
+      <Header showBack={true} />
 
-      {/* ── Floating Nav ── */}
-      <View style={styles.floatingNav}>
-        <TouchableOpacity
-          onPress={() => router.back()}
-          style={[styles.floatingPill, { borderColor: colors.borderLight }]}
-        >
-          <Ionicons name="arrow-back" size={17} color="#000" />
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.floatingPill, { borderColor: colors.borderLight }]}
-        >
-          <Ionicons name="share-outline" size={17} color="#000" />
-        </TouchableOpacity>
-      </View>
-
-      {/* ── Scroll + Bottom Bar (flex column, no absolute) ── */}
+      {/* Main scroll + sticky bottom bar in a flex column */}
       <View style={{ flex: 1, flexDirection: "column" }}>
-        <Animated.ScrollView
+        <ScrollView
           style={{ flex: 1 }}
           showsVerticalScrollIndicator={false}
-          onScroll={Animated.event(
-            [{ nativeEvent: { contentOffset: { y: scrollY } } }],
-            { useNativeDriver: false },
-          )}
-          scrollEventThrottle={16}
+          contentContainerStyle={{ paddingBottom: 24 }}
         >
-          {/* ── Gallery ── */}
-          <View style={styles.galleryWrap}>
-            <Animated.ScrollView
-              horizontal
-              pagingEnabled
-              showsHorizontalScrollIndicator={false}
-              onMomentumScrollEnd={(e) =>
-                setSelectedImage(Math.round(e.nativeEvent.contentOffset.x / W))
-              }
-            >
-              {displayImages.map((uri: string, i: number) => (
-                <Animated.View
-                  key={i}
-                  style={[
-                    styles.imgFrame,
-                    {
-                      transform: [
-                        { translateY: parallax },
-                        { scale: galleryScale },
-                      ],
-                    },
-                  ]}
-                >
-                  <Image
-                    source={{ uri }}
-                    style={styles.img}
-                    resizeMode="cover"
-                  />
-                </Animated.View>
-              ))}
-            </Animated.ScrollView>
-
-            <View style={styles.indicatorRow}>
-              {displayImages.map((_: string, i: number) => (
-                <View
-                  key={i}
-                  style={[
-                    styles.indicatorBar,
-                    selectedImage === i && styles.indicatorActive,
-                  ]}
-                />
-              ))}
-            </View>
-
-            <View style={styles.counterChip}>
-              <Text style={styles.counterText}>
-                {selectedImage + 1}/{displayImages.length || 0}
-              </Text>
-            </View>
-
-            {displayImages.length > 0 && (
-              <TouchableOpacity
-                style={styles.tryOnBtn}
-                onPress={() => setShowTryOn(true)}
-                activeOpacity={0.85}
-              >
-                <Ionicons name="body-outline" size={16} color="#fff" />
-                <Text style={styles.tryOnBtnText}>TRY ON</Text>
-              </TouchableOpacity>
+          {/* Hero Image */}
+          <View style={styles.heroContainer}>
+            {heroImage ? (
+              <Image
+                source={{ uri: heroImage }}
+                style={styles.heroImage}
+                resizeMode="cover"
+              />
+            ) : (
+              <View style={styles.heroPlaceholder}>
+                <Ionicons name="image-outline" size={48} color="#aaa" />
+              </View>
             )}
           </View>
 
-          {/* ── Content ── */}
-          <Animated.View
-            style={[
-              styles.content,
-              {
-                backgroundColor: colors.background,
-                opacity: fadeAnim,
-                transform: [{ scale: scaleAnim }],
-              },
-            ]}
-          >
-            {/* Brand + Title */}
+          {/* Thumbnail Row */}
+          {displayImages.length > 1 && (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.thumbnailRow}
+            >
+              {displayImages.slice(0, 4).map((uri: string, i: number) => (
+                <TouchableOpacity
+                  key={i}
+                  onPress={() => setSelectedImage(i)}
+                  style={[
+                    styles.thumbnail,
+                    selectedImage === i && styles.thumbnailSelected,
+                  ]}
+                  activeOpacity={0.8}
+                >
+                  <Image
+                    source={{ uri }}
+                    style={styles.thumbnailImage}
+                    resizeMode="cover"
+                  />
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          )}
+
+          {/* Product Info */}
+          <View style={styles.infoSection}>
+            {/* Brand name */}
             <TouchableOpacity
-              onPress={() => router.push(`/brands/${product.brand.id}`)}
+              onPress={() =>
+                product.brand?.id && router.push(`/brands/${product.brand.id}`)
+              }
               activeOpacity={0.7}
             >
-              <Text style={[styles.brandLabel, { color: colors.text }]}>
-                {product.brand.name?.toUpperCase()}
+              <Text style={styles.brandName}>
+                {product.brand?.name?.toUpperCase() || ""}
               </Text>
             </TouchableOpacity>
 
-            <Text style={[styles.productName, { color: colors.text }]}>
-              {product.name}
-            </Text>
+            {/* Product name */}
+            <Text style={styles.productName}>{product.name}</Text>
 
+            {/* Status badge if not published */}
             {product.status !== "published" && (
-              <View
-                style={[
-                  styles.statusChip,
-                  { backgroundColor: colors.warningSoft },
-                ]}
-              >
-                <Text
-                  style={[styles.statusChipText, { color: colors.warning }]}
-                >
+              <View style={styles.statusChip}>
+                <Text style={styles.statusChipText}>
                   {(product.status || "draft").toUpperCase()}
                 </Text>
               </View>
             )}
 
-            {/* Price */}
-            <View style={styles.priceBlock}>
-              <View style={styles.priceLeft}>
-                <Text
-                  style={[
-                    styles.priceMain,
-                    { color: hasDiscount ? colors.danger : colors.text },
-                  ]}
-                >
-                  ${price?.toFixed(2)}
-                </Text>
-                {hasDiscount && (
-                  <Text
-                    style={[styles.priceStrike, { color: colors.textTertiary }]}
-                  >
+            {/* Price row */}
+            <View style={styles.priceRow}>
+              {hasDiscount ? (
+                <>
+                  <Text style={styles.priceCurrentSale}>
+                    ${price?.toFixed(2)}
+                  </Text>
+                  <Text style={styles.priceOriginalStrike}>
                     ${product.price.toFixed(2)}
                   </Text>
-                )}
-              </View>
-              {hasDiscount && (
-                <View
-                  style={[styles.saveBadge, { backgroundColor: colors.danger }]}
-                >
-                  <Text style={styles.saveBadgeText}>
-                    {Math.round(
-                      ((product.price - product.salePrice!) / product.price) *
-                        100,
-                    )}
-                    % OFF
-                  </Text>
-                </View>
+                  <View style={styles.saleBadge}>
+                    <Text style={styles.saleBadgeText}>SALE</Text>
+                  </View>
+                </>
+              ) : (
+                <Text style={styles.priceCurrent}>${price?.toFixed(2)}</Text>
               )}
             </View>
 
-            {/* Stock */}
-            <View style={styles.stockRow}>
-              <View
-                style={[
-                  styles.stockDot,
-                  { backgroundColor: inStock ? colors.success : colors.danger },
-                ]}
-              />
-              <Text
-                style={[styles.stockLabel, { color: colors.textSecondary }]}
+            {/* Wishlist toggle inline */}
+            <TouchableOpacity
+              style={styles.wishlistRow}
+              onPress={toggleWishlist}
+              disabled={wishlistLoading}
+              activeOpacity={0.7}
+            >
+              {wishlistLoading ? (
+                <ActivityIndicator size="small" color="#000" />
+              ) : (
+                <>
+                  <Ionicons
+                    name={isInWishlist ? "heart" : "heart-outline"}
+                    size={18}
+                    color="#000"
+                  />
+                  <Text style={styles.wishlistLabel}>
+                    {isInWishlist ? "SAVED" : "SAVE TO WISHLIST"}
+                  </Text>
+                </>
+              )}
+            </TouchableOpacity>
+          </View>
+
+          {/* 32px spacer */}
+          <View style={{ height: 32 }} />
+
+          {/* Color Swatches */}
+          {variantColors.length > 0 && (
+            <View style={styles.selectorSection}>
+              <Text style={styles.selectorLabel}>SELECT COLOR</Text>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.swatchRow}
               >
-                {inStock ? `${currentStock} in stock` : "Out of stock"}
-              </Text>
-            </View>
-
-            <View
-              style={[styles.divider, { backgroundColor: colors.borderLight }]}
-            />
-
-            {/* Color */}
-            {product.color && (
-              <>
-                <View style={styles.section}>
-                  <View style={styles.sectionRow}>
-                    <Text
+                {variantColors.map((color: string, i: number) => {
+                  const isSelected = selectedColor === color;
+                  return (
+                    <TouchableOpacity
+                      key={i}
+                      onPress={() => setSelectedColor(color)}
                       style={[
-                        styles.sectionLabel,
-                        { color: colors.textTertiary },
+                        styles.swatchOuter,
+                        isSelected && styles.swatchOuterSelected,
                       ]}
-                    >
-                      COLOR
-                    </Text>
-                  </View>
-                  <View
-                    style={{
-                      flexDirection: "row",
-                      alignItems: "center",
-                      gap: 8,
-                      marginTop: 8,
-                    }}
-                  >
-                    <View
-                      style={[styles.colorRing, { borderColor: colors.text }]}
+                      activeOpacity={0.8}
                     >
                       <View
-                        style={[
-                          styles.colorDot,
-                          { backgroundColor: product.color },
-                        ]}
+                        style={[styles.swatch, { backgroundColor: color }]}
                       />
-                    </View>
-                  </View>
-                </View>
-                <View
-                  style={[
-                    styles.divider,
-                    { backgroundColor: colors.borderLight },
-                  ]}
-                />
-              </>
-            )}
-
-            {/* Size */}
-            {hasVariants && availableSizes.length > 0 && (
-              <>
-                <View style={styles.section}>
-                  <View style={styles.sectionRow}>
-                    <Text
-                      style={[
-                        styles.sectionLabel,
-                        { color: colors.textTertiary },
-                      ]}
-                    >
-                      SIZE
-                    </Text>
-                    <Text style={[styles.sectionValue, { color: colors.text }]}>
-                      {selectedSize}
-                    </Text>
-                  </View>
-                  <ScrollView
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    contentContainerStyle={styles.colorRow}
-                  >
-                    {availableSizes.map((size) => {
-                      const active = selectedSize === size;
-                      const sizeVariant = product.variants.find(
-                        (v) => v.size === size,
-                      );
-                      const sizeInStock = (sizeVariant?.stock || 0) > 0;
-                      return (
-                        <TouchableOpacity
-                          key={size}
-                          onPress={() => sizeInStock && setSelectedSize(size)}
-                          disabled={!sizeInStock}
-                          style={[
-                            styles.sizeChip,
-                            {
-                              borderColor: active
-                                ? colors.text
-                                : colors.borderLight,
-                              backgroundColor: active
-                                ? colors.text
-                                : "transparent",
-                              opacity: sizeInStock ? 1 : 0.35,
-                            },
-                          ]}
-                        >
-                          <Text
-                            style={[
-                              styles.sizeChipText,
-                              {
-                                color: active ? colors.background : colors.text,
-                              },
-                            ]}
-                          >
-                            {size}
-                          </Text>
-                        </TouchableOpacity>
-                      );
-                    })}
-                  </ScrollView>
-                </View>
-                <View
-                  style={[
-                    styles.divider,
-                    { backgroundColor: colors.borderLight },
-                  ]}
-                />
-              </>
-            )}
-
-            {/* Accordion: DETAILS */}
-            <TouchableOpacity
-              style={styles.accordionHeader}
-              onPress={() => toggleSection("details")}
-              activeOpacity={0.7}
-            >
-              <Text style={[styles.accordionTitle, { color: colors.text }]}>
-                DETAILS
-              </Text>
-              <Ionicons
-                name={expandedSections.details ? "remove" : "add"}
-                size={20}
-                color={colors.text}
-              />
-            </TouchableOpacity>
-            {expandedSections.details && (
-              <View style={styles.accordionBody}>
-                <Text
-                  style={[styles.descText, { color: colors.textSecondary }]}
-                >
-                  {product.description}
-                </Text>
-              </View>
-            )}
-            <View
-              style={[styles.divider, { backgroundColor: colors.borderLight }]}
-            />
-
-            {/* Accordion: SIZE & FIT */}
-            <TouchableOpacity
-              style={styles.accordionHeader}
-              onPress={() => toggleSection("sizeFit")}
-              activeOpacity={0.7}
-            >
-              <Text style={[styles.accordionTitle, { color: colors.text }]}>
-                SIZE & FIT
-              </Text>
-              <Ionicons
-                name={expandedSections.sizeFit ? "remove" : "add"}
-                size={20}
-                color={colors.text}
-              />
-            </TouchableOpacity>
-            {expandedSections.sizeFit && (
-              <View style={styles.accordionBody}>
-                {[
-                  { k: "Type", v: product.productType },
-                  { k: "Season", v: product.season },
-                ].map((item) => (
-                  <View key={item.k} style={styles.accordionRow}>
-                    <Text
-                      style={[
-                        styles.accordionKey,
-                        { color: colors.textTertiary },
-                      ]}
-                    >
-                      {item.k}
-                    </Text>
-                    <Text style={[styles.accordionVal, { color: colors.text }]}>
-                      {item.v}
-                    </Text>
-                  </View>
-                ))}
-              </View>
-            )}
-            <View
-              style={[styles.divider, { backgroundColor: colors.borderLight }]}
-            />
-
-            {/* Accordion: COMPOSITION & CARE */}
-            <TouchableOpacity
-              style={styles.accordionHeader}
-              onPress={() => toggleSection("composition")}
-              activeOpacity={0.7}
-            >
-              <Text style={[styles.accordionTitle, { color: colors.text }]}>
-                COMPOSITION & CARE
-              </Text>
-              <Ionicons
-                name={expandedSections.composition ? "remove" : "add"}
-                size={20}
-                color={colors.text}
-              />
-            </TouchableOpacity>
-            {expandedSections.composition && (
-              <View style={styles.accordionBody}>
-                {[
-                  { k: "Material", v: product.material || "—" },
-                  { k: "Origin", v: product.origin || "Locally Made" },
-                ].map((item) => (
-                  <View key={item.k} style={styles.accordionRow}>
-                    <Text
-                      style={[
-                        styles.accordionKey,
-                        { color: colors.textTertiary },
-                      ]}
-                    >
-                      {item.k}
-                    </Text>
-                    <Text style={[styles.accordionVal, { color: colors.text }]}>
-                      {item.v}
-                    </Text>
-                  </View>
-                ))}
-              </View>
-            )}
-            <View
-              style={[styles.divider, { backgroundColor: colors.borderLight }]}
-            />
-
-            {/* Accordion: DELIVERY & RETURNS */}
-            <TouchableOpacity
-              style={styles.accordionHeader}
-              onPress={() => toggleSection("delivery")}
-              activeOpacity={0.7}
-            >
-              <Text style={[styles.accordionTitle, { color: colors.text }]}>
-                DELIVERY & RETURNS
-              </Text>
-              <Ionicons
-                name={expandedSections.delivery ? "remove" : "add"}
-                size={20}
-                color={colors.text}
-              />
-            </TouchableOpacity>
-            {expandedSections.delivery && (
-              <View style={styles.accordionBody}>
-                {[
-                  {
-                    icon: "cube-outline",
-                    text: "Free standard delivery on all orders",
-                  },
-                  {
-                    icon: "refresh-outline",
-                    text: "Easy returns within 30 days",
-                  },
-                  {
-                    icon: "shield-checkmark-outline",
-                    text: "Secure checkout guaranteed",
-                  },
-                ].map((item) => (
-                  <View key={item.text} style={styles.deliveryRow}>
-                    <Ionicons
-                      name={item.icon as any}
-                      size={18}
-                      color={colors.text}
-                    />
-                    <Text
-                      style={[
-                        styles.deliveryText,
-                        { color: colors.textSecondary },
-                      ]}
-                    >
-                      {item.text}
-                    </Text>
-                  </View>
-                ))}
-              </View>
-            )}
-            <View
-              style={[styles.divider, { backgroundColor: colors.borderLight }]}
-            />
-
-            {/* Trust Signals */}
-            <View style={styles.trustRow}>
-              {[
-                { icon: "cube-outline", label: "Free Delivery" },
-                { icon: "shield-checkmark-outline", label: "Secure Payment" },
-                { icon: "refresh-outline", label: "Easy Returns" },
-              ].map((item) => (
-                <View key={item.label} style={styles.trustItem}>
-                  <Ionicons
-                    name={item.icon as any}
-                    size={20}
-                    color={colors.text}
-                  />
-                  <Text
-                    style={[styles.trustText, { color: colors.textSecondary }]}
-                  >
-                    {item.label}
-                  </Text>
-                </View>
-              ))}
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
             </View>
-            <View
-              style={[styles.divider, { backgroundColor: colors.borderLight }]}
-            />
+          )}
 
-            {/* Reviews */}
-            <ProductReviews productId={product.id} />
-
-            {/* You May Also Like */}
-            {similarProducts.length > 0 && (
-              <>
-                <View
-                  style={[
-                    styles.divider,
-                    { backgroundColor: colors.borderLight },
-                  ]}
-                />
-                <View style={styles.section}>
-                  <Text
+          {/* Product-level single color */}
+          {!variantColors.length && product.color && (
+            <View style={styles.selectorSection}>
+              <Text style={styles.selectorLabel}>COLOR</Text>
+              <View style={styles.swatchRow}>
+                <View style={styles.swatchOuterSelected}>
+                  <View
                     style={[
-                      styles.sectionLabel,
-                      { color: colors.textTertiary, marginBottom: 14 },
+                      styles.swatch,
+                      { backgroundColor: product.color },
                     ]}
-                  >
-                    YOU MAY ALSO LIKE
-                  </Text>
-                  <FlatList
-                    data={similarProducts}
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    contentContainerStyle={{ gap: 12 }}
-                    keyExtractor={(item) => `similar-${item.id}`}
-                    renderItem={({ item }) => {
-                      const img = item.images?.[0] || item.mainImage || "";
-                      const hasItemDiscount =
-                        item.salePrice && item.salePrice < item.price;
-                      return (
-                        <TouchableOpacity
-                          style={{
-                            width: 140,
-                            backgroundColor: colors.surface,
-                          }}
-                          onPress={() =>
-                            router.push(`/products/${item.id}` as any)
-                          }
-                          activeOpacity={0.7}
-                        >
-                          <Image
-                            source={{ uri: img }}
-                            style={{
-                              width: 140,
-                              height: 180,
-                              backgroundColor: colors.surfaceRaised,
-                            }}
-                          />
-                          <View style={{ padding: 8 }}>
-                            <Text
-                              style={{
-                                fontSize: 10,
-                                fontWeight: "600",
-                                textTransform: "uppercase",
-                                letterSpacing: 0.8,
-                                color: colors.textTertiary,
-                                marginBottom: 2,
-                              }}
-                              numberOfLines={1}
-                            >
-                              {item.brand?.name || ""}
-                            </Text>
-                            <Text
-                              style={{
-                                fontSize: 12,
-                                fontWeight: "600",
-                                color: colors.text,
-                                marginBottom: 4,
-                              }}
-                              numberOfLines={2}
-                            >
-                              {item.name}
-                            </Text>
-                            <View
-                              style={{
-                                flexDirection: "row",
-                                alignItems: "center",
-                                gap: 4,
-                              }}
-                            >
-                              <Text
-                                style={{
-                                  fontSize: 13,
-                                  fontWeight: "800",
-                                  color: hasItemDiscount
-                                    ? colors.priceCurrent
-                                    : colors.text,
-                                }}
-                              >
-                                ${(item.salePrice || item.price)?.toFixed(2)}
-                              </Text>
-                              {hasItemDiscount && (
-                                <Text
-                                  style={{
-                                    fontSize: 11,
-                                    color: colors.textTertiary,
-                                    textDecorationLine: "line-through",
-                                  }}
-                                >
-                                  ${item.price?.toFixed(2)}
-                                </Text>
-                              )}
-                            </View>
-                          </View>
-                        </TouchableOpacity>
-                      );
-                    }}
                   />
                 </View>
-              </>
-            )}
+              </View>
+            </View>
+          )}
 
-            {/* Admin Controls */}
-            {isOwnerOrAdmin && (
-              <>
-                <View
-                  style={[
-                    styles.divider,
-                    { backgroundColor: colors.borderLight },
-                  ]}
-                />
-                <View style={styles.section}>
-                  <Text
-                    style={[
-                      styles.sectionLabel,
-                      { color: colors.textTertiary, marginBottom: 14 },
-                    ]}
-                  >
-                    MANAGE
-                  </Text>
-                  <View style={styles.adminRow}>
+          {/* Size Selector */}
+          {hasVariants && availableSizes.length > 0 && (
+            <View style={styles.selectorSection}>
+              <Text style={styles.selectorLabel}>SELECT SIZE</Text>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.sizeRow}
+              >
+                {availableSizes.map((size) => {
+                  const isActive = selectedSize === size;
+                  const sizeVariant = product.variants.find(
+                    (v) => v.size === size,
+                  );
+                  const sizeInStock = (sizeVariant?.stock || 0) > 0;
+                  return (
                     <TouchableOpacity
-                      onPress={() => router.push(`/products/edit/${productId}`)}
+                      key={size}
+                      onPress={() => sizeInStock && setSelectedSize(size)}
+                      disabled={!sizeInStock}
                       style={[
-                        styles.adminBtn,
-                        {
-                          backgroundColor: colors.primarySoft,
-                          borderColor: colors.primary,
-                        },
+                        styles.sizeBox,
+                        isActive && styles.sizeBoxSelected,
+                        !sizeInStock && styles.sizeBoxOos,
                       ]}
+                      activeOpacity={0.8}
                     >
-                      <Ionicons
-                        name="create-outline"
-                        size={16}
-                        color={colors.primary}
-                      />
                       <Text
                         style={[
-                          styles.adminBtnLabel,
-                          { color: colors.primary },
+                          styles.sizeBoxText,
+                          isActive && styles.sizeBoxTextSelected,
+                          !sizeInStock && styles.sizeBoxTextOos,
                         ]}
                       >
-                        Edit
+                        {size}
                       </Text>
                     </TouchableOpacity>
-                    <TouchableOpacity
-                      onPress={handleDelete}
-                      style={[
-                        styles.adminBtn,
-                        {
-                          backgroundColor: colors.dangerSoft,
-                          borderColor: colors.danger,
-                        },
-                      ]}
-                    >
-                      <Ionicons
-                        name="trash-outline"
-                        size={16}
-                        color={colors.danger}
-                      />
-                      <Text
-                        style={[styles.adminBtnLabel, { color: colors.danger }]}
-                      >
-                        Delete
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              </>
-            )}
-          </Animated.View>
-        </Animated.ScrollView>
+                  );
+                })}
+              </ScrollView>
+            </View>
+          )}
 
-        {/* ── Bottom Bar — in flow, not absolute ── */}
+          {/* The Details */}
+          <View style={styles.detailsSection}>
+            <Text style={styles.detailsLabel}>THE DETAILS</Text>
+            <Text style={styles.descriptionText}>{product.description}</Text>
+
+            {(product.material || product.productType || product.season) && (
+              <View style={{ marginTop: 16 }}>
+                {product.material && (
+                  <Text style={styles.metaLine}>
+                    — MATERIAL: {product.material.toUpperCase()}
+                  </Text>
+                )}
+                {product.productType && (
+                  <Text style={styles.metaLine}>
+                    — TYPE: {product.productType.toUpperCase()}
+                  </Text>
+                )}
+                {product.season && (
+                  <Text style={styles.metaLine}>
+                    — SEASON: {product.season.toUpperCase()}
+                  </Text>
+                )}
+                {product.origin && (
+                  <Text style={styles.metaLine}>
+                    — ORIGIN: {product.origin.toUpperCase()}
+                  </Text>
+                )}
+              </View>
+            )}
+          </View>
+
+          {/* Reviews */}
+          <View style={{ paddingHorizontal: 20, marginTop: 40 }}>
+            <ProductReviews productId={product.id} />
+          </View>
+
+          {/* Marquee strip */}
+          <View style={styles.marqueeContainer}>
+            <Animated.View
+              style={[
+                styles.marqueeTrack,
+                {
+                  transform: [
+                    {
+                      translateX: marqueeAnim.interpolate({
+                        inputRange: [-1, 0],
+                        outputRange: [-W * 2, 0],
+                      }),
+                    },
+                  ],
+                },
+              ]}
+            >
+              <Text style={styles.marqueeText}>
+                {MARQUEE_TEXT.repeat(6)}
+              </Text>
+            </Animated.View>
+          </View>
+
+          {/* Admin Controls */}
+          {isOwnerOrAdmin && (
+            <View style={styles.adminSection}>
+              <Text style={styles.selectorLabel}>MANAGE</Text>
+              <View style={styles.adminRow}>
+                <TouchableOpacity
+                  onPress={() => router.push(`/products/edit/${productId}`)}
+                  style={styles.adminEditBtn}
+                >
+                  <Ionicons name="create-outline" size={16} color="#000" />
+                  <Text style={styles.adminBtnLabel}>EDIT</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={handleDelete}
+                  style={styles.adminDeleteBtn}
+                >
+                  <Ionicons name="trash-outline" size={16} color="#C41E3A" />
+                  <Text style={styles.adminDeleteLabel}>DELETE</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
+        </ScrollView>
+
+        {/* Bottom CTA Bar */}
         <View
           style={[
             styles.bottomBar,
-            {
-              backgroundColor: colors.surface,
-              borderTopColor: colors.borderLight,
-              paddingBottom: insets.bottom + 12,
-            },
+            { paddingBottom: insets.bottom + 12 },
           ]}
         >
-          <TouchableOpacity
-            style={[
-              styles.wishBtn,
-              {
-                borderColor: isInWishlist ? colors.text : colors.border,
-                backgroundColor: isInWishlist
-                  ? colors.primarySoft
-                  : "transparent",
-              },
-            ]}
-            onPress={toggleWishlist}
-            disabled={wishlistLoading}
-          >
-            {wishlistLoading ? (
-              <ActivityIndicator size="small" color={colors.text} />
-            ) : (
-              <Ionicons
-                name={isInWishlist ? "heart" : "heart-outline"}
-                size={22}
-                color={colors.text}
-              />
-            )}
-          </TouchableOpacity>
-
           {allOutOfStock ? (
             <TouchableOpacity
               style={[
-                styles.notifyBtn,
-                {
-                  backgroundColor: isSubscribedNotify
-                    ? colors.successSoft
-                    : colors.accent,
-                  borderColor: isSubscribedNotify
-                    ? colors.success
-                    : colors.accent,
-                },
+                styles.addToCollectionBtn,
+                { backgroundColor: isSubscribedNotify ? "#444" : "#000" },
               ]}
               onPress={handleNotifyMe}
               disabled={notifyMeLoading || isSubscribedNotify}
               activeOpacity={0.85}
             >
               {notifyMeLoading ? (
-                <ActivityIndicator
-                  size="small"
-                  color={
-                    isSubscribedNotify ? colors.success : colors.textInverse
-                  }
-                />
+                <ActivityIndicator size="small" color="#fff" />
               ) : (
-                <>
-                  <Ionicons
-                    name={
-                      isSubscribedNotify
-                        ? "checkmark-circle"
-                        : "notifications-outline"
-                    }
-                    size={18}
-                    color={
-                      isSubscribedNotify ? colors.success : colors.textInverse
-                    }
-                    style={{ marginRight: 8 }}
-                  />
-                  <Text
-                    style={[
-                      styles.cartBtnText,
-                      {
-                        color: isSubscribedNotify
-                          ? colors.success
-                          : colors.textInverse,
-                      },
-                    ]}
-                  >
-                    {isSubscribedNotify ? "SUBSCRIBED" : "NOTIFY ME"}
-                  </Text>
-                </>
+                <Text style={styles.addToCollectionText}>
+                  {isSubscribedNotify ? "SUBSCRIBED" : "NOTIFY ME"}
+                </Text>
               )}
             </TouchableOpacity>
           ) : (
-            <View style={styles.buyRow}>
-              <TouchableOpacity
-                style={[
-                  styles.cartBtn,
-                  {
-                    backgroundColor: inStock
-                      ? colors.primary
-                      : colors.textTertiary,
-                  },
-                ]}
-                onPress={addToCart}
-                disabled={cartLoading || !inStock}
-                activeOpacity={0.85}
-              >
-                {cartLoading ? (
-                  <ActivityIndicator
-                    size="small"
-                    color={inStock ? colors.primaryForeground : colors.text}
-                  />
-                ) : (
-                  <Text
-                    style={[
-                      styles.cartBtnText,
-                      { color: colors.primaryForeground },
-                    ]}
-                  >
-                    ADD TO BAG
-                  </Text>
-                )}
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[
-                  styles.buyNowBtn,
-                  { borderColor: inStock ? colors.text : colors.textTertiary },
-                ]}
-                onPress={buyNow}
-                disabled={buyNowLoading || !inStock}
-                activeOpacity={0.85}
-              >
-                {buyNowLoading ? (
-                  <ActivityIndicator size="small" color={colors.text} />
-                ) : (
-                  <Text
-                    style={[
-                      styles.cartBtnText,
-                      { color: inStock ? colors.text : colors.textTertiary },
-                    ]}
-                  >
-                    BUY NOW
-                  </Text>
-                )}
-              </TouchableOpacity>
-            </View>
+            <TouchableOpacity
+              style={[
+                styles.addToCollectionBtn,
+                { backgroundColor: inStock ? "#000" : "#888" },
+              ]}
+              onPress={addToCart}
+              disabled={cartLoading || !inStock}
+              activeOpacity={0.85}
+            >
+              {cartLoading ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <Text style={styles.addToCollectionText}>
+                  ADD TO COLLECTION
+                </Text>
+              )}
+            </TouchableOpacity>
           )}
+
+          <View style={{ height: 8 }} />
+
+          <TouchableOpacity
+            style={styles.tryOnBtn}
+            onPress={() => setShowTryOn(true)}
+            activeOpacity={0.85}
+          >
+            <Text style={styles.tryOnBtnText}>TRY ON (AI VISUALIZER)</Text>
+          </TouchableOpacity>
         </View>
       </View>
-    </View>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
+  safeArea: {
+    flex: 1,
+    backgroundColor: "#f9f9f9",
+  },
 
-  // ── Added to Bag Overlay ────────────────
+  center: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#f9f9f9",
+  },
+  loadingLabel: {
+    marginTop: 16,
+    fontSize: 10,
+    fontFamily: "SpaceMono_400Regular",
+    letterSpacing: 3,
+    color: "#666",
+  },
+  errorTitle: {
+    fontSize: 18,
+    fontFamily: "SpaceGrotesk_700Bold",
+    marginTop: 20,
+    color: "#000",
+  },
+  goBackBtn: {
+    marginTop: 28,
+    paddingVertical: 14,
+    paddingHorizontal: 28,
+    borderWidth: 2,
+    borderColor: "#000",
+  },
+  goBackText: {
+    fontSize: 12,
+    fontFamily: "SpaceMono_400Regular",
+    letterSpacing: 2,
+    color: "#000",
+  },
+
+  // ── Added to Bag Overlay ──────────────────────────
   addedOverlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: "rgba(0,0,0,0.55)",
@@ -1324,30 +834,30 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   addedCard: {
-    width: 280,
-    backgroundColor: "#fff",
+    width: 300,
+    backgroundColor: "#f9f9f9",
     paddingVertical: 36,
     paddingHorizontal: 28,
     alignItems: "center",
   },
-  addedCheckCircle: {
+  addedCheckBox: {
     width: 56,
     height: 56,
-    backgroundColor: "#2E7D32",
+    backgroundColor: "#000",
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 18,
   },
   addedTitle: {
-    fontSize: 14,
-    fontWeight: "800",
+    fontSize: 13,
+    fontFamily: "SpaceMono_400Regular",
     letterSpacing: 2.5,
     color: "#000",
     marginBottom: 6,
   },
   addedSubtitle: {
     fontSize: 13,
-    fontWeight: "400",
+    fontFamily: "Inter_400Regular",
     color: "#666",
     textAlign: "center",
     marginBottom: 24,
@@ -1355,360 +865,341 @@ const styles = StyleSheet.create({
   addedViewBag: {
     width: "100%",
     backgroundColor: "#000",
-    paddingVertical: 14,
+    paddingVertical: 16,
     alignItems: "center",
     marginBottom: 10,
   },
   addedViewBagText: {
     color: "#fff",
-    fontSize: 13,
-    fontWeight: "700",
-    letterSpacing: 1.5,
+    fontSize: 12,
+    fontFamily: "SpaceMono_400Regular",
+    letterSpacing: 2,
   },
   addedContinue: {
     width: "100%",
-    paddingVertical: 12,
+    paddingVertical: 14,
     alignItems: "center",
-    borderWidth: 1,
+    borderWidth: 2,
     borderColor: "#000",
   },
   addedContinueText: {
     color: "#000",
-    fontSize: 12,
-    fontWeight: "700",
+    fontSize: 11,
+    fontFamily: "SpaceMono_400Regular",
     letterSpacing: 1.5,
   },
-  center: { flex: 1, alignItems: "center", justifyContent: "center" },
-  loadingLabel: {
-    marginTop: 16,
-    fontSize: 10,
-    fontWeight: "600",
-    letterSpacing: 3,
-  },
-  errorTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    marginTop: 20,
-    letterSpacing: 0.5,
-  },
-  goBackBtn: {
-    marginTop: 28,
-    paddingVertical: 12,
-    paddingHorizontal: 28,
-    borderWidth: 1,
-  },
-  goBackText: { fontSize: 12, fontWeight: "700", letterSpacing: 1.5 },
 
-  // ── Sticky Header ─────────────────────────
-  stickyHeader: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    height: STATUS_H + 50,
-    zIndex: 100,
-    paddingTop: STATUS_H,
-    borderBottomWidth: 1,
+  // ── Hero Image ────────────────────────────────────
+  heroContainer: {
+    width: "100%",
+    aspectRatio: 4 / 5,
+    backgroundColor: "#eeeeee",
   },
-  stickyInner: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 20,
-    height: 50,
+  heroImage: {
+    width: "100%",
+    height: "100%",
   },
-  stickyTitle: {
-    fontSize: 13,
-    fontWeight: "600",
-    letterSpacing: 1,
+  heroPlaceholder: {
     flex: 1,
-    textAlign: "center",
-    marginHorizontal: 16,
-    textTransform: "uppercase",
-  },
-
-  // ── Floating Nav ──────────────────────────
-  floatingNav: {
-    position: "absolute",
-    top: STATUS_H + 10,
-    left: 0,
-    right: 0,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    paddingHorizontal: 20,
-    zIndex: 90,
-  },
-  floatingPill: {
-    width: 38,
-    height: 38,
-    backgroundColor: "rgba(255,255,255,0.92)",
-    borderWidth: 1,
     alignItems: "center",
     justifyContent: "center",
+    backgroundColor: "#eeeeee",
   },
 
-  // ── Gallery ───────────────────────────────
-  galleryWrap: { height: GALLERY_HEIGHT, backgroundColor: "#F5F5F5" },
-  imgFrame: { width: W, height: GALLERY_HEIGHT },
-  img: { width: W, height: "100%" },
-  indicatorRow: {
-    position: "absolute",
-    bottom: 20,
-    left: 24,
+  // ── Thumbnail Row ─────────────────────────────────
+  thumbnailRow: {
     flexDirection: "row",
-    gap: 5,
+    gap: 8,
+    paddingHorizontal: 20,
+    paddingTop: 16,
   },
-  indicatorBar: {
-    width: 20,
-    height: 2.5,
-    backgroundColor: "rgba(0,0,0,0.2)",
+  thumbnail: {
+    width: 60,
+    height: 72,
+    backgroundColor: "#eeeeee",
   },
-  indicatorActive: { backgroundColor: "#000", width: 32 },
-  counterChip: {
-    position: "absolute",
-    bottom: 20,
-    right: 24,
-    backgroundColor: "rgba(0,0,0,0.6)",
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+  thumbnailSelected: {
+    borderWidth: 2,
+    borderColor: "#000",
   },
-  counterText: {
-    color: "#FFF",
-    fontSize: 11,
-    fontWeight: "600",
-    letterSpacing: 0.5,
-  },
-  tryOnBtn: {
-    position: "absolute",
-    bottom: 20,
-    left: 16,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    backgroundColor: "rgba(0,0,0,0.75)",
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-  },
-  tryOnBtnText: {
-    color: "#fff",
-    fontSize: 10,
-    fontWeight: "700",
-    letterSpacing: 1.5,
+  thumbnailImage: {
+    width: "100%",
+    height: "100%",
   },
 
-  // ── Content ───────────────────────────────
-  content: {
-    paddingTop: 28,
-    paddingHorizontal: 24,
+  // ── Product Info Section ──────────────────────────
+  infoSection: {
+    paddingHorizontal: 20,
+    paddingTop: 24,
   },
-  brandLabel: {
+  brandName: {
     fontSize: 11,
-    fontWeight: "700",
-    letterSpacing: 2.5,
+    fontFamily: "SpaceMono_400Regular",
+    letterSpacing: 3,
+    color: "#666",
+    textTransform: "uppercase",
     marginBottom: 8,
   },
   productName: {
     fontSize: 28,
-    fontWeight: "300",
-    letterSpacing: -0.3,
-    lineHeight: 36,
-    marginBottom: 12,
+    fontFamily: "SpaceGrotesk_700Bold",
+    color: "#000000",
+    letterSpacing: -0.5,
+    lineHeight: 34,
+    marginBottom: 16,
   },
   statusChip: {
     alignSelf: "flex-start",
+    backgroundColor: "#eeeeee",
     paddingHorizontal: 10,
     paddingVertical: 4,
     marginBottom: 12,
   },
-  statusChipText: { fontSize: 10, fontWeight: "800", letterSpacing: 1 },
-
-  // ── Price ─────────────────────────────────
-  priceBlock: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 12,
-  },
-  priceLeft: { flexDirection: "row", alignItems: "baseline", gap: 10 },
-  priceMain: { fontSize: 32, fontWeight: "300", letterSpacing: -0.5 },
-  priceStrike: { fontSize: 16, textDecorationLine: "line-through" },
-  saveBadge: { paddingHorizontal: 10, paddingVertical: 5 },
-  saveBadgeText: {
-    color: "#FFF",
-    fontSize: 11,
-    fontWeight: "800",
-    letterSpacing: 0.5,
+  statusChipText: {
+    fontSize: 10,
+    fontFamily: "SpaceMono_400Regular",
+    letterSpacing: 1,
+    color: "#666",
   },
 
-  // ── Stock ─────────────────────────────────
-  stockRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 24,
-    gap: 8,
-  },
-  stockDot: { width: 7, height: 7, borderRadius: 0 },
-  stockLabel: { fontSize: 13, fontWeight: "500" },
-
-  // ── Shared ────────────────────────────────
-  divider: { height: 1, marginVertical: 20 },
-  section: { marginBottom: 4 },
-  sectionRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "baseline",
-    marginBottom: 16,
-  },
-  sectionLabel: { fontSize: 10, fontWeight: "800", letterSpacing: 2.5 },
-  sectionValue: { fontSize: 14, fontWeight: "500" },
-
-  // ── Colors ────────────────────────────────
-  colorRow: { gap: 14, paddingVertical: 4 },
-  colorWrap: { alignItems: "center" },
-  colorRing: {
-    width: 40,
-    height: 40,
-    borderWidth: 2,
-    padding: 3,
-  },
-  colorDot: { flex: 1 },
-  sizeChip: {
-    paddingHorizontal: 18,
-    paddingVertical: 10,
-    borderWidth: 1.5,
-    minWidth: 48,
-    alignItems: "center",
-  },
-  sizeChipText: {
-    fontSize: 14,
-    fontWeight: "700",
-    letterSpacing: 0.5,
-  },
-
-  // ── Accordion ─────────────────────────────
-  accordionHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: 4,
-  },
-  accordionTitle: {
-    fontSize: 12,
-    fontWeight: "700",
-    letterSpacing: 2,
-  },
-  accordionBody: {
-    paddingTop: 16,
-    paddingBottom: 4,
-  },
-  accordionRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    paddingVertical: 10,
-  },
-  accordionKey: { fontSize: 13, fontWeight: "500" },
-  accordionVal: { fontSize: 13, fontWeight: "600" },
-
-  // ── Description ───────────────────────────
-  descText: {
-    fontSize: 15,
-    lineHeight: 25,
-    fontWeight: "400",
-    letterSpacing: 0.15,
-  },
-
-  // ── Delivery rows ─────────────────────────
-  deliveryRow: {
+  // ── Price ─────────────────────────────────────────
+  priceRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    paddingVertical: 8,
+    marginBottom: 16,
   },
-  deliveryText: {
-    fontSize: 14,
-    fontWeight: "400",
+  priceCurrent: {
+    fontSize: 18,
+    fontFamily: "SpaceMono_400Regular",
+    color: "#000000",
+  },
+  priceCurrentSale: {
+    fontSize: 18,
+    fontFamily: "SpaceMono_400Regular",
+    color: "#000000",
+  },
+  priceOriginalStrike: {
+    fontSize: 16,
+    fontFamily: "SpaceMono_400Regular",
+    color: "#7d001d",
+    textDecorationLine: "line-through",
+  },
+  saleBadge: {
+    backgroundColor: "#C41E3A",
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  saleBadgeText: {
+    color: "#fff",
+    fontSize: 10,
+    fontFamily: "SpaceMono_400Regular",
+    letterSpacing: 1.5,
   },
 
-  // ── Trust Signals ─────────────────────────
-  trustRow: {
+  // ── Wishlist ──────────────────────────────────────
+  wishlistRow: {
     flexDirection: "row",
-    justifyContent: "space-between",
-    paddingVertical: 8,
-  },
-  trustItem: {
     alignItems: "center",
     gap: 8,
-    flex: 1,
   },
-  trustText: {
+  wishlistLabel: {
     fontSize: 11,
-    fontWeight: "600",
-    letterSpacing: 0.5,
-    textAlign: "center",
+    fontFamily: "SpaceMono_400Regular",
+    letterSpacing: 1.5,
+    color: "#000",
   },
 
-  // ── Admin ─────────────────────────────────
-  adminRow: { flexDirection: "row", gap: 12 },
-  adminBtn: {
+  // ── Color / Size selectors ─────────────────────────
+  selectorSection: {
+    paddingHorizontal: 20,
+    marginBottom: 24,
+  },
+  selectorLabel: {
+    fontSize: 10,
+    fontFamily: "SpaceMono_400Regular",
+    letterSpacing: 2,
+    color: "#666",
+    textTransform: "uppercase",
+    marginBottom: 12,
+  },
+  swatchRow: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  swatchOuter: {
+    width: 32,
+    height: 32,
+    padding: 3,
+    borderWidth: 2,
+    borderColor: "transparent",
+  },
+  swatchOuterSelected: {
+    width: 32,
+    height: 32,
+    padding: 3,
+    borderWidth: 2,
+    borderColor: "#000",
+  },
+  swatch: {
+    flex: 1,
+  },
+  sizeRow: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  sizeBox: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderWidth: 1,
+    borderColor: "#ccc",
+    alignItems: "center",
+    justifyContent: "center",
+    minWidth: 48,
+  },
+  sizeBoxSelected: {
+    backgroundColor: "#000",
+    borderColor: "#000",
+  },
+  sizeBoxOos: {
+    opacity: 0.35,
+  },
+  sizeBoxText: {
+    fontSize: 13,
+    fontFamily: "SpaceMono_400Regular",
+    color: "#000",
+  },
+  sizeBoxTextSelected: {
+    color: "#fff",
+  },
+  sizeBoxTextOos: {
+    color: "#999",
+  },
+
+  // ── The Details ───────────────────────────────────
+  detailsSection: {
+    paddingHorizontal: 20,
+    marginTop: 8,
+  },
+  detailsLabel: {
+    fontSize: 11,
+    fontFamily: "SpaceMono_400Regular",
+    letterSpacing: 2,
+    color: "#000",
+    textTransform: "uppercase",
+    marginBottom: 16,
+  },
+  descriptionText: {
+    fontSize: 14,
+    fontFamily: "Inter_400Regular",
+    lineHeight: 22,
+    color: "#474747",
+  },
+  metaLine: {
+    fontSize: 11,
+    fontFamily: "SpaceMono_400Regular",
+    color: "#666",
+    letterSpacing: 0.5,
+    marginBottom: 6,
+  },
+
+  // ── Marquee ───────────────────────────────────────
+  marqueeContainer: {
+    backgroundColor: "#000",
+    paddingVertical: 12,
+    marginTop: 40,
+    overflow: "hidden",
+  },
+  marqueeTrack: {
+    flexDirection: "row",
+  },
+  marqueeText: {
+    fontSize: 10,
+    fontFamily: "SpaceMono_400Regular",
+    color: "#fff",
+    letterSpacing: 2,
+    textTransform: "uppercase",
+  },
+
+  // ── Admin Controls ────────────────────────────────
+  adminSection: {
+    paddingHorizontal: 20,
+    marginTop: 40,
+    marginBottom: 8,
+  },
+  adminRow: {
+    flexDirection: "row",
+    gap: 12,
+    marginTop: 4,
+  },
+  adminEditBtn: {
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     paddingVertical: 14,
-    borderWidth: 1,
+    borderWidth: 2,
+    borderColor: "#000",
     gap: 8,
   },
-  adminBtnLabel: { fontSize: 14, fontWeight: "700" },
-
-  // ── Bottom Bar ────────────────────────────
-  bottomBar: {
-    paddingTop: 16,
-    paddingHorizontal: 20,
-    borderTopWidth: 1,
-    flexDirection: "row",
-    gap: 12,
-    alignItems: "center",
-  },
-  wishBtn: {
-    width: 54,
-    height: 54,
-    borderWidth: 1.5,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  cartBtn: {
+  adminDeleteBtn: {
     flex: 1,
-    height: 54,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
+    paddingVertical: 14,
+    borderWidth: 2,
+    borderColor: "#C41E3A",
+    gap: 8,
   },
-  cartBtnText: {
-    fontSize: 13,
-    fontWeight: "700",
+  adminBtnLabel: {
+    fontSize: 12,
+    fontFamily: "SpaceMono_400Regular",
     letterSpacing: 1.5,
+    color: "#000",
   },
-  buyRow: {
-    flex: 1,
-    flexDirection: "row",
-    gap: 10,
-    alignItems: "stretch", // add this
+  adminDeleteLabel: {
+    fontSize: 12,
+    fontFamily: "SpaceMono_400Regular",
+    letterSpacing: 1.5,
+    color: "#C41E3A",
   },
-  buyNowBtn: {
-    flex: 1,
-    height: 54,
-    borderWidth: 1.5,
-    flexDirection: "row",
+
+  // ── Bottom CTA Bar ────────────────────────────────
+  bottomBar: {
+    backgroundColor: "#f9f9f9",
+    paddingHorizontal: 20,
+    paddingTop: 16,
+  },
+  addToCollectionBtn: {
+    width: "100%",
+    paddingVertical: 20,
     alignItems: "center",
     justifyContent: "center",
+    backgroundColor: "#000",
   },
-  notifyBtn: {
-    flex: 1,
-    height: 54,
-    borderWidth: 1.5,
-    flexDirection: "row",
+  addToCollectionText: {
+    fontSize: 13,
+    fontFamily: "SpaceMono_400Regular",
+    letterSpacing: 2,
+    color: "#fff",
+    textTransform: "uppercase",
+  },
+  tryOnBtn: {
+    width: "100%",
+    paddingVertical: 16,
     alignItems: "center",
     justifyContent: "center",
+    borderWidth: 2,
+    borderColor: "#000",
+    backgroundColor: "transparent",
+  },
+  tryOnBtnText: {
+    fontSize: 12,
+    fontFamily: "SpaceMono_400Regular",
+    letterSpacing: 2,
+    color: "#000",
+    textTransform: "uppercase",
   },
 });
 

@@ -1,3 +1,4 @@
+import "../global.css";
 import { Stack, useRouter, useSegments } from "expo-router";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
 import { BrandProvider } from "@/context/BrandContext";
@@ -10,6 +11,27 @@ import { ThemeProvider } from "@/context/ThemeContext";
 import GlobalErrorBoundary from "@/components/GlobalErrorBoundary";
 import { useEffect } from "react";
 import { SafeAreaProvider } from "react-native-safe-area-context";
+import { useFonts } from "expo-font";
+import {
+  SpaceGrotesk_300Light,
+  SpaceGrotesk_400Regular,
+  SpaceGrotesk_500Medium,
+  SpaceGrotesk_600SemiBold,
+  SpaceGrotesk_700Bold,
+} from "@expo-google-fonts/space-grotesk";
+import {
+  SpaceMono_400Regular,
+  SpaceMono_700Bold,
+} from "@expo-google-fonts/space-mono";
+import {
+  Inter_300Light,
+  Inter_400Regular,
+  Inter_500Medium,
+  Inter_600SemiBold,
+} from "@expo-google-fonts/inter";
+import * as SplashScreen from "expo-splash-screen";
+
+SplashScreen.preventAutoHideAsync();
 
 const PROTECTED_SEGMENTS = [
   "checkout",
@@ -213,6 +235,30 @@ function RootLayoutNav() {
 }
 
 export default function RootLayout() {
+  const [fontsLoaded] = useFonts({
+    SpaceGrotesk_300Light,
+    SpaceGrotesk_400Regular,
+    SpaceGrotesk_500Medium,
+    SpaceGrotesk_600SemiBold,
+    SpaceGrotesk_700Bold,
+    SpaceMono_400Regular,
+    SpaceMono_700Bold,
+    Inter_300Light,
+    Inter_400Regular,
+    Inter_500Medium,
+    Inter_600SemiBold,
+  });
+
+  useEffect(() => {
+    if (fontsLoaded) {
+      SplashScreen.hideAsync();
+    }
+  }, [fontsLoaded]);
+
+  if (!fontsLoaded) {
+    return null;
+  }
+
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>

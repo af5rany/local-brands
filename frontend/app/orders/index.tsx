@@ -6,16 +6,13 @@ import {
   FlatList,
   TouchableOpacity,
   ActivityIndicator,
-  Alert,
-  Platform,
+  Image,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import Header from "@/components/Header";
-import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/context/AuthContext";
 import getApiUrl from "@/helpers/getApiUrl";
-import { useThemeColor } from "@/hooks/useThemeColor";
 
 const OrdersScreen = () => {
   const router = useRouter();
@@ -23,16 +20,6 @@ const OrdersScreen = () => {
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const backgroundColor = useThemeColor({}, "background");
-  const textColor = useThemeColor({}, "text");
-  const cardBackground = useThemeColor(
-    { light: "#ffffff", dark: "#1c1c1e" },
-    "background",
-  );
-  const secondaryTextColor = useThemeColor(
-    { light: "#737373", dark: "#A3A3A3" },
-    "text",
-  );
   const fetchOrders = useCallback(async () => {
     if (!token) return;
     try {
@@ -54,152 +41,156 @@ const OrdersScreen = () => {
     fetchOrders();
   }, [fetchOrders]);
 
-  const getStatusColor = (status: string) => {
-    switch (status.toUpperCase()) {
-      case "CANCELLED":
-        return "#C41E3A";
-      default:
-        return "#000000";
-    }
+  const isCancelled = (status: string) =>
+    status?.toUpperCase() === "CANCELLED";
+
+  const isDelivered = (status: string) => {
+    const s = status?.toUpperCase();
+    return s === "DELIVERED" || s === "COMPLETED";
   };
 
-  const renderItem = ({ item }: { item: any }) => (
-    <TouchableOpacity
-      style={[styles.orderCard, { backgroundColor: cardBackground }]}
-      onPress={() => router.push(`/orders/${item.id}` as any)}
-    >
-      <View style={styles.orderHeader}>
-        <View>
-          <Text style={[styles.orderNumber, { color: textColor }]}>
-            Order #{item.id}
-          </Text>
-          <Text style={[styles.orderDate, { color: secondaryTextColor }]}>
-            {new Date(item.createdAt).toLocaleDateString()}
-          </Text>
-        </View>
-        <View
-          style={[
-            styles.statusBadge,
-            { backgroundColor: getStatusColor(item.status) + "20" },
-          ]}
+  const getStatusBadgeStyle = (status: string) => {
+    if (isCancelled(status)) return styles.badgeCancelled;
+    if (isDelivered(status)) return styles.badgeDelivered;
+    return styles.badgeProcessing;
+  };
+
+  const getStatusTextStyle = (status: string) => {
+    if (isCancelled(status)) return styles.badgeTextCancelled;
+    if (isDelivered(status)) return styles.badgeTextDelivered;
+    return styles.badgeTextProcessing;
+  };
+
+  const renderCTA = (item: any) => {
+    const status = item.status?.toUpperCase();
+    if (isCancelled(item.status)) {
+      return (
+        <TouchableOpacity style={styles.ctaGhost}>
+          <Text style={styles.ctaGhostText}>CONTACT SUPPORT</Text>
+        </TouchableOpacity>
+      );
+    }
+    if (isDelivered(item.status)) {
+      return (
+        <TouchableOpacity
+          style={styles.ctaBordered}
+          onPress={() => router.push(`/orders/${item.id}` as any)}
         >
-          <Text
-            style={[styles.statusText, { color: getStatusColor(item.status) }]}
-          >
-            {item.status}
+          <Text style={styles.ctaBorderedText}>REORDER</Text>
+        </TouchableOpacity>
+      );
+    }
+    return (
+      <TouchableOpacity
+        style={styles.ctaBordered}
+        onPress={() => router.push(`/orders/${item.id}` as any)}
+      >
+        <Text style={styles.ctaBorderedText}>VIEW DETAILS</Text>
+      </TouchableOpacity>
+    );
+  };
+
+  const renderItem = ({ item }: { item: any }) => {
+    const cancelled = isCancelled(item.status);
+    const images: string[] = (item.orderItems || [])
+      .slice(0, 3)
+      .map((i: any) => i.productImage)
+      .filter(Boolean);
+
+    return (
+      <TouchableOpacity
+        style={[styles.orderCard, cancelled && styles.orderCardCancelled]}
+        onPress={() =>
+          !cancelled && router.push(`/orders/${item.id}` as any)
+        }
+        activeOpacity={cancelled ? 1 : 0.85}
+      >
+        {/* Top row: order number + badge */}
+        <View style={styles.topRow}>
+          <Text style={styles.orderNumber}>
+            #ORD-{String(item.id).padStart(4, "0")}
           </Text>
-        </View>
-      </View>
-
-      <View style={styles.orderBody}>
-        <Text style={[styles.itemCount, { color: textColor }]}>
-          {item.orderItems?.length || 0}{" "}
-          {item.orderItems?.length === 1 ? "item" : "items"}
-        </Text>
-        <Text style={[styles.orderTotal, { color: textColor }]}>
-          ${Number(item.totalAmount).toFixed(2)}
-        </Text>
-      </View>
-
-      {item.estimatedDeliveryDate &&
-        item.status !== "DELIVERED" &&
-        item.status !== "CANCELLED" && (
-          <View style={styles.estimatedRow}>
-            <Ionicons
-              name="time-outline"
-              size={12}
-              color={secondaryTextColor}
-            />
-            <Text style={[styles.estimatedText, { color: secondaryTextColor }]}>
-              EST. DELIVERY{" "}
-              <Text style={{ color: textColor, fontWeight: "700" }}>
-                {new Date(item.estimatedDeliveryDate).toLocaleDateString(
-                  "en-US",
-                  {
-                    month: "short",
-                    day: "numeric",
-                  },
-                )}
-              </Text>
+          <View style={[styles.statusBadge, getStatusBadgeStyle(item.status)]}>
+            <Text style={[styles.statusText, getStatusTextStyle(item.status)]}>
+              {item.status?.toUpperCase()}
             </Text>
+          </View>
+        </View>
+
+        {/* Date */}
+        <Text style={styles.dateText}>
+          PLACED{" "}
+          {new Date(item.createdAt)
+            .toLocaleDateString("en-US", {
+              month: "long",
+              day: "numeric",
+              year: "numeric",
+            })
+            .toUpperCase()}
+        </Text>
+
+        {/* Product thumbnails */}
+        {images.length > 0 && (
+          <View style={styles.thumbnailRow}>
+            {images.map((uri, idx) => (
+              <Image
+                key={idx}
+                source={{ uri }}
+                style={[
+                  styles.thumbnail,
+                  idx > 0 && { marginLeft: -8 },
+                ]}
+              />
+            ))}
           </View>
         )}
 
-      {item.status === "DELIVERED" && item.deliveredAt && (
-        <View style={styles.estimatedRow}>
-          <Ionicons name="checkmark-circle-outline" size={12} color="#000000" />
-          <Text style={[styles.estimatedText, { color: textColor }]}>
-            DELIVERED{" "}
-            <Text style={{ fontWeight: "700" }}>
-              {new Date(item.deliveredAt).toLocaleDateString("en-US", {
-                month: "short",
-                day: "numeric",
-              })}
+        {/* Total + CTA */}
+        <View style={styles.bottomRow}>
+          <View>
+            <Text style={styles.totalLabel}>TOTAL AMOUNT</Text>
+            <Text style={styles.totalAmount}>
+              ${Number(item.totalAmount).toFixed(2)}
             </Text>
-          </Text>
+          </View>
+          {renderCTA(item)}
         </View>
-      )}
-
-      <View
-        style={[styles.divider, { backgroundColor: secondaryTextColor + "15" }]}
-      />
-
-      <TouchableOpacity
-        style={styles.viewDetailsBtn}
-        onPress={() => router.push(`/orders/${item.id}` as any)}
-      >
-        <Text style={[styles.viewDetailsText, { color: textColor }]}>
-          VIEW DETAILS
-        </Text>
-        <Ionicons name="chevron-forward" size={14} color={textColor} />
       </TouchableOpacity>
-    </TouchableOpacity>
-  );
+    );
+  };
 
   return (
-    <View style={[styles.container, { backgroundColor }]}>
-      <SafeAreaView edges={["top"]} style={{ backgroundColor: cardBackground }}>
-        <Header />
-      </SafeAreaView>
+    <SafeAreaView style={styles.container} edges={["top"]}>
+      <Header showBack={true} />
 
       {!token ? (
-        <View style={{ flex: 1, justifyContent: "center", alignItems: "center", padding: 32 }}>
-          <Ionicons name="list-outline" size={64} color={secondaryTextColor} />
-          <Text style={[styles.emptyTitle, { color: textColor }]}>
-            Order history
-          </Text>
-          <Text style={[styles.emptySubtitle, { color: secondaryTextColor }]}>
-            Login to view your previous acquisitions.
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyTitle}>NO ORDERS YET</Text>
+          <Text style={styles.emptySubtitle}>
+            Sign in to view your order history.
           </Text>
           <TouchableOpacity
-            style={styles.authBtn}
+            style={styles.primaryBtn}
             onPress={() => router.push("/auth/login")}
           >
-            <Text style={styles.authBtnText}>SIGN IN</Text>
+            <Text style={styles.primaryBtnText}>SIGN IN</Text>
           </TouchableOpacity>
         </View>
       ) : loading ? (
         <View style={styles.center}>
-          <ActivityIndicator size="large" color={textColor} />
+          <ActivityIndicator size="large" color="#000000" />
         </View>
       ) : orders.length === 0 ? (
         <View style={styles.emptyContainer}>
-          <Ionicons
-            name="receipt-outline"
-            size={64}
-            color={secondaryTextColor}
-          />
-          <Text style={[styles.emptyTitle, { color: textColor }]}>
-            No orders yet
-          </Text>
-          <Text style={[styles.emptySubtitle, { color: secondaryTextColor }]}>
+          <Text style={styles.emptyTitle}>NO ORDERS YET</Text>
+          <Text style={styles.emptySubtitle}>
             Begin your journey by discovering our premium collections.
           </Text>
           <TouchableOpacity
-            style={styles.shopBtn}
+            style={styles.primaryBtn}
             onPress={() => router.push("/")}
           >
-            <Text style={styles.shopBtnText}>START EXPLORING</Text>
+            <Text style={styles.primaryBtnText}>START SHOPPING</Text>
           </TouchableOpacity>
         </View>
       ) : (
@@ -209,147 +200,217 @@ const OrdersScreen = () => {
           keyExtractor={(item) => item.id.toString()}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
+          ListHeaderComponent={
+            <View style={styles.pageHeader}>
+              <Text style={styles.pageTitle}>MY ORDERS</Text>
+              <View style={styles.titleAccent} />
+            </View>
+          }
         />
       )}
-    </View>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: "#f9f9f9",
   },
   center: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
   },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+
+  /* Page header */
+  pageHeader: {
+    paddingHorizontal: 20,
+    paddingTop: 32,
+    paddingBottom: 40,
   },
-  backBtn: {
-    padding: 4,
+  pageTitle: {
+    fontFamily: "SpaceGrotesk_700Bold",
+    fontSize: 40,
+    color: "#000000",
+    letterSpacing: -0.5,
   },
-  title: {
-    fontSize: 14,
-    fontWeight: "700",
-    letterSpacing: 2,
+  titleAccent: {
+    width: 80,
+    height: 2,
+    backgroundColor: "#000000",
+    marginTop: 12,
   },
+
+  /* List */
   listContent: {
-    padding: 16,
+    paddingHorizontal: 20,
+    paddingBottom: 40,
   },
+
+  /* Order card */
   orderCard: {
-    borderRadius: 0,
-    padding: 16,
+    backgroundColor: "#ffffff",
+    padding: 20,
     marginBottom: 16,
+    borderRadius: 0,
   },
-  orderHeader: {
+  orderCardCancelled: {
+    opacity: 0.7,
+  },
+
+  /* Top row */
+  topRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "flex-start",
-    marginBottom: 16,
+    alignItems: "center",
+    marginBottom: 8,
   },
   orderNumber: {
-    fontSize: 16,
+    fontFamily: "SpaceMono_400Regular",
+    fontSize: 15,
     fontWeight: "700",
-    marginBottom: 2,
+    color: "#000000",
+    letterSpacing: 0.5,
   },
-  orderDate: {
-    fontSize: 12,
-  },
+
+  /* Status badge */
   statusBadge: {
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 0,
+    borderWidth: 1,
+  },
+  badgeProcessing: {
+    borderColor: "#000000",
+  },
+  badgeDelivered: {
+    borderColor: "rgba(0,0,0,0.3)",
+  },
+  badgeCancelled: {
+    borderColor: "#C41E3A",
   },
   statusText: {
-    fontSize: 10,
-    fontWeight: "700",
+    fontFamily: "SpaceMono_400Regular",
+    fontSize: 9,
+    letterSpacing: 1.2,
     textTransform: "uppercase",
   },
-  orderBody: {
+  badgeTextProcessing: {
+    color: "#000000",
+  },
+  badgeTextDelivered: {
+    color: "#888888",
+  },
+  badgeTextCancelled: {
+    color: "#C41E3A",
+  },
+
+  /* Date */
+  dateText: {
+    fontFamily: "SpaceMono_400Regular",
+    fontSize: 9,
+    color: "#888888",
+    letterSpacing: 1,
+    textTransform: "uppercase",
+    marginBottom: 16,
+  },
+
+  /* Thumbnails */
+  thumbnailRow: {
+    flexDirection: "row",
+    marginBottom: 20,
+  },
+  thumbnail: {
+    width: 48,
+    height: 48,
+    borderRadius: 0,
+    backgroundColor: "#eeeeee",
+  },
+
+  /* Bottom row */
+  bottomRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "center",
+    alignItems: "flex-end",
   },
-  itemCount: {
-    fontSize: 14,
+  totalLabel: {
+    fontFamily: "SpaceMono_400Regular",
+    fontSize: 9,
+    color: "#888888",
+    letterSpacing: 1.2,
+    textTransform: "uppercase",
+    marginBottom: 4,
   },
-  orderTotal: {
-    fontSize: 18,
-    fontWeight: "700",
+  totalAmount: {
+    fontFamily: "SpaceGrotesk_700Bold",
+    fontSize: 22,
+    color: "#000000",
   },
-  divider: {
-    height: 1,
-    marginVertical: 16,
+
+  /* CTA buttons */
+  ctaBordered: {
+    borderWidth: 1,
+    borderColor: "#000000",
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 0,
   },
-  viewDetailsBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 4,
+  ctaBorderedText: {
+    fontFamily: "SpaceMono_400Regular",
+    fontSize: 10,
+    color: "#000000",
+    letterSpacing: 1.5,
+    textTransform: "uppercase",
   },
-  viewDetailsText: {
-    fontSize: 11,
-    fontWeight: "700",
-    letterSpacing: 1,
+  ctaGhost: {
+    paddingHorizontal: 4,
+    paddingVertical: 10,
   },
+  ctaGhostText: {
+    fontFamily: "SpaceMono_400Regular",
+    fontSize: 10,
+    color: "#888888",
+    letterSpacing: 1.5,
+    textTransform: "uppercase",
+    textDecorationLine: "underline",
+  },
+
+  /* Empty state */
   emptyContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    padding: 32,
+    padding: 40,
   },
   emptyTitle: {
-    fontSize: 20,
-    fontWeight: "700",
-    marginTop: 24,
-    marginBottom: 8,
+    fontFamily: "SpaceMono_400Regular",
+    fontSize: 14,
+    color: "#000000",
+    letterSpacing: 2,
+    textTransform: "uppercase",
+    marginBottom: 16,
   },
   emptySubtitle: {
+    fontFamily: "Inter_400Regular",
     fontSize: 14,
+    color: "#888888",
     textAlign: "center",
-    marginBottom: 32,
-    lineHeight: 20,
+    lineHeight: 22,
+    marginBottom: 40,
   },
-  shopBtn: {
-    backgroundColor: "#000",
+  primaryBtn: {
+    backgroundColor: "#000000",
     paddingVertical: 16,
-    paddingHorizontal: 32,
+    paddingHorizontal: 40,
     borderRadius: 0,
   },
-  shopBtnText: {
-    color: "#fff",
-    fontSize: 12,
-    fontWeight: "700",
-    letterSpacing: 1.5,
-  },
-  authBtn: {
-    backgroundColor: "#000",
-    paddingVertical: 16,
-    paddingHorizontal: 48,
-    borderRadius: 0,
-  },
-  authBtnText: {
-    color: "#fff",
-    fontSize: 12,
-    fontWeight: "700",
-    letterSpacing: 1.5,
-  },
-  estimatedRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    marginTop: 12,
-  },
-  estimatedText: {
-    fontSize: 10,
-    fontWeight: "600",
-    letterSpacing: 1,
+  primaryBtnText: {
+    fontFamily: "SpaceMono_400Regular",
+    color: "#ffffff",
+    fontSize: 11,
+    letterSpacing: 2,
+    textTransform: "uppercase",
   },
 });
 

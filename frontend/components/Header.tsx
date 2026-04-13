@@ -149,9 +149,10 @@ const AnimatedSection: React.FC<{
 
 interface HeaderProps {
   notificationCount?: number;
+  showBack?: boolean;
 }
 
-const Header: React.FC<HeaderProps> = ({ notificationCount = 0 }) => {
+const Header: React.FC<HeaderProps> = ({ notificationCount = 0, showBack = false }) => {
   const colors = useThemeColors();
   const { width } = useWindowDimensions();
   const router = useRouter();
@@ -202,19 +203,23 @@ const Header: React.FC<HeaderProps> = ({ notificationCount = 0 }) => {
         styles.headerWrapper,
         {
           backgroundColor: colors.surface,
-          borderBottomWidth: 0.5,
-          borderBottomColor: colors.border,
         },
       ]}
     >
       {/* Top Row: Logo + Actions */}
       <View style={[styles.topRow, isTablet && styles.topRowTablet]}>
         <View style={[styles.authActions, isTablet && styles.topRowTablet]}>
-          {/* LEFT — Hamburger + Search */}
+          {/* LEFT — Menu or Back */}
           <View style={styles.rightActions}>
-            <Pressable style={styles.iconBtn} onPress={openMenu}>
-              <Ionicons name="menu" size={20} color={colors.text} />
-            </Pressable>
+            {showBack ? (
+              <Pressable style={styles.iconBtn} onPress={() => router.back()}>
+                <Ionicons name="arrow-back" size={20} color={colors.text} />
+              </Pressable>
+            ) : (
+              <Pressable style={styles.iconBtn} onPress={openMenu}>
+                <Ionicons name="menu" size={20} color={colors.text} />
+              </Pressable>
+            )}
             <Pressable
               style={styles.iconBtn}
               onPress={() => setSearchVisible(true)}
@@ -228,8 +233,8 @@ const Header: React.FC<HeaderProps> = ({ notificationCount = 0 }) => {
             onPress={() => router.push("/(tabs)")}
             style={styles.logoContainer}
           >
-            <Text style={[styles.logoText, { color: colors.text }]}>
-              LOCAL SOOQ
+            <Text style={[styles.logoText, { color: colors.text, fontFamily: "SpaceGrotesk_700Bold" }]}>
+              MONOLITH
             </Text>
           </Pressable>
 
@@ -397,10 +402,10 @@ const Header: React.FC<HeaderProps> = ({ notificationCount = 0 }) => {
                     <Text
                       style={[
                         styles.menuFooterText,
-                        { color: colors.textTertiary },
+                        { color: colors.textTertiary, fontFamily: "SpaceGrotesk_700Bold" },
                       ]}
                     >
-                      Local Brands
+                      MONOLITH
                     </Text>
                   </View>
                 </AnimatedSection>
