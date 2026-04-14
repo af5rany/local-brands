@@ -20,6 +20,7 @@ import { Product } from "@/types/product";
 import { useAuth } from "@/context/AuthContext";
 import { useCart } from "@/context/CartContext";
 import { useToast } from "@/context/ToastContext";
+import { useBrand } from "@/context/BrandContext";
 import ProductReviews from "@/components/ProductReviews";
 import TryOnModal from "@/components/TryOnModal";
 import Header from "@/components/Header";
@@ -37,6 +38,7 @@ const ProductDetailScreen = () => {
   const { token, user } = useAuth();
   const { refresh: refreshCart } = useCart();
   const { showToast } = useToast();
+  const { incrementProductListVersion } = useBrand();
   const userRole = user?.role || user?.userRole;
   const insets = useSafeAreaInsets();
 
@@ -322,6 +324,7 @@ const ProductDetailScreen = () => {
             });
             const text = await res.text();
             if (!res.ok) throw new Error(text || "Failed to delete product");
+            incrementProductListVersion();
             Alert.alert("Success", "Product deleted.", [
               { text: "OK", onPress: () => router.back() },
             ]);

@@ -220,19 +220,15 @@ export const useBrandDetails = (
     [brandId, token, filters, sortBy, sortOrder, pagination.limit, isOwnerOrAdmin]
   );
 
-  // Hook to patch brand name into products independently
+  // Patch brand name into products when brand loads
   useEffect(() => {
-    if (products.length > 0 && brand?.name) {
-      setProducts((prev) => {
-        // Only update if needed to prevent infinite loops
-        const needsUpdate = prev.some((p) => p.brandName !== brand.name);
-        if (needsUpdate) {
-          return prev.map((p) => ({ ...p, brandName: brand.name }));
-        }
-        return prev;
-      });
-    }
-  }, [brand?.name, products]); // Now products is in deps but we short-circuit via needsUpdate!
+    if (!brand?.name) return;
+    setProducts((prev) => {
+      if (prev.length === 0) return prev;
+      const needsUpdate = prev.some((p) => p.brandName !== brand.name);
+      return needsUpdate ? prev.map((p) => ({ ...p, brandName: brand.name })) : prev;
+    });
+  }, [brand?.name]); // functional updater always receives latest products — no need for products in deps
 
   return {
     brand,

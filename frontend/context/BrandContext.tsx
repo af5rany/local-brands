@@ -5,6 +5,8 @@ interface BrandContextType {
   setSelectedBrandId: (brandId: number | null) => void;
   isManagementMode: boolean;
   setIsManagementMode: (isManagementMode: boolean) => void;
+  productListVersion: number;
+  incrementProductListVersion: () => void;
 }
 
 const BrandContext = createContext<BrandContextType | undefined>(undefined);
@@ -12,6 +14,8 @@ const BrandContext = createContext<BrandContextType | undefined>(undefined);
 export const BrandProvider = ({ children }: { children: ReactNode }) => {
   const [selectedBrandId, setSelectedBrandId] = useState<number | null>(null);
   const [isManagementMode, setIsManagementMode] = useState<boolean>(false);
+  const [productListVersion, setProductListVersion] = useState(0);
+  const incrementProductListVersion = () => setProductListVersion((v) => v + 1);
 
   return (
     <BrandContext.Provider
@@ -20,6 +24,8 @@ export const BrandProvider = ({ children }: { children: ReactNode }) => {
         setSelectedBrandId,
         isManagementMode,
         setIsManagementMode,
+        productListVersion,
+        incrementProductListVersion,
       }}
     >
       {children}

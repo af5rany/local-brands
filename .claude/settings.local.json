@@ -72,7 +72,13 @@
       "Bash(docker ps:*)",
       "Bash(lsof:*)",
       "Bash(kill:*)",
-      "Bash(pod:*)"
+      "Bash(pod:*)",
+      "Bash(find /Users/f5rany/Documents/Work/local-brands -type f -name *stitch*)",
+      "WebFetch(domain:stitch.anthropic.com)",
+      "Bash(npx react-native-community/cli doctor)",
+      "Bash(node_modules/.bin/tsc --noEmit --skipLibCheck)",
+      "Bash(git add:*)",
+      "Bash(git checkout:*)"
     ]
   }
 }

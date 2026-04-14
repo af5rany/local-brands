@@ -1,5 +1,5 @@
-import React, { useEffect, useState, useCallback, useRef } from "react";
-import { useFocusEffect } from "expo-router";
+import React, { useEffect, useState, useCallback } from "react";
+
 import {
   View,
   Text,
@@ -24,6 +24,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { BrandStatus } from "@/types/enums";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/context/ToastContext";
+import { useBrand } from "@/context/BrandContext";
 import { useBrandDetails, sortOptions, SortOption } from "@/hooks/useBrandDetails";
 
 const STATUS_CONFIG: Record<
@@ -41,6 +42,7 @@ const BrandDetailScreen = () => {
   const { brandId, refresh } = useLocalSearchParams();
   const { token, user } = useAuth();
   const { showToast } = useToast();
+  const { productListVersion } = useBrand();
   const colors = useThemeColors();
   const userRole = user?.role || user?.userRole;
 
@@ -154,16 +156,17 @@ const BrandDetailScreen = () => {
       fetchProducts(1, true);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [brandId, filters, sortBy, sortOrder]); // Remove brand object itself to avoid rapid re-fetches
+  }, [brandId, brand?.name, filters, sortBy, sortOrder]);
 
-  const fetchProductsRef = useRef(fetchProducts);
-  fetchProductsRef.current = fetchProducts;
-
-  useFocusEffect(
-    useCallback(() => {
-      fetchProductsRef.current(1, true);
-    }, [])
-  );
+  const isFirstRender = React.useRef(true);
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+    if (brandId) fetchProducts(1, true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [productListVersion]);
 
   useEffect(() => {
     if (refresh === "true") {

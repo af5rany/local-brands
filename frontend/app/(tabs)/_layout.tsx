@@ -5,10 +5,11 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { HapticTab } from "@/components/HapticTab";
 import Header from "@/components/Header";
 import { useThemeColors } from "@/hooks/useThemeColor";
-import { Ionicons } from "@expo/vector-icons";
 
 export default function TabLayout() {
   const colors = useThemeColors();
+  const tintColor = colors.tabActive;
+  const inactiveColor = colors.tabInactive;
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
@@ -16,58 +17,45 @@ export default function TabLayout() {
         <Header />
       </SafeAreaView>
       <Tabs
-        screenOptions={({ route }) => ({
+        screenOptions={{
+          tabBarActiveTintColor: tintColor,
+          tabBarInactiveTintColor: inactiveColor,
           headerShown: false,
           tabBarButton: HapticTab,
-          tabBarShowLabel: false,
-          tabBarIcon: ({ focused }) => {
-            const iconMap: Record<string, { focused: keyof typeof Ionicons.glyphMap; unfocused: keyof typeof Ionicons.glyphMap }> = {
-              index: { focused: "home", unfocused: "home-outline" },
-              shop: { focused: "grid", unfocused: "grid-outline" },
-              feed: { focused: "images", unfocused: "images-outline" },
-              wishlist: { focused: "heart", unfocused: "heart-outline" },
-              brands: { focused: "storefront", unfocused: "storefront-outline" },
-            };
-            const icons = iconMap[route.name] ?? { focused: "ellipse", unfocused: "ellipse-outline" };
-            return (
-              <View
-                style={{
-                  width: 44,
-                  height: 32,
-                  borderRadius: 9999,
-                  backgroundColor: focused ? "#000000" : "transparent",
-                  justifyContent: "center",
-                  alignItems: "center",
-                }}
-              >
-                <Ionicons
-                  name={focused ? icons.focused : icons.unfocused}
-                  size={20}
-                  color={focused ? "#ffffff" : "#aaaaaa"}
-                />
-              </View>
-            );
-          },
+          tabBarIcon: () => null,
           tabBarStyle: Platform.select({
             ios: {
               position: "absolute",
-              backgroundColor: "#ffffff",
-              height: 80,
+              backgroundColor: colors.bottomTabBackground,
+              height: 94,
+              borderTopColor: colors.bottomTabBorder,
+              shadowColor: colors.cardShadow,
+              shadowOpacity: 0.04,
+              shadowOffset: { width: 0, height: -2 },
+              shadowRadius: 8,
             },
             default: {
-              backgroundColor: "#ffffff",
-              height: 80,
-              borderTopWidth: 0,
-              paddingBottom: 12,
+              backgroundColor: colors.bottomTabBackground,
+              height: 94,
+              borderTopColor: colors.bottomTabBorder,
+              elevation: 4,
+              paddingBottom: 16,
             },
           }),
-        })}
+          tabBarLabelStyle: {
+            fontSize: 10,
+            fontWeight: "600",
+            letterSpacing: 1.6,
+            textTransform: "uppercase",
+            marginBottom: 14,
+          },
+        }}
       >
-        <Tabs.Screen name="index" />
-        <Tabs.Screen name="shop" />
-        <Tabs.Screen name="feed" />
-        <Tabs.Screen name="wishlist" />
-        <Tabs.Screen name="brands" />
+        <Tabs.Screen name="index" options={{ title: "Home" }} />
+        <Tabs.Screen name="shop" options={{ title: "Shop" }} />
+        <Tabs.Screen name="feed" options={{ title: "Feed" }} />
+        <Tabs.Screen name="wishlist" options={{ title: "Wishlist" }} />
+        <Tabs.Screen name="brands" options={{ title: "Brands" }} />
         <Tabs.Screen name="profile" options={{ href: null }} />
       </Tabs>
     </View>

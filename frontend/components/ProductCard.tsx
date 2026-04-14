@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React from "react";
 import {
   View,
   Text,
@@ -11,6 +11,7 @@ import { useRouter } from "expo-router";
 import { useAuth } from "@/context/AuthContext";
 import { Ionicons } from "@expo/vector-icons";
 import { Product } from "@/types/product";
+import { useThemeColors } from "@/hooks/useThemeColor";
 
 interface ProductCardProps {
   product: Product;
@@ -20,7 +21,7 @@ interface ProductCardProps {
   onToggleWishlist?: (productId: number) => void;
 }
 
-const ProductCard: React.FC<ProductCardProps> = ({
+const ProductCard: React.FC<ProductCardProps> = React.memo(({
   product,
   mode = "view",
   onEdit,
@@ -29,94 +30,90 @@ const ProductCard: React.FC<ProductCardProps> = ({
 }) => {
   const router = useRouter();
   const { token } = useAuth();
-  const [heartVisible, setHeartVisible] = useState(false);
+  const colors = useThemeColors();
 
   const hasDiscount = product.salePrice && product.salePrice < product.price;
   const displayPrice = hasDiscount ? product.salePrice! : product.price;
-
-  const getMainImage = (): string | null => {
-    if (product.images && product.images.length > 0) return product.images[0];
-    if (product.mainImage) return product.mainImage;
-    return null;
-  };
-
-  const mainImage = getMainImage();
+  const mainImage = product.images?.[0] ?? product.mainImage ?? null;
 
   return (
     <Pressable
       onPress={() => router.push(`/products/${product.id}`)}
-      onPressIn={() => setHeartVisible(true)}
-      onPressOut={() => setHeartVisible(false)}
       style={styles.card}
     >
-      {/* Image */}
-      <View style={styles.imageWrap}>
-        {mainImage ? (
-          <Image source={{ uri: mainImage }} style={styles.image} resizeMode="cover" />
-        ) : (
-          <View style={[styles.image, styles.imagePlaceholder]} />
-        )}
+      {({ pressed }) => (
+        <>
+          {/* Image */}
+          <View style={[styles.imageWrap, { backgroundColor: colors.surfaceContainer }]}>
+            {mainImage ? (
+              <Image source={{ uri: mainImage }} style={styles.image} resizeMode="cover" />
+            ) : (
+              <View style={styles.image} />
+            )}
 
-        {/* Sale badge */}
-        {hasDiscount && (
-          <View style={styles.saleBadge}>
-            <Text style={styles.saleBadgeText}>SALE</Text>
+            {/* Sale badge */}
+            {hasDiscount && (
+              <View style={[styles.saleBadge, { backgroundColor: colors.discountBadge }]}>
+                <Text style={styles.saleBadgeText}>SALE</Text>
+              </View>
+            )}
+
+            {/* Wishlist heart — shown on press or when wishlisted */}
+            {mode === "view" && (
+              <TouchableOpacity
+                style={[styles.heartBtn, { backgroundColor: colors.surface, opacity: pressed || isWishlisted ? 1 : 0 }]}
+                onPress={(e) => {
+                  e.stopPropagation();
+                  if (!token) { router.push("/auth/login"); return; }
+                  onToggleWishlist?.(product.id);
+                }}
+              >
+                <Ionicons
+                  name={isWishlisted ? "heart" : "heart-outline"}
+                  size={16}
+                  color={colors.wishlistHeart}
+                />
+              </TouchableOpacity>
+            )}
+
+            {/* Edit button */}
+            {mode === "manage" && onEdit && (
+              <TouchableOpacity
+                style={[styles.editBtn, { backgroundColor: colors.surface }]}
+                onPress={(e) => {
+                  e.stopPropagation();
+                  onEdit(product.id);
+                }}
+              >
+                <Ionicons name="create-outline" size={16} color={colors.text} />
+              </TouchableOpacity>
+            )}
           </View>
-        )}
 
-        {/* Wishlist heart — shown on press */}
-        {mode === "view" && (
-          <TouchableOpacity
-            style={[styles.heartBtn, { opacity: heartVisible || isWishlisted ? 1 : 0 }]}
-            onPress={(e) => {
-              e.stopPropagation();
-              if (!token) {
-                router.push("/auth/login");
-                return;
-              }
-              onToggleWishlist?.(product.id);
-            }}
-          >
-            <Ionicons
-              name={isWishlisted ? "heart" : "heart-outline"}
-              size={16}
-              color="#000000"
-            />
-          </TouchableOpacity>
-        )}
-
-        {/* Edit button */}
-        {mode === "manage" && onEdit && (
-          <TouchableOpacity
-            style={styles.editBtn}
-            onPress={(e) => {
-              e.stopPropagation();
-              onEdit(product.id);
-            }}
-          >
-            <Ionicons name="create-outline" size={16} color="#000000" />
-          </TouchableOpacity>
-        )}
-      </View>
-
-      {/* Info */}
-      <View style={styles.info}>
-        <Text style={styles.brandLabel} numberOfLines={1}>
-          {product.brandName ?? "BRAND"}
-        </Text>
-        <Text style={styles.productName} numberOfLines={2}>
-          {product.name}
-        </Text>
-        <View style={styles.priceRow}>
-          <Text style={styles.price}>${displayPrice}</Text>
-          {hasDiscount && (
-            <Text style={styles.originalPrice}>${product.price}</Text>
-          )}
-        </View>
-      </View>
+          {/* Info */}
+          <View style={styles.info}>
+            {/* <Text style={[styles.brandLabel, { color: colors.textSecondary }]} numberOfLines={1}>
+              {product.brandName ?? "BRAND"}
+            </Text> */}
+            <Text style={[styles.productName, { color: colors.text }]} numberOfLines={2}>
+              {product.name}
+            </Text>
+            <View style={styles.priceRow}>
+              <Text style={[styles.price, { color: colors.priceCurrent }]}>
+                ${displayPrice}
+              </Text>
+              {hasDiscount && (
+                <Text style={[styles.originalPrice, { color: colors.priceOriginal }]}>
+                  ${product.price}
+                </Text>
+              )}
+            </View>
+          </View>
+        </>
+      )}
     </Pressable>
   );
-};
+});
 
 const styles = StyleSheet.create({
   card: {
@@ -126,7 +123,6 @@ const styles = StyleSheet.create({
   imageWrap: {
     width: "100%",
     aspectRatio: 1,
-    backgroundColor: "#f3f3f4",
     position: "relative",
     overflow: "hidden",
   },
@@ -134,14 +130,10 @@ const styles = StyleSheet.create({
     width: "100%",
     height: "100%",
   },
-  imagePlaceholder: {
-    backgroundColor: "#eeeeee",
-  },
   saleBadge: {
     position: "absolute",
     top: 8,
     left: 8,
-    backgroundColor: "#C41E3A",
     paddingHorizontal: 6,
     paddingVertical: 3,
   },
@@ -157,7 +149,6 @@ const styles = StyleSheet.create({
     right: 8,
     width: 32,
     height: 32,
-    backgroundColor: "#ffffff",
     justifyContent: "center",
     alignItems: "center",
   },
@@ -167,7 +158,6 @@ const styles = StyleSheet.create({
     right: 8,
     width: 32,
     height: 32,
-    backgroundColor: "#ffffff",
     justifyContent: "center",
     alignItems: "center",
   },
@@ -178,7 +168,6 @@ const styles = StyleSheet.create({
   brandLabel: {
     fontFamily: "SpaceMono_700Bold",
     fontSize: 10,
-    color: "#666666",
     textTransform: "uppercase",
     letterSpacing: 1,
     marginBottom: 3,
@@ -186,7 +175,6 @@ const styles = StyleSheet.create({
   productName: {
     fontFamily: "SpaceGrotesk_400Regular",
     fontSize: 13,
-    color: "#000000",
     marginBottom: 4,
     lineHeight: 18,
   },
@@ -198,12 +186,10 @@ const styles = StyleSheet.create({
   price: {
     fontFamily: "SpaceMono_400Regular",
     fontSize: 13,
-    color: "#000000",
   },
   originalPrice: {
     fontFamily: "SpaceMono_400Regular",
     fontSize: 11,
-    color: "#7d001d",
     textDecorationLine: "line-through",
   },
 });

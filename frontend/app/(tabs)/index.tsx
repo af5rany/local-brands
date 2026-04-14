@@ -10,7 +10,6 @@ import {
   RefreshControl,
   Animated,
   Easing,
-  useWindowDimensions,
   TextInput,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
@@ -19,8 +18,25 @@ import { useAuth } from "@/context/AuthContext";
 import getApiUrl from "@/helpers/getApiUrl";
 import { Product } from "@/types/product";
 
+const MAN_IMAGE = require("@/assets/images/man.jpg");
+const WOMEN_IMAGE = require("@/assets/images/women.jpg");
+
+interface Brand {
+  id: string;
+  name: string;
+  logo?: string;
+}
+
 const MARQUEE_TEXT =
   "GLOBAL SHIPPING AVAILABLE  —  ARCHIVE RESTOCK LIVE  —  NEXT DROP 04.25  —  ";
+
+const FALLBACK_BRANDS: Brand[] = [
+  { id: "fallback-1", name: "MONOLITH" },
+  { id: "fallback-2", name: "CELINE" },
+  { id: "fallback-3", name: "DOVER" },
+  { id: "fallback-4", name: "ARCHIVE" },
+  { id: "fallback-5", name: "GLOSSIER" },
+];
 
 // ── Marquee ──────────────────────────────────────────────────
 const Marquee: React.FC<{ dark?: boolean }> = ({ dark = false }) => {
@@ -60,11 +76,10 @@ const Marquee: React.FC<{ dark?: boolean }> = ({ dark = false }) => {
 const HomeScreen = () => {
   const router = useRouter();
   const { token } = useAuth();
-  const { width } = useWindowDimensions();
 
   const [lookbookProducts, setLookbookProducts] = useState<Product[]>([]);
   const [recommendedProducts, setRecommendedProducts] = useState<Product[]>([]);
-  const [heroProduct, setHeroProduct] = useState<Product | null>(null);
+  const [brands, setBrands] = useState<Brand[]>(FALLBACK_BRANDS);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const hasLoadedOnce = useRef(false);
@@ -77,26 +92,34 @@ const HomeScreen = () => {
       : {};
 
     try {
-      const [newArrivalsRes, trendingRes] = await Promise.all([
+      const [newArrivalsRes, trendingRes, brandsRes] = await Promise.all([
         fetch(
           `${apiUrl}/products?limit=6&status=published&sortBy=createdAt&sortOrder=DESC`,
           { headers },
         ),
         fetch(`${apiUrl}/products/trending?limit=6`, { headers }),
+        fetch(`${apiUrl}/brands?limit=10`, { headers }),
       ]);
 
       if (newArrivalsRes.ok) {
         const data = await newArrivalsRes.json();
         const items: Product[] = data.items || [];
-        setHeroProduct(items[0] ?? null);
         setLookbookProducts(items.slice(0, 4));
       }
       if (trendingRes.ok) {
         const data = await trendingRes.json();
         setRecommendedProducts(Array.isArray(data) ? data.slice(0, 6) : []);
       }
+      if (brandsRes.ok) {
+        const data = await brandsRes.json();
+        const list: Brand[] = Array.isArray(data) ? data : data.items || [];
+        setBrands(list.length > 0 ? list : FALLBACK_BRANDS);
+      } else {
+        setBrands(FALLBACK_BRANDS);
+      }
     } catch (err) {
       console.error("Home fetch error:", err);
+      setBrands(FALLBACK_BRANDS);
     } finally {
       hasLoadedOnce.current = true;
       setLoading(false);
@@ -130,11 +153,18 @@ const HomeScreen = () => {
     );
   }
 
-  const heroImage = heroProduct ? getImage(heroProduct) : null;
-
-  // Build staggered pairs: left col = [0,2], right col = [1,3]
   const leftCol = lookbookProducts.filter((_, i) => i % 2 === 0);
   const rightCol = lookbookProducts.filter((_, i) => i % 2 !== 0);
+
+  const gridBrands = brands.slice(0, 3);
+  const barBrands = brands.slice(0, 8);
+
+  const TILE_STYLES = [
+    styles.brandTileWhite,
+    styles.brandTileBlack,
+    styles.brandTileGray,
+  ];
+  const TILE_CAPTIONS = ["CURATORIAL", "HERITAGE", "GALLERY"];
 
   return (
     <ScrollView
@@ -145,27 +175,118 @@ const HomeScreen = () => {
         <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#000" />
       }
     >
-      {/* ── 1. Hero ──────────────────────────────────────── */}
-      <View style={[styles.hero, { height: width * 1.2 }]}>
-        {heroImage ? (
-          <Image source={{ uri: heroImage }} style={styles.heroImage} resizeMode="cover" />
-        ) : (
-          <View style={[styles.heroImage, { backgroundColor: "#111111" }]} />
+      {/* ── 1. Split Hero (Men / Women) ────────────────────── */}
+      <View style={styles.splitHero}>
+        {/* Men half */}
+        <TouchableOpacity
+          style={styles.heroHalf}
+          activeOpacity={0.9}
+          onPress={() => router.navigate({ pathname: "/(tabs)/shop", params: { gender: "men" } } as any)}
+        >
+          <Image source={MAN_IMAGE} style={styles.fill} resizeMode="cover" />
+          <LinearGradient
+            colors={["transparent", "rgba(0,0,0,0.65)"]}
+            style={styles.heroGradient}
+          />
+          <View style={styles.heroHalfContent}>
+            <Text style={styles.heroLabel}>SS25 MEN</Text>
+            <Text style={styles.heroHalfTitle}>{"Structural\nPrecision"}</Text>
+            <View style={styles.heroBtn}>
+              <Text style={styles.heroBtnText}>SHOP MEN</Text>
+            </View>
+          </View>
+        </TouchableOpacity>
+
+        {/* Women half */}
+        <TouchableOpacity
+          style={[styles.heroHalf, styles.heroHalfRight]}
+          activeOpacity={0.9}
+          onPress={() => router.navigate({ pathname: "/(tabs)/shop", params: { gender: "women" } } as any)}
+        >
+          <Image source={WOMEN_IMAGE} style={styles.fill} resizeMode="cover" />
+          <LinearGradient
+            colors={["transparent", "rgba(0,0,0,0.65)"]}
+            style={styles.heroGradient}
+          />
+          <View style={styles.heroHalfContent}>
+            <Text style={styles.heroLabel}>SS25 WOMEN</Text>
+            <Text style={styles.heroHalfTitle}>{"Architectural\nForm"}</Text>
+            <View style={styles.heroBtn}>
+              <Text style={styles.heroBtnText}>SHOP WOMEN</Text>
+            </View>
+          </View>
+        </TouchableOpacity>
+      </View>
+
+      {/* ── 1.5. Editorial Partners / Brands ──────────────── */}
+      <View style={styles.brandsSection}>
+        <Text style={styles.brandsLabel}>EDITORIAL PARTNERS</Text>
+
+        {/* 3-col staggered brand grid */}
+        {gridBrands.length > 0 && (
+          <View style={styles.brandsGrid}>
+            {gridBrands.map((brand, i) => (
+              <TouchableOpacity
+                key={brand.id}
+                style={[styles.brandGridItem, i === 1 && { paddingTop: 48 }]}
+                onPress={() =>
+                  String(brand.id).startsWith("fallback")
+                    ? router.push("/(tabs)/brands" as any)
+                    : router.push(`/brands/${brand.id}` as any)
+                }
+              >
+                <View style={[styles.brandTile, TILE_STYLES[i]]}>
+                  {brand.logo ? (
+                    <Image
+                      source={{ uri: brand.logo }}
+                      style={styles.brandTileImage}
+                      resizeMode="cover"
+                    />
+                  ) : (
+                    <Text
+                      style={[
+                        styles.brandTileText,
+                        i === 1 && { color: "#ffffff" },
+                      ]}
+                      numberOfLines={1}
+                      adjustsFontSizeToFit
+                    >
+                      {brand.name.toUpperCase().slice(0, 8)}
+                    </Text>
+                  )}
+                </View>
+                <Text style={styles.brandTileCaption}>{TILE_CAPTIONS[i]}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
         )}
-        <LinearGradient
-          colors={["transparent", "rgba(0,0,0,0.55)"]}
-          style={styles.heroGradient}
-        />
-        <View style={styles.heroContent}>
-          <Text style={styles.heroLabel}>SS25 COLLECTION</Text>
-          <Text style={styles.heroTitle}>{"Structural\nElegance"}</Text>
-          <TouchableOpacity
-            style={styles.heroBtn}
-            onPress={() => router.push("/(tabs)/shop" as any)}
-          >
-            <Text style={styles.heroBtnText}>SHOP NOW</Text>
-          </TouchableOpacity>
-        </View>
+
+        {/* Horizontal brand bar */}
+        {barBrands.length > 0 && (
+          <View style={styles.brandBar}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.brandBarScroll}
+            >
+              {barBrands.map((brand) => (
+                <TouchableOpacity
+                  key={brand.id}
+                  style={styles.brandBarItem}
+                  onPress={() =>
+                    String(brand.id).startsWith("fallback")
+                      ? router.push("/(tabs)/brands" as any)
+                      : router.push(`/brands/${brand.id}` as any)
+                  }
+                >
+                  <Text style={styles.brandBarText}>
+                    {brand.name.toUpperCase()}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        )}
       </View>
 
       {/* ── 2. Marquee ───────────────────────────────────── */}
@@ -197,9 +318,13 @@ const HomeScreen = () => {
                   </View>
                   <View style={styles.lookbookMeta}>
                     <Text style={styles.lookbookSku} numberOfLines={1}>
-                      {product.brandName ? `${product.brandName.toUpperCase().replace(/\s/g, "_")}_${product.name.toUpperCase().replace(/\s/g, "_").slice(0, 6)}` : product.name.toUpperCase()}
+                      {product.brandName
+                        ? `${product.brandName.toUpperCase().replace(/\s/g, "_")}_${product.name.toUpperCase().replace(/\s/g, "_").slice(0, 6)}`
+                        : product.name.toUpperCase()}
                     </Text>
-                    <Text style={styles.lookbookPrice}>${product.salePrice ?? product.price}</Text>
+                    <Text style={styles.lookbookPrice}>
+                      ${product.salePrice ?? product.price}
+                    </Text>
                   </View>
                 </TouchableOpacity>
               );
@@ -232,7 +357,9 @@ const HomeScreen = () => {
                   </View>
                   <View style={styles.lookbookMeta}>
                     <Text style={styles.lookbookSku} numberOfLines={1}>
-                      {product.brandName ? `${product.brandName.toUpperCase().replace(/\s/g, "_")}_${product.name.toUpperCase().replace(/\s/g, "_").slice(0, 6)}` : product.name.toUpperCase()}
+                      {product.brandName
+                        ? `${product.brandName.toUpperCase().replace(/\s/g, "_")}_${product.name.toUpperCase().replace(/\s/g, "_").slice(0, 6)}`
+                        : product.name.toUpperCase()}
                     </Text>
                     <Text style={styles.lookbookPrice}>
                       ${product.salePrice ?? product.price}
@@ -286,16 +413,9 @@ const HomeScreen = () => {
 
       {/* ── 5. Split Editorial ───────────────────────────── */}
       <View style={styles.editorial}>
-        {/* Image top (on mobile) */}
         <View style={styles.editorialImage}>
-          <Image
-            source={{ uri: heroImage ?? undefined }}
-            style={styles.fill}
-            resizeMode="cover"
-          />
-          {!heroImage && <View style={[styles.fill, { backgroundColor: "#1a1a1a" }]} />}
+          <Image source={MAN_IMAGE} style={styles.fill} resizeMode="cover" />
         </View>
-        {/* Text */}
         <View style={styles.editorialText}>
           <Text style={styles.editorialEyebrow}>THE PHILOSOPHY</Text>
           <Text style={styles.editorialTitle}>Form Follows{"\n"}Absence</Text>
@@ -378,69 +498,159 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: "#ffffff",
   },
-
-  // Hero
-  hero: {
-    width: "100%",
-    position: "relative",
-    overflow: "hidden",
-  },
-  heroImage: {
+  fill: {
     width: "100%",
     height: "100%",
-    position: "absolute",
+  },
+
+  // ── Split Hero ──────────────────────────────────────────
+  splitHero: {
+    flexDirection: "row",
+    height: 600,
+    backgroundColor: "#000000",
+  },
+  heroHalf: {
+    flex: 1,
+    overflow: "hidden",
+    position: "relative",
+  },
+  heroHalfRight: {
+    borderLeftWidth: 2,
+    borderLeftColor: "#000000",
   },
   heroGradient: {
     position: "absolute",
     bottom: 0,
     left: 0,
     right: 0,
-    height: "60%",
+    height: "65%",
   },
-  heroContent: {
+  heroHalfContent: {
     position: "absolute",
     bottom: 0,
     left: 0,
     right: 0,
-    padding: 32,
+    padding: 24,
   },
   heroLabel: {
     fontFamily: "SpaceMono_400Regular",
     fontSize: 10,
     color: "#ffffff",
-    letterSpacing: 5,
+    letterSpacing: 4,
     textTransform: "uppercase",
     marginBottom: 12,
   },
-  heroTitle: {
+  heroHalfTitle: {
     fontFamily: "SpaceGrotesk_700Bold",
-    fontSize: 48,
+    fontSize: 28,
     color: "#ffffff",
     textTransform: "uppercase",
-    letterSpacing: -1,
-    lineHeight: 50,
-    marginBottom: 28,
+    letterSpacing: -0.5,
+    lineHeight: 30,
+    marginBottom: 24,
   },
   heroBtn: {
     backgroundColor: "#ffffff",
-    paddingHorizontal: 28,
-    paddingVertical: 14,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
     alignSelf: "flex-start",
   },
   heroBtnText: {
     fontFamily: "SpaceMono_400Regular",
-    fontSize: 11,
+    fontSize: 10,
     color: "#000000",
-    letterSpacing: 3,
+    letterSpacing: 2,
     textTransform: "uppercase",
   },
 
-  // Marquee
+  // ── Editorial Partners / Brands ─────────────────────────
+  brandsSection: {
+    paddingHorizontal: 24,
+    paddingTop: 64,
+    paddingBottom: 64,
+    backgroundColor: "#ffffff",
+  },
+  brandsLabel: {
+    fontFamily: "SpaceMono_400Regular",
+    fontSize: 10,
+    color: "#000000",
+    letterSpacing: 3,
+    textTransform: "uppercase",
+    marginBottom: 48,
+  },
+  brandsGrid: {
+    flexDirection: "row",
+    gap: 16,
+    marginBottom: 48,
+  },
+  brandGridItem: {
+    flex: 1,
+  },
+  brandTile: {
+    aspectRatio: 1,
+    borderWidth: 2,
+    borderColor: "#000000",
+    justifyContent: "center",
+    alignItems: "center",
+    overflow: "hidden",
+  },
+  brandTileWhite: {
+    backgroundColor: "#ffffff",
+  },
+  brandTileBlack: {
+    backgroundColor: "#000000",
+  },
+  brandTileGray: {
+    backgroundColor: "#f3f3f4",
+  },
+  brandTileImage: {
+    width: "100%",
+    height: "100%",
+  },
+  brandTileText: {
+    fontFamily: "SpaceMono_700Bold",
+    fontSize: 10,
+    color: "#000000",
+    letterSpacing: 1,
+    textAlign: "center",
+    textTransform: "uppercase",
+  },
+  brandTileCaption: {
+    fontFamily: "SpaceMono_400Regular",
+    fontSize: 9,
+    color: "#777777",
+    letterSpacing: 2,
+    textTransform: "uppercase",
+    textAlign: "center",
+    marginTop: 12,
+  },
+  brandBar: {
+    borderTopWidth: 2,
+    borderBottomWidth: 2,
+    borderColor: "#000000",
+    paddingVertical: 24,
+    marginHorizontal: -24,
+  },
+  brandBarScroll: {
+    paddingHorizontal: 24,
+    gap: 32,
+    alignItems: "center",
+  },
+  brandBarItem: {},
+  brandBarText: {
+    fontFamily: "SpaceMono_700Bold",
+    fontSize: 11,
+    color: "#000000",
+    letterSpacing: 2,
+    textTransform: "uppercase",
+  },
+
+  // ── Marquee ──────────────────────────────────────────────
   marqueeWrap: {
     borderTopWidth: 2,
     borderBottomWidth: 2,
     borderColor: "#000000",
-    paddingVertical: 12,
+    paddingVertical: 16,
     overflow: "hidden",
     backgroundColor: "#ffffff",
   },
@@ -460,11 +670,11 @@ const styles = StyleSheet.create({
     color: "#e2e2e2",
   },
 
-  // Section
+  // ── Section (Lookbook) ──────────────────────────────────
   section: {
     paddingHorizontal: 24,
-    paddingTop: 48,
-    paddingBottom: 48,
+    paddingTop: 64,
+    paddingBottom: 64,
     backgroundColor: "#ffffff",
   },
   sectionLabel: {
@@ -473,10 +683,8 @@ const styles = StyleSheet.create({
     color: "#000000",
     letterSpacing: 3,
     textTransform: "uppercase",
-    marginBottom: 36,
+    marginBottom: 48,
   },
-
-  // Staggered grid
   staggerRow: {
     flexDirection: "row",
     gap: 16,
@@ -490,16 +698,12 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     backgroundColor: "#eeeeee",
   },
-  fill: {
-    width: "100%",
-    height: "100%",
-  },
   lookbookMeta: {
     paddingTop: 10,
   },
   lookbookSku: {
     fontFamily: "SpaceMono_700Bold",
-    fontSize: 9,
+    fontSize: 10,
     color: "#000000",
     letterSpacing: 1,
     textTransform: "uppercase",
@@ -518,16 +722,16 @@ const styles = StyleSheet.create({
   },
   limitedBadgeText: {
     fontFamily: "SpaceMono_700Bold",
-    fontSize: 8,
+    fontSize: 10,
     color: "#C41E3A",
     letterSpacing: 1,
   },
 
-  // Recommended
+  // ── Recommended ─────────────────────────────────────────
   recommendedSection: {
     backgroundColor: "#000000",
-    paddingTop: 48,
-    paddingBottom: 48,
+    paddingTop: 64,
+    paddingBottom: 64,
   },
   recommendedLabel: {
     fontFamily: "SpaceMono_400Regular",
@@ -535,19 +739,19 @@ const styles = StyleSheet.create({
     color: "#ffffff",
     letterSpacing: 3,
     textTransform: "uppercase",
-    marginBottom: 28,
+    marginBottom: 48,
     paddingHorizontal: 24,
   },
   recommendedScroll: {
     paddingHorizontal: 24,
-    gap: 16,
+    gap: 24,
   },
   recommendedCard: {
-    width: 220,
+    width: 280,
   },
   recommendedImage: {
-    width: 220,
-    height: 300,
+    width: 280,
+    height: 400,
     backgroundColor: "#1a1a1a",
     overflow: "hidden",
   },
@@ -556,7 +760,7 @@ const styles = StyleSheet.create({
   },
   recommendedSku: {
     fontFamily: "SpaceMono_700Bold",
-    fontSize: 9,
+    fontSize: 10,
     color: "#ffffff",
     letterSpacing: 1,
     textTransform: "uppercase",
@@ -568,18 +772,18 @@ const styles = StyleSheet.create({
     color: "#777777",
   },
 
-  // Editorial
+  // ── Editorial ───────────────────────────────────────────
   editorial: {
     backgroundColor: "#ffffff",
   },
   editorialImage: {
     width: "100%",
-    height: 300,
+    height: 400,
     overflow: "hidden",
     backgroundColor: "#eeeeee",
   },
   editorialText: {
-    padding: 40,
+    padding: 48,
   },
   editorialEyebrow: {
     fontFamily: "SpaceMono_400Regular",
@@ -587,7 +791,7 @@ const styles = StyleSheet.create({
     color: "#000000",
     letterSpacing: 3,
     textTransform: "uppercase",
-    marginBottom: 20,
+    marginBottom: 32,
   },
   editorialTitle: {
     fontFamily: "SpaceGrotesk_700Bold",
@@ -595,17 +799,16 @@ const styles = StyleSheet.create({
     color: "#000000",
     textTransform: "uppercase",
     lineHeight: 38,
-    marginBottom: 20,
+    marginBottom: 32,
   },
   editorialBody: {
     fontFamily: "Inter_400Regular",
     fontSize: 14,
     color: "#474747",
     lineHeight: 22,
-    maxWidth: 300,
   },
   editorialLink: {
-    marginTop: 32,
+    marginTop: 48,
     alignSelf: "flex-start",
     borderBottomWidth: 2,
     borderBottomColor: "#000000",
@@ -619,19 +822,19 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
   },
 
-  // Footer
+  // ── Footer ──────────────────────────────────────────────
   footer: {
     borderTopWidth: 2,
     borderTopColor: "#000000",
     backgroundColor: "#ffffff",
     paddingHorizontal: 24,
-    paddingTop: 48,
-    paddingBottom: 48,
+    paddingTop: 80,
+    paddingBottom: 80,
   },
   footerGrid: {
     flexDirection: "row",
-    gap: 40,
-    marginBottom: 48,
+    gap: 48,
+    marginBottom: 80,
   },
   footerCol: {
     flex: 1,
@@ -639,7 +842,7 @@ const styles = StyleSheet.create({
   },
   footerHeading: {
     fontFamily: "SpaceMono_700Bold",
-    fontSize: 9,
+    fontSize: 10,
     color: "#000000",
     letterSpacing: 3,
     textTransform: "uppercase",
@@ -647,18 +850,18 @@ const styles = StyleSheet.create({
   },
   footerLink: {
     fontFamily: "SpaceMono_400Regular",
-    fontSize: 9,
+    fontSize: 10,
     color: "#777777",
     letterSpacing: 2,
     textTransform: "uppercase",
     paddingVertical: 3,
   },
   footerNewsletter: {
-    marginBottom: 32,
+    marginBottom: 40,
   },
   footerNewsletterLabel: {
     fontFamily: "SpaceMono_400Regular",
-    fontSize: 9,
+    fontSize: 10,
     color: "#000000",
     letterSpacing: 3,
     textTransform: "uppercase",
