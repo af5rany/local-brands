@@ -613,7 +613,7 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: "800",
     marginBottom: 6,
-    letterSpacing: -0.3,
+    // letterSpacing: -0.3,
   },
   subtitle: { fontSize: 15, fontWeight: "500", marginBottom: 24 },
 
@@ -642,7 +642,8 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   fieldGroup: { gap: 6 },
-  label: { fontSize: 13, fontWeight: "600", letterSpacing: 0.2 },
+  label: { fontSize: 13, fontWeight: "600", // letterSpacing: 0.2
+   },
   inputWrapper: {
     flexDirection: "row",
     alignItems: "center",

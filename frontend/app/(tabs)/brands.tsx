@@ -2,63 +2,131 @@ import React, { useEffect, useState, useCallback, useMemo } from "react";
 import {
   View,
   Text,
-  StyleSheet,
   FlatList,
   TouchableOpacity,
+  StyleSheet,
   ActivityIndicator,
   Image,
   TextInput,
+  Modal,
+  ScrollView,
+  RefreshControl,
 } from "react-native";
 import { useFocusEffect, useRouter } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
-import { useAuth } from "@/context/AuthContext";
 import getApiUrl from "@/helpers/getApiUrl";
+import { Ionicons } from "@expo/vector-icons";
+import { debounce } from "lodash";
+import { Filters, PaginatedResult, SortOptions } from "@/types/filters";
+import { Brand } from "@/types/brand";
+import { BrandStatus } from "@/types/enums";
+import { useAuth } from "@/context/AuthContext";
 
-const CARD_PADDING = 24;
+const BrandsScreen = () => {
+  const { token, user } = useAuth();
+  const userRole = user?.role || user?.userRole;
+  const isAdmin = userRole === "admin";
 
-const PAGE_SIZE = 12;
+  const [brandsData, setBrandsData] = useState<PaginatedResult<Brand> | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [refreshing, setRefreshing] = useState<boolean>(false);
+  const [loadingMore, setLoadingMore] = useState<boolean>(false);
+  const [error, setError] = useState<string>("");
 
-const BrandsTab = () => {
-  const router = useRouter();
-  const { token } = useAuth();
-  const [brands, setBrands] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [hasMore, setHasMore] = useState(false);
-  const [page, setPage] = useState(1);
+  // Search and Filter States
+  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [filters, setFilters] = useState<Filters>({
+    location: "",
+    ownerId: "",
+    status: "",
+  });
+  const [sortOptions, setSortOptions] = useState<SortOptions>({
+    sortBy: "createdAt",
+    sortOrder: "DESC",
+  });
+
+  // UI States
+  const [showFilters, setShowFilters] = useState<boolean>(false);
+  const [showSort, setShowSort] = useState<boolean>(false);
+
+  // Follow state (customer feature)
   const [followedIds, setFollowedIds] = useState<Set<number>>(new Set());
   const [togglingId, setTogglingId] = useState<number | null>(null);
-  const [searchQuery, setSearchQuery] = useState("");
 
-  const fetchBrands = useCallback(async (pageNum: number = 1, append = false) => {
-    try {
-      if (pageNum === 1) setLoading(true);
-      else setLoadingMore(true);
+  const router = useRouter();
 
-      const headers: Record<string, string> = {};
-      if (token) headers.Authorization = `Bearer ${token}`;
+  // Build API URL with query parameters
+  const buildApiUrl = useCallback(
+    (page: number = 1) => {
+      const params = new URLSearchParams({
+        page: page.toString(),
+        limit: "10",
+        ...(searchQuery && { search: searchQuery }),
+        ...(filters.location && { location: filters.location }),
+        ...(filters.ownerId && { ownerId: filters.ownerId }),
+        ...(filters.status && { status: filters.status }),
+        sortBy: sortOptions.sortBy,
+        sortOrder: sortOptions.sortOrder,
+      });
 
-      const response = await fetch(
-        `${getApiUrl()}/brands?limit=${PAGE_SIZE}&page=${pageNum}&sortBy=name&sortOrder=ASC`,
-        { headers }
-      );
-      if (response.ok) {
-        const data = await response.json();
-        const items = data.items || data.data || data;
-        setBrands((prev) => (append ? [...prev, ...items] : items));
-        setHasMore(data.hasNextPage ?? items.length === PAGE_SIZE);
-        setPage(pageNum);
+      const endpoint = isAdmin ? "/brands/admin" : "/brands";
+      return `${getApiUrl()}${endpoint}?${params.toString()}`;
+    },
+    [searchQuery, filters, sortOptions, isAdmin],
+  );
+
+  // Fetch brands with pagination
+  const fetchBrands = useCallback(
+    async (page: number = 1, append: boolean = false) => {
+      try {
+        if (!append) {
+          setLoading(page === 1);
+        } else {
+          setLoadingMore(true);
+        }
+
+        const response = await fetch(buildApiUrl(page), {
+          headers: {
+            ...(token && { Authorization: `Bearer ${token}` }),
+          },
+        });
+        if (!response.ok) {
+          throw new Error("Failed to fetch brands");
+        }
+
+        const data: PaginatedResult<Brand> = await response.json();
+
+        if (append) {
+          setBrandsData((prev) =>
+            prev
+              ? {
+                  ...data,
+                  items: [...prev.items, ...data.items],
+                }
+              : data,
+          );
+        } else {
+          setBrandsData(data);
+        }
+
+        setError("");
+      } catch (err) {
+        if (err instanceof Error) {
+          setError(err.message);
+        } else {
+          setError("An error occurred");
+        }
+      } finally {
+        setLoading(false);
+        setLoadingMore(false);
+        setRefreshing(false);
       }
-    } catch (error) {
-      console.error("Error fetching brands:", error);
-    } finally {
-      setLoading(false);
-      setLoadingMore(false);
-    }
-  }, [token]);
+    },
+    [buildApiUrl, token],
+  );
 
+  // Fetch followed brands (customer feature)
   const fetchFollowedBrands = useCallback(async () => {
-    if (!token) { setFollowedIds(new Set()); return; }
+    if (!token || isAdmin) { setFollowedIds(new Set()); return; }
     try {
       const response = await fetch(`${getApiUrl()}/brands/user/followed`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -70,20 +138,34 @@ const BrandsTab = () => {
     } catch (error) {
       console.error("Error fetching followed brands:", error);
     }
-  }, [token]);
+  }, [token, isAdmin]);
+
+  // Debounced search
+  const debouncedFetch = useMemo(
+    () => debounce((page: number = 1) => fetchBrands(page, false), 300),
+    [fetchBrands],
+  );
+
+  // Initial fetch and search/filter changes
+  useEffect(() => {
+    debouncedFetch(1);
+    return () => {
+      debouncedFetch.cancel();
+    };
+  }, [debouncedFetch]);
 
   useEffect(() => {
-    fetchBrands();
     fetchFollowedBrands();
-  }, [fetchBrands, fetchFollowedBrands]);
+  }, [fetchFollowedBrands]);
 
   useFocusEffect(
     useCallback(() => {
-      fetchBrands();
+      fetchBrands(1, false);
       fetchFollowedBrands();
     }, [fetchBrands, fetchFollowedBrands])
   );
 
+  // Toggle follow (customer feature)
   const toggleFollow = async (brandId: number) => {
     if (!token) { router.push("/auth/login"); return; }
     setTogglingId(brandId);
@@ -107,158 +189,506 @@ const BrandsTab = () => {
     }
   };
 
-  const getBrandImage = (brand: any): string | null => {
-    if (brand.logo) return brand.logo;
-    if (brand.products?.length > 0) {
-      const p = brand.products[0];
-      if (p.images?.length > 0) return p.images[0];
-      if (p.mainImage) return p.mainImage;
+  // Handle search input
+  const handleSearch = (text: string) => {
+    setSearchQuery(text);
+  };
+
+  // Handle filter changes
+  const handleFilterChange = (key: keyof Filters, value: string) => {
+    setFilters((prev) => ({ ...prev, [key]: value }));
+  };
+
+  // Handle sort changes
+  const handleSortChange = (
+    sortBy: SortOptions["sortBy"],
+    sortOrder: SortOptions["sortOrder"],
+  ) => {
+    setSortOptions({ sortBy, sortOrder });
+    setShowSort(false);
+  };
+
+  // Clear all filters
+  const clearFilters = () => {
+    setSearchQuery("");
+    setFilters({ location: "", ownerId: "", status: "" });
+    setSortOptions({ sortBy: "createdAt", sortOrder: "DESC" });
+  };
+
+  // Refresh data
+  const onRefresh = () => {
+    setRefreshing(true);
+    fetchBrands(1, false);
+  };
+
+  // Load more data
+  const loadMore = () => {
+    if (brandsData && brandsData.hasNextPage && !loadingMore) {
+      fetchBrands(brandsData.page + 1, true);
     }
-    return null;
   };
 
-  const filteredBrands = useMemo(() => {
-    if (!searchQuery.trim()) return brands;
-    const q = searchQuery.toLowerCase();
-    return brands.filter((b) => b.name?.toLowerCase().includes(q));
-  }, [brands, searchQuery]);
+  const getStatusLabel = (status: string | undefined) => {
+    if (!status) return "DRAFT";
+    return status.toUpperCase();
+  };
 
-  const renderBrandCard = ({ item, index }: { item: any; index: number }) => {
-    const image = getBrandImage(item);
-    const isFollowed = followedIds.has(item.id);
-    const num = String(index + 1).padStart(3, "0");
+  const hasActiveFilters = !!(filters.location || filters.ownerId || filters.status);
 
-    return (
-      <TouchableOpacity
-        style={styles.card}
-        onPress={() => router.push(`/brands/${item.id}` as any)}
-        activeOpacity={0.85}
-      >
-        {/* Square image */}
-        <View style={styles.imageWrap}>
-          {image ? (
-            <Image
-              source={{ uri: image }}
-              style={styles.image}
-              resizeMode="cover"
-            />
-          ) : (
-            <View style={styles.imagePlaceholder} />
-          )}
-
-          {/* Index badge */}
-          <View style={styles.indexBadge}>
-            <Text style={styles.indexBadgeText}>{num}</Text>
-          </View>
-
-          {/* Follow heart overlay */}
-          <TouchableOpacity
-            style={styles.heartOverlay}
-            onPress={(e) => { e.stopPropagation(); toggleFollow(item.id); }}
-            disabled={togglingId === item.id}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          >
-            {togglingId === item.id ? (
-              <ActivityIndicator size="small" color="#ffffff" />
-            ) : (
-              <Ionicons
-                name={isFollowed ? "heart" : "heart-outline"}
-                size={18}
-                color="#ffffff"
-              />
-            )}
-          </TouchableOpacity>
-        </View>
-
-        {/* Info */}
-        <View style={styles.cardInfo}>
-          <Text style={styles.brandName} numberOfLines={1}>
-            {item.name?.toUpperCase()}
-          </Text>
-          {item.location ? (
-            <Text style={styles.brandLocation} numberOfLines={1}>
-              {item.location.toUpperCase()}
+  // ── renderHeader ───────────────────────────────────
+  const renderHeader = () => (
+    <View style={styles.headerContainer}>
+      <View style={styles.headerRow}>
+        <View>
+          <Text style={styles.header}>BRANDS</Text>
+          {brandsData && (
+            <Text style={styles.headerCount}>
+              {brandsData.total} {brandsData.total === 1 ? "BRAND" : "BRANDS"}
             </Text>
-          ) : null}
+          )}
         </View>
-      </TouchableOpacity>
-    );
-  };
-
-  const ListHeader = () => (
-    <View style={styles.header}>
-      {/* Label */}
-      <Text style={styles.searchLabel}>SEARCH_ARCHIVE</Text>
-
-      {/* Big search input */}
-      <View style={styles.searchRow}>
-        <TextInput
-          style={styles.searchInput}
-          placeholder="ENTER BRAND NAME"
-          placeholderTextColor="#dddddd"
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-          returnKeyType="search"
-          autoCapitalize="characters"
-        />
-        {searchQuery.length > 0 ? (
-          <TouchableOpacity onPress={() => setSearchQuery("")} style={styles.searchIcon}>
-            <Ionicons name="close" size={28} color="#000000" />
+        {isAdmin && (
+          <TouchableOpacity
+            style={styles.createButton}
+            onPress={() => router.push("/brands/create")}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="add" size={18} color="#ffffff" />
+            <Text style={styles.createButtonText}>NEW BRAND</Text>
           </TouchableOpacity>
-        ) : (
-          <View style={styles.searchIcon}>
-            <Ionicons name="search" size={28} color="#000000" />
-          </View>
         )}
       </View>
     </View>
   );
 
-  const ListFooter = () => (
-    <View style={styles.footer}>
-      {hasMore && !searchQuery && (
-        <TouchableOpacity
-          style={styles.loadMoreBtn}
-          onPress={() => fetchBrands(page + 1, true)}
-          disabled={loadingMore}
-          activeOpacity={0.85}
-        >
-          {loadingMore ? (
-            <ActivityIndicator size="small" color="#ffffff" />
-          ) : (
-            <Text style={styles.loadMoreText}>LOAD MORE BRANDS</Text>
-          )}
-        </TouchableOpacity>
-      )}
-      <View style={{ height: 100 }} />
+  // ── renderSearchBar ────────────────────────────────
+  const renderSearchBar = () => (
+    <View style={styles.searchSection}>
+      <View style={styles.searchRow}>
+        <Ionicons name="search-outline" size={16} color="#777777" />
+        <TextInput
+          style={styles.searchInput}
+          placeholder="SEARCH BRANDS..."
+          placeholderTextColor="#aaaaaa"
+          value={searchQuery}
+          onChangeText={handleSearch}
+          returnKeyType="search"
+          autoCapitalize="none"
+        />
+        {searchQuery.length > 0 && (
+          <TouchableOpacity onPress={() => setSearchQuery("")}>
+            <Ionicons name="close" size={16} color="#777777" />
+          </TouchableOpacity>
+        )}
+      </View>
     </View>
   );
 
+  // ── renderControls ─────────────────────────────────
+  const renderControls = () => (
+    <View style={styles.controlsContainer}>
+      {isAdmin && (
+        <TouchableOpacity
+          style={[styles.controlBtn, hasActiveFilters && styles.controlBtnActive]}
+          onPress={() => setShowFilters(true)}
+          activeOpacity={0.8}
+        >
+          <Ionicons
+            name="options-outline"
+            size={14}
+            color={hasActiveFilters ? "#ffffff" : "#000000"}
+          />
+          <Text
+            style={[
+              styles.controlBtnText,
+              hasActiveFilters && styles.controlBtnTextActive,
+            ]}
+          >
+            FILTER
+          </Text>
+        </TouchableOpacity>
+      )}
+      <TouchableOpacity
+        style={styles.controlBtn}
+        onPress={() => setShowSort(true)}
+        activeOpacity={0.8}
+      >
+        <Ionicons name="swap-vertical-outline" size={14} color="#000000" />
+        <Text style={styles.controlBtnText}>SORT</Text>
+      </TouchableOpacity>
+      {(searchQuery || hasActiveFilters) && (
+        <TouchableOpacity
+          style={styles.controlBtn}
+          onPress={clearFilters}
+          activeOpacity={0.8}
+        >
+          <Ionicons name="close" size={14} color="#C41E3A" />
+          <Text style={[styles.controlBtnText, { color: "#C41E3A" }]}>
+            CLEAR
+          </Text>
+        </TouchableOpacity>
+      )}
+      {brandsData && (
+        <Text style={styles.resultsCount}>{brandsData.total} BRANDS</Text>
+      )}
+    </View>
+  );
+
+  // ── renderBrand ────────────────────────────────────
+  const renderBrand = ({ item }: { item: Brand }) => {
+    const isActive = item.status === BrandStatus.ACTIVE;
+    const isFollowed = followedIds.has(item.id);
+
+    return (
+      <TouchableOpacity
+        style={styles.brandContainer}
+        onPress={() => router.push(`/brands/${item.id}`)}
+        activeOpacity={0.6}
+      >
+        <View style={styles.brandRow}>
+          {/* Logo */}
+          <View style={styles.logoContainer}>
+            {item.logo ? (
+              <Image
+                style={styles.brandLogo}
+                source={{ uri: item.logo }}
+                defaultSource={require("@/assets/images/placeholder-logo.png")}
+              />
+            ) : (
+              <View style={styles.logoPlaceholder}>
+                <Text style={styles.logoInitial}>
+                  {item.name?.charAt(0)?.toUpperCase() || "B"}
+                </Text>
+              </View>
+            )}
+          </View>
+
+          {/* Info */}
+          <View style={styles.brandInfo}>
+            <View style={styles.nameStatusRow}>
+              <Text style={styles.brandName} numberOfLines={1}>
+                {item.name?.toUpperCase()}
+              </Text>
+              {isAdmin && (
+                <View
+                  style={[
+                    styles.statusBadge,
+                    isActive ? styles.statusBadgeActive : styles.statusBadgeInactive,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.statusText,
+                      isActive ? styles.statusTextActive : styles.statusTextInactive,
+                    ]}
+                  >
+                    {getStatusLabel(item.status)}
+                  </Text>
+                </View>
+              )}
+            </View>
+
+            <Text style={styles.brandDescription} numberOfLines={1}>
+              {item.description || "No description"}
+            </Text>
+
+            {isAdmin && (
+              <View style={styles.metaRow}>
+                {item.location && (
+                  <View style={styles.metaItem}>
+                    <Ionicons name="location-outline" size={11} color="#aaaaaa" />
+                    <Text style={styles.metaText}>{item.location}</Text>
+                  </View>
+                )}
+                <View style={styles.metaItem}>
+                  <Ionicons name="cube-outline" size={11} color="#aaaaaa" />
+                  <Text style={styles.metaText}>
+                    {item?.products?.length || 0}
+                  </Text>
+                </View>
+                <View style={styles.metaItem}>
+                  <Text style={styles.metaText}>
+                    {new Date(item.createdAt).toLocaleDateString()}
+                  </Text>
+                </View>
+              </View>
+            )}
+          </View>
+
+          {/* Follow button for customers, arrow for admin */}
+          {!isAdmin ? (
+            <TouchableOpacity
+              style={styles.followButton}
+              onPress={() => toggleFollow(item.id)}
+              disabled={togglingId === item.id}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              {togglingId === item.id ? (
+                <ActivityIndicator size="small" color="#000000" />
+              ) : (
+                <Ionicons
+                  name={isFollowed ? "heart" : "heart-outline"}
+                  size={20}
+                  color="#000000"
+                />
+              )}
+            </TouchableOpacity>
+          ) : (
+            <Text style={styles.arrowText}>→</Text>
+          )}
+        </View>
+      </TouchableOpacity>
+    );
+  };
+
+  // ── renderFilterModal ──────────────────────────────
+  const renderFilterModal = () => (
+    <Modal
+      visible={showFilters}
+      animationType="slide"
+      presentationStyle="pageSheet"
+      onRequestClose={() => setShowFilters(false)}
+    >
+      <View style={styles.modalContainer}>
+        <View style={styles.modalHeader}>
+          <TouchableOpacity onPress={() => setShowFilters(false)}>
+            <Text style={styles.modalActionCancel}>CANCEL</Text>
+          </TouchableOpacity>
+          <Text style={styles.modalTitle}>FILTERS</Text>
+          <TouchableOpacity onPress={() => setShowFilters(false)}>
+            <Text style={styles.modalActionDone}>DONE</Text>
+          </TouchableOpacity>
+        </View>
+
+        <ScrollView style={styles.modalContent}>
+          <View style={styles.filterSection}>
+            <Text style={styles.filterLabel}>LOCATION</Text>
+            <TextInput
+              style={styles.filterInput}
+              placeholder="Enter location..."
+              placeholderTextColor="#aaaaaa"
+              value={filters.location}
+              onChangeText={(text) => handleFilterChange("location", text)}
+            />
+          </View>
+
+          <View style={styles.filterSection}>
+            <Text style={styles.filterLabel}>OWNER ID</Text>
+            <TextInput
+              style={styles.filterInput}
+              placeholder="Enter owner ID..."
+              placeholderTextColor="#aaaaaa"
+              value={filters.ownerId}
+              onChangeText={(text) => handleFilterChange("ownerId", text)}
+              keyboardType="numeric"
+            />
+          </View>
+
+          <View style={styles.filterSection}>
+            <Text style={styles.filterLabel}>STATUS</Text>
+            <View style={styles.statusChips}>
+              {Object.values(BrandStatus).map((s) => {
+                const isSelected = filters.status === s;
+                return (
+                  <TouchableOpacity
+                    key={s}
+                    style={[
+                      styles.statusChip,
+                      isSelected && styles.statusChipActive,
+                    ]}
+                    onPress={() =>
+                      handleFilterChange("status", isSelected ? "" : s)
+                    }
+                  >
+                    <Text
+                      style={[
+                        styles.statusChipText,
+                        isSelected && styles.statusChipTextActive,
+                      ]}
+                    >
+                      {s.toUpperCase()}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+        </ScrollView>
+      </View>
+    </Modal>
+  );
+
+  // ── renderSortModal ────────────────────────────────
+  const renderSortModal = () => (
+    <Modal
+      visible={showSort}
+      animationType="slide"
+      presentationStyle="pageSheet"
+      onRequestClose={() => setShowSort(false)}
+    >
+      <View style={styles.modalContainer}>
+        <View style={styles.modalHeader}>
+          <TouchableOpacity onPress={() => setShowSort(false)}>
+            <Text style={styles.modalActionCancel}>CANCEL</Text>
+          </TouchableOpacity>
+          <Text style={styles.modalTitle}>SORT BY</Text>
+          <View style={{ width: 60 }} />
+        </View>
+
+        <ScrollView style={styles.modalContent}>
+          {[
+            { key: "name", label: "NAME" },
+            { key: "createdAt", label: "CREATED" },
+            { key: "updatedAt", label: "UPDATED" },
+            { key: "location", label: "LOCATION" },
+            { key: "productCount", label: "PRODUCTS" },
+          ].map((option) => (
+            <View key={option.key}>
+              <TouchableOpacity
+                style={styles.sortOption}
+                onPress={() =>
+                  handleSortChange(option.key as SortOptions["sortBy"], "ASC")
+                }
+              >
+                <Text style={styles.sortOptionText}>{option.label} (A-Z)</Text>
+                {sortOptions.sortBy === option.key &&
+                  sortOptions.sortOrder === "ASC" && (
+                    <Ionicons name="checkmark" size={18} color="#000000" />
+                  )}
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.sortOption}
+                onPress={() =>
+                  handleSortChange(option.key as SortOptions["sortBy"], "DESC")
+                }
+              >
+                <Text style={styles.sortOptionText}>{option.label} (Z-A)</Text>
+                {sortOptions.sortBy === option.key &&
+                  sortOptions.sortOrder === "DESC" && (
+                    <Ionicons name="checkmark" size={18} color="#000000" />
+                  )}
+              </TouchableOpacity>
+            </View>
+          ))}
+        </ScrollView>
+      </View>
+    </Modal>
+  );
+
+  // ── renderPaginationInfo ───────────────────────────
+  const renderPaginationInfo = () => {
+    if (!brandsData) return null;
+    return (
+      <View style={styles.paginationInfo}>
+        <Text style={styles.paginationText}>
+          {brandsData.items.length} OF {brandsData.total}
+        </Text>
+      </View>
+    );
+  };
+
+  // ── renderLoadMore ─────────────────────────────────
+  const renderLoadMore = () => {
+    if (!brandsData?.hasNextPage) return null;
+    return (
+      <TouchableOpacity
+        style={styles.loadMoreButton}
+        onPress={loadMore}
+        disabled={loadingMore}
+      >
+        {loadingMore ? (
+          <ActivityIndicator size="small" color="#000000" />
+        ) : (
+          <Text style={styles.loadMoreText}>LOAD MORE</Text>
+        )}
+      </TouchableOpacity>
+    );
+  };
+
+  // ── renderEmptyState ───────────────────────────────
+  const renderEmptyState = () => (
+    <View style={styles.emptyState}>
+      <Text style={styles.emptyStateTitle}>
+        {searchQuery || filters.location || filters.ownerId
+          ? "NO RESULTS"
+          : "NO BRANDS YET"}
+      </Text>
+      <Text style={styles.emptyStateText}>
+        {searchQuery || filters.location || filters.ownerId
+          ? "Try adjusting your search or filters"
+          : "Create your first brand to get started"}
+      </Text>
+      {(searchQuery ||
+        filters.location ||
+        filters.ownerId ||
+        filters.status) && (
+        <TouchableOpacity style={styles.clearButton} onPress={clearFilters}>
+          <Text style={styles.clearButtonText}>CLEAR FILTERS</Text>
+        </TouchableOpacity>
+      )}
+    </View>
+  );
+
+  // ── Loading / Error states ─────────────────────────
+  if (loading && !brandsData) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="small" color="#000000" />
+        <Text style={styles.loadingText}>Loading...</Text>
+      </View>
+    );
+  }
+
+  if (error && !brandsData) {
+    return (
+      <View style={styles.errorContainer}>
+        <Text style={styles.errorTitle}>SOMETHING WENT WRONG</Text>
+        <Text style={styles.errorText}>{error}</Text>
+        <TouchableOpacity
+          style={styles.retryButton}
+          onPress={() => fetchBrands(1, false)}
+        >
+          <Text style={styles.retryButtonText}>TRY AGAIN</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
-      {loading ? (
-        <>
-          <ListHeader />
-          <View style={styles.center}>
-            <ActivityIndicator size="large" color="#000000" />
-          </View>
-        </>
-      ) : (
-        <FlatList
-          data={filteredBrands}
-          renderItem={renderBrandCard}
-          keyExtractor={(item) => item.id.toString()}
-          ListHeaderComponent={ListHeader}
-          ListFooterComponent={ListFooter}
-          ListEmptyComponent={
-            <View style={styles.empty}>
-              <Text style={styles.emptyText}>NO BRANDS FOUND</Text>
-            </View>
-          }
-          contentContainerStyle={styles.listContent}
-          showsVerticalScrollIndicator={false}
-        />
-      )}
+      <FlatList
+        data={brandsData?.items || []}
+        keyExtractor={(item) => item.id.toString()}
+        renderItem={renderBrand}
+        ListHeaderComponent={
+          <>
+            {renderHeader()}
+            {renderSearchBar()}
+            {renderControls()}
+          </>
+        }
+        ListEmptyComponent={renderEmptyState}
+        ListFooterComponent={
+          <>
+            {renderPaginationInfo()}
+            {renderLoadMore()}
+            <View style={{ height: 100 }} />
+          </>
+        }
+        contentContainerStyle={styles.listContainer}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor="#000000"
+          />
+        }
+      />
+
+      {isAdmin && renderFilterModal()}
+      {renderSortModal()}
     </View>
   );
 };
@@ -268,146 +698,420 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#ffffff",
   },
-  center: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingTop: 80,
+  listContainer: {
+    paddingBottom: 20,
   },
 
-  // ── Header / Search ───────────────────────────────
-  header: {
-    paddingHorizontal: CARD_PADDING,
-    paddingTop: 48,
-    paddingBottom: 40,
-    borderBottomWidth: 0,
+  // ── Header ────────────────────────────────────────
+  headerContainer: {
+    paddingHorizontal: 24,
+    paddingTop: 28,
+    paddingBottom: 20,
   },
-  searchLabel: {
-    fontFamily: "SpaceMono_400Regular",
+  headerRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+  },
+  header: {
+    fontFamily: undefined,
+    fontSize: 28,
+    color: "#000000",
+    // letterSpacing: 2,
+  },
+  headerCount: {
+    fontFamily: undefined,
     fontSize: 10,
     color: "#777777",
-    letterSpacing: 4,
-    textTransform: "uppercase",
-    marginBottom: 16,
+    marginTop: 4,
+    // letterSpacing: 2,
+  },
+
+  // ── Create button ─────────────────────────────────
+  createButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#000000",
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    gap: 6,
+  },
+  createButtonText: {
+    fontFamily: undefined,
+    fontSize: 11,
+    color: "#ffffff",
+    // letterSpacing: 1,
+  },
+
+  // ── Search ────────────────────────────────────────
+  searchSection: {
+    borderBottomWidth: 2,
+    borderBottomColor: "#000000",
+    backgroundColor: "#ffffff",
   },
   searchRow: {
     flexDirection: "row",
-    alignItems: "flex-end",
-    borderBottomWidth: 2,
-    borderBottomColor: "#000000",
-    paddingBottom: 10,
+    alignItems: "center",
+    gap: 12,
+    paddingHorizontal: 24,
+    paddingVertical: 14,
   },
   searchInput: {
     flex: 1,
-    fontFamily: "SpaceGrotesk_700Bold",
-    fontSize: 28,
+    fontFamily: undefined,
+    fontSize: 11,
     color: "#000000",
-    letterSpacing: -0.5,
-    textTransform: "uppercase",
+    // letterSpacing: 2,
     paddingVertical: 0,
   },
-  searchIcon: {
-    paddingBottom: 2,
-    paddingLeft: 8,
-  },
 
-  // ── List ─────────────────────────────────────────
-  listContent: {
-    paddingHorizontal: CARD_PADDING,
-    paddingTop: 40,
+  // ── Controls ──────────────────────────────────────
+  controlsContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#eeeeee",
+  },
+  controlBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderWidth: 1,
+    borderColor: "#000000",
+  },
+  controlBtnActive: {
+    backgroundColor: "#000000",
+  },
+  controlBtnText: {
+    fontFamily: undefined,
+    fontSize: 10,
+    color: "#000000",
+    // letterSpacing: 1,
+  },
+  controlBtnTextActive: {
+    color: "#ffffff",
+  },
+  resultsCount: {
+    fontFamily: undefined,
+    fontSize: 9,
+    color: "#777777",
+    // letterSpacing: 2,
+    marginLeft: "auto",
   },
 
   // ── Brand card ────────────────────────────────────
-  card: {
-    width: "100%",
-    marginBottom: 48,
+  brandContainer: {
+    paddingHorizontal: 24,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: "#eeeeee",
   },
-  imageWrap: {
-    width: "100%",
-    aspectRatio: 1,
+  brandRow: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  logoContainer: {
+    marginRight: 14,
+  },
+  brandLogo: {
+    width: 48,
+    height: 48,
+  },
+  logoPlaceholder: {
+    width: 48,
+    height: 48,
     backgroundColor: "#eeeeee",
-    overflow: "hidden",
-    position: "relative",
-    marginBottom: 12,
-  },
-  image: {
-    width: "100%",
-    height: "100%",
-  },
-  imagePlaceholder: {
-    flex: 1,
-    backgroundColor: "#eeeeee",
-  },
-  indexBadge: {
-    position: "absolute",
-    top: 10,
-    left: 10,
-    backgroundColor: "#000000",
-    paddingHorizontal: 6,
-    paddingVertical: 3,
-  },
-  indexBadgeText: {
-    fontFamily: "SpaceMono_400Regular",
-    fontSize: 9,
-    color: "#ffffff",
-    letterSpacing: 1,
-  },
-  heartOverlay: {
-    position: "absolute",
-    top: 10,
-    right: 10,
-    width: 32,
-    height: 32,
-    backgroundColor: "rgba(0,0,0,0.35)",
     alignItems: "center",
     justifyContent: "center",
   },
-  cardInfo: {
-    gap: 3,
+  logoInitial: {
+    fontFamily: undefined,
+    fontSize: 20,
+    color: "#000000",
+  },
+  brandInfo: {
+    flex: 1,
+    marginRight: 12,
+  },
+  nameStatusRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 3,
   },
   brandName: {
-    fontFamily: "SpaceGrotesk_700Bold",
+    fontFamily: undefined,
     fontSize: 15,
     color: "#000000",
-    letterSpacing: -0.3,
+    flexShrink: 1,
   },
-  brandLocation: {
-    fontFamily: "SpaceMono_400Regular",
-    fontSize: 10,
-    color: "#aaaaaa",
-    letterSpacing: 2,
+  statusBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
   },
-
-  // ── Footer ────────────────────────────────────────
-  footer: {
-    paddingTop: 16,
-  },
-  loadMoreBtn: {
+  statusBadgeActive: {
     backgroundColor: "#000000",
-    paddingVertical: 20,
+  },
+  statusBadgeInactive: {
+    backgroundColor: "#eeeeee",
+  },
+  statusText: {
+    fontFamily: undefined,
+    fontSize: 9,
+    // letterSpacing: 1,
+  },
+  statusTextActive: {
+    color: "#ffffff",
+  },
+  statusTextInactive: {
+    color: "#777777",
+  },
+  brandDescription: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 13,
+    color: "#777777",
+    lineHeight: 18,
+    marginBottom: 6,
+  },
+  metaRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  metaItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+  },
+  metaText: {
+    fontFamily: undefined,
+    fontSize: 9,
+    color: "#aaaaaa",
+    // letterSpacing: 0.5,
+  },
+  arrowText: {
+    fontFamily: undefined,
+    fontSize: 16,
+    color: "#000000",
+  },
+  followButton: {
+    width: 36,
+    height: 36,
     alignItems: "center",
     justifyContent: "center",
-    marginHorizontal: 0,
+  },
+
+  // ── Pagination ────────────────────────────────────
+  paginationInfo: {
+    alignItems: "center",
+    paddingVertical: 20,
+  },
+  paginationText: {
+    fontFamily: undefined,
+    fontSize: 9,
+    color: "#777777",
+    // letterSpacing: 2,
+  },
+
+  // ── Load more ─────────────────────────────────────
+  loadMoreButton: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 14,
+    marginHorizontal: 24,
+    borderWidth: 1,
+    borderColor: "#000000",
   },
   loadMoreText: {
-    fontFamily: "SpaceMono_700Bold",
+    fontFamily: undefined,
     fontSize: 11,
-    color: "#ffffff",
-    letterSpacing: 3,
+    color: "#000000",
+    // letterSpacing: 2,
+  },
+
+  // ── Modal ─────────────────────────────────────────
+  modalContainer: {
+    flex: 1,
+    backgroundColor: "#ffffff",
+  },
+  modalHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 24,
+    paddingVertical: 16,
+    borderBottomWidth: 2,
+    borderBottomColor: "#000000",
+  },
+  modalTitle: {
+    fontFamily: undefined,
+    fontSize: 11,
+    color: "#000000",
+    // letterSpacing: 2,
+  },
+  modalActionCancel: {
+    fontFamily: undefined,
+    fontSize: 11,
+    color: "#777777",
+    // letterSpacing: 1,
+  },
+  modalActionDone: {
+    fontFamily: undefined,
+    fontSize: 11,
+    color: "#000000",
+    // letterSpacing: 1,
+  },
+  modalContent: {
+    flex: 1,
+    paddingHorizontal: 24,
+  },
+
+  // ── Filters ───────────────────────────────────────
+  filterSection: {
+    marginTop: 28,
+  },
+  filterLabel: {
+    fontFamily: undefined,
+    fontSize: 9,
+    color: "#777777",
+    // letterSpacing: 2,
+    marginBottom: 10,
+  },
+  filterInput: {
+    fontFamily: undefined,
+    fontSize: 13,
+    color: "#000000",
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#eeeeee",
+  },
+
+  // ── Sort ──────────────────────────────────────────
+  sortOption: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: "#eeeeee",
+  },
+  sortOptionText: {
+    fontFamily: undefined,
+    fontSize: 10,
+    color: "#000000",
+    // letterSpacing: 2,
     textTransform: "uppercase",
   },
 
-  // ── Empty ─────────────────────────────────────────
-  empty: {
-    paddingTop: 64,
-    alignItems: "center",
+  // ── Status chips ──────────────────────────────────
+  statusChips: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
   },
-  emptyText: {
-    fontFamily: "SpaceMono_400Regular",
+  statusChip: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderWidth: 1,
+    borderColor: "#000000",
+  },
+  statusChipActive: {
+    backgroundColor: "#000000",
+  },
+  statusChipText: {
+    fontFamily: undefined,
+    fontSize: 10,
+    color: "#000000",
+    // letterSpacing: 1,
+  },
+  statusChipTextActive: {
+    color: "#ffffff",
+  },
+
+  // ── States ────────────────────────────────────────
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#ffffff",
+  },
+  loadingText: {
+    fontFamily: undefined,
+    marginTop: 12,
     fontSize: 11,
-    color: "#aaaaaa",
-    letterSpacing: 3,
+    color: "#777777",
+    // letterSpacing: 1,
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 24,
+    backgroundColor: "#ffffff",
+  },
+  errorTitle: {
+    fontFamily: undefined,
+    fontSize: 16,
+    color: "#000000",
+    // letterSpacing: 2,
+    marginBottom: 8,
+  },
+  errorText: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 14,
+    color: "#777777",
+    textAlign: "center",
+    marginBottom: 28,
+  },
+  retryButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 28,
+    borderWidth: 1,
+    borderColor: "#000000",
+  },
+  retryButtonText: {
+    fontFamily: undefined,
+    fontSize: 11,
+    color: "#000000",
+    // letterSpacing: 2,
+  },
+  emptyState: {
+    alignItems: "center",
+    paddingVertical: 60,
+    paddingHorizontal: 24,
+  },
+  emptyStateTitle: {
+    fontFamily: undefined,
+    fontSize: 16,
+    color: "#000000",
+    // letterSpacing: 2,
+    marginBottom: 8,
+  },
+  emptyStateText: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 14,
+    color: "#777777",
+    textAlign: "center",
+    marginBottom: 24,
+    lineHeight: 20,
+  },
+  clearButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderWidth: 1,
+    borderColor: "#000000",
+  },
+  clearButtonText: {
+    fontFamily: undefined,
+    fontSize: 11,
+    color: "#000000",
+    // letterSpacing: 2,
   },
 });
 
-export default BrandsTab;
+export default BrandsScreen;

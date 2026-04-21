@@ -381,7 +381,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 12,
     fontWeight: "800",
-    letterSpacing: 2,
+    // letterSpacing: 2,
     marginBottom: 20,
   },
   reviewItem: {
@@ -449,7 +449,7 @@ const styles = StyleSheet.create({
   boxTitle: {
     fontSize: 11,
     fontWeight: "700",
-    letterSpacing: 1,
+    // letterSpacing: 1,
     marginBottom: 16,
     textAlign: "center",
   },
@@ -509,12 +509,12 @@ const styles = StyleSheet.create({
   addImageText: {
     fontSize: 8,
     fontWeight: "700",
-    letterSpacing: 0.5,
+    // letterSpacing: 0.5,
   },
   imageHint: {
     fontSize: 10,
     marginTop: 8,
-    letterSpacing: 0.5,
+    // letterSpacing: 0.5,
   },
   submitBtn: {
     paddingVertical: 14,
@@ -524,7 +524,7 @@ const styles = StyleSheet.create({
   submitBtnText: {
     fontSize: 11,
     fontWeight: "800",
-    letterSpacing: 1.5,
+    // letterSpacing: 1.5,
   },
   viewerOverlay: {
     flex: 1,

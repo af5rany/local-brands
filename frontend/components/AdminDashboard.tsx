@@ -69,7 +69,7 @@ const AdminDashboard = ({
       description: "View and manage all brands",
       icon: "storefront" as const,
       color: colors.primary,
-      onPress: () => navigateTo("/brands"),
+      onPress: () => navigateTo("/(tabs)/brands"),
     },
     {
       title: "Product Management",
@@ -239,7 +239,7 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: "800",
     marginBottom: 16,
-    letterSpacing: -0.3,
+    // letterSpacing: -0.3,
   },
   sectionTitleTablet: {
     fontSize: 26,

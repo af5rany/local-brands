@@ -738,7 +738,7 @@ const styles = StyleSheet.create({
   header: {
     fontSize: 18,
     fontWeight: "800",
-    letterSpacing: 2,
+    // letterSpacing: 2,
   },
 
   // Sections
@@ -748,13 +748,13 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 14,
     fontWeight: "800",
-    letterSpacing: 2,
+    // letterSpacing: 2,
     marginBottom: 16,
   },
   label: {
     fontSize: 11,
     fontWeight: "700",
-    letterSpacing: 1.5,
+    // letterSpacing: 1.5,
     marginBottom: 10,
   },
   divider: {
@@ -813,7 +813,7 @@ const styles = StyleSheet.create({
   logoPlaceholderText: {
     fontSize: 13,
     fontWeight: "500",
-    letterSpacing: 0.5,
+    // letterSpacing: 0.5,
   },
 
   // Chips
@@ -831,7 +831,7 @@ const styles = StyleSheet.create({
   chipText: {
     fontSize: 10,
     fontWeight: "700",
-    letterSpacing: 1,
+    // letterSpacing: 1,
   },
 
   // Members
@@ -868,7 +868,7 @@ const styles = StyleSheet.create({
   roleBadgeText: {
     fontSize: 9,
     fontWeight: "800",
-    letterSpacing: 1,
+    // letterSpacing: 1,
   },
 
   // Filter
@@ -946,7 +946,7 @@ const styles = StyleSheet.create({
   dropdownItemRole: {
     fontSize: 9,
     fontWeight: "700",
-    letterSpacing: 1,
+    // letterSpacing: 1,
     marginTop: 2,
   },
 
@@ -957,7 +957,7 @@ const styles = StyleSheet.create({
   assignLabel: {
     fontSize: 10,
     fontWeight: "700",
-    letterSpacing: 1.5,
+    // letterSpacing: 1.5,
     marginBottom: 8,
   },
   roleChips: {
@@ -975,7 +975,7 @@ const styles = StyleSheet.create({
   addButtonText: {
     fontSize: 12,
     fontWeight: "800",
-    letterSpacing: 2,
+    // letterSpacing: 2,
   },
 
   // Submit
@@ -989,7 +989,7 @@ const styles = StyleSheet.create({
   submitText: {
     fontSize: 14,
     fontWeight: "800",
-    letterSpacing: 2,
+    // letterSpacing: 2,
   },
   submitDisabled: {
     opacity: 0.4,

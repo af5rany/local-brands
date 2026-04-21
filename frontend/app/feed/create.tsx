@@ -378,7 +378,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 11,
     fontWeight: "700",
-    letterSpacing: 1.5,
+    // letterSpacing: 1.5,
     marginBottom: 12,
   },
 
@@ -446,6 +446,6 @@ const styles = StyleSheet.create({
   submitBtnText: {
     fontSize: 13,
     fontWeight: "700",
-    letterSpacing: 2,
+    // letterSpacing: 2,
   },
 });

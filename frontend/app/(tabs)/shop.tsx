@@ -11,12 +11,16 @@ import {
   ScrollView,
   TextInput,
   Pressable,
+  Alert,
+  ActionSheetIOS,
+  Platform,
 } from "react-native";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/context/ToastContext";
 import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
+import { useImageSearch } from "@/hooks/useImageSearch";
 import FilterPanel, { PanelFilters } from "@/components/FilterPanel";
 import getApiUrl from "@/helpers/getApiUrl";
 import { Product } from "@/types/product";
@@ -178,6 +182,40 @@ const ShopScreen = () => {
     productTypes: [] as string[],
   });
   const [isPanelVisible, setIsPanelVisible] = useState(false);
+
+  // Visual search
+  const {
+    searching: imageSearching,
+    results: imageResults,
+    error: imageError,
+    searchedImageUri,
+    pickFromGallery: pickImageFromGallery,
+    takePhoto: takeImagePhoto,
+    clear: clearImageSearch,
+  } = useImageSearch();
+  const inImageSearchMode = !!searchedImageUri;
+
+  const showImagePickerOptions = useCallback(() => {
+    if (Platform.OS === "ios") {
+      ActionSheetIOS.showActionSheetWithOptions(
+        {
+          options: ["Take a photo", "Choose from gallery", "Cancel"],
+          cancelButtonIndex: 2,
+          title: "Search by image",
+        },
+        (index) => {
+          if (index === 0) takeImagePhoto();
+          else if (index === 1) pickImageFromGallery();
+        },
+      );
+    } else {
+      Alert.alert("Search by image", "", [
+        { text: "Take a photo", onPress: () => takeImagePhoto() },
+        { text: "Choose from gallery", onPress: () => pickImageFromGallery() },
+        { text: "Cancel", style: "cancel" },
+      ]);
+    }
+  }, [takeImagePhoto, pickImageFromGallery]);
 
   // ── Derived ────────────────────────────────────────
   const hasPriceFilter =
@@ -641,15 +679,47 @@ const ShopScreen = () => {
             value={searchQuery}
             onChangeText={handleSearchChange}
             returnKeyType="search"
+            editable={!inImageSearchMode}
           />
           {searchQuery.length > 0 && (
             <Pressable
               onPress={() => { setSearchQuery(""); setSuggestions([]); }}
+              style={{ paddingHorizontal: 4 }}
             >
               <Ionicons name="close" size={16} color="#777777" />
             </Pressable>
           )}
+          <Pressable
+            onPress={showImagePickerOptions}
+            hitSlop={8}
+            style={{ paddingLeft: 6 }}
+          >
+            <Ionicons name="camera-outline" size={18} color="#000000" />
+          </Pressable>
         </View>
+
+        {/* Visual search banner */}
+        {inImageSearchMode && (
+          <View style={styles.visualBanner}>
+            {searchedImageUri && (
+              <Image
+                source={{ uri: searchedImageUri }}
+                style={styles.visualThumb}
+                resizeMode="cover"
+              />
+            )}
+            <Text style={styles.visualLabel}>VISUAL SEARCH</Text>
+            <Pressable onPress={clearImageSearch} hitSlop={8}>
+              <Text style={styles.visualClear}>CLEAR</Text>
+            </Pressable>
+          </View>
+        )}
+
+        {imageError && inImageSearchMode && (
+          <View style={styles.visualError}>
+            <Text style={styles.visualErrorText}>{imageError}</Text>
+          </View>
+        )}
 
         {/* Suggestions */}
         {suggestions.length > 0 && searchQuery.length > 0 && (
@@ -679,21 +749,40 @@ const ShopScreen = () => {
 
       {/* ── Product grid ──────────────────────────── */}
       <FlatList
-        data={products}
+        data={inImageSearchMode ? imageResults : products}
         keyExtractor={(item) => item.id.toString()}
         renderItem={renderProductCard}
         numColumns={2}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
-        ListHeaderComponent={renderListHeader}
-        ListFooterComponent={renderListFooter}
-        ListEmptyComponent={renderEmpty}
+        ListHeaderComponent={inImageSearchMode ? null : renderListHeader}
+        ListFooterComponent={inImageSearchMode ? null : renderListFooter}
+        ListEmptyComponent={
+          inImageSearchMode
+            ? imageSearching
+              ? (
+                <View style={styles.emptyContainer}>
+                  <ActivityIndicator size="large" color="#000000" />
+                </View>
+              )
+              : (
+                <View style={styles.emptyContainer}>
+                  <Text style={styles.emptyTitle}>NO SIMILAR PRODUCTS</Text>
+                  <Text style={styles.emptySubtitle}>
+                    TRY A DIFFERENT IMAGE
+                  </Text>
+                </View>
+              )
+            : renderEmpty
+        }
         onEndReached={() => {
-          if (hasMore && !productsLoading) loadMore();
+          if (!inImageSearchMode && hasMore && !productsLoading) loadMore();
         }}
         onEndReachedThreshold={0.5}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor="#000000" />
+          !inImageSearchMode ? (
+            <RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor="#000000" />
+          ) : undefined
         }
       />
 
@@ -744,10 +833,10 @@ const cardStyles = StyleSheet.create({
     paddingVertical: 4,
   },
   limitedBadgeText: {
-    fontFamily: "SpaceMono_400Regular",
+    fontFamily: undefined,
     fontSize: 8,
     color: "#ffffff",
-    letterSpacing: 2,
+    // letterSpacing: 2,
     textTransform: "uppercase",
   },
   heartBtn: {
@@ -764,17 +853,17 @@ const cardStyles = StyleSheet.create({
     gap: 4,
   },
   brandLabel: {
-    fontFamily: "SpaceMono_400Regular",
+    fontFamily: undefined,
     fontSize: 10,
     color: "#777777",
-    letterSpacing: 2,
+    // letterSpacing: 2,
     textTransform: "uppercase",
   },
   productName: {
-    fontFamily: "SpaceMono_700Bold",
+    fontFamily: undefined,
     fontSize: 11,
     color: "#000000",
-    letterSpacing: 1,
+    // letterSpacing: 1,
     textTransform: "uppercase",
     lineHeight: 16,
   },
@@ -785,12 +874,12 @@ const cardStyles = StyleSheet.create({
     marginTop: 2,
   },
   price: {
-    fontFamily: "SpaceMono_400Regular",
+    fontFamily: undefined,
     fontSize: 12,
     color: "#000000",
   },
   originalPrice: {
-    fontFamily: "SpaceMono_400Regular",
+    fontFamily: undefined,
     fontSize: 11,
     color: "#aaaaaa",
     textDecorationLine: "line-through",
@@ -826,10 +915,10 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     flex: 1,
-    fontFamily: "SpaceMono_400Regular",
+    fontFamily: undefined,
     fontSize: 11,
     color: "#000000",
-    letterSpacing: 2,
+    // letterSpacing: 2,
     paddingVertical: 0,
   },
   suggestionBox: {
@@ -849,17 +938,60 @@ const styles = StyleSheet.create({
     borderBottomColor: "#eeeeee",
   },
   suggestionText: {
-    fontFamily: "SpaceMono_400Regular",
+    fontFamily: undefined,
     fontSize: 10,
     color: "#000000",
-    letterSpacing: 1,
+    // letterSpacing: 1,
     flex: 1,
   },
   suggestionType: {
-    fontFamily: "SpaceMono_400Regular",
+    fontFamily: undefined,
     fontSize: 9,
     color: "#777777",
-    letterSpacing: 2,
+    // letterSpacing: 2,
+  },
+
+  // ── Visual search ─────────────────────────────────
+  visualBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingHorizontal: 24,
+    paddingVertical: 10,
+    borderTopWidth: 1,
+    borderTopColor: "#eeeeee",
+    backgroundColor: "#ffffff",
+  },
+  visualThumb: {
+    width: 28,
+    height: 28,
+    borderRadius: 2,
+    backgroundColor: "#f3f3f4",
+  },
+  visualLabel: {
+    flex: 1,
+    fontFamily: undefined,
+    fontSize: 10,
+    color: "#000000",
+    // letterSpacing: 2,
+    fontWeight: "700",
+  },
+  visualClear: {
+    fontFamily: undefined,
+    fontSize: 10,
+    color: "#777777",
+    // letterSpacing: 2,
+    fontWeight: "700",
+  },
+  visualError: {
+    paddingHorizontal: 24,
+    paddingVertical: 8,
+    backgroundColor: "#fff0f0",
+  },
+  visualErrorText: {
+    color: "#cc0000",
+    fontSize: 11,
+    fontFamily: undefined,
   },
 
   // ── Gender tabs ───────────────────────────────────
@@ -879,10 +1011,10 @@ const styles = StyleSheet.create({
     backgroundColor: "#000000",
   },
   genderTabText: {
-    fontFamily: "SpaceMono_400Regular",
+    fontFamily: undefined,
     fontSize: 11,
     color: "#000000",
-    letterSpacing: 3,
+    // letterSpacing: 3,
     textTransform: "uppercase",
   },
   genderTabTextActive: {
@@ -910,10 +1042,10 @@ const styles = StyleSheet.create({
     borderColor: "#000000",
   },
   categoryChipText: {
-    fontFamily: "SpaceMono_400Regular",
+    fontFamily: undefined,
     fontSize: 10,
     color: "#000000",
-    letterSpacing: 2,
+    // letterSpacing: 2,
     textTransform: "uppercase",
   },
   categoryChipTextActive: {
@@ -944,25 +1076,25 @@ const styles = StyleSheet.create({
     backgroundColor: "#000000",
   },
   filterBtnText: {
-    fontFamily: "SpaceMono_400Regular",
+    fontFamily: undefined,
     fontSize: 10,
     color: "#000000",
-    letterSpacing: 1,
+    // letterSpacing: 1,
   },
   filterBtnTextActive: {
     color: "#ffffff",
   },
   filterBtnBadge: {
-    fontFamily: "SpaceMono_700Bold",
+    fontFamily: undefined,
     fontSize: 10,
     color: "#ffffff",
-    letterSpacing: 0,
+    // letterSpacing: 0,
   },
   resultsCount: {
-    fontFamily: "SpaceMono_400Regular",
+    fontFamily: undefined,
     fontSize: 9,
     color: "#777777",
-    letterSpacing: 2,
+    // letterSpacing: 2,
     marginLeft: "auto",
   },
 
@@ -983,10 +1115,10 @@ const styles = StyleSheet.create({
     borderColor: "#000000",
   },
   activeChipText: {
-    fontFamily: "SpaceMono_400Regular",
+    fontFamily: undefined,
     fontSize: 9,
     color: "#000000",
-    letterSpacing: 2,
+    // letterSpacing: 2,
   },
 
   // ── Grid ──────────────────────────────────────────
@@ -1015,10 +1147,10 @@ const styles = StyleSheet.create({
     backgroundColor: "#000000",
   },
   endText: {
-    fontFamily: "SpaceMono_400Regular",
+    fontFamily: undefined,
     fontSize: 9,
     color: "#000000",
-    letterSpacing: 3,
+    // letterSpacing: 3,
   },
   emptyContainer: {
     paddingVertical: 80,
@@ -1026,17 +1158,17 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   emptyTitle: {
-    fontFamily: "SpaceGrotesk_700Bold",
+    fontFamily: undefined,
     fontSize: 20,
     color: "#000000",
     textTransform: "uppercase",
-    letterSpacing: 2,
+    // letterSpacing: 2,
   },
   emptySubtitle: {
-    fontFamily: "SpaceMono_400Regular",
+    fontFamily: undefined,
     fontSize: 10,
     color: "#777777",
-    letterSpacing: 2,
+    // letterSpacing: 2,
     textTransform: "uppercase",
   },
 });

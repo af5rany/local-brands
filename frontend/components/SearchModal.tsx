@@ -11,11 +11,15 @@ import {
   ActivityIndicator,
   useWindowDimensions,
   SafeAreaView,
+  ActionSheetIOS,
+  Alert,
+  Platform,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useThemeColors } from "@/hooks/useThemeColor";
 import { useAuth } from "@/context/AuthContext";
+import { useImageSearch } from "@/hooks/useImageSearch";
 import getApiUrl from "@/helpers/getApiUrl";
 import { Product } from "@/types/product";
 
@@ -36,6 +40,17 @@ export default function SearchModal({ visible, onClose }: SearchModalProps) {
   const [loading, setLoading] = useState(false);
   const cachedProducts = useRef<Product[]>([]);
 
+  const {
+    searching: imageSearching,
+    results: imageResults,
+    error: imageError,
+    searchedImageUri,
+    pickFromGallery,
+    takePhoto,
+    clear: clearImageSearch,
+  } = useImageSearch();
+
+  const inImageSearchMode = !!searchedImageUri;
   const itemWidth = (width - 48) / 2;
 
   // Fetch initial/popular products when modal opens
@@ -43,6 +58,7 @@ export default function SearchModal({ visible, onClose }: SearchModalProps) {
     if (!visible) {
       setQuery("");
       setProducts([]);
+      clearImageSearch();
       return;
     }
 
@@ -72,7 +88,7 @@ export default function SearchModal({ visible, onClose }: SearchModalProps) {
       });
 
     return () => { cancelled = true; };
-  }, [visible, token]);
+  }, [visible, token, clearImageSearch]);
 
   const searchProducts = useCallback(
     async (text: string) => {
@@ -110,8 +126,37 @@ export default function SearchModal({ visible, onClose }: SearchModalProps) {
     onClose();
   };
 
+  const handleOpenPicker = () => {
+    if (Platform.OS === "ios") {
+      ActionSheetIOS.showActionSheetWithOptions(
+        {
+          options: ["Take a photo", "Choose from gallery", "Cancel"],
+          cancelButtonIndex: 2,
+          title: "Search by image",
+        },
+        (index) => {
+          if (index === 0) takePhoto();
+          else if (index === 1) pickFromGallery();
+        },
+      );
+    } else {
+      Alert.alert("Search by image", "", [
+        { text: "Take a photo", onPress: () => takePhoto() },
+        { text: "Choose from gallery", onPress: () => pickFromGallery() },
+        { text: "Cancel", style: "cancel" },
+      ]);
+    }
+  };
+
+  const handleClearImageSearch = () => {
+    clearImageSearch();
+  };
+
+  const displayedProducts = inImageSearchMode ? imageResults : products;
+  const isLoading = inImageSearchMode ? imageSearching : loading;
+
   const renderProduct = ({ item }: { item: Product }) => {
-    const image = item.mainImage || item.variants?.[0]?.images?.[0];
+    const image = item.mainImage;
     const hasDiscount = item.salePrice && item.salePrice < item.price;
 
     return (
@@ -178,14 +223,46 @@ export default function SearchModal({ visible, onClose }: SearchModalProps) {
             autoCapitalize="none"
             autoCorrect={false}
             returnKeyType="search"
+            editable={!inImageSearchMode}
           />
+          <Pressable onPress={handleOpenPicker} hitSlop={8} style={styles.iconButton}>
+            <Ionicons name="camera-outline" size={22} color={colors.text} />
+          </Pressable>
           <Pressable onPress={onClose} hitSlop={8}>
             <Ionicons name="close" size={22} color={colors.text} />
           </Pressable>
         </View>
 
+        {/* Visual search banner */}
+        {inImageSearchMode && (
+          <View style={[styles.visualBanner, { borderBottomColor: colors.border }]}>
+            {searchedImageUri && (
+              <Image
+                source={{ uri: searchedImageUri }}
+                style={styles.visualThumb}
+                resizeMode="cover"
+              />
+            )}
+            <Text style={[styles.visualLabel, { color: colors.text }]}>
+              VISUAL SEARCH
+            </Text>
+            <Pressable onPress={handleClearImageSearch} hitSlop={8}>
+              <Text style={[styles.clearLabel, { color: colors.textTertiary }]}>
+                CLEAR
+              </Text>
+            </Pressable>
+          </View>
+        )}
+
+        {/* Error banner */}
+        {imageError && inImageSearchMode && (
+          <View style={styles.errorBanner}>
+            <Text style={styles.errorText}>{imageError}</Text>
+          </View>
+        )}
+
         {/* Results */}
-        {loading && products.length === 0 ? (
+        {isLoading && displayedProducts.length === 0 ? (
           <ActivityIndicator
             size="large"
             color={colors.text}
@@ -193,7 +270,7 @@ export default function SearchModal({ visible, onClose }: SearchModalProps) {
           />
         ) : (
           <FlatList
-            data={products}
+            data={displayedProducts}
             keyExtractor={(item) => item.id.toString()}
             numColumns={2}
             columnWrapperStyle={styles.row}
@@ -202,23 +279,32 @@ export default function SearchModal({ visible, onClose }: SearchModalProps) {
             keyboardShouldPersistTaps="handled"
             renderItem={renderProduct}
             ListHeaderComponent={
-              products.length > 0 ? (
+              displayedProducts.length > 0 ? (
                 <Text style={[styles.sectionTitle, { color: colors.textTertiary }]}>
-                  {query.trim() ? "RESULTS" : "PRODUCTS"}
+                  {inImageSearchMode
+                    ? "SIMILAR PRODUCTS"
+                    : query.trim()
+                      ? "RESULTS"
+                      : "PRODUCTS"}
                 </Text>
               ) : null
             }
             ListEmptyComponent={
-              !loading ? (
+              !isLoading ? (
                 <View style={styles.emptyState}>
                   <Text style={[styles.emptyText, { color: colors.textTertiary }]}>
-                    {query.trim() ? "No products found" : ""}
+                    {inImageSearchMode
+                      ? "No similar products found"
+                      : query.trim()
+                        ? "No products found"
+                        : ""}
                   </Text>
                 </View>
               ) : null
             }
           />
         )}
+
       </SafeAreaView>
     </Modal>
   );
@@ -243,10 +329,46 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 4,
   },
+  iconButton: {
+    paddingHorizontal: 2,
+  },
+  visualBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    gap: 12,
+    borderBottomWidth: 0.5,
+  },
+  visualThumb: {
+    width: 32,
+    height: 32,
+    borderRadius: 4,
+  },
+  visualLabel: {
+    flex: 1,
+    fontSize: 11,
+    fontWeight: "700",
+    // letterSpacing: 2,
+  },
+  clearLabel: {
+    fontSize: 11,
+    fontWeight: "700",
+    // letterSpacing: 2,
+  },
+  errorBanner: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    backgroundColor: "#fff0f0",
+  },
+  errorText: {
+    color: "#cc0000",
+    fontSize: 12,
+  },
   sectionTitle: {
     fontSize: 11,
     fontWeight: "700",
-    letterSpacing: 2,
+    // letterSpacing: 2,
     marginBottom: 12,
   },
   grid: {
@@ -272,7 +394,7 @@ const styles = StyleSheet.create({
   productName: {
     fontSize: 12,
     fontWeight: "600",
-    letterSpacing: 0.5,
+    // letterSpacing: 0.5,
     textTransform: "uppercase",
   },
   priceRow: {

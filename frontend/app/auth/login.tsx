@@ -391,13 +391,14 @@ const styles = StyleSheet.create({
     fontSize: 26,
     fontWeight: "800",
     marginBottom: 6,
-    letterSpacing: -0.3,
+    // letterSpacing: -0.3,
   },
   subtitle: { fontSize: 15, marginBottom: 36, fontWeight: "500" },
 
   // ── Fields ────────────────────────────────
   fieldGroup: { width: "100%", marginBottom: 18, gap: 7 },
-  label: { fontSize: 13, fontWeight: "600", letterSpacing: 0.2 },
+  label: { fontSize: 13, fontWeight: "600", // letterSpacing: 0.2 
+  },
   inputWrapper: {
     flexDirection: "row",
     alignItems: "center",

@@ -78,7 +78,20 @@
       "Bash(npx react-native-community/cli doctor)",
       "Bash(node_modules/.bin/tsc --noEmit --skipLibCheck)",
       "Bash(git add:*)",
-      "Bash(git checkout:*)"
+      "Bash(git checkout:*)",
+      "Bash(find /Users/f5rany/Documents/Work/local-brands/backend -name .env* -type f)",
+      "Bash(find /Users/f5rany/Documents/Work/local-brands/backend -name *.sql -o -name init*)",
+      "Bash(npm ls:*)",
+      "Bash(ipconfig getifaddr:*)",
+      "Bash(PGPASSWORD=postgres psql -h localhost -U postgres -d local_brands_db -c \"SELECT COUNT\\(*\\) FROM product_embedding WHERE embedding IS NOT NULL;\" 2>&1)",
+      "Bash(PGPASSWORD=postgres psql -h localhost -U postgres -d local_brands_db -c \"SELECT \\\\\"productId\\\\\", \\\\\"imageUrl\\\\\" FROM product_embedding LIMIT 3;\" 2>&1)",
+      "Bash(PGPASSWORD=postgres psql -h localhost -U postgres -d local_brands_db -c \"DELETE FROM product_embedding WHERE embedding IS NULL;\" 2>&1)",
+      "Bash(PGPASSWORD=postgres psql -h localhost -U postgres -d local_brands_db -t -c \"SELECT email FROM \"\"user\"\" WHERE role=''''admin'''' LIMIT 1;\")",
+      "Bash(PGPASSWORD=postgres psql -h localhost -U postgres -d local_brands_db -t -c \"SELECT email, role FROM \\\\\"user\\\\\" WHERE role='admin';\" 2>&1)",
+      "Bash(PGPASSWORD=postgres psql -h localhost -U postgres -d local_brands_db -t -c \"*\" 2>&1)",
+      "Bash(npx ts-node -e \":*)",
+      "Read(//private/tmp/**)",
+      "Bash(python3 -c \":*)"
     ]
   }
 }

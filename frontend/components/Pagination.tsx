@@ -188,7 +188,7 @@ const styles = StyleSheet.create({
   },
   ellipsisText: {
     fontSize: 14,
-    letterSpacing: 2,
+    // letterSpacing: 2,
   },
 });
 

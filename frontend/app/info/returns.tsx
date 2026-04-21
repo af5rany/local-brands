@@ -182,7 +182,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 16,
     fontWeight: "700",
-    letterSpacing: 0.2,
+    // letterSpacing: 0.2,
   },
   content: {
     padding: 20,
@@ -199,7 +199,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "800",
     textAlign: "center",
-    letterSpacing: -0.3,
+    // letterSpacing: -0.3,
     marginTop: 8,
   },
   heroSubtitle: {
@@ -210,7 +210,7 @@ const styles = StyleSheet.create({
   sectionLabel: {
     fontSize: 13,
     fontWeight: "700",
-    letterSpacing: 0.5,
+    // letterSpacing: 0.5,
     textTransform: "uppercase",
     marginTop: 4,
   },
@@ -225,7 +225,7 @@ const styles = StyleSheet.create({
   stepNumber: {
     fontSize: 22,
     fontWeight: "800",
-    letterSpacing: -0.5,
+    // letterSpacing: -0.5,
     lineHeight: 26,
   },
   stepBody: {

@@ -166,7 +166,7 @@ const CreateBrandScreen = () => {
         Alert.alert("Success", "Brand created successfully!", [
           {
             text: "OK",
-            onPress: () => router.replace("/brands"),
+            onPress: () => router.replace("/(tabs)/brands"),
           },
         ]);
       } else {
@@ -555,7 +555,7 @@ const styles = StyleSheet.create({
   header: {
     fontSize: 18,
     fontWeight: "800",
-    letterSpacing: 2,
+    // letterSpacing: 2,
   },
 
   // Sections
@@ -565,7 +565,7 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 11,
     fontWeight: "700",
-    letterSpacing: 1.5,
+    // letterSpacing: 1.5,
     marginBottom: 10,
   },
 
@@ -620,7 +620,7 @@ const styles = StyleSheet.create({
   logoPlaceholderText: {
     fontSize: 13,
     fontWeight: "500",
-    letterSpacing: 0.5,
+    // letterSpacing: 0.5,
   },
 
   // Filter chips
@@ -639,7 +639,7 @@ const styles = StyleSheet.create({
   filterChipText: {
     fontSize: 10,
     fontWeight: "700",
-    letterSpacing: 1,
+    // letterSpacing: 1,
   },
 
   // Dropdown
@@ -709,7 +709,7 @@ const styles = StyleSheet.create({
   dropdownItemRole: {
     fontSize: 9,
     fontWeight: "700",
-    letterSpacing: 1,
+    // letterSpacing: 1,
     marginTop: 2,
   },
 
@@ -740,7 +740,7 @@ const styles = StyleSheet.create({
   selectedRole: {
     fontSize: 10,
     fontWeight: "600",
-    letterSpacing: 0.8,
+    // letterSpacing: 0.8,
     marginTop: 2,
   },
 
@@ -755,7 +755,7 @@ const styles = StyleSheet.create({
   submitText: {
     fontSize: 14,
     fontWeight: "800",
-    letterSpacing: 2,
+    // letterSpacing: 2,
   },
   submitDisabled: {
     opacity: 0.4,

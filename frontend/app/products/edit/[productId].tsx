@@ -791,7 +791,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  navTitle: { fontSize: 16, fontWeight: "700", letterSpacing: 0.2 },
+  navTitle: { fontSize: 16, fontWeight: "700", // letterSpacing: 0.2 
+},
   scrollContainer: { padding: 20, paddingBottom: 60 },
   header: { fontSize: 24, fontWeight: "bold", marginBottom: 20 },
   card: {

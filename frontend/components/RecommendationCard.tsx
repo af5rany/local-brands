@@ -281,7 +281,7 @@ const styles = StyleSheet.create({
   brandName: {
     fontSize: 11,
     textTransform: "uppercase",
-    letterSpacing: 0.8,
+    // letterSpacing: 0.8,
     fontWeight: "600",
   },
   productName: {

@@ -374,7 +374,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 11,
     fontWeight: "700",
-    letterSpacing: 1.5,
+    // letterSpacing: 1.5,
     marginBottom: 8,
     marginTop: 20,
     paddingHorizontal: 4,

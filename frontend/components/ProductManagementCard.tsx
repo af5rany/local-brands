@@ -225,7 +225,7 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: "#ffffff",
     textTransform: "uppercase",
-    letterSpacing: 0.4,
+    // letterSpacing: 0.4,
   },
   editButton: {
     width: 30,

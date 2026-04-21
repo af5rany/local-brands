@@ -1033,7 +1033,7 @@ const styles = StyleSheet.create({
   sectionLabel: {
     fontSize: 13,
     fontWeight: "700",
-    letterSpacing: 0.3,
+    // letterSpacing: 0.3,
     marginBottom: 14,
   },
   divider: { height: 0.5, marginHorizontal: 16 },

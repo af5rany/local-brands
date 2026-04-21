@@ -19,10 +19,13 @@ import { ReferralsModule } from './referrals/referrals.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { TryOnModule } from './try-on/try-on.module';
 import { FeedModule } from './feed/feed.module';
+import { EventEmitterModule } from '@nestjs/event-emitter';
+import { ImageSearchModule } from './image-search/image-search.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    EventEmitterModule.forRoot(),
     BullModule.forRoot({
       connection: process.env.REDIS_URL
         ? { url: process.env.REDIS_URL }
@@ -60,6 +63,7 @@ import { FeedModule } from './feed/feed.module';
     NotificationsModule,
     TryOnModule,
     FeedModule,
+    ImageSearchModule,
   ],
   controllers: [AppController],
   providers: [AppService],

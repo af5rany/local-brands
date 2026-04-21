@@ -1,7 +1,7 @@
 import { useState, useCallback } from "react";
 import * as ImagePicker from "expo-image-picker";
 import * as ImageManipulator from "expo-image-manipulator";
-import axios from "axios";
+
 
 const CLOUDINARY_URL = "https://api.cloudinary.com/v1_1/dg4l2eelg/image/upload";
 const UPLOAD_PRESET = "UnsignedPreset";
@@ -51,33 +51,43 @@ export const useCloudinaryUpload = () => {
         } as any);
         formData.append("upload_preset", UPLOAD_PRESET);
 
-        // 4. Upload with Progress
-        const response = await axios.post(CLOUDINARY_URL, formData, {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
-          onUploadProgress: (progressEvent) => {
-            const progress = progressEvent.total
-              ? Math.round((progressEvent.loaded * 100) / progressEvent.total)
-              : 0;
+        // 4. Upload with Progress (using XMLHttpRequest for progress tracking)
+        const cloudUrl = await new Promise<string>((resolve, reject) => {
+          const xhr = new XMLHttpRequest();
+          xhr.open("POST", CLOUDINARY_URL);
 
+          xhr.upload.onprogress = (event) => {
+            const progress = event.lengthComputable
+              ? Math.round((event.loaded * 100) / event.total)
+              : 0;
             setUploads((prev) => ({
               ...prev,
               [uri]: { ...prev[uri], progress },
             }));
-          },
+          };
+
+          xhr.onload = () => {
+            if (xhr.status >= 200 && xhr.status < 300) {
+              const data = JSON.parse(xhr.responseText);
+              if (data?.secure_url) {
+                resolve(data.secure_url);
+              } else {
+                reject(new Error("Invalid response from Cloudinary"));
+              }
+            } else {
+              reject(new Error(`Upload failed with status ${xhr.status}`));
+            }
+          };
+
+          xhr.onerror = () => reject(new Error("Upload failed"));
+          xhr.send(formData);
         });
 
-        if (response.data && response.data.secure_url) {
-          const cloudUrl = response.data.secure_url;
-          setUploads((prev) => ({
-            ...prev,
-            [uri]: { ...prev[uri], status: "success", cloudUrl, progress: 100 },
-          }));
-          return cloudUrl;
-        } else {
-          throw new Error("Invalid response from Cloudinary");
-        }
+        setUploads((prev) => ({
+          ...prev,
+          [uri]: { ...prev[uri], status: "success", cloudUrl, progress: 100 },
+        }));
+        return cloudUrl;
       } catch (error: any) {
         console.error("Cloudinary upload error:", error);
         setUploads((prev) => ({

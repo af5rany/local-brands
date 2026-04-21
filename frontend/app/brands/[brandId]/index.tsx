@@ -106,7 +106,7 @@ const BrandDetailScreen = () => {
                 throw new Error(errorData.message || "Failed to delete brand");
               }
               Alert.alert("Success", "Brand deleted successfully");
-              router.replace("/brands");
+              router.replace("/(tabs)/brands");
             } catch (err: any) {
               Alert.alert("Error", err.message);
             }
@@ -852,7 +852,9 @@ const styles = StyleSheet.create({
     borderRadius: 0,
     borderWidth: 1,
   },
-  goBackBtnText: { fontSize: 12, fontWeight: "700", letterSpacing: 1.5 },
+  goBackBtnText: {
+    fontSize: 12, fontWeight: "700", // letterSpacing: 1.5
+  },
 
   // ── Nav Bar ─────────────────────────────────
   navBar: {
@@ -877,7 +879,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "700",
     textAlign: "center",
-    letterSpacing: 1,
+    // letterSpacing: 1,
     textTransform: "uppercase",
   },
 
@@ -904,7 +906,7 @@ const styles = StyleSheet.create({
   heroName: {
     fontSize: 24,
     fontWeight: "800",
-    letterSpacing: 1,
+    // letterSpacing: 1,
     textTransform: "uppercase",
     marginBottom: 8,
     textAlign: "center",
@@ -922,7 +924,7 @@ const styles = StyleSheet.create({
   statusBadgeText: {
     fontSize: 10,
     fontWeight: "700",
-    letterSpacing: 1.5,
+    // letterSpacing: 1.5,
   },
   heroDescription: {
     fontSize: 14,
@@ -947,7 +949,10 @@ const styles = StyleSheet.create({
   },
   heroStat: { alignItems: "center", flex: 1 },
   heroStatValue: { fontSize: 22, fontWeight: "800" },
-  heroStatLabel: { fontSize: 10, fontWeight: "700", letterSpacing: 1.5, textTransform: "uppercase", marginTop: 2 },
+  heroStatLabel: {
+    fontSize: 10, fontWeight: "700", // letterSpacing: 1.5,
+    textTransform: "uppercase", marginTop: 2
+  },
   heroStatDivider: { width: 1, height: 32, alignSelf: "center" },
   followBtn: {
     marginTop: 16,
@@ -961,7 +966,7 @@ const styles = StyleSheet.create({
   followBtnText: {
     fontSize: 11,
     fontWeight: "800",
-    letterSpacing: 1.5,
+    // letterSpacing: 1.5,
   },
 
   // ── Management Section ──────────────────────
@@ -976,7 +981,10 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderRadius: 0,
   },
-  actionBtnText: { fontSize: 12, fontWeight: "700", letterSpacing: 0.5, textTransform: "uppercase" },
+  actionBtnText: {
+    fontSize: 12, fontWeight: "700", // letterSpacing: 0.5
+    textTransform: "uppercase"
+  },
 
   statusCard: {
     borderRadius: 0,
@@ -986,7 +994,7 @@ const styles = StyleSheet.create({
   statusCardTitle: {
     fontSize: 10,
     fontWeight: "800",
-    letterSpacing: 2,
+    // letterSpacing: 2,
     marginBottom: 12,
   },
   statusOptions: {
@@ -1003,7 +1011,9 @@ const styles = StyleSheet.create({
     borderRadius: 0,
     borderWidth: 1,
   },
-  statusOptionText: { fontSize: 12, fontWeight: "700", letterSpacing: 0.5 },
+  statusOptionText: {
+    fontSize: 12, fontWeight: "700", // letterSpacing: 0.5 
+  },
 
   // ── Search & Filter ─────────────────────────
   searchFilterRow: {
@@ -1058,7 +1068,10 @@ const styles = StyleSheet.create({
     borderRadius: 0,
     borderWidth: 1,
   },
-  sortChipText: { fontSize: 11, fontWeight: "700", letterSpacing: 0.5, textTransform: "uppercase" },
+  sortChipText: {
+    fontSize: 11, fontWeight: "700", // letterSpacing: 0.5, 
+    textTransform: "uppercase"
+  },
 
   // ── Products Header ─────────────────────────
   productsHeader: {
@@ -1069,7 +1082,10 @@ const styles = StyleSheet.create({
     marginTop: 24,
     marginBottom: 14,
   },
-  productsTitle: { fontSize: 12, fontWeight: "800", letterSpacing: 2, textTransform: "uppercase" },
+  productsTitle: {
+    fontSize: 12, fontWeight: "800", // letterSpacing: 2, 
+    textTransform: "uppercase"
+  },
   productCount: { fontSize: 12, fontWeight: "500" },
 
   // ── Products List ───────────────────────────
@@ -1082,7 +1098,10 @@ const styles = StyleSheet.create({
     marginTop: 12,
     borderWidth: 1,
   },
-  loadMoreText: { fontSize: 12, fontWeight: "700", letterSpacing: 0.5, textTransform: "uppercase" },
+  loadMoreText: {
+    fontSize: 12, fontWeight: "700", // letterSpacing: 0.5, 
+    textTransform: "uppercase"
+  },
 
   // ── Empty State ─────────────────────────────
   emptyState: {
@@ -1105,7 +1124,10 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   dangerHeader: { flexDirection: "row", alignItems: "center", gap: 8 },
-  dangerTitle: { fontSize: 12, fontWeight: "800", letterSpacing: 1, textTransform: "uppercase" },
+  dangerTitle: {
+    fontSize: 12, fontWeight: "800", // letterSpacing: 1, 
+    textTransform: "uppercase"
+  },
   dangerDescription: { fontSize: 13, lineHeight: 20 },
   deleteBtn: {
     flexDirection: "row",
@@ -1117,7 +1139,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     marginTop: 8,
   },
-  deleteBtnText: { fontSize: 12, fontWeight: "700", letterSpacing: 0.5, textTransform: "uppercase" },
+  deleteBtnText: {
+    fontSize: 12, fontWeight: "700", // letterSpacing: 0.5, 
+    textTransform: "uppercase"
+  },
 });
 
 export default BrandDetailScreen;

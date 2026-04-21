@@ -174,7 +174,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 16,
     fontWeight: "700",
-    letterSpacing: 0.2,
+    // letterSpacing: 0.2,
   },
   content: {
     padding: 20,
@@ -190,13 +190,13 @@ const styles = StyleSheet.create({
   logoMark: {
     fontSize: 13,
     fontWeight: "800",
-    letterSpacing: 4,
+    // letterSpacing: 4,
   },
   heroTitle: {
     fontSize: 22,
     fontWeight: "800",
     textAlign: "center",
-    letterSpacing: -0.5,
+    // letterSpacing: -0.5,
     marginTop: 4,
   },
   heroSubtitle: {
@@ -222,7 +222,7 @@ const styles = StyleSheet.create({
   statValue: {
     fontSize: 22,
     fontWeight: "800",
-    letterSpacing: -0.5,
+    // letterSpacing: -0.5,
   },
   statLabel: {
     fontSize: 12,
@@ -237,7 +237,7 @@ const styles = StyleSheet.create({
   missionLabel: {
     fontSize: 11,
     fontWeight: "700",
-    letterSpacing: 1,
+    // letterSpacing: 1,
   },
   missionText: {
     fontSize: 15,
@@ -248,7 +248,7 @@ const styles = StyleSheet.create({
   sectionLabel: {
     fontSize: 13,
     fontWeight: "700",
-    letterSpacing: 0.5,
+    // letterSpacing: 0.5,
     textTransform: "uppercase",
     marginTop: 4,
   },

@@ -20,8 +20,8 @@ const COLORS = {
 };
 
 const FONTS = {
-  headline: "SpaceGrotesk_700Bold",
-  mono: "SpaceMono_400Regular",
+  headline: undefined,
+  mono: undefined,
   body: "Inter_400Regular",
 };
 
@@ -190,7 +190,7 @@ const styles = StyleSheet.create({
   brandMarkText: {
     fontFamily: FONTS.headline,
     fontSize: 14,
-    letterSpacing: 4,
+    // letterSpacing: 4,
     color: COLORS.black,
     textTransform: "uppercase",
   },
@@ -243,7 +243,7 @@ const styles = StyleSheet.create({
   infoCellLabel: {
     fontFamily: FONTS.mono,
     fontSize: 9,
-    letterSpacing: 2,
+    // letterSpacing: 2,
     color: COLORS.gray,
     textTransform: "uppercase",
   },
@@ -251,7 +251,7 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.mono,
     fontSize: 12,
     color: COLORS.black,
-    letterSpacing: 0.5,
+    // letterSpacing: 0.5,
   },
 
   // Totals
@@ -270,7 +270,7 @@ const styles = StyleSheet.create({
   totalsLabel: {
     fontFamily: FONTS.mono,
     fontSize: 10,
-    letterSpacing: 2,
+    // letterSpacing: 2,
     color: COLORS.gray,
     textTransform: "uppercase",
   },
@@ -295,7 +295,7 @@ const styles = StyleSheet.create({
   primaryBtnText: {
     fontFamily: FONTS.mono,
     fontSize: 12,
-    letterSpacing: 3,
+    // letterSpacing: 3,
     color: COLORS.white,
     textTransform: "uppercase",
   },
@@ -309,7 +309,7 @@ const styles = StyleSheet.create({
   secondaryBtnText: {
     fontFamily: FONTS.mono,
     fontSize: 12,
-    letterSpacing: 3,
+    // letterSpacing: 3,
     color: COLORS.black,
     textTransform: "uppercase",
   },
@@ -324,7 +324,7 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.mono,
     fontSize: 10,
     color: COLORS.white,
-    letterSpacing: 3,
+    // letterSpacing: 3,
     textTransform: "uppercase",
   },
 });

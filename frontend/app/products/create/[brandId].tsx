@@ -374,7 +374,8 @@ const CreateProductScreen = () => {
       justifyContent: "center",
       alignItems: "center",
     },
-    navTitle: { fontSize: 16, fontWeight: "700", letterSpacing: 0.2 },
+    navTitle: { fontSize: 16, fontWeight: "700", // letterSpacing: 0.2 
+},
     scrollContainer: { padding: 20, paddingBottom: 100 },
     header: {
       fontSize: 32,

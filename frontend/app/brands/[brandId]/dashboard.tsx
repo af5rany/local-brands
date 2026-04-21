@@ -409,7 +409,7 @@ const styles = StyleSheet.create({
   goBackText: {
     fontSize: 13,
     fontWeight: "700",
-    letterSpacing: 1,
+    // letterSpacing: 1,
     marginTop: 8,
   },
   header: {
@@ -424,7 +424,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 14,
     fontWeight: "800",
-    letterSpacing: 2,
+    // letterSpacing: 2,
   },
   headerSubtitle: {
     fontSize: 11,
@@ -452,12 +452,12 @@ const styles = StyleSheet.create({
   statValue: {
     fontSize: 18,
     fontWeight: "800",
-    letterSpacing: -0.3,
+    // letterSpacing: -0.3,
   },
   statLabel: {
     fontSize: 9,
     fontWeight: "700",
-    letterSpacing: 1,
+    // letterSpacing: 1,
   },
 
   // Alert
@@ -484,7 +484,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 13,
     fontWeight: "800",
-    letterSpacing: 2,
+    // letterSpacing: 2,
     marginBottom: 16,
   },
 
@@ -562,7 +562,7 @@ const styles = StyleSheet.create({
   orderStatus: {
     fontSize: 9,
     fontWeight: "800",
-    letterSpacing: 1,
+    // letterSpacing: 1,
   },
 });
 

@@ -167,7 +167,7 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: "800",
     marginBottom: 16,
-    letterSpacing: -0.3,
+    // letterSpacing: -0.3,
   },
   sectionTitleTablet: {
     fontSize: 26,

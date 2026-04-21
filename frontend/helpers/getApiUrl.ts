@@ -15,7 +15,7 @@ const getApiUrl = () => {
     return "http://10.0.2.2:5000";
   }
 
-  return "http://192.168.1.6:5000";
+  return "http://192.168.1.11:5000";
 };
 
 // --- DEBUG: log every fetch call (URL + payload) ---

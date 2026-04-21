@@ -233,7 +233,7 @@ const Header: React.FC<HeaderProps> = ({ notificationCount = 0, showBack = false
             onPress={() => router.push("/(tabs)")}
             style={styles.logoContainer}
           >
-            <Text style={[styles.logoText, { color: colors.text, fontFamily: "SpaceGrotesk_700Bold" }]}>
+            <Text style={[styles.logoText, { color: colors.text, fontFamily: undefined }]}>
               MONOLITH
             </Text>
           </Pressable>
@@ -402,7 +402,7 @@ const Header: React.FC<HeaderProps> = ({ notificationCount = 0, showBack = false
                     <Text
                       style={[
                         styles.menuFooterText,
-                        { color: colors.textTertiary, fontFamily: "SpaceGrotesk_700Bold" },
+                        { color: colors.textTertiary, fontFamily: undefined },
                       ]}
                     >
                       MONOLITH
@@ -446,7 +446,7 @@ const styles = StyleSheet.create({
   logoText: {
     fontSize: 15,
     fontWeight: "800",
-    letterSpacing: 3,
+    // letterSpacing: 3,
   },
   // logoImage: {
   //   width: "100%",
@@ -483,7 +483,7 @@ const styles = StyleSheet.create({
   loginText: {
     fontSize: 14,
     fontWeight: "700",
-    letterSpacing: 0.3,
+    // letterSpacing: 0.3,
   },
 
   // Notification dot badge
@@ -546,7 +546,7 @@ const styles = StyleSheet.create({
   menuTitle: {
     fontSize: 24,
     fontWeight: "800",
-    letterSpacing: -0.3,
+    // letterSpacing: -0.3,
   },
   menuCloseBtn: {
     width: 36,
@@ -566,7 +566,7 @@ const styles = StyleSheet.create({
   menuSectionLabel: {
     fontSize: 11,
     fontWeight: "700",
-    letterSpacing: 1.2,
+    // letterSpacing: 1.2,
     paddingHorizontal: 24,
     paddingBottom: 4,
   },
@@ -589,7 +589,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 16,
     fontWeight: "600",
-    letterSpacing: 0.1,
+    // letterSpacing: 0.1,
   },
   menuFooter: {
     paddingBottom: 40,
@@ -614,7 +614,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "500",
     marginTop: 16,
-    letterSpacing: 0.5,
+    // letterSpacing: 0.5,
   },
 });
 

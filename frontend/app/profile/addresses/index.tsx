@@ -322,7 +322,9 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
     borderRadius: 0,
   },
-  defaultText: { fontSize: 10, fontWeight: "800", letterSpacing: 0.5 },
+  defaultText: { fontSize: 10, fontWeight: "800", 
+    // letterSpacing: 0.5
+    },
   deleteBtn: {
     width: 32,
     height: 32,

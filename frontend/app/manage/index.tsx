@@ -169,7 +169,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 17,
     fontWeight: "700",
-    letterSpacing: -0.2,
+    // letterSpacing: -0.2,
   },
   closeBtn: {
     width: 32,

@@ -365,7 +365,7 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     textAlign: "center",
     marginBottom: 8,
-    letterSpacing: -0.3,
+    // letterSpacing: -0.3,
   },
   description: {
     fontSize: 14,
@@ -386,7 +386,7 @@ const styles = StyleSheet.create({
   codeLabel: {
     fontSize: 11,
     fontWeight: "700",
-    letterSpacing: 1.5,
+    // letterSpacing: 1.5,
     marginBottom: 12,
   },
   codeRow: {
@@ -397,7 +397,7 @@ const styles = StyleSheet.create({
   codeText: {
     fontSize: 24,
     fontWeight: "800",
-    letterSpacing: 2,
+    // letterSpacing: 2,
   },
   copyBtn: {
     flexDirection: "row",
@@ -432,7 +432,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 11,
     fontWeight: "700",
-    letterSpacing: 1.5,
+    // letterSpacing: 1.5,
     marginBottom: 12,
     paddingHorizontal: 4,
   },

@@ -230,10 +230,10 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   pageTitle: {
-    fontFamily: "SpaceGrotesk_700Bold",
+    fontFamily: undefined,
     fontSize: 40,
     color: "#000000",
-    letterSpacing: -0.5,
+    // letterSpacing: -0.5,
   },
   titleAccent: {
     width: 80,
@@ -267,11 +267,11 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   orderNumber: {
-    fontFamily: "SpaceMono_400Regular",
+    fontFamily: undefined,
     fontSize: 15,
     fontWeight: "700",
     color: "#000000",
-    letterSpacing: 0.5,
+    // letterSpacing: 0.5,
   },
 
   /* Status badge */
@@ -291,9 +291,9 @@ const styles = StyleSheet.create({
     borderColor: "#C41E3A",
   },
   statusText: {
-    fontFamily: "SpaceMono_400Regular",
+    fontFamily: undefined,
     fontSize: 9,
-    letterSpacing: 1.2,
+    // letterSpacing: 1.2,
     textTransform: "uppercase",
   },
   badgeTextProcessing: {
@@ -308,10 +308,10 @@ const styles = StyleSheet.create({
 
   /* Date */
   dateText: {
-    fontFamily: "SpaceMono_400Regular",
+    fontFamily: undefined,
     fontSize: 9,
     color: "#888888",
-    letterSpacing: 1,
+    // letterSpacing: 1,
     textTransform: "uppercase",
     marginBottom: 16,
   },
@@ -335,15 +335,15 @@ const styles = StyleSheet.create({
     alignItems: "flex-end",
   },
   totalLabel: {
-    fontFamily: "SpaceMono_400Regular",
+    fontFamily: undefined,
     fontSize: 9,
     color: "#888888",
-    letterSpacing: 1.2,
+    // letterSpacing: 1.2,
     textTransform: "uppercase",
     marginBottom: 4,
   },
   totalAmount: {
-    fontFamily: "SpaceGrotesk_700Bold",
+    fontFamily: undefined,
     fontSize: 22,
     color: "#000000",
   },
@@ -357,10 +357,10 @@ const styles = StyleSheet.create({
     borderRadius: 0,
   },
   ctaBorderedText: {
-    fontFamily: "SpaceMono_400Regular",
+    fontFamily: undefined,
     fontSize: 10,
     color: "#000000",
-    letterSpacing: 1.5,
+    // letterSpacing: 1.5,
     textTransform: "uppercase",
   },
   ctaGhost: {
@@ -368,10 +368,10 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   ctaGhostText: {
-    fontFamily: "SpaceMono_400Regular",
+    fontFamily: undefined,
     fontSize: 10,
     color: "#888888",
-    letterSpacing: 1.5,
+    // letterSpacing: 1.5,
     textTransform: "uppercase",
     textDecorationLine: "underline",
   },
@@ -384,10 +384,10 @@ const styles = StyleSheet.create({
     padding: 40,
   },
   emptyTitle: {
-    fontFamily: "SpaceMono_400Regular",
+    fontFamily: undefined,
     fontSize: 14,
     color: "#000000",
-    letterSpacing: 2,
+    // letterSpacing: 2,
     textTransform: "uppercase",
     marginBottom: 16,
   },
@@ -406,10 +406,10 @@ const styles = StyleSheet.create({
     borderRadius: 0,
   },
   primaryBtnText: {
-    fontFamily: "SpaceMono_400Regular",
+    fontFamily: undefined,
     color: "#ffffff",
     fontSize: 11,
-    letterSpacing: 2,
+    // letterSpacing: 2,
     textTransform: "uppercase",
   },
 });

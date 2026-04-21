@@ -409,7 +409,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 14,
     fontWeight: "700",
-    letterSpacing: 2,
+    // letterSpacing: 2,
   },
   tabRow: {
     flexDirection: "row",
@@ -429,7 +429,7 @@ const styles = StyleSheet.create({
   tabText: {
     fontSize: 11,
     fontWeight: "700",
-    letterSpacing: 1.5,
+    // letterSpacing: 1.5,
   },
   listContent: {
     padding: 16,
@@ -461,7 +461,7 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: "600",
     textTransform: "uppercase",
-    letterSpacing: 1,
+    // letterSpacing: 1,
     marginBottom: 4,
   },
   productName: {
@@ -524,7 +524,7 @@ const styles = StyleSheet.create({
   unfollowText: {
     fontSize: 10,
     fontWeight: "700",
-    letterSpacing: 1,
+    // letterSpacing: 1,
   },
   emptyTitle: {
     fontSize: 20,
@@ -546,7 +546,7 @@ const styles = StyleSheet.create({
     // color set via inline style (colors.primaryForeground)
     fontSize: 12,
     fontWeight: "700",
-    letterSpacing: 1.5,
+    // letterSpacing: 1.5,
   },
   authBtn: {
     paddingVertical: 16,
@@ -556,7 +556,7 @@ const styles = StyleSheet.create({
     // color set via inline style (colors.primaryForeground)
     fontSize: 12,
     fontWeight: "700",
-    letterSpacing: 1.5,
+    // letterSpacing: 1.5,
   },
 });
 

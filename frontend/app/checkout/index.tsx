@@ -29,8 +29,8 @@ const COLORS = {
 };
 
 const FONTS = {
-  headline: "SpaceGrotesk_700Bold",
-  mono: "SpaceMono_400Regular",
+  headline: undefined,
+  mono: undefined,
   body: "Inter_400Regular",
 };
 
@@ -501,7 +501,7 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontFamily: FONTS.mono,
     fontSize: 12,
-    letterSpacing: 2,
+    // letterSpacing: 2,
     color: COLORS.black,
   },
   goBackBtn: {
@@ -513,7 +513,7 @@ const styles = StyleSheet.create({
   goBackText: {
     fontFamily: FONTS.mono,
     fontSize: 11,
-    letterSpacing: 2,
+    // letterSpacing: 2,
     color: COLORS.black,
   },
 
@@ -527,7 +527,7 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.mono,
     fontSize: 10,
     color: COLORS.white,
-    letterSpacing: 2,
+    // letterSpacing: 2,
     textTransform: "uppercase",
   },
 
@@ -553,14 +553,14 @@ const styles = StyleSheet.create({
   stepLabel: {
     fontFamily: FONTS.mono,
     fontSize: 11,
-    letterSpacing: 2,
+    // letterSpacing: 2,
     color: COLORS.black,
     textTransform: "uppercase",
   },
   stepAction: {
     fontFamily: FONTS.mono,
     fontSize: 10,
-    letterSpacing: 2,
+    // letterSpacing: 2,
     color: COLORS.black,
     textDecorationLine: "underline",
     textTransform: "uppercase",
@@ -577,7 +577,7 @@ const styles = StyleSheet.create({
   collapsedCartCount: {
     fontFamily: FONTS.mono,
     fontSize: 11,
-    letterSpacing: 2,
+    // letterSpacing: 2,
     color: COLORS.gray,
   },
   collapsedCartTotal: {
@@ -605,7 +605,7 @@ const styles = StyleSheet.create({
   cartItemBrand: {
     fontFamily: FONTS.mono,
     fontSize: 9,
-    letterSpacing: 1,
+    // letterSpacing: 1,
     color: COLORS.gray,
     textTransform: "uppercase",
     marginBottom: 4,
@@ -620,7 +620,7 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.mono,
     fontSize: 10,
     color: COLORS.gray,
-    letterSpacing: 1,
+    // letterSpacing: 1,
   },
   cartItemRight: { alignItems: "flex-end", justifyContent: "space-between" },
   cartItemPrice: {
@@ -632,7 +632,7 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.mono,
     fontSize: 10,
     color: COLORS.gray,
-    letterSpacing: 1,
+    // letterSpacing: 1,
   },
 
   // Address cards
@@ -651,21 +651,21 @@ const styles = StyleSheet.create({
   addressLabel: {
     fontFamily: FONTS.mono,
     fontSize: 9,
-    letterSpacing: 3,
+    // letterSpacing: 3,
     textTransform: "uppercase",
     marginBottom: 12,
   },
   addressName: {
     fontFamily: FONTS.headline,
     fontSize: 14,
-    letterSpacing: 0.5,
+    // letterSpacing: 0.5,
     marginBottom: 8,
   },
   addressLines: {
     fontFamily: FONTS.mono,
     fontSize: 11,
     lineHeight: 18,
-    letterSpacing: 0.5,
+    // letterSpacing: 0.5,
   },
   emptyAddress: {
     paddingVertical: 32,
@@ -678,7 +678,7 @@ const styles = StyleSheet.create({
   emptyAddressText: {
     fontFamily: FONTS.mono,
     fontSize: 10,
-    letterSpacing: 2,
+    // letterSpacing: 2,
     color: COLORS.gray,
   },
 
@@ -707,7 +707,7 @@ const styles = StyleSheet.create({
   shippingOptionText: {
     fontFamily: FONTS.mono,
     fontSize: 11,
-    letterSpacing: 1,
+    // letterSpacing: 1,
     color: COLORS.black,
   },
   shippingPrice: {
@@ -725,7 +725,7 @@ const styles = StyleSheet.create({
   orderSummaryTitle: {
     fontFamily: FONTS.mono,
     fontSize: 10,
-    letterSpacing: 3,
+    // letterSpacing: 3,
     color: COLORS.gray,
     textTransform: "uppercase",
     marginBottom: 24,
@@ -739,7 +739,7 @@ const styles = StyleSheet.create({
   summaryLabel: {
     fontFamily: FONTS.mono,
     fontSize: 10,
-    letterSpacing: 2,
+    // letterSpacing: 2,
     color: COLORS.gray,
     textTransform: "uppercase",
   },
@@ -751,7 +751,7 @@ const styles = StyleSheet.create({
   summaryTotalLabel: {
     fontFamily: FONTS.mono,
     fontSize: 11,
-    letterSpacing: 2,
+    // letterSpacing: 2,
     color: COLORS.black,
     textTransform: "uppercase",
   },
@@ -778,13 +778,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 0,
     fontFamily: FONTS.mono,
     fontSize: 11,
-    letterSpacing: 2,
+    // letterSpacing: 2,
     color: COLORS.black,
   },
   applyText: {
     fontFamily: FONTS.mono,
     fontSize: 11,
-    letterSpacing: 2,
+    // letterSpacing: 2,
     color: COLORS.black,
     paddingBottom: 8,
   },
@@ -799,7 +799,7 @@ const styles = StyleSheet.create({
   placeOrderText: {
     fontFamily: FONTS.mono,
     fontSize: 13,
-    letterSpacing: 3,
+    // letterSpacing: 3,
     color: COLORS.white,
     textTransform: "uppercase",
   },

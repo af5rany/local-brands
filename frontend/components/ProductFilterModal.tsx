@@ -434,7 +434,7 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 14,
     fontWeight: "700",
-    letterSpacing: 2,
+    // letterSpacing: 2,
     textTransform: "uppercase",
   },
   filterSection: {
@@ -444,7 +444,7 @@ const styles = StyleSheet.create({
   filterSectionTitle: {
     fontSize: 10,
     fontWeight: "800",
-    letterSpacing: 1.5,
+    // letterSpacing: 1.5,
     textTransform: "uppercase",
     marginBottom: 12,
   },
@@ -468,7 +468,7 @@ const styles = StyleSheet.create({
   priceLabel: {
     fontSize: 10,
     fontWeight: "700",
-    letterSpacing: 1,
+    // letterSpacing: 1,
     marginBottom: 8,
   },
   priceInput: {
@@ -501,7 +501,7 @@ const styles = StyleSheet.create({
   modalResetText: {
     fontSize: 12,
     fontWeight: "700",
-    letterSpacing: 0.5,
+    // letterSpacing: 0.5,
     textTransform: "uppercase",
   },
   modalApplyBtn: {
@@ -514,7 +514,7 @@ const styles = StyleSheet.create({
   modalApplyText: {
     fontSize: 12,
     fontWeight: "700",
-    letterSpacing: 0.5,
+    // letterSpacing: 0.5,
     textTransform: "uppercase",
   },
 });

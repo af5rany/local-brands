@@ -646,7 +646,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 16,
   },
-  title: { fontSize: 16, fontWeight: "700", letterSpacing: 1.5 },
+  title: {
+    fontSize: 16, fontWeight: "700", // letterSpacing: 1.5 
+  },
 
   countRow: { paddingHorizontal: 20, marginBottom: 4 },
   countText: { fontSize: 13 },
@@ -670,7 +672,7 @@ const styles = StyleSheet.create({
   filterLabel: {
     fontSize: 12,
     fontWeight: "600",
-    letterSpacing: 0.5,
+    // letterSpacing: 0.5,
     marginRight: 10,
   },
   filterChip: {
@@ -733,7 +735,9 @@ const styles = StyleSheet.create({
     paddingVertical: 1,
     borderRadius: 0,
   },
-  youText: { fontSize: 9, fontWeight: "700", letterSpacing: 0.5 },
+  youText: {
+    fontSize: 9, fontWeight: "700", // letterSpacing: 0.5 
+  },
   emailRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -754,7 +758,9 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: 0,
   },
-  roleText: { fontSize: 9, fontWeight: "700", letterSpacing: 0.5 },
+  roleText: {
+    fontSize: 9, fontWeight: "700", // letterSpacing: 0.5
+  },
 
   metaRow: {
     flexDirection: "row",
@@ -774,7 +780,7 @@ const styles = StyleSheet.create({
   brandsLabel: {
     fontSize: 10,
     fontWeight: "700",
-    letterSpacing: 1,
+    // letterSpacing: 1,
     marginBottom: 8,
   },
   brandsRow: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
@@ -815,7 +821,7 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 14,
     fontWeight: "700",
-    letterSpacing: 1.5,
+    // letterSpacing: 1.5,
     paddingTop: 24,
     paddingHorizontal: 24,
   },

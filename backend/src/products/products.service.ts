@@ -22,6 +22,7 @@ import { PublicProductDto } from './dto/public-product.dto';
 import { BrandsService } from '../brands/brands.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { NotificationType } from '../notifications/notification.entity';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 
 @Injectable()
 export class ProductsService {
@@ -35,6 +36,7 @@ export class ProductsService {
     private dataSource: DataSource,
     private brandsService: BrandsService,
     private notificationsService: NotificationsService,
+    private eventEmitter: EventEmitter2,
   ) {}
 
   async findAll(
@@ -536,6 +538,15 @@ export class ProductsService {
 
     const result = await this.findOne(savedProduct.id);
 
+    // Queue image embedding for visual search
+    const imageUrl = (productData as any).images?.[0];
+    if (imageUrl) {
+      this.eventEmitter.emit('product.created', {
+        productId: savedProduct.id,
+        imageUrl,
+      });
+    }
+
     // Notify followers when a product is published
     if (
       savedProduct.status === ProductStatus.PUBLISHED &&
@@ -611,6 +622,14 @@ export class ProductsService {
     });
 
     const result = await this.findOne(id);
+
+    // Re-embed if images changed
+    if ((updateData as any).images?.length) {
+      this.eventEmitter.emit('product.updated', {
+        productId: id,
+        imageUrl: (updateData as any).images[0],
+      });
+    }
 
     if (currentProduct?.brandId) {
       // Notify when product status changes to PUBLISHED

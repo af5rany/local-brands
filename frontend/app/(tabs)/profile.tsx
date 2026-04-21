@@ -300,7 +300,7 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontWeight: "800",
     marginBottom: 8,
-    letterSpacing: -0.3,
+    // letterSpacing: -0.3,
   },
   guestSubtitle: {
     fontSize: 14,
@@ -321,7 +321,7 @@ const styles = StyleSheet.create({
   signInBtnText: {
     fontSize: 14,
     fontWeight: "700",
-    letterSpacing: 1,
+    // letterSpacing: 1,
   },
   registerBtn: {
     paddingVertical: 14,
@@ -332,7 +332,7 @@ const styles = StyleSheet.create({
   registerBtnText: {
     fontSize: 13,
     fontWeight: "700",
-    letterSpacing: 1,
+    // letterSpacing: 1,
   },
   header: {
     alignItems: "center",
@@ -363,7 +363,7 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: "800",
     marginBottom: 4,
-    letterSpacing: -0.3,
+    // letterSpacing: -0.3,
   },
   email: {
     fontSize: 14,
@@ -377,7 +377,7 @@ const styles = StyleSheet.create({
   roleText: {
     fontSize: 12,
     fontWeight: "700",
-    letterSpacing: 0.3,
+    // letterSpacing: 0.3,
   },
   menuContainer: {
     marginHorizontal: 16,

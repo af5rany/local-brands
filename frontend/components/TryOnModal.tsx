@@ -15,7 +15,7 @@ import * as ImagePicker from "expo-image-picker";
 import * as ImageManipulator from "expo-image-manipulator";
 import { File, Paths } from "expo-file-system";
 import * as MediaLibrary from "expo-media-library";
-import axios from "axios";
+
 import { Ionicons } from "@expo/vector-icons";
 import getApiUrl from "@/helpers/getApiUrl";
 import { useAuth } from "@/context/AuthContext";
@@ -72,10 +72,13 @@ export default function TryOnModal({
       type: "image/jpeg",
     } as any);
     formData.append("upload_preset", UPLOAD_PRESET);
-    const res = await axios.post(CLOUDINARY_URL, formData, {
-      headers: { "Content-Type": "multipart/form-data" },
+    const res = await fetch(CLOUDINARY_URL, {
+      method: "POST",
+      body: formData,
     });
-    return res.data.secure_url;
+    if (!res.ok) throw new Error("Upload failed");
+    const data = await res.json();
+    return data.secure_url;
   };
 
   const pollForResult = (jobId: string) => {
@@ -400,7 +403,7 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 13,
     fontWeight: "700",
-    letterSpacing: 2,
+    // letterSpacing: 2,
   },
   center: {
     flex: 1,
@@ -413,14 +416,14 @@ const styles = StyleSheet.create({
   garmentLabel: {
     color: "rgba(255,255,255,0.4)",
     fontSize: 9,
-    letterSpacing: 2,
+    // letterSpacing: 2,
   },
   instructionText: {
     color: "rgba(255,255,255,0.6)",
     fontSize: 13,
     textAlign: "center",
     lineHeight: 20,
-    letterSpacing: 0.3,
+    // letterSpacing: 0.3,
   },
   errorBanner: {
     backgroundColor: "rgba(196,30,58,0.9)",
@@ -443,7 +446,7 @@ const styles = StyleSheet.create({
     color: "#000",
     fontSize: 12,
     fontWeight: "700",
-    letterSpacing: 2,
+    // letterSpacing: 2,
   },
   secondaryBtn: {
     flexDirection: "row",
@@ -460,19 +463,19 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 12,
     fontWeight: "600",
-    letterSpacing: 2,
+    // letterSpacing: 2,
   },
   personPreview: { width: 120, height: 150, backgroundColor: "#111" },
   processingText: {
     color: "#fff",
     fontSize: 14,
-    letterSpacing: 3,
+    // letterSpacing: 3,
     fontWeight: "700",
   },
   processingSubtext: {
     color: "rgba(255,255,255,0.5)",
     fontSize: 12,
-    letterSpacing: 0.5,
+    // letterSpacing: 0.5,
   },
   retryBtn: {
     flexDirection: "row",
@@ -486,7 +489,7 @@ const styles = StyleSheet.create({
     color: "#000",
     fontSize: 12,
     fontWeight: "700",
-    letterSpacing: 2,
+    // letterSpacing: 2,
   },
   garmentContainer: {
     alignItems: "center",
@@ -524,7 +527,7 @@ const styles = StyleSheet.create({
     color: "rgba(255,255,255,0.6)",
     fontSize: 9,
     fontWeight: "600",
-    letterSpacing: 1.5,
+    // letterSpacing: 1.5,
   },
 
   fullscreenOverlay: {

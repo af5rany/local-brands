@@ -337,7 +337,9 @@ const styles = StyleSheet.create({
     gap: 18,
   },
   fieldGroup: { gap: 6 },
-  label: { fontSize: 13, fontWeight: "600", letterSpacing: 0.2 },
+  label: {
+    fontSize: 13, fontWeight: "600", // letterSpacing: 0.2
+  },
   input: {
     borderWidth: 1,
     borderRadius: 0,

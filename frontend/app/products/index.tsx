@@ -865,7 +865,7 @@ const styles = StyleSheet.create({
   pageTitle: {
     fontSize: 24,
     fontWeight: "800",
-    letterSpacing: -0.5,
+    // letterSpacing: -0.5,
     marginBottom: 4,
   },
   brandTag: {
@@ -987,7 +987,7 @@ const styles = StyleSheet.create({
   cardName: {
     fontSize: 15,
     fontWeight: "700",
-    letterSpacing: -0.1,
+    // letterSpacing: -0.1,
   },
   cardDesc: {
     fontSize: 12,
@@ -1162,7 +1162,7 @@ const styles = StyleSheet.create({
   filterLabel: {
     fontSize: 13,
     fontWeight: "700",
-    letterSpacing: 0.5,
+    // letterSpacing: 0.5,
     textTransform: "uppercase",
   },
   miniSearch: {

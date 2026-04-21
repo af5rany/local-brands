@@ -13,17 +13,6 @@ import { useEffect } from "react";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { useFonts } from "expo-font";
 import {
-  SpaceGrotesk_300Light,
-  SpaceGrotesk_400Regular,
-  SpaceGrotesk_500Medium,
-  SpaceGrotesk_600SemiBold,
-  SpaceGrotesk_700Bold,
-} from "@expo-google-fonts/space-grotesk";
-import {
-  SpaceMono_400Regular,
-  SpaceMono_700Bold,
-} from "@expo-google-fonts/space-mono";
-import {
   Inter_300Light,
   Inter_400Regular,
   Inter_500Medium,
@@ -236,13 +225,6 @@ function RootLayoutNav() {
 
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({
-    SpaceGrotesk_300Light,
-    SpaceGrotesk_400Regular,
-    SpaceGrotesk_500Medium,
-    SpaceGrotesk_600SemiBold,
-    SpaceGrotesk_700Bold,
-    SpaceMono_400Regular,
-    SpaceMono_700Bold,
     Inter_300Light,
     Inter_400Regular,
     Inter_500Medium,

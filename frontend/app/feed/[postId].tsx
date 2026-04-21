@@ -616,7 +616,7 @@ const styles = StyleSheet.create({
   commentsTitle: {
     fontSize: 11,
     fontWeight: "700",
-    letterSpacing: 1.5,
+    // letterSpacing: 1.5,
   },
   commentRow: {
     flexDirection: "row",

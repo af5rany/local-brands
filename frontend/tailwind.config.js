@@ -33,12 +33,12 @@ module.exports = {
         full: 9999,
       },
       fontFamily: {
-        headline: ["SpaceGrotesk_700Bold", "SpaceGrotesk_400Regular"],
-        "headline-medium": ["SpaceGrotesk_500Medium"],
+        headline: ["System"],
+        "headline-medium": ["System"],
         body: ["Inter_400Regular", "Inter_300Light"],
         "body-medium": ["Inter_500Medium"],
-        label: ["SpaceMono_400Regular"],
-        "label-bold": ["SpaceMono_700Bold"],
+        label: ["System"],
+        "label-bold": ["System"],
       },
       letterSpacing: {
         widest: "0.15em",

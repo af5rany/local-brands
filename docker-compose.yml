@@ -2,12 +2,14 @@ version: "3.9"
 
 services:
   db:
-    image: postgres:14-alpine
+    image: pgvector/pgvector:pg14
     restart: always
     environment:
       POSTGRES_USER: ${DB_USERNAME}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_DB: ${DB_DATABASE}
+    ports:
+      - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     networks:
@@ -31,10 +33,29 @@ services:
       timeout: 5s
       retries: 5
 
+  clip:
+    build:
+      context: ./clip-service
+      dockerfile: Dockerfile
+    restart: always
+    ports:
+      - "8100:8100"
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8100/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+
   backend:
     build:
       context: ./backend
-      dockerfile: Dockerfile          # the new production Dockerfile
+      dockerfile: Dockerfile
       target: production
     restart: always
     env_file:
@@ -47,15 +68,15 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      clip:
+        condition: service_healthy
     networks:
       - app-network
     environment:
       - NODE_ENV=production
-    develop:
-      watch:
-        - action: rebuild
-          path: ./backend/src
-          target: /usr/src/app/src
+      - DB_HOST=db
+      - REDIS_HOST=redis
+      - CLIP_SERVICE_URL=http://clip:8100
 
 networks:
   app-network:

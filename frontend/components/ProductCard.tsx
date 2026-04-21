@@ -138,10 +138,10 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
   },
   saleBadgeText: {
-    fontFamily: "SpaceMono_700Bold",
+    fontFamily: undefined,
     fontSize: 9,
     color: "#ffffff",
-    letterSpacing: 1,
+    // // letterSpacing: 1,
   },
   heartBtn: {
     position: "absolute",
@@ -166,14 +166,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 2,
   },
   brandLabel: {
-    fontFamily: "SpaceMono_700Bold",
+    fontFamily: undefined,
     fontSize: 10,
     textTransform: "uppercase",
-    letterSpacing: 1,
+    // letterSpacing: 1,
     marginBottom: 3,
   },
   productName: {
-    fontFamily: "SpaceGrotesk_400Regular",
+    fontFamily: undefined,
     fontSize: 13,
     marginBottom: 4,
     lineHeight: 18,
@@ -184,11 +184,11 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   price: {
-    fontFamily: "SpaceMono_400Regular",
+    fontFamily: undefined,
     fontSize: 13,
   },
   originalPrice: {
-    fontFamily: "SpaceMono_400Regular",
+    fontFamily: undefined,
     fontSize: 11,
     textDecorationLine: "line-through",
   },
