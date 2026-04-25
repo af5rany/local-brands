@@ -172,6 +172,17 @@ export class BrandsController {
     return this.brandsService.removeUserFromBrand(brandId, userId);
   }
 
+  @Post(':id/notifications/send')
+  @Roles(UserRole.ADMIN, UserRole.BRAND_OWNER)
+  @UseGuards(BrandAccessGuard)
+  @ApiOperation({ summary: 'Send push + in-app notification to all brand followers' })
+  async sendNotificationToFollowers(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() body: { title: string; message: string },
+  ) {
+    return this.brandsService.sendNotificationToFollowers(id, body.title, body.message);
+  }
+
   // Delete brand - Admin can delete any, Brand Owner can delete brands they are assigned to
   @Delete(':id')
   @Roles(UserRole.ADMIN, UserRole.BRAND_OWNER)

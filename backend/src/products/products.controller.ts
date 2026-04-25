@@ -23,7 +23,10 @@ import { UpdateProductDto } from './dto/update-product.dto';
 import { PublicProductDto } from './dto/public-product.dto';
 import { PaginatedResult } from '../common/types/pagination.type';
 import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
+import { RolesGuard } from 'src/auth/roles.guard';
+import { Roles } from 'src/auth/roles.decorator';
 import { Public } from 'src/auth/public.decorator';
+import { UserRole } from 'src/common/enums/user.enum';
 
 @UseGuards(JwtAuthGuard)
 @Controller('products')
@@ -90,14 +93,19 @@ export class ProductsController {
   }
 
   @Post()
+  @Roles(UserRole.BRAND_OWNER, UserRole.ADMIN)
+  @UseGuards(RolesGuard)
   @UsePipes(new ValidationPipe({ whitelist: true }))
   async create(
     @Body() productData: CreateProductDto,
+    @Req() req,
   ): Promise<PublicProductDto> {
     const startTime = Date.now();
-    // console.log('Creating product with data:', productData);
 
-    const result = await this.productsService.create(productData as any);
+    const result = await this.productsService.create(
+      productData as any,
+      req.user,
+    );
 
     const endTime = Date.now();
     console.log('Product creation took:', endTime - startTime, 'ms');
@@ -106,28 +114,38 @@ export class ProductsController {
   }
 
   @Post('batch')
+  @Roles(UserRole.BRAND_OWNER, UserRole.ADMIN)
+  @UseGuards(RolesGuard)
   @UsePipes(new ValidationPipe({ whitelist: true }))
   async batchCreate(
     @Body() data: BatchCreateProductDto,
+    @Req() req,
   ): Promise<PublicProductDto[]> {
-    return this.productsService.batchCreate(data.products);
+    return this.productsService.batchCreate(data.products, req.user);
   }
 
   @Put(':id')
+  @Roles(UserRole.BRAND_OWNER, UserRole.ADMIN)
+  @UseGuards(RolesGuard)
   @UsePipes(new ValidationPipe({ whitelist: true }))
   update(
     @Param('id', ParseIntPipe) id: number,
     @Body() updateData: UpdateProductDto,
+    @Req() req,
   ): Promise<PublicProductDto> {
-    return this.productsService.update(id, updateData);
+    return this.productsService.update(id, updateData, req.user);
   }
 
   @Delete(':id')
-  remove(@Param('id', ParseIntPipe) id: number): Promise<void> {
-    return this.productsService.remove(id);
+  @Roles(UserRole.BRAND_OWNER, UserRole.ADMIN)
+  @UseGuards(RolesGuard)
+  remove(@Param('id', ParseIntPipe) id: number, @Req() req): Promise<void> {
+    return this.productsService.remove(id, req.user);
   }
 
   @Delete()
+  @Roles(UserRole.ADMIN)
+  @UseGuards(RolesGuard)
   deleteAll(): Promise<void> {
     return this.productsService.deleteAll();
   }

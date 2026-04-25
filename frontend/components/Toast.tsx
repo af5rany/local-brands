@@ -8,6 +8,7 @@ import {
   Pressable,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useThemeColors } from "@/hooks/useThemeColor";
 
 export type ToastType = "success" | "error" | "info";
 
@@ -28,6 +29,7 @@ const Toast: React.FC<ToastProps> = ({
 }) => {
   const opacity = useRef(new Animated.Value(0)).current;
   const translateY = useRef(new Animated.Value(-50)).current;
+  const colors = useThemeColors();
 
   useEffect(() => {
     Animated.parallel([
@@ -68,13 +70,13 @@ const Toast: React.FC<ToastProps> = ({
   const getBackgroundColor = () => {
     switch (type) {
       case "success":
-        return "#10b981"; // Emerald-500
+        return colors.toastSuccess;
       case "error":
-        return "#ef4444"; // Red-500
+        return colors.toastError;
       case "info":
-        return "#3b82f6"; // Blue-500
+        return colors.toastInfo;
       default:
-        return "#1e293b"; // Slate-800
+        return colors.toastDefault;
     }
   };
 
@@ -103,13 +105,13 @@ const Toast: React.FC<ToastProps> = ({
       ]}
     >
       <View style={styles.content}>
-        <Ionicons name={getIcon()} size={24} color="#fff" />
-        <Text style={styles.message} numberOfLines={2}>
+        <Ionicons name={getIcon()} size={24} color={colors.toastText} />
+        <Text style={[styles.message, { color: colors.toastText }]} numberOfLines={2}>
           {message}
         </Text>
       </View>
       <Pressable onPress={hide} style={styles.closeButton}>
-        <Ionicons name="close" size={20} color="#fff" />
+        <Ionicons name="close" size={20} color={colors.toastText} />
       </Pressable>
     </Animated.View>
   );
@@ -136,7 +138,6 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
   message: {
-    color: "#fff",
     fontSize: 14,
     fontWeight: "600",
     marginLeft: 12,

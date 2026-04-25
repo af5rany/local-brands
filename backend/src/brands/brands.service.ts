@@ -20,6 +20,7 @@ import { UserRole } from 'src/common/enums/user.enum';
 import { OrderStatus } from 'src/common/enums/order.enum';
 import { ProductStatus } from 'src/common/enums/product.enum';
 import { NotificationsService } from '../notifications/notifications.service';
+import { PushNotificationService } from '../notifications/push-notification.service';
 import { NotificationType } from '../notifications/notification.entity';
 
 @Injectable()
@@ -34,6 +35,7 @@ export class BrandsService {
     @InjectRepository(User)
     private usersRepository: Repository<User>,
     private notificationsService: NotificationsService,
+    private pushService: PushNotificationService,
     private dataSource: DataSource,
   ) {}
 
@@ -611,6 +613,33 @@ export class BrandsService {
       createdAt: oi.order?.createdAt,
     }));
 
+    // Active promo codes count
+    const activePromoResult = await this.dataSource.query(
+      `SELECT COUNT(*) AS count FROM promo_code
+       WHERE "brandId" = $1
+         AND is_active = true
+         AND deleted_at IS NULL
+         AND (expiry_date IS NULL OR expiry_date > NOW())
+         AND (max_uses IS NULL OR uses_count < max_uses)`,
+      [brandId],
+    );
+
+    // Pending returns count
+    const pendingReturnsResult = await this.dataSource.query(
+      `SELECT COUNT(*) AS count FROM return_request
+       WHERE "brandId" = $1 AND status = 'requested'`,
+      [brandId],
+    );
+
+    // Total discount given via promo codes
+    const discountResult = await this.dataSource.query(
+      `SELECT COALESCE(SUM(pcu.discount_applied), 0) AS total
+       FROM promo_code_usage pcu
+       INNER JOIN promo_code pc ON pc.id = pcu."promoCodeId"
+       WHERE pc."brandId" = $1`,
+      [brandId],
+    );
+
     return {
       totalProducts,
       totalRevenue: parseFloat(revenueData?.totalRevenue || '0'),
@@ -619,6 +648,9 @@ export class BrandsService {
       pendingOrders: parseInt(pendingOrders?.count || '0', 10),
       followerCount,
       totalViews: parseInt(viewsData?.totalViews || '0', 10),
+      activePromoCodes: parseInt(activePromoResult?.[0]?.count || '0', 10),
+      pendingReturns: parseInt(pendingReturnsResult?.[0]?.count || '0', 10),
+      totalDiscountGiven: parseFloat(discountResult?.[0]?.total || '0'),
       topProducts: topProducts.map((p) => ({
         id: p.id,
         name: p.name,
@@ -631,5 +663,31 @@ export class BrandsService {
       })),
       recentOrders: formattedRecentOrders,
     };
+  }
+
+  async sendNotificationToFollowers(
+    brandId: number,
+    title: string,
+    message: string,
+  ): Promise<{ sent: number }> {
+    const followerIds = await this.getFollowerIds(brandId);
+    if (followerIds.length === 0) return { sent: 0 };
+
+    // In-app notifications
+    const inAppPromises = followerIds.map((userId) =>
+      this.notificationsService.create(
+        userId,
+        NotificationType.GENERAL,
+        title,
+        message,
+        { brandId },
+      ),
+    );
+    await Promise.allSettled(inAppPromises);
+
+    // Push notifications
+    await this.pushService.sendPushToMany(followerIds, title, message, { brandId });
+
+    return { sent: followerIds.length };
   }
 }

@@ -40,7 +40,7 @@ Theme values are defined in `frontend/constants/Colors.ts` and accessed via `use
 ## App Structure & Navigation
 
 ### 1. Root Layout & Contexts
-- `_layout.tsx`: Wraps the app in `AuthProvider`, `BrandProvider`, and `ToastProvider`. Handles initial session restoration.
+- `_layout.tsx`: Wraps the app in `AuthProvider`, `BrandProvider`, and `ToastProvider`. Handles initial session restoration, Expo push notification permission request + token registration with backend, and deep-link routing from notification taps (order and return deep links).
 
 ### 2. Main Tabs (`(tabs)/`)
 Six bottom tabs (with label-less icons):
@@ -68,12 +68,20 @@ Six bottom tabs (with label-less icons):
 - `profile/addresses/[id].tsx` — Edit existing address.
 
 ### 5. Brands (`brands/`)
-- `brands/index.tsx` — Paginated brand listing with search, filters, sort.
 - `brands/create.tsx` — Create new brand (admin only).
 - `brands/select.tsx` — Multi-brand owner context switcher.
 - `brands/[brandId]/index.tsx` — Brand detail with products. **[TODO]** Add "Posts" tab (see Planned Features).
 - `brands/[brandId]/edit.tsx` — Edit brand identity & location.
 - `brands/[brandId]/products.tsx` — Brand's product listing.
+- `brands/[brandId]/dashboard.tsx` — Brand owner analytics dashboard (stats grid, quick actions, top products, recent orders, pending alerts, notify followers modal).
+- `brands/[brandId]/promo-codes/index.tsx` — List all promo codes for brand (status badge, toggle active, delete).
+- `brands/[brandId]/promo-codes/create.tsx` — Create promo code form (code + GENERATE button, type: percentage/fixed, value, min order amount, max discount, max uses, per-user limit, start/expiry dates, description, isActive switch).
+- `brands/[brandId]/promo-codes/[promoId].tsx` — Edit promo code + usage stats grid (total uses, discount given, uses/max) + recent usage list.
+- `brands/[brandId]/shipping/index.tsx` — Shipping zones list with expand/collapse to show rates; zone/rate delete actions; link to zone form.
+- `brands/[brandId]/shipping/zone.tsx` — Dual-purpose: create zone (name + ISO country codes) OR add rate to zone (when `?zoneId=X` param present); method type selector (STANDARD/EXPRESS/OVERNIGHT/LOCAL_PICKUP).
+- `brands/[brandId]/returns/index.tsx` — Brand owner return requests with horizontal status filter tabs (All / Requested / Approved / etc.).
+- `brands/[brandId]/returns/[returnId].tsx` — Full admin view: status banner, customer info, return reason, customer photos, approve/reject (with notes input), mark received, process refund buttons.
+- `brands/[brandId]/return-policy.tsx` — Return policy settings form (returnWindowDays, restockingFeePercent, conditions textarea, requiresImages switch, isActive switch).
 
 ### 6. Products (`products/`)
 - `products/index.tsx` — All products listing with advanced search, filters, pagination.
@@ -85,12 +93,17 @@ Six bottom tabs (with label-less icons):
 - `cart/index.tsx` — Cart with item listing, quantity adjustment, variant display, total calculation, checkout navigation.
 
 ### 8. Checkout (`checkout/`)
-- `checkout/index.tsx` — Order placement with address selection, order summary, idempotency key generation.
+- `checkout/index.tsx` — Order placement with address selection, dynamic shipping rate calculation (calls `POST /shipping/calculate` after address selection, shows rate picker), promo code apply/remove (calls `POST /promo-codes/validate`, shows discount line in summary), idempotency key generation. Checkout body includes `promoCode` and `shippingCost`.
 - `checkout/confirmation.tsx` — Order confirmation screen shown after successful order placement.
 
 ### 9. Orders (`orders/`)
 - `orders/index.tsx` — Order history listing with status badges.
-- `orders/[orderId].tsx` — Order detail with item breakdown, shipping address, price summary, and status timeline.
+- `orders/[orderId].tsx` — Order detail with item breakdown, shipping address (incl. `shippingCarrier` and `shippingMethodName` rows), price summary (incl. discount line if applicable), status timeline, and **REQUEST RETURN** button visible when status is DELIVERED.
+
+### 9b. Returns (`returns/`)
+- `returns/index.tsx` — Customer's return history list with status color badges.
+- `returns/create.tsx` — Create return request form: loads order info from `?orderId` param, reason picker (dropdown), description textarea, submits `POST /returns`.
+- `returns/[returnId].tsx` — Return detail: 5-step status timeline (REQUESTED → APPROVED → SHIPPED BACK → RECEIVED → REFUNDED), return reason/description, rejection notes card, ship-back action (text input for tracking number + submit button visible when status is APPROVED).
 
 ### 10. Feed (`feed/`)
 - `feed/create.tsx` — Create a new feed post. Brand owners select which brand to post for, write a caption, upload images, and tag products from the selected brand.
@@ -101,6 +114,7 @@ Six bottom tabs (with label-less icons):
 
 ### 12. Notifications (`notifications/`)
 - `notifications/index.tsx` — Notification list with unread indicators, mark-all-read.
+- `notifications/settings.tsx` — Notification preference toggles: PUSH NOTIFICATIONS, EMAIL NOTIFICATIONS, ORDER UPDATES, PROMOTIONS & OFFERS. Saves to `PUT /users/notification-preferences`. Loads existing preferences from `user.notificationPreferences` on mount.
 
 ### 13. Referral (`referral/`)
 - `referral/index.tsx` — Referral program screen with share code, copy button, and referral history list.
@@ -200,24 +214,36 @@ Centralized via `useCloudinaryUpload` hook:
 | **Header Side Menu** | Animated slide-in menu with navigation, cart badge, user actions |
 | **Search Modal** | Full-page search with trending products cache and debounced live search |
 | **Notifications** | Notification list with unread indicators and mark-all-read |
+| **Notification Settings** | Per-preference toggles (push, email, order updates, promotions) saved to backend |
 | **Referral** | Referral program with share code, copy, and referral history |
 | **AI Try-On** | Virtual try-on via Cloudinary upload + backend job polling + before/after result display |
 | **Info / Static Pages** | About, Contact, Shipping Policy, Returns Policy screens |
 | **Order Confirmation** | Dedicated confirmation screen after order placement |
+| **Promo Codes (brand owner)** | List, create, edit, toggle, delete promo codes; usage stats with recent usage list |
+| **Promo Code at Checkout** | Apply/remove promo code field in checkout; discount line in order summary |
+| **Shipping Zones (brand owner)** | Zones list with expandable rates; create zone; add rate to zone |
+| **Dynamic Shipping at Checkout** | Fetches available rates by address country after address selection; rate picker replaces hardcoded options |
+| **Returns (customer)** | Return request creation, return list, return detail with status timeline and ship-back action |
+| **Returns (brand owner)** | Brand returns list with status filters, approve/reject/received/refund actions, customer photo review |
+| **Return Policy (brand owner)** | Policy form — window, restocking fee, conditions, photo requirement toggle |
+| **Order Detail — REQUEST RETURN** | Button visible on delivered orders → navigates to return create screen |
+| **Order Detail — Carrier/Service** | `shippingCarrier` and `shippingMethodName` shown in logistics section |
+| **Push Notifications** | Token registration on login (Expo push token → `POST /notifications/push-token`), deep-link routing from notification taps (order and return screens) |
+| **Brand Dashboard** | Analytics with quick action cards (promo codes, shipping, returns, return policy), pending returns alert, notify followers modal |
+| **Brand Notify Followers** | Compose modal in dashboard → sends title + message to all followers via backend (`POST /brands/:id/notifications/send`) |
 
 ### Developed But Not Working / Incomplete
 
 | Feature | Issue |
 |---------|-------|
 | **ProductVariant Entity Migration** | New `ProductVariant` entity table exists but the system still uses the deprecated `variants` JSON column. Backend normalizes `variantImages → images` on read. |
-| **Auth Route Protection** | Login redirect in `_layout.tsx` is commented out — individual screens handle auth checks independently. |
+| **Auth Route Protection** | Login redirect in `_layout.tsx` only covers a subset of protected segments (`checkout`, `users`, `manage`, `orders`, `referral`). Returns, cart, and profile routes check auth individually at screen level. |
 
 ### Not Started
 
 | Feature | Notes |
 |---------|-------|
 | **Payment Integration** | No payment gateway — checkout creates orders but no payment processing |
-| **Push Notifications** | Not implemented (toggles in settings are UI-only) |
 | **Product Search Autocomplete** | Debounced search calls API; no dedicated autocomplete/suggestion endpoint |
 
 ---

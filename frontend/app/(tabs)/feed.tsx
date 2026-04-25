@@ -1,14 +1,15 @@
-import React, { useState, useCallback, useRef } from "react";
+import React, { useState, useCallback, useRef, useEffect } from "react";
 import {
   View,
   Text,
   StyleSheet,
-  FlatList,
   Image,
   TouchableOpacity,
   ActivityIndicator,
   Dimensions,
   ScrollView,
+  RefreshControl,
+  FlatList,
 } from "react-native";
 import { useFocusEffect, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -17,6 +18,11 @@ import getApiUrl from "@/helpers/getApiUrl";
 import { useThemeColors } from "@/hooks/useThemeColor";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
+const COLUMN_GAP = 8;
+const PADDING = 8;
+const NUM_COLUMNS = 2;
+const COLUMN_WIDTH =
+  (SCREEN_WIDTH - PADDING * 2 - COLUMN_GAP * (NUM_COLUMNS - 1)) / NUM_COLUMNS;
 
 interface PostData {
   id: number;
@@ -28,172 +34,188 @@ interface PostData {
   isLiked?: boolean;
   brand: { id: number; name: string; logo?: string };
   author: { id: number; firstName?: string; lastName?: string };
-  postProducts?: { product: { id: number; name: string; price: number; images?: string[] } }[];
+  postProducts?: {
+    product: { id: number; name: string; price: number; images?: string[] };
+  }[];
 }
 
-// ── Image Carousel ──
-const ImageCarousel: React.FC<{ images: string[] }> = ({ images }) => {
-  const [activeIndex, setActiveIndex] = useState(0);
+interface SuggestedProduct {
+  id: number;
+  name: string;
+  price: number;
+  images: string[];
+  brand?: { id: number; name: string; logo?: string };
+}
 
-  if (images.length === 1) {
-    return (
-      <Image source={{ uri: images[0] }} style={styles.postImage} resizeMode="cover" />
-    );
-  }
-
+// ── Suggested Product Card ──
+const SuggestedProductCard: React.FC<{
+  product: SuggestedProduct;
+  colors: any;
+  onPress: (id: number) => void;
+}> = ({ product, colors, onPress }) => {
+  const image = product.images?.[0];
   return (
-    <View>
-      <ScrollView
-        horizontal
-        pagingEnabled
-        showsHorizontalScrollIndicator={false}
-        onMomentumScrollEnd={(e) => {
-          const index = Math.round(e.nativeEvent.contentOffset.x / SCREEN_WIDTH);
-          setActiveIndex(index);
-        }}
-      >
-        {images.map((uri, i) => (
-          <Image key={i} source={{ uri }} style={styles.postImage} resizeMode="cover" />
-        ))}
-      </ScrollView>
-      <View style={styles.dots}>
-        {images.map((_, i) => (
-          <View
-            key={i}
-            style={[
-              styles.dot,
-              i === activeIndex ? styles.dotActive : styles.dotInactive,
-            ]}
-          />
-        ))}
+    <TouchableOpacity
+      style={[styles.suggestedCard, { backgroundColor: colors.background }]}
+      onPress={() => onPress(product.id)}
+      activeOpacity={0.85}
+    >
+      {image ? (
+        <Image source={{ uri: image }} style={styles.suggestedImage} resizeMode="cover" />
+      ) : (
+        <View style={[styles.suggestedImage, { backgroundColor: colors.surfaceRaised, justifyContent: "center", alignItems: "center" }]}>
+          <Ionicons name="image-outline" size={24} color={colors.textTertiary} />
+        </View>
+      )}
+      <View style={styles.suggestedInfo}>
+        <Text style={[styles.suggestedName, { color: colors.text }]} numberOfLines={2}>
+          {product.name}
+        </Text>
+        <Text style={[styles.suggestedPrice, { color: colors.text }]}>
+          ${Number(product.price).toFixed(2)}
+        </Text>
+        {product.brand && (
+          <Text style={[styles.suggestedBrand, { color: colors.textTertiary }]} numberOfLines={1}>
+            {product.brand.name}
+          </Text>
+        )}
       </View>
-    </View>
+    </TouchableOpacity>
   );
 };
 
-// ── Post Card ──
-const PostCard: React.FC<{
+// ── Pin Card (Pinterest style) ──
+const PinCard: React.FC<{
   post: PostData;
+  imageHeight: number;
   colors: any;
-  token: string | null;
+  onPress: (id: number) => void;
   onLike: (id: number) => void;
-  onNavigate: (id: number) => void;
   onBrandPress: (id: number) => void;
-  onProductPress: (id: number) => void;
-}> = ({ post, colors, token, onLike, onNavigate, onBrandPress, onProductPress }) => {
-  const timeAgo = getTimeAgo(post.createdAt);
+}> = ({ post, imageHeight, colors, onPress, onLike, onBrandPress }) => {
+  const hasProduct =
+    post.postProducts && post.postProducts.length > 0
+      ? post.postProducts[0].product
+      : null;
 
   return (
-    <View style={[styles.card, { borderBottomColor: colors.border }]}>
-      {/* Header */}
-      <TouchableOpacity
-        style={styles.cardHeader}
-        onPress={() => onBrandPress(post.brand.id)}
-        activeOpacity={0.7}
-      >
-        {post.brand.logo ? (
-          <Image source={{ uri: post.brand.logo }} style={styles.brandAvatar} />
-        ) : (
-          <View style={[styles.brandAvatar, { backgroundColor: colors.surfaceRaised }]}>
-            <Text style={[styles.brandInitial, { color: colors.text }]}>
-              {post.brand.name?.charAt(0) || "B"}
-            </Text>
+    <TouchableOpacity
+      style={[styles.pin, { backgroundColor: colors.background }]}
+      onPress={() => onPress(post.id)}
+      activeOpacity={0.85}
+    >
+      {/* Image */}
+      <View style={[styles.pinImageWrap, { height: imageHeight, backgroundColor: colors.borderLight }]}>
+        <Image
+          source={{ uri: post.images[0] }}
+          style={[styles.pinImage, { height: imageHeight }]}
+          resizeMode="cover"
+        />
+        {post.images.length > 1 && (
+          <View style={[styles.multiImageBadge, { backgroundColor: colors.surfaceOverlay }]}>
+            <Ionicons name="copy-outline" size={12} color={colors.textInverse} />
           </View>
         )}
-        <View style={styles.headerInfo}>
-          <Text style={[styles.brandName, { color: colors.text }]}>
-            {post.brand.name}
-          </Text>
-          <Text style={[styles.timeAgo, { color: colors.textTertiary }]}>
-            {timeAgo}
-          </Text>
-        </View>
-      </TouchableOpacity>
+      </View>
 
-      {/* Images */}
-      <ImageCarousel images={post.images} />
+      {/* Info */}
+      <View style={styles.pinInfo}>
+        {/* Caption */}
+        {post.caption ? (
+          <Text
+            style={[styles.pinCaption, { color: colors.text }]}
+            numberOfLines={2}
+          >
+            {post.caption}
+          </Text>
+        ) : hasProduct ? (
+          <Text
+            style={[styles.pinCaption, { color: colors.text }]}
+            numberOfLines={2}
+          >
+            {hasProduct.name}
+          </Text>
+        ) : null}
 
-      {/* Actions */}
-      <View style={styles.actions}>
-        <View style={styles.actionsLeft}>
+        {/* Tagged product price */}
+        {hasProduct && (
+          <Text style={[styles.pinPrice, { color: colors.text }]}>
+            ${Number(hasProduct.price).toFixed(2)}
+          </Text>
+        )}
+
+        {/* Bottom row: brand + like */}
+        <View style={styles.pinBottom}>
           <TouchableOpacity
-            style={styles.actionBtn}
+            style={styles.pinBrandRow}
+            onPress={() => onBrandPress(post.brand.id)}
+            activeOpacity={0.7}
+          >
+            {post.brand.logo ? (
+              <Image
+                source={{ uri: post.brand.logo }}
+                style={styles.pinBrandAvatar}
+              />
+            ) : (
+              <View
+                style={[
+                  styles.pinBrandAvatar,
+                  { backgroundColor: colors.surfaceRaised },
+                ]}
+              >
+                <Text style={[styles.pinBrandInitial, { color: colors.text }]}>
+                  {post.brand.name?.charAt(0) || "B"}
+                </Text>
+              </View>
+            )}
+            <Text
+              style={[styles.pinBrandName, { color: colors.textTertiary }]}
+              numberOfLines={1}
+            >
+              {post.brand.name}
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
             onPress={() => onLike(post.id)}
             activeOpacity={0.6}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
             <Ionicons
               name={post.isLiked ? "heart" : "heart-outline"}
-              size={24}
-              color={post.isLiked ? "#ef4444" : colors.text}
+              size={18}
+              color={post.isLiked ? colors.danger : colors.textTertiary}
             />
-            {post.likeCount > 0 && (
-              <Text style={[styles.actionCount, { color: post.isLiked ? "#ef4444" : colors.text }]}>
-                {post.likeCount}
-              </Text>
-            )}
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.actionBtn}
-            onPress={() => onNavigate(post.id)}
-            activeOpacity={0.6}
-          >
-            <Ionicons name="chatbubble-outline" size={22} color={colors.text} />
-            {post.commentCount > 0 && (
-              <Text style={[styles.actionCount, { color: colors.text }]}>
-                {post.commentCount}
-              </Text>
-            )}
           </TouchableOpacity>
         </View>
       </View>
-
-      {/* Caption */}
-      {post.caption && (
-        <Text style={[styles.caption, { color: colors.text }]} numberOfLines={3}>
-          <Text style={styles.captionBrand}>{post.brand.name} </Text>
-          {post.caption}
-        </Text>
-      )}
-
-      {/* Tagged Products */}
-      {post.postProducts && post.postProducts.length > 0 && (
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={styles.productsScroll}
-          contentContainerStyle={styles.productsContainer}
-        >
-          {post.postProducts.map((pp) => (
-            <TouchableOpacity
-              key={pp.product.id}
-              style={[styles.taggedProduct, { borderColor: colors.border }]}
-              onPress={() => onProductPress(pp.product.id)}
-              activeOpacity={0.7}
-            >
-              {pp.product.images?.[0] && (
-                <Image
-                  source={{ uri: pp.product.images[0] }}
-                  style={styles.taggedProductImage}
-                />
-              )}
-              <View style={styles.taggedProductInfo}>
-                <Text
-                  style={[styles.taggedProductName, { color: colors.text }]}
-                  numberOfLines={1}
-                >
-                  {pp.product.name}
-                </Text>
-                <Text style={[styles.taggedProductPrice, { color: colors.textTertiary }]}>
-                  ${Number(pp.product.price).toFixed(2)}
-                </Text>
-              </View>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-      )}
-    </View>
+    </TouchableOpacity>
   );
 };
+
+// ── Masonry Layout ──
+function useMasonryColumns(posts: PostData[], imageHeights: Record<number, number>) {
+  const leftCol: { post: PostData; height: number }[] = [];
+  const rightCol: { post: PostData; height: number }[] = [];
+  let leftHeight = 0;
+  let rightHeight = 0;
+
+  for (const post of posts) {
+    const imgH = imageHeights[post.id] || COLUMN_WIDTH;
+    const totalH = imgH + 70;
+
+    // Use accumulated height to pick the shorter column
+    if (leftHeight <= rightHeight) {
+      leftCol.push({ post, height: imgH });
+      leftHeight += totalH + COLUMN_GAP;
+    } else {
+      rightCol.push({ post, height: imgH });
+      rightHeight += totalH + COLUMN_GAP;
+    }
+  }
+
+  return { leftCol, rightCol };
+}
 
 // ── Main Feed Screen ──
 export default function FeedScreen() {
@@ -202,11 +224,67 @@ export default function FeedScreen() {
   const { token, user } = useAuth();
 
   const [posts, setPosts] = useState<PostData[]>([]);
+  const [suggestedProducts, setSuggestedProducts] = useState<SuggestedProduct[]>([]);
+  const [suggestedPosts, setSuggestedPosts] = useState<PostData[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const loadingMore = useRef(false);
+  const [imageHeights, setImageHeights] = useState<Record<number, number>>({});
+
+  // Resolve image aspect ratios → heights for all displayed posts
+  const allPosts = posts.length > 0 ? posts : suggestedPosts;
+  useEffect(() => {
+    for (const post of allPosts) {
+      if (imageHeights[post.id] || !post.images[0]) continue;
+      Image.getSize(
+        post.images[0],
+        (w, h) => {
+          const scaledHeight = (h / w) * COLUMN_WIDTH;
+          // Clamp between 120 and 300
+          const clamped = Math.max(120, Math.min(300, scaledHeight));
+          setImageHeights((prev) => ({ ...prev, [post.id]: clamped }));
+        },
+        () => {
+          // On error, default to square
+          setImageHeights((prev) => ({ ...prev, [post.id]: COLUMN_WIDTH }));
+        },
+      );
+    }
+  }, [allPosts]);
+
+  // Fetch personalized product suggestions (uses wishlist + order history)
+  const fetchSuggestedProducts = useCallback(async () => {
+    try {
+      const headers: any = {};
+      if (token) headers.Authorization = `Bearer ${token}`;
+
+      // Use /products/for-you if logged in, otherwise /products/trending
+      const endpoint = token ? "/products/for-you" : "/products/trending";
+      const res = await fetch(`${getApiUrl()}${endpoint}?limit=10`, { headers });
+      if (!res.ok) return;
+      const data = await res.json();
+      setSuggestedProducts(Array.isArray(data) ? data : data.data || []);
+    } catch (e) {
+      console.error("Suggested products error:", e);
+    }
+  }, [token]);
+
+  // Fetch suggested posts (all posts, not just followed) as fallback when followed feed is empty
+  const fetchSuggestedPosts = useCallback(async () => {
+    try {
+      const headers: any = {};
+      if (token) headers.Authorization = `Bearer ${token}`;
+
+      const res = await fetch(`${getApiUrl()}/feed?page=1&limit=20`, { headers });
+      if (!res.ok) return;
+      const data = await res.json();
+      setSuggestedPosts(data.data || []);
+    } catch (e) {
+      console.error("Suggested posts error:", e);
+    }
+  }, [token]);
 
   const fetchFeed = useCallback(
     async (pageNum = 1, isRefresh = false) => {
@@ -216,16 +294,24 @@ export default function FeedScreen() {
         if (token) headers.Authorization = `Bearer ${token}`;
 
         const url = token
-          ? `${getApiUrl()}/feed?page=${pageNum}&limit=10&followedOnly=true`
-          : `${getApiUrl()}/feed?page=${pageNum}&limit=10`;
+          ? `${getApiUrl()}/feed?page=${pageNum}&limit=20&followedOnly=true`
+          : `${getApiUrl()}/feed?page=${pageNum}&limit=20`;
         const res = await fetch(url, { headers });
         if (!res.ok) throw new Error("Failed to fetch feed");
         const data = await res.json();
 
+        const newPosts = data.data || [];
+
         if (pageNum === 1) {
-          setPosts(data.data);
+          setPosts(newPosts);
+          // If no followed-brand posts and user is logged in, load suggested posts
+          if (newPosts.length === 0 && token) {
+            fetchSuggestedPosts();
+          } else {
+            setSuggestedPosts([]);
+          }
         } else {
-          setPosts((prev) => [...prev, ...data.data]);
+          setPosts((prev) => [...prev, ...newPosts]);
         }
         setHasMore(pageNum < data.pagination.totalPages);
         setPage(pageNum);
@@ -237,13 +323,14 @@ export default function FeedScreen() {
         loadingMore.current = false;
       }
     },
-    [token],
+    [token, fetchSuggestedPosts],
   );
 
   useFocusEffect(
     useCallback(() => {
       fetchFeed(1);
-    }, [fetchFeed]),
+      fetchSuggestedProducts();
+    }, [fetchFeed, fetchSuggestedProducts]),
   );
 
   const handleRefresh = () => fetchFeed(1, true);
@@ -276,7 +363,48 @@ export default function FeedScreen() {
     } catch {}
   };
 
+  const handleScroll = (e: any) => {
+    const { layoutMeasurement, contentOffset, contentSize } = e.nativeEvent;
+    const distanceFromBottom =
+      contentSize.height - layoutMeasurement.height - contentOffset.y;
+    if (distanceFromBottom < 400) {
+      handleLoadMore();
+    }
+  };
+
+  // Determine which posts to show in the masonry: followed posts, or suggested as fallback
+  const displayPosts = posts.length > 0 ? posts : suggestedPosts;
+  const showingSuggested = posts.length === 0 && suggestedPosts.length > 0;
+
+  const { leftCol, rightCol } = useMasonryColumns(displayPosts, imageHeights);
+
   const isBrandOwner = user?.role === "brandOwner";
+
+  // ── Suggested For You section ──
+  const renderSuggestedSection = () => {
+    if (suggestedProducts.length === 0) return null;
+    return (
+      <View style={styles.suggestedSection}>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>
+          Suggested for you
+        </Text>
+        <FlatList
+          data={suggestedProducts}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          keyExtractor={(item) => `sp-${item.id}`}
+          contentContainerStyle={styles.suggestedList}
+          renderItem={({ item }) => (
+            <SuggestedProductCard
+              product={item}
+              colors={colors}
+              onPress={(id) => router.push(`/products/${id}` as any)}
+            />
+          )}
+        />
+      </View>
+    );
+  };
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -284,46 +412,97 @@ export default function FeedScreen() {
         <View style={styles.center}>
           <ActivityIndicator size="large" color={colors.text} />
         </View>
-      ) : (
-        <FlatList
-          data={posts}
-          keyExtractor={(item) => item.id.toString()}
-          renderItem={({ item }) => (
-            <PostCard
-              post={item}
-              colors={colors}
-              token={token}
-              onLike={handleLike}
-              onNavigate={(id) => router.push(`/feed/${id}` as any)}
-              onBrandPress={(id) => router.push(`/brands/${id}` as any)}
-              onProductPress={(id) => router.push(`/products/${id}` as any)}
-            />
-          )}
-          onRefresh={handleRefresh}
-          refreshing={refreshing}
-          onEndReached={handleLoadMore}
-          onEndReachedThreshold={0.5}
-          ListEmptyComponent={
-            <View style={styles.empty}>
-              <Ionicons name="images-outline" size={48} color={colors.textTertiary} />
-              <Text style={[styles.emptyTitle, { color: colors.text }]}>
-                No posts yet
+      ) : displayPosts.length === 0 ? (
+        <ScrollView
+          contentContainerStyle={styles.emptyScroll}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
+          }
+        >
+          {renderSuggestedSection()}
+          <View style={styles.empty}>
+            <Ionicons name="images-outline" size={48} color={colors.textTertiary} />
+            <Text style={[styles.emptyTitle, { color: colors.text }]}>
+              Your feed is empty
+            </Text>
+            <Text style={[styles.emptySubtitle, { color: colors.textTertiary }]}>
+              Follow brands you love to see their posts here
+            </Text>
+            <TouchableOpacity
+              style={[styles.exploreCta, { borderColor: colors.text }]}
+              onPress={() => router.push("/(tabs)/discover" as any)}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.exploreCtaText, { color: colors.text }]}>
+                Explore brands
               </Text>
-              <Text style={[styles.emptySubtitle, { color: colors.textTertiary }]}>
-                Follow brands to see their latest updates
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      ) : (
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          onScroll={handleScroll}
+          scrollEventThrottle={200}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
+          }
+          contentContainerStyle={styles.scrollContent}
+        >
+          {/* Suggested products section */}
+          {renderSuggestedSection()}
+
+          {/* Label when showing suggested posts instead of followed feed */}
+          {showingSuggested && (
+            <View style={styles.suggestedBanner}>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>
+                Discover posts
+              </Text>
+              <Text style={[styles.suggestedBannerSub, { color: colors.textTertiary }]}>
+                Follow brands to personalize your feed
               </Text>
             </View>
-          }
-          ListFooterComponent={
-            hasMore ? (
-              <ActivityIndicator
-                style={{ paddingVertical: 20 }}
-                color={colors.textTertiary}
-              />
-            ) : null
-          }
-          contentContainerStyle={posts.length === 0 ? { flex: 1 } : undefined}
-        />
+          )}
+
+          <View style={styles.masonryRow}>
+            {/* Left column */}
+            <View style={[styles.column, styles.columnLeft]}>
+              {leftCol.map(({ post, height }) => (
+                <PinCard
+                  key={post.id}
+                  post={post}
+                  imageHeight={height}
+                  colors={colors}
+                  onPress={(id) => router.push(`/feed/${id}` as any)}
+                  onLike={handleLike}
+                  onBrandPress={(id) => router.push(`/brands/${id}` as any)}
+                />
+              ))}
+            </View>
+            {/* Right column */}
+            <View style={styles.column}>
+              {rightCol.map(({ post, height }) => (
+                <PinCard
+                  key={post.id}
+                  post={post}
+                  imageHeight={height}
+                  colors={colors}
+                  onPress={(id) => router.push(`/feed/${id}` as any)}
+                  onLike={handleLike}
+                  onBrandPress={(id) => router.push(`/brands/${id}` as any)}
+                />
+              ))}
+            </View>
+          </View>
+
+          {/* Load more indicator */}
+          {hasMore && (
+            <ActivityIndicator
+              style={{ paddingVertical: 20 }}
+              color={colors.textTertiary}
+            />
+          )}
+        </ScrollView>
       )}
 
       {/* FAB for brand owners */}
@@ -340,102 +519,168 @@ export default function FeedScreen() {
   );
 }
 
-function getTimeAgo(dateStr: string): string {
-  const now = Date.now();
-  const then = new Date(dateStr).getTime();
-  const diff = now - then;
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1) return "now";
-  if (mins < 60) return `${mins}m`;
-  const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours}h`;
-  const days = Math.floor(hours / 24);
-  if (days < 7) return `${days}d`;
-  const weeks = Math.floor(days / 7);
-  return `${weeks}w`;
-}
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
   center: { flex: 1, justifyContent: "center", alignItems: "center" },
 
-  // Card
-  card: { borderBottomWidth: 0.5, paddingBottom: 16, marginBottom: 4 },
-  cardHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+  // Masonry
+  scrollContent: {
+    paddingHorizontal: PADDING,
+    paddingTop: PADDING,
+    paddingBottom: 110,
   },
-  brandAvatar: {
-    width: 36,
-    height: 36,
+  masonryRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+  },
+  column: {
+    width: COLUMN_WIDTH,
+  },
+  columnLeft: {
+    marginRight: COLUMN_GAP,
+  },
+
+  // Pin card
+  pin: {
+    marginBottom: COLUMN_GAP,
+    overflow: "hidden",
+  },
+  pinImageWrap: {
+    width: COLUMN_WIDTH,
+    overflow: "hidden",
+  },
+  pinImage: {
+    width: COLUMN_WIDTH,
+  },
+  multiImageBadge: {
+    position: "absolute",
+    top: 8,
+    right: 8,
     borderRadius: 0,
-    justifyContent: "center",
+    padding: 4,
+  },
+
+  // Pin info
+  pinInfo: {
+    paddingHorizontal: 6,
+    paddingVertical: 8,
+  },
+  pinCaption: {
+    fontSize: 12,
+    fontWeight: "600",
+    lineHeight: 16,
+  },
+  pinPrice: {
+    fontSize: 12,
+    fontWeight: "800",
+    marginTop: 3,
+  },
+  pinBottom: {
+    flexDirection: "row",
     alignItems: "center",
-  },
-  brandInitial: { fontSize: 14, fontWeight: "800" },
-  headerInfo: { marginLeft: 10, flex: 1 },
-  brandName: { fontSize: 13, fontWeight: "700" },
-  timeAgo: { fontSize: 11, marginTop: 1 },
-
-  // Image
-  postImage: { width: SCREEN_WIDTH, height: SCREEN_WIDTH, backgroundColor: "#f0f0f0" },
-  dots: {
-    flexDirection: "row",
-    justifyContent: "center",
-    paddingVertical: 10,
-    gap: 5,
-  },
-  dot: { width: 6, height: 6, borderRadius: 0 },
-  dotActive: { backgroundColor: "#000" },
-  dotInactive: { backgroundColor: "#E5E5E5" },
-
-  // Actions
-  actions: {
-    flexDirection: "row",
     justifyContent: "space-between",
-    paddingHorizontal: 12,
-    paddingTop: 10,
-  },
-  actionsLeft: { flexDirection: "row", gap: 16 },
-  actionBtn: { flexDirection: "row", alignItems: "center", gap: 4, padding: 4 },
-  actionCount: { fontSize: 13, fontWeight: "600" },
-
-  // Content
-  caption: {
-    fontSize: 13,
-    lineHeight: 18,
-    paddingHorizontal: 16,
     marginTop: 6,
   },
-  captionBrand: { fontWeight: "700" },
-
-  // Tagged products
-  productsScroll: { marginTop: 12 },
-  productsContainer: { paddingHorizontal: 16, gap: 10 },
-  taggedProduct: {
+  pinBrandRow: {
     flexDirection: "row",
-    borderWidth: 1,
-    padding: 8,
-    width: 200,
-    gap: 8,
+    alignItems: "center",
+    flex: 1,
+    marginRight: 8,
   },
-  taggedProductImage: { width: 40, height: 40, backgroundColor: "#f5f5f5" },
-  taggedProductInfo: { flex: 1, justifyContent: "center" },
-  taggedProductName: { fontSize: 12, fontWeight: "600" },
-  taggedProductPrice: { fontSize: 11, marginTop: 2 },
+  pinBrandAvatar: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    justifyContent: "center",
+    alignItems: "center",
+    overflow: "hidden",
+  },
+  pinBrandInitial: {
+    fontSize: 9,
+    fontWeight: "800",
+  },
+  pinBrandName: {
+    fontSize: 11,
+    marginLeft: 4,
+    flex: 1,
+  },
+
+  // Suggested section
+  suggestedSection: {
+    marginBottom: 16,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    paddingHorizontal: PADDING,
+    marginBottom: 10,
+  },
+  suggestedList: {
+    paddingHorizontal: PADDING,
+    gap: 10,
+  },
+  suggestedCard: {
+    width: 140,
+    overflow: "hidden",
+  },
+  suggestedImage: {
+    width: 140,
+    height: 140,
+  },
+  suggestedInfo: {
+    paddingHorizontal: 4,
+    paddingVertical: 6,
+  },
+  suggestedName: {
+    fontSize: 12,
+    fontWeight: "600",
+    lineHeight: 16,
+  },
+  suggestedPrice: {
+    fontSize: 12,
+    fontWeight: "800",
+    marginTop: 2,
+  },
+  suggestedBrand: {
+    fontSize: 10,
+    marginTop: 2,
+  },
+  suggestedBanner: {
+    paddingHorizontal: 0,
+    marginBottom: 12,
+  },
+  suggestedBannerSub: {
+    fontSize: 12,
+    paddingHorizontal: PADDING,
+    marginTop: 2,
+  },
 
   // Empty
+  emptyScroll: {
+    flexGrow: 1,
+    paddingTop: PADDING,
+  },
   empty: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
     gap: 10,
     paddingHorizontal: 40,
+    paddingBottom: 110,
   },
   emptyTitle: { fontSize: 18, fontWeight: "700" },
   emptySubtitle: { fontSize: 13, textAlign: "center" },
+  exploreCta: {
+    marginTop: 12,
+    paddingHorizontal: 24,
+    paddingVertical: 10,
+    borderWidth: 1,
+  },
+  exploreCtaText: {
+    fontSize: 13,
+    fontWeight: "600",
+  },
 
   // FAB
   fab: {

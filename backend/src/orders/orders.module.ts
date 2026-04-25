@@ -12,6 +12,7 @@ import { Cart } from '../cart/cart.entity';
 import { CartItem } from '../cart/cart-item.entity';
 import { OrderStatusHistory } from './order-status-history.entity';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { PromoCodesModule } from '../promo-codes/promo-codes.module';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { NotificationsModule } from '../notifications/notifications.module';
       OrderStatusHistory,
     ]),
     NotificationsModule,
+    PromoCodesModule,
   ],
   controllers: [OrdersController],
   providers: [OrdersService],

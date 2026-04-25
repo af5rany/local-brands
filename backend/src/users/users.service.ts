@@ -118,4 +118,13 @@ export class UsersService {
       throw new NotFoundException(`User with id ${id} not found`);
     }
   }
+
+  async updateNotificationPreferences(
+    userId: number,
+    prefs: Record<string, boolean>,
+  ): Promise<void> {
+    await this.usersRepository.update(userId, {
+      notificationPreferences: prefs,
+    } as any);
+  }
 }

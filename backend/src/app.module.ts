@@ -21,6 +21,9 @@ import { TryOnModule } from './try-on/try-on.module';
 import { FeedModule } from './feed/feed.module';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { ImageSearchModule } from './image-search/image-search.module';
+import { PromoCodesModule } from './promo-codes/promo-codes.module';
+import { ShippingModule } from './shipping/shipping.module';
+import { ReturnsModule } from './returns/returns.module';
 
 @Module({
   imports: [
@@ -64,6 +67,9 @@ import { ImageSearchModule } from './image-search/image-search.module';
     TryOnModule,
     FeedModule,
     ImageSearchModule,
+    PromoCodesModule,
+    ShippingModule,
+    ReturnsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

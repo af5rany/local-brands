@@ -261,11 +261,27 @@ const OrderDetailScreen = () => {
                     .toUpperCase()}
                 </Text>
               </View>
-              {order.shippingMethod && (
+              {order.shippingMethodName && (
+                <View style={styles.logisticsRow}>
+                  <Text style={styles.logisticsKey}>SERVICE</Text>
+                  <Text style={styles.logisticsVal}>
+                    {order.shippingMethodName.toUpperCase()}
+                  </Text>
+                </View>
+              )}
+              {!order.shippingMethodName && order.shippingMethod && (
                 <View style={styles.logisticsRow}>
                   <Text style={styles.logisticsKey}>METHOD</Text>
                   <Text style={styles.logisticsVal}>
                     {order.shippingMethod.toUpperCase()}
+                  </Text>
+                </View>
+              )}
+              {order.shippingCarrier && (
+                <View style={styles.logisticsRow}>
+                  <Text style={styles.logisticsKey}>CARRIER</Text>
+                  <Text style={styles.logisticsVal}>
+                    {order.shippingCarrier.toUpperCase()}
                   </Text>
                 </View>
               )}
@@ -326,6 +342,18 @@ const OrderDetailScreen = () => {
               <TouchableOpacity style={styles.btnFilledWhite}>
                 <Text style={styles.btnFilledWhiteText}>TRACK SHIPMENT</Text>
               </TouchableOpacity>
+              {order.status?.toUpperCase() === "DELIVERED" && (
+                <TouchableOpacity
+                  style={styles.btnOutlineWhite}
+                  onPress={() =>
+                    router.push(
+                      `/returns/create?orderId=${orderId}${order.brandId ? `&brandId=${order.brandId}` : ""}` as any
+                    )
+                  }
+                >
+                  <Text style={styles.btnOutlineWhiteText}>REQUEST RETURN</Text>
+                </TouchableOpacity>
+              )}
             </View>
           </View>
         </View>

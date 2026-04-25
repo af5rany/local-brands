@@ -34,7 +34,7 @@ export class BrandAccessGuard implements CanActivate {
     // Check if user is associated with this brand
     const membership = await this.brandsService.getMembership(
       brandId,
-      user.userId,
+      user.id,
     );
     if (!membership) {
       throw new ForbiddenException(

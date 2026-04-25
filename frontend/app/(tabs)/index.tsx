@@ -17,6 +17,10 @@ import { useFocusEffect, useRouter } from "expo-router";
 import { useAuth } from "@/context/AuthContext";
 import getApiUrl from "@/helpers/getApiUrl";
 import { Product } from "@/types/product";
+import LookbookHero from "@/components/LookbookHero";
+import HeroPressable from "@/components/HeroPressable";
+import ManSvg from "@/assets/images/man.svg";
+import WomanSvg from "@/assets/images/woman.svg";
 
 const MAN_IMAGE = require("@/assets/images/man.jpg");
 const WOMEN_IMAGE = require("@/assets/images/women.jpg");
@@ -83,6 +87,7 @@ const HomeScreen = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const hasLoadedOnce = useRef(false);
+  const scrollY = useRef(new Animated.Value(0)).current;
 
   const fetchData = async () => {
     if (!hasLoadedOnce.current) setLoading(true);
@@ -167,100 +172,63 @@ const HomeScreen = () => {
   const TILE_CAPTIONS = ["CURATORIAL", "HERITAGE", "GALLERY"];
 
   return (
-    <ScrollView
+    <Animated.ScrollView
       style={styles.scroll}
       contentContainerStyle={styles.scrollContent}
       showsVerticalScrollIndicator={false}
+      scrollEventThrottle={16}
+      onScroll={Animated.event(
+        [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+        { useNativeDriver: true }
+      )}
       refreshControl={
         <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#000" />
       }
     >
-      {/* ── 1. Split Hero (Men / Women) ────────────────────── */}
-      <View style={styles.splitHero}>
-        {/* Men half */}
-        <TouchableOpacity
-          style={styles.heroHalf}
-          activeOpacity={0.9}
-          onPress={() => router.navigate({ pathname: "/(tabs)/shop", params: { gender: "men" } } as any)}
-        >
-          <Image source={MAN_IMAGE} style={styles.fill} resizeMode="cover" />
-          <LinearGradient
-            colors={["transparent", "rgba(0,0,0,0.65)"]}
-            style={styles.heroGradient}
-          />
-          <View style={styles.heroHalfContent}>
-            <Text style={styles.heroLabel}>SS25 MEN</Text>
-            <Text style={styles.heroHalfTitle}>{"Structural\nPrecision"}</Text>
-            <View style={styles.heroBtn}>
-              <Text style={styles.heroBtnText}>SHOP MEN</Text>
-            </View>
-          </View>
-        </TouchableOpacity>
+      {/* fix this image to be pressable  */}
+      <View style={{
+        width: "100%",
+        height: 500,
+        marginBottom: 64,
+        marginHorizontal: 0,
+        alignSelf: "stretch",
+        backgroundColor: "#ffffff",
+      }}>
 
-        {/* Women half */}
-        <TouchableOpacity
-          style={[styles.heroHalf, styles.heroHalfRight]}
-          activeOpacity={0.9}
-          onPress={() => router.navigate({ pathname: "/(tabs)/shop", params: { gender: "women" } } as any)}
-        >
-          <Image source={WOMEN_IMAGE} style={styles.fill} resizeMode="cover" />
-          <LinearGradient
-            colors={["transparent", "rgba(0,0,0,0.65)"]}
-            style={styles.heroGradient}
+        {/* Woman character — positioned over her exact location */}
+        <View style={{ position: "absolute", left: "10%", bottom: 0, width: "24%", height: "78%", alignItems: "center" }}>
+          <Text style={styles.heroShopLabel}>SHOP HER LOOK</Text>
+          <HeroPressable
+            SvgComponent={WomanSvg}
+            onPress={() => router.push("/(tabs)/shop" as any)}
+            style={{ width: "63%", height: "63%" }}
+            entryDirection="left"
+            entryDelay={0}
+            scrollY={scrollY}
           />
-          <View style={styles.heroHalfContent}>
-            <Text style={styles.heroLabel}>SS25 WOMEN</Text>
-            <Text style={styles.heroHalfTitle}>{"Architectural\nForm"}</Text>
-            <View style={styles.heroBtn}>
-              <Text style={styles.heroBtnText}>SHOP WOMEN</Text>
-            </View>
-          </View>
-        </TouchableOpacity>
+        </View>
+
+        {/* Man character — positioned over his exact location */}
+        <View style={{ position: "absolute", right: "10%", bottom: 0, width: "24%", height: "78%", alignItems: "center" }}>
+          <Text style={styles.heroShopLabel}>SHOP HIS LOOK</Text>
+          <HeroPressable
+            SvgComponent={ManSvg}
+            onPress={() => router.push("/(tabs)/shop" as any)}
+            style={{ width: "63%", height: "63%"}}
+            entryDirection="right"
+            entryDelay={200}
+            scrollY={scrollY}
+          />
+        </View>
+
       </View>
+      <LookbookHero />
+      {/* <EditorialSection /> */}
+
 
       {/* ── 1.5. Editorial Partners / Brands ──────────────── */}
       <View style={styles.brandsSection}>
         <Text style={styles.brandsLabel}>EDITORIAL PARTNERS</Text>
-
-        {/* 3-col staggered brand grid */}
-        {gridBrands.length > 0 && (
-          <View style={styles.brandsGrid}>
-            {gridBrands.map((brand, i) => (
-              <TouchableOpacity
-                key={brand.id}
-                style={[styles.brandGridItem, i === 1 && { paddingTop: 48 }]}
-                onPress={() =>
-                  String(brand.id).startsWith("fallback")
-                    ? router.push("/(tabs)/brands" as any)
-                    : router.push(`/brands/${brand.id}` as any)
-                }
-              >
-                <View style={[styles.brandTile, TILE_STYLES[i]]}>
-                  {brand.logo ? (
-                    <Image
-                      source={{ uri: brand.logo }}
-                      style={styles.brandTileImage}
-                      resizeMode="cover"
-                    />
-                  ) : (
-                    <Text
-                      style={[
-                        styles.brandTileText,
-                        i === 1 && { color: "#ffffff" },
-                      ]}
-                      numberOfLines={1}
-                      adjustsFontSizeToFit
-                    >
-                      {brand.name.toUpperCase().slice(0, 8)}
-                    </Text>
-                  )}
-                </View>
-                <Text style={styles.brandTileCaption}>{TILE_CAPTIONS[i]}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        )}
-
         {/* Horizontal brand bar */}
         {barBrands.length > 0 && (
           <View style={styles.brandBar}>
@@ -480,7 +448,7 @@ const HomeScreen = () => {
           © 2025 MONOLITH LTD. ALL RIGHTS RESERVED.
         </Text>
       </View>
-    </ScrollView>
+    </Animated.ScrollView>
   );
 };
 
@@ -576,7 +544,7 @@ const styles = StyleSheet.create({
     color: "#000000",
     // letterSpacing: 3,
     textTransform: "uppercase",
-    marginBottom: 48,
+    marginBottom: 10,
   },
   brandsGrid: {
     flexDirection: "row",
@@ -839,6 +807,18 @@ const styles = StyleSheet.create({
   footerCol: {
     flex: 1,
     gap: 12,
+  },
+  heroShopLabel: {
+    fontSize: 9,
+    color: "#000000",
+    textTransform: "uppercase",
+    letterSpacing: 2,
+    marginBottom: 30,
+  },
+  heroImage: {
+    width: "100%",
+    height: 600,
+    marginBottom: 64,
   },
   footerHeading: {
     fontFamily: undefined,

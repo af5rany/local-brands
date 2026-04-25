@@ -3,13 +3,13 @@ import { Stack, useRouter, useSegments } from "expo-router";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
 import { BrandProvider } from "@/context/BrandContext";
 import { CartProvider } from "@/context/CartContext";
-import { ActivityIndicator, View } from "react-native";
+import { ActivityIndicator, Platform, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { ToastProvider } from "@/context/ToastContext";
 import { NetworkProvider } from "@/context/NetworkContext";
 import { ThemeProvider } from "@/context/ThemeContext";
 import GlobalErrorBoundary from "@/components/GlobalErrorBoundary";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { useFonts } from "expo-font";
 import {
@@ -19,6 +19,17 @@ import {
   Inter_600SemiBold,
 } from "@expo-google-fonts/inter";
 import * as SplashScreen from "expo-splash-screen";
+import * as Notifications from "expo-notifications";
+import * as Device from "expo-device";
+import getApiUrl from "@/helpers/getApiUrl";
+
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: true,
+  }),
+});
 
 SplashScreen.preventAutoHideAsync();
 
@@ -30,10 +41,34 @@ const PROTECTED_SEGMENTS = [
   "referral",
 ];
 
+async function registerForPushNotifications(token: string) {
+  if (!Device.isDevice) return;
+  const { status: existingStatus } = await Notifications.getPermissionsAsync();
+  let finalStatus = existingStatus;
+  if (existingStatus !== "granted") {
+    const { status } = await Notifications.requestPermissionsAsync();
+    finalStatus = status;
+  }
+  if (finalStatus !== "granted") return;
+
+  const expoPushToken = (await Notifications.getExpoPushTokenAsync()).data;
+  const platform = Platform.OS;
+
+  try {
+    await fetch(`${getApiUrl()}/notifications/push-token`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ token: expoPushToken, platform }),
+    });
+  } catch {}
+}
+
 function RootLayoutNav() {
   const { token, loading } = useAuth();
   const router = useRouter();
   const segments = useSegments();
+  const notificationListener = useRef<any>();
+  const responseListener = useRef<any>();
 
   useEffect(() => {
     if (
@@ -45,6 +80,29 @@ function RootLayoutNav() {
       router.replace("/auth/login");
     }
   }, [token, segments, loading]);
+
+  // Register push token when user logs in
+  useEffect(() => {
+    if (token && !loading) {
+      registerForPushNotifications(token).catch(() => {});
+    }
+  }, [token, loading]);
+
+  // Notification listeners
+  useEffect(() => {
+    notificationListener.current = Notifications.addNotificationReceivedListener(() => {
+      // notification received in foreground — handled by handler above
+    });
+    responseListener.current = Notifications.addNotificationResponseReceivedListener((response) => {
+      const data = response.notification.request.content.data;
+      if (data?.orderId) router.push(`/orders/${data.orderId}` as any);
+      else if (data?.returnId) router.push(`/returns/${data.returnId}` as any);
+    });
+    return () => {
+      Notifications.removeNotificationSubscription(notificationListener.current);
+      Notifications.removeNotificationSubscription(responseListener.current);
+    };
+  }, []);
 
   if (loading) {
     return (
@@ -79,10 +137,6 @@ function RootLayoutNav() {
       />
 
       {/* Brands */}
-      <Stack.Screen
-        name="brands/index"
-        options={{ headerShown: false, title: "Brands" }}
-      />
       <Stack.Screen
         name="brands/create"
         options={{ headerShown: false, title: "Create Brand" }}
@@ -188,6 +242,58 @@ function RootLayoutNav() {
       <Stack.Screen
         name="notifications/index"
         options={{ headerShown: false, title: "Notifications" }}
+      />
+      <Stack.Screen
+        name="notifications/settings"
+        options={{ headerShown: false, title: "Notification Settings" }}
+      />
+      {/* Returns */}
+      <Stack.Screen
+        name="returns/index"
+        options={{ headerShown: false, title: "My Returns" }}
+      />
+      <Stack.Screen
+        name="returns/create"
+        options={{ headerShown: false, title: "Request Return" }}
+      />
+      <Stack.Screen
+        name="returns/[returnId]"
+        options={{ headerShown: false, title: "Return Details" }}
+      />
+      {/* Brand — promo codes */}
+      <Stack.Screen
+        name="brands/[brandId]/promo-codes/index"
+        options={{ headerShown: false, title: "Promo Codes" }}
+      />
+      <Stack.Screen
+        name="brands/[brandId]/promo-codes/create"
+        options={{ headerShown: false, title: "Create Promo Code" }}
+      />
+      <Stack.Screen
+        name="brands/[brandId]/promo-codes/[promoId]"
+        options={{ headerShown: false, title: "Promo Code" }}
+      />
+      {/* Brand — shipping */}
+      <Stack.Screen
+        name="brands/[brandId]/shipping/index"
+        options={{ headerShown: false, title: "Shipping Zones" }}
+      />
+      <Stack.Screen
+        name="brands/[brandId]/shipping/zone"
+        options={{ headerShown: false, title: "Shipping Zone" }}
+      />
+      {/* Brand — returns */}
+      <Stack.Screen
+        name="brands/[brandId]/returns/index"
+        options={{ headerShown: false, title: "Returns" }}
+      />
+      <Stack.Screen
+        name="brands/[brandId]/returns/[returnId]"
+        options={{ headerShown: false, title: "Return Request" }}
+      />
+      <Stack.Screen
+        name="brands/[brandId]/return-policy"
+        options={{ headerShown: false, title: "Return Policy" }}
       />
 
       <Stack.Screen

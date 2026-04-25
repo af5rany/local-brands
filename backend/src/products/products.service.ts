@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Brackets, DataSource } from 'typeorm';
@@ -498,7 +499,32 @@ export class ProductsService {
     };
   }
 
-  async create(productData: Partial<Product>): Promise<PublicProductDto> {
+  private async validateBrandAccess(
+    brandId: number,
+    user: any,
+  ): Promise<void> {
+    if (!user) return;
+    if (user.role === UserRole.ADMIN) return;
+    const membership = await this.brandsService.getMembership(
+      brandId,
+      user.id,
+    );
+    if (!membership) {
+      throw new ForbiddenException(
+        'You do not have permission to manage products for this brand.',
+      );
+    }
+    if (membership.role !== 'owner' && !membership.canManageProducts) {
+      throw new ForbiddenException(
+        'You do not have permission to manage products for this brand.',
+      );
+    }
+  }
+
+  async create(
+    productData: Partial<Product>,
+    user?: any,
+  ): Promise<PublicProductDto> {
     if (productData.brandId) {
       const brand = await this.brandsRepository.findOne({
         where: { id: productData.brandId },
@@ -509,6 +535,10 @@ export class ProductsService {
         throw new BadRequestException(
           `Brand with id ${productData.brandId} does not exist`,
         );
+      }
+
+      if (user) {
+        await this.validateBrandAccess(productData.brandId, user);
       }
     }
 
@@ -569,6 +599,7 @@ export class ProductsService {
   async update(
     id: number,
     updateData: Partial<Product>,
+    user?: any,
   ): Promise<PublicProductDto> {
     if (updateData.brandId) {
       const brand = await this.brandsRepository.findOne({
@@ -580,6 +611,17 @@ export class ProductsService {
         throw new BadRequestException(
           `Brand with id ${updateData.brandId} does not exist`,
         );
+      }
+    }
+
+    // Validate ownership: check against the product's current brand
+    if (user) {
+      const product = await this.productsRepository.findOne({
+        where: { id },
+        select: ['id', 'brandId'],
+      });
+      if (product?.brandId) {
+        await this.validateBrandAccess(product.brandId, user);
       }
     }
 
@@ -674,7 +716,16 @@ export class ProductsService {
     return result;
   }
 
-  async remove(id: number): Promise<void> {
+  async remove(id: number, user?: any): Promise<void> {
+    if (user) {
+      const product = await this.productsRepository.findOne({
+        where: { id },
+        select: ['id', 'brandId'],
+      });
+      if (product?.brandId) {
+        await this.validateBrandAccess(product.brandId, user);
+      }
+    }
     const result = await this.productsRepository.softDelete(id);
     console.log(`[ProductsService] softDelete id=${id}, affected=${result.affected}`);
     if (result.affected === 0) {
@@ -684,6 +735,7 @@ export class ProductsService {
 
   async batchCreate(
     productsData: CreateProductDto[],
+    user?: any,
   ): Promise<PublicProductDto[]> {
     console.log(
       `[ProductsService] Starting batchCreate for ${productsData.length} products`,
@@ -713,6 +765,10 @@ export class ProductsService {
         console.log(
           `[ProductsService] Brand validation passed for product ${i + 1}`,
         );
+
+        if (user) {
+          await this.validateBrandAccess(data.brandId, user);
+        }
       }
 
       // Extract variants — they go to ProductVariant table separately

@@ -91,7 +91,18 @@
       "Bash(PGPASSWORD=postgres psql -h localhost -U postgres -d local_brands_db -t -c \"*\" 2>&1)",
       "Bash(npx ts-node -e \":*)",
       "Read(//private/tmp/**)",
-      "Bash(python3 -c \":*)"
+      "Bash(python3 -c \":*)",
+      "Bash(grep -E \"\\\\.\\(ts|tsx\\)$\")",
+      "Bash(grep -r react-native-reanimated /Users/f5rany/Documents/Work/local-brands/frontend/app /Users/f5rany/Documents/Work/local-brands/frontend/components --include=*.tsx --include=*.ts)",
+      "Bash(grep -r \"GestureDetector\\\\|Gesture\\\\.\" /Users/f5rany/Documents/Work/local-brands/frontend/app /Users/f5rany/Documents/Work/local-brands/frontend/components --include=*.tsx --include=*.ts)",
+      "Bash(find /Users/f5rany/Documents/Work/local-brands/backend/src -type d -name *recommend* -o -type d -name *suggestion* -o -type f -name *recommend* -o -type f -name *suggestion*)",
+      "Skill(update-config)",
+      "Bash(chmod:*)",
+      "Bash(jq:*)",
+      "Bash(python3:*)",
+      "Bash(bash ~/.claude/hooks/block-heavy-files.sh)",
+      "Bash(echo \"Exit: $?\")",
+      "Bash(claude plugin:*)"
     ]
   }
 }

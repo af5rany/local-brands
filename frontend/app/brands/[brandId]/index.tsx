@@ -17,7 +17,6 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import getApiUrl from "@/helpers/getApiUrl";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import ProductCard from "@/components/ProductCard";
-import ProductManagementCard from "@/components/ProductManagementCard";
 import { ProductFilterModal } from "@/components/ProductFilterModal";
 import { useThemeColors } from "@/hooks/useThemeColor";
 import { Ionicons } from "@expo/vector-icons";
@@ -75,10 +74,34 @@ const BrandDetailScreen = () => {
 
   const isOwnerOrAdmin =
     userRole === "admin" ||
+    (user?.id &&
+      brand?.brandUsers?.some(
+        (bu: any) => bu.user?.id === user.id && bu.role === "owner"
+      )) ||
     (user?.id && brand?.owner?.id && user.id === brand.owner.id);
 
   const [showFilters, setShowFilters] = useState(false);
   const [changingStatus, setChangingStatus] = useState(false);
+  const [posts, setPosts] = useState<any[]>([]);
+  const [postsLoading, setPostsLoading] = useState(false);
+
+  const fetchPosts = useCallback(async () => {
+    if (!brandId) return;
+    setPostsLoading(true);
+    try {
+      const headers: Record<string, string> = {};
+      if (token) headers.Authorization = `Bearer ${token}`;
+      const res = await fetch(`${getApiUrl()}/feed/brand/${brandId}?limit=10`, { headers });
+      if (res.ok) {
+        const data = await res.json();
+        setPosts(data.data || []);
+      }
+    } catch {
+      // silently fail
+    } finally {
+      setPostsLoading(false);
+    }
+  }, [brandId, token]);
 
   // ── Status color helpers ─────────────────────
   const getStatusColors = (_status: BrandStatus) => ({
@@ -154,6 +177,7 @@ const BrandDetailScreen = () => {
   useEffect(() => {
     if (brandId && brand?.name) {
       fetchProducts(1, true);
+      fetchPosts();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [brandId, brand?.name, filters, sortBy, sortOrder]);
@@ -202,6 +226,7 @@ const BrandDetailScreen = () => {
     setRefreshing(true);
     fetchBrandDetails();
     fetchProducts(1, true);
+    fetchPosts();
   };
 
   const handleSortChange = (option: SortOption) => {
@@ -623,7 +648,7 @@ const BrandDetailScreen = () => {
                   { backgroundColor: colors.danger },
                 ]}
               >
-                <Text style={styles.filterBadgeText}>{activeFiltersCount}</Text>
+                <Text style={[styles.filterBadgeText, { color: colors.primaryForeground }]}>{activeFiltersCount}</Text>
               </View>
             )}
           </TouchableOpacity>
@@ -669,6 +694,87 @@ const BrandDetailScreen = () => {
           })}
         </ScrollView>
 
+        {/* ── Posts Section ──────────────────────── */}
+        {posts.length > 0 && (
+          <View style={styles.postsSection}>
+            <View style={styles.postsSectionHeader}>
+              <Text style={[styles.productsTitle, { color: colors.text }]}>
+                Posts
+              </Text>
+              <TouchableOpacity
+                onPress={() => router.push(`/brands/${brandId}/posts` as any)}
+                hitSlop={8}
+              >
+                <Text style={[styles.seeAllText, { color: colors.primary }]}>
+                  SEE ALL
+                </Text>
+              </TouchableOpacity>
+            </View>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.postsScroll}
+            >
+              {posts.map((post: any) => (
+                <TouchableOpacity
+                  key={post.id}
+                  style={[styles.postCard, { borderColor: colors.border }]}
+                  onPress={() => router.push(`/feed/${post.id}` as any)}
+                  activeOpacity={0.85}
+                >
+                  {post.images?.[0] ? (
+                    <Image
+                      source={{ uri: post.images[0] }}
+                      style={styles.postImage}
+                      resizeMode="cover"
+                    />
+                  ) : (
+                    <View style={[styles.postImage, { backgroundColor: colors.surfaceRaised }]}>
+                      <Ionicons name="image-outline" size={24} color={colors.textTertiary} />
+                    </View>
+                  )}
+                  {post.images?.length > 1 && (
+                    <View style={[styles.postMultiBadge, { backgroundColor: colors.surfaceOverlay }]}>
+                      <Ionicons name="copy-outline" size={10} color={colors.textInverse} />
+                    </View>
+                  )}
+                  <View style={styles.postMeta}>
+                    {post.caption ? (
+                      <Text
+                        style={[styles.postCaption, { color: colors.text }]}
+                        numberOfLines={2}
+                      >
+                        {post.caption}
+                      </Text>
+                    ) : null}
+                    <View style={styles.postStatsRow}>
+                      <Ionicons name="heart" size={10} color={colors.textTertiary} />
+                      <Text style={[styles.postStatText, { color: colors.textTertiary }]}>
+                        {post.likeCount || 0}
+                      </Text>
+                      <Ionicons name="chatbubble" size={10} color={colors.textTertiary} />
+                      <Text style={[styles.postStatText, { color: colors.textTertiary }]}>
+                        {post.commentCount || 0}
+                      </Text>
+                    </View>
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        )}
+
+        {postsLoading && posts.length === 0 && (
+          <View style={styles.postsSection}>
+            <View style={styles.postsSectionHeader}>
+              <Text style={[styles.productsTitle, { color: colors.text }]}>
+                Posts
+              </Text>
+            </View>
+            <ActivityIndicator size="small" color={colors.primary} style={{ paddingVertical: 16 }} />
+          </View>
+        )}
+
         {/* ── Products Header ─────────────────────── */}
         <View style={styles.productsHeader}>
           <Text style={[styles.productsTitle, { color: colors.text }]}>
@@ -681,54 +787,59 @@ const BrandDetailScreen = () => {
           </Text>
         </View>
 
-        {/* ── Products List ───────────────────────── */}
+        {/* ── Products Grid (2 columns) ──────────── */}
         {productsLoading && products.length === 0 ? (
           <View style={styles.productsLoadingWrap}>
             <ActivityIndicator size="large" color={colors.primary} />
           </View>
         ) : products.length > 0 ? (
-          <FlatList
-            data={products}
-            scrollEnabled={false}
-            keyExtractor={(item) => String(item.id)}
-            renderItem={({ item }) =>
-              isOwnerOrAdmin ? (
-                <ProductManagementCard
-                  product={item}
-                  onEdit={(id) => router.push(`/products/edit/${id}`)}
-                />
-              ) : (
-                <ProductCard product={item} mode="view" />
-              )
-            }
-            contentContainerStyle={styles.productsList}
-            ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
-            ListFooterComponent={() =>
-              hasNext ? (
-                <TouchableOpacity
-                  style={[
-                    styles.loadMoreBtn,
-                    {
-                      backgroundColor: colors.surface,
-                      borderColor: colors.border,
-                    },
-                  ]}
-                  onPress={loadMoreProducts}
-                  disabled={productsLoading}
-                >
-                  {productsLoading ? (
-                    <ActivityIndicator size="small" color={colors.primary} />
+          <View style={styles.productsList}>
+            <FlatList
+              data={products}
+              scrollEnabled={false}
+              numColumns={2}
+              keyExtractor={(item) => String(item.id)}
+              renderItem={({ item, index }) => (
+                <View style={[
+                  styles.productGridItem,
+                  index % 2 === 0 ? { paddingRight: 8 } : { paddingLeft: 8 },
+                ]}>
+                  {isOwnerOrAdmin ? (
+                    <ProductCard
+                      product={item}
+                      mode="manage"
+                      onEdit={(id) => router.push(`/products/edit/${id}`)}
+                    />
                   ) : (
-                    <Text
-                      style={[styles.loadMoreText, { color: colors.primary }]}
-                    >
-                      Load More ({pagination.total - products.length} remaining)
-                    </Text>
+                    <ProductCard product={item} mode="view" />
                   )}
-                </TouchableOpacity>
-              ) : null
-            }
-          />
+                </View>
+              )}
+            />
+            {hasNext && (
+              <TouchableOpacity
+                style={[
+                  styles.loadMoreBtn,
+                  {
+                    backgroundColor: colors.surface,
+                    borderColor: colors.border,
+                  },
+                ]}
+                onPress={loadMoreProducts}
+                disabled={productsLoading}
+              >
+                {productsLoading ? (
+                  <ActivityIndicator size="small" color={colors.primary} />
+                ) : (
+                  <Text
+                    style={[styles.loadMoreText, { color: colors.primary }]}
+                  >
+                    Load More ({pagination.total - products.length} remaining)
+                  </Text>
+                )}
+              </TouchableOpacity>
+            )}
+          </View>
         ) : (
           <View
             style={[
@@ -1057,7 +1168,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  filterBadgeText: { color: "#FFF", fontSize: 10, fontWeight: "700" },
+  filterBadgeText: { fontSize: 10, fontWeight: "700" },
 
   // ── Sort Chips ──────────────────────────────
   sortScroll: { marginTop: 12 },
@@ -1088,7 +1199,65 @@ const styles = StyleSheet.create({
   },
   productCount: { fontSize: 12, fontWeight: "500" },
 
-  // ── Products List ───────────────────────────
+  // ── Posts Section ──────────────────────────
+  postsSection: { marginTop: 24 },
+  postsSectionHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "baseline",
+    paddingHorizontal: 16,
+    marginBottom: 14,
+  },
+  seeAllText: {
+    fontSize: 11,
+    fontWeight: "700",
+    textTransform: "uppercase",
+  },
+  postsScroll: { paddingHorizontal: 16, gap: 12 },
+  postCard: {
+    width: 140,
+    borderWidth: 1,
+    overflow: "hidden",
+  },
+  postImage: {
+    width: 140,
+    height: 180,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  postMultiBadge: {
+    position: "absolute",
+    top: 8,
+    right: 8,
+    width: 22,
+    height: 22,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  postMeta: {
+    padding: 8,
+    gap: 4,
+  },
+  postCaption: {
+    fontSize: 11,
+    fontWeight: "500",
+    lineHeight: 15,
+  },
+  postStatsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  postStatText: {
+    fontSize: 10,
+    fontWeight: "600",
+    marginRight: 6,
+  },
+
+  // ── Products Grid ────────────────────────────
+  productGridItem: {
+    flex: 1,
+  },
   productsList: { paddingHorizontal: 16, paddingBottom: 8 },
   productsLoadingWrap: { paddingVertical: 48, alignItems: "center" },
   loadMoreBtn: {

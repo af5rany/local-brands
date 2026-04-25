@@ -93,9 +93,16 @@ The backend is a robust RESTful API built with **NestJS**, utilizing **TypeScrip
 - **Feed Query**: Supports pagination (`page`, `limit`), `followedOnly` filter (uses PostgreSQL subquery on `brand_follow` table). Public access (no auth) returns all posts; authenticated users can filter by followed brands.
 - **Post Detail**: Returns post with `isLiked` flag, `likeCount`, `commentCount`, and full comments with user info.
 
-### 11. Notifications (`NotificationModule`)
-- **Entity**: `Notification` — stores user notifications with type, message, read status, and related entity references.
-- Endpoints: list notifications, mark as read, mark all as read.
+### 11. Notifications & Push (`NotificationModule`)
+- **Entities**:
+  - `Notification` — stores user notifications with type, message, read status, and related entity references.
+  - `PushToken` — Expo push tokens per user (userId, token unique, platform ios/android/web, isActive). One user can have multiple tokens (multi-device). Invalid tokens auto-marked inactive after failed sends.
+- **Services**:
+  - `NotificationsService` — create, list, mark-read, mark-all-read.
+  - `PushNotificationService` — `registerToken(userId, token, platform)`, `unregisterToken`, `sendPush(userId, title, body, data)` (respects `notificationPreferences.push`), `sendPushToMany(userIds[], ...)`, uses `expo-server-sdk`, chunks messages, marks invalid tokens inactive.
+- **New endpoints**: `POST /notifications/push-token`, `DELETE /notifications/push-token`.
+- **Preferences endpoint**: `PUT /users/notification-preferences` — updates `user.notificationPreferences` JSON (`push`, `email`, `orderUpdates`, `promotions` booleans).
+- Notifications dispatched fire-and-forget (`.catch(() => {})`) from all modules that trigger them.
 
 ### 12. AI Try-On (`TryOnModule`)
 - Virtual try-on feature powered by an AI service.
@@ -105,7 +112,54 @@ The backend is a robust RESTful API built with **NestJS**, utilizing **TypeScrip
   - `POST /try-on` — submit a try-on job
   - `GET /try-on/:jobId/status` — poll for result
 
-### 13. Referral (`ReferralModule`)
+### 13. Promo Codes (`PromoCodesModule`)
+- **Entities**:
+  - `PromoCode` — code (unique, uppercase), type (`PERCENTAGE` | `FIXED`), value, minOrderAmount, maxDiscountAmount (cap for % discounts), maxUses (nullable = unlimited), usesCount, maxUsesPerUser (default 1), startDate, expiryDate, isActive, brandId (FK nullable — null = platform-wide). Soft delete.
+  - `PromoCodeUsage` — promoCodeId, userId, orderId, discountApplied. Unique constraint `[promoCodeId, userId, orderId]`.
+- **Service methods**: `create`, `findAllByBrand`, `findOne`, `update`, `toggleActive`, `remove` (soft delete), `validate(code, cartTotal, userId, brandId?)` — checks active/dates/usage limits/min order → returns discount amount, `applyPromo(code, userId, orderId, discountApplied)` — atomic `usesCount` increment, `getUsageStats(promoCodeId)`.
+- **Endpoints**:
+  - `POST /promo-codes/validate` — public validation (customer validates code at checkout)
+  - `GET /brands/:brandId/promo-codes` — brand owner list
+  - `POST /brands/:brandId/promo-codes` — create
+  - `PUT /brands/:brandId/promo-codes/:id` — update
+  - `PUT /brands/:brandId/promo-codes/:id/toggle` — toggle active
+  - `GET /brands/:brandId/promo-codes/:id/usage` — usage stats
+  - `DELETE /brands/:brandId/promo-codes/:id` — soft delete
+- **Order integration**: `OrdersModule` imports `PromoCodesModule`. In `checkout()`: promo validated → discount applied → usage recorded fire-and-forget after order save. `Order` entity has `promoCode` (string, nullable) and `discountAmount` columns.
+
+### 14. Shipping (`ShippingModule`)
+- **Entities**:
+  - `ShippingZone` — name, countries (simple-array of ISO-2 codes), regions, brandId, isActive.
+  - `ShippingRate` — zoneId, methodName, method (enum `STANDARD|EXPRESS|OVERNIGHT|LOCAL_PICKUP`), minWeight, maxWeight, price, estimatedDays, isActive.
+- **Service methods**: Zone CRUD, Rate CRUD, `calculateShipping(brandId, countryCode, weight?)` — finds matching zone by country, filters rates by weight.
+- **Endpoints**:
+  - `POST /shipping/calculate` — customer calculates rates for an address
+  - Full CRUD under `brands/:brandId/shipping/zones` and `brands/:brandId/shipping/zones/:zoneId/rates` (BrandAccessGuard)
+- **Order integration**: `Order` entity has `shippingCarrier` (string, nullable) and `shippingMethodName` (string, nullable) columns.
+
+### 15. Returns (`ReturnsModule`)
+- **Entities**:
+  - `ReturnRequest` — orderId, orderItemId (nullable = full order), userId, brandId, reason (enum `DEFECTIVE|WRONG_ITEM|NOT_AS_DESCRIBED|CHANGED_MIND|SIZE_FIT|DAMAGED_IN_SHIPPING|OTHER`), description, status (enum `REQUESTED|APPROVED|REJECTED|SHIPPED_BACK|RECEIVED|REFUNDED`, default REQUESTED), images (simple-array, Cloudinary URLs), adminNotes, returnTrackingNumber, refundAmount, resolvedAt.
+  - `ReturnPolicy` — brandId (unique — one per brand), returnWindowDays (default 30), conditions, requiresImages (default false), restockingFeePercent (default 0), isActive (default true).
+- **Service methods**: `createReturnRequest` (validates ownership, return window vs policy, no duplicate), `getReturnsByUser`, `getReturnsByBrand`, `approveReturn`, `rejectReturn` (notes required), `markShippedBack`, `markReceived`, `completeRefund` (restores stock in transaction, calculates refund minus restocking fee, sets REFUNDED), `getReturnPolicy`, `upsertReturnPolicy`, `getPendingReturnsCount`.
+- **Endpoints**:
+  - Customer: `POST /returns`, `GET /returns/my-returns`, `GET /returns/:id`, `PUT /returns/:id/ship`
+  - Brand owner: `GET /brands/:brandId/returns`, `GET /brands/:brandId/returns/:id`, `PUT /brands/:brandId/returns/:id/approve`, `PUT /brands/:brandId/returns/:id/reject`, `PUT /brands/:brandId/returns/:id/received`, `PUT /brands/:brandId/returns/:id/refund`
+  - Policy: `GET /brands/:brandId/return-policy`, `PUT /brands/:brandId/return-policy`
+
+### 16. Brand Notifications (`BrandsModule` extension)
+- **Endpoint**: `POST /brands/:id/notifications/send` — brand owner sends in-app + push notification to all brand followers.
+- Calls `notificationsService.create()` for each follower (in-app) + `pushService.sendPushToMany()` for push.
+- Returns `{ sent: number }` — count of followers notified.
+- Protected by `BrandAccessGuard`.
+
+### 17. Brand Analytics (extended)
+- `GET /brands/:id/analytics` now returns additional fields via raw SQL:
+  - `activePromoCodes` — count of active, non-expired, non-exhausted promo codes
+  - `pendingReturns` — count of return requests with status `requested`
+  - `totalDiscountGiven` — sum of all discounts applied via the brand's promo codes
+
+### 18. Referral (`ReferralModule`)
 - Users have a referral code.
 - Users can refer others; tracked per referral with status (pending/completed).
 - Frontend shows share code, copy button, and referral history.
@@ -136,7 +190,13 @@ The backend is a robust RESTful API built with **NestJS**, utilizing **TypeScrip
 - `Brand` → `FeedPost` (1:M) → `FeedPostLike` (M:M via user) + `FeedPostComment` (1:M)
 - `User` → `BrandFollow` → `Brand` (M:M — user follows brands)
 - `User` → `Notification` (1:M)
+- `User` → `PushToken` (1:M — multi-device)
 - `User` → `Referral` (tracks referrer/referee relationships)
+- `Brand` → `PromoCode` (1:M, FK nullable for platform-wide codes)
+- `PromoCode` → `PromoCodeUsage` (1:M — one record per use, unique per promoCode+user+order)
+- `Brand` → `ShippingZone` (1:M) → `ShippingRate` (1:M)
+- `Order` → `ReturnRequest` (1:M — one return per item or whole order)
+- `Brand` → `ReturnPolicy` (1:1 — one policy per brand)
 
 ### Soft Delete Entities
 - `User`, `Product`, `Order` use `@DeleteDateColumn`.
@@ -162,9 +222,15 @@ The backend is a robust RESTful API built with **NestJS**, utilizing **TypeScrip
 | **Reviews** | Submit, list by product, can-review check, admin approve/reject, pending list | Verified purchase check, product rating aggregation |
 | **Mail** | Password reset, welcome, order confirmation, order status updates | Nodemailer, non-blocking fire-and-forget |
 | **Feed** | Create posts, like/unlike, comment CRUD, brand follow/unfollow, filtered feed | Brand owner only posting, `followedOnly` filter, public read access |
-| **Notifications** | List, mark read, mark all read | Type-based notifications with read status |
+| **Notifications** | List, mark read, mark all read, push token register/unregister, notification preferences | In-app + Expo push via `expo-server-sdk`, multi-device tokens |
 | **Try-On** | Submit job, poll status | Cloudinary image upload, job queue, cache hits, polling |
 | **Referral** | Share code, list referrals | Status tracking per referral |
+| **Promo Codes** | Create/update/toggle/delete promo codes, validate at checkout, usage tracking | Atomic `usesCount` increment, per-user limits, % and fixed discount types, soft delete |
+| **Shipping Zones & Rates** | Zone CRUD, rate CRUD, calculate shipping by country | Country ISO matching, weight-based rate filtering, brand-scoped |
+| **Returns** | Full RMA flow — customer request → brand approve/reject → ship back → received → refund | Stock restoration in transaction, restocking fee, window enforcement via return policy |
+| **Return Policy** | Create/update per-brand policy | returnWindowDays, requiresImages, restockingFeePercent, isActive |
+| **Brand Analytics (extended)** | `GET /brands/:id/analytics` | Now includes `activePromoCodes`, `pendingReturns`, `totalDiscountGiven` |
+| **Brand Notify Followers** | `POST /brands/:id/notifications/send` | Sends in-app + push to all followers, returns `{ sent: N }` |
 
 ### Developed But Not Working / Incomplete
 
@@ -177,7 +243,6 @@ The backend is a robust RESTful API built with **NestJS**, utilizing **TypeScrip
 | Feature | Notes |
 |---------|-------|
 | **Payment Processing** | No payment gateway integration |
-| **Push Notifications** | Not implemented |
 | **Server-side Autocomplete** | Search is basic `ILike` — no dedicated autocomplete/suggestion endpoint |
 | **File/Image Cleanup** | No Cloudinary cleanup when products are deleted |
 | **Rate Limiting** | No request rate limiting on API endpoints |
@@ -294,3 +359,28 @@ Returns: PublicProductDto[]
 | `/notifications/read-all` | PATCH | Auth | Mark all notifications as read |
 | `/try-on` | POST | Auth | Submit AI try-on job |
 | `/try-on/:jobId/status` | GET | Auth | Poll try-on job status |
+| `/notifications/push-token` | POST | Auth | Register Expo push token |
+| `/notifications/push-token` | DELETE | Auth | Unregister push token |
+| `/users/notification-preferences` | PUT | Auth | Update notification preferences (`push`, `email`, `orderUpdates`, `promotions`) |
+| `/promo-codes/validate` | POST | Public | Validate promo code against cart total |
+| `/brands/:id/promo-codes` | GET/POST | Brand Owner | List / create promo codes |
+| `/brands/:id/promo-codes/:promoId` | PUT/DELETE | Brand Owner | Update / soft-delete promo code |
+| `/brands/:id/promo-codes/:promoId/toggle` | PUT | Brand Owner | Toggle promo code active state |
+| `/brands/:id/promo-codes/:promoId/usage` | GET | Brand Owner | Usage stats for a promo code |
+| `/shipping/calculate` | POST | Public | Calculate shipping rates by country + weight |
+| `/brands/:id/shipping/zones` | GET/POST | Brand Owner | List / create shipping zones |
+| `/brands/:id/shipping/zones/:zoneId` | PUT/DELETE | Brand Owner | Update / delete shipping zone |
+| `/brands/:id/shipping/zones/:zoneId/rates` | GET/POST | Brand Owner | List / create shipping rates |
+| `/brands/:id/shipping/zones/:zoneId/rates/:rateId` | PUT/DELETE | Brand Owner | Update / delete shipping rate |
+| `/returns` | POST | Auth | Create return request |
+| `/returns/my-returns` | GET | Auth | Customer's return history |
+| `/returns/:id` | GET | Auth | Return detail |
+| `/returns/:id/ship` | PUT | Auth | Customer marks item shipped back (with tracking number) |
+| `/brands/:id/returns` | GET | Brand Owner | List brand's return requests (filterable by status) |
+| `/brands/:id/returns/:returnId` | GET | Brand Owner | Return request detail |
+| `/brands/:id/returns/:returnId/approve` | PUT | Brand Owner | Approve return |
+| `/brands/:id/returns/:returnId/reject` | PUT | Brand Owner | Reject return (notes required) |
+| `/brands/:id/returns/:returnId/received` | PUT | Brand Owner | Mark item received |
+| `/brands/:id/returns/:returnId/refund` | PUT | Brand Owner | Process refund + restore stock |
+| `/brands/:id/return-policy` | GET/PUT | Brand Owner | Get / upsert return policy |
+| `/brands/:id/notifications/send` | POST | Brand Owner | Send push + in-app notification to all followers |

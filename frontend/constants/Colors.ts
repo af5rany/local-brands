@@ -85,6 +85,14 @@ export const Colors = {
     // ── Misc ─────────────────────────────────────────────
     icon: "#000000",
     tint: "#000000",
+    link: "#3152d3", // Links / size guide
+
+    // ── Toast Notifications ────────────────────────────
+    toastSuccess: "#10b981",
+    toastError: "#ef4444",
+    toastInfo: "#3b82f6",
+    toastDefault: "#1e293b",
+    toastText: "#FFFFFF",
 
     // ── Monolith Design System Surfaces ──────────────────
     surfaceContainer: "#eeeeee",
@@ -167,6 +175,14 @@ export const Colors = {
     // ── Misc ─────────────────────────────────────────────
     icon: "#FFFFFF",
     tint: "#FFFFFF",
+    link: "#6B8AFF", // Links / size guide
+
+    // ── Toast Notifications ────────────────────────────
+    toastSuccess: "#10b981",
+    toastError: "#ef4444",
+    toastInfo: "#3b82f6",
+    toastDefault: "#334155",
+    toastText: "#FFFFFF",
 
     // ── Monolith Design System Surfaces ──────────────────
     surfaceContainer: "#1a1a1a",

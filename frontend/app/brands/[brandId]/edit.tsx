@@ -13,7 +13,6 @@ import {
   StatusBar,
   Platform,
   KeyboardAvoidingView,
-  useColorScheme,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { Dropdown } from "react-native-element-dropdown";
@@ -26,13 +25,16 @@ import { BrandUser } from "@/types/user";
 import { BrandStatus, BrandRole, UserRole } from "@/types/enums";
 import { useCloudinaryUpload } from "@/hooks/useCloudinaryUpload";
 import { ImageUploadProgress } from "@/components/ImageUploadProgress";
+import { useThemeColors } from "@/hooks/useThemeColor";
+import { useThemePreference } from "@/context/ThemeContext";
 
 const EditBrandScreen = () => {
   const { token, user } = useAuth();
   const router = useRouter();
   const { brandId } = useLocalSearchParams();
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === "dark";
+  const colors = useThemeColors();
+  const { scheme } = useThemePreference();
+  const isDark = scheme === "dark";
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -51,12 +53,11 @@ const EditBrandScreen = () => {
   const { uploads, uploadImage } = useCloudinaryUpload();
   const dropdownRef = useRef<any>(null);
 
-  // B&W theme
-  const bg = isDark ? "#000000" : "#FFFFFF";
-  const text = isDark ? "#FFFFFF" : "#000000";
-  const secondary = isDark ? "#8E8E93" : "#6B6B6B";
-  const border = isDark ? "#2C2C2E" : "#E5E5E5";
-  const inputBg = isDark ? "#1C1C1E" : "#F5F5F5";
+  const bg = colors.background;
+  const text = colors.text;
+  const secondary = colors.textSecondary;
+  const border = colors.border;
+  const inputBg = colors.surfaceRaised;
 
   const fetchBrandData = useCallback(async () => {
     try {
@@ -92,9 +93,14 @@ const EditBrandScreen = () => {
           headers: { Authorization: `Bearer ${token}` },
         },
       );
+      if (!response.ok) {
+        console.warn("Cannot fetch users (may require admin role)");
+        return;
+      }
       const data = await response.json();
+      const users = Array.isArray(data) ? data : data.data ?? [];
       setAllUsers(
-        data.map((u: any) => ({
+        users.map((u: any) => ({
           label: u.name ? `${u.name} (${u.email})` : u.email || "Unknown",
           value: u.id,
           role: u.role || "",
@@ -325,13 +331,13 @@ const EditBrandScreen = () => {
                 <View
                   style={[
                     styles.logoOverlay,
-                    { backgroundColor: isDark ? "#FFFFFF" : "#000000" },
+                    { backgroundColor: colors.text },
                   ]}
                 >
                   <Ionicons
                     name="camera-outline"
                     size={14}
-                    color={isDark ? "#000000" : "#FFFFFF"}
+                    color={colors.background}
                   />
                 </View>
               </View>
@@ -351,7 +357,7 @@ const EditBrandScreen = () => {
         {/* Name */}
         <View style={styles.section}>
           <Text style={[styles.label, { color: secondary }]}>
-            BRAND NAME <Text style={{ color: "#C41E3A" }}>*</Text>
+            BRAND NAME <Text style={{ color: colors.danger }}>*</Text>
           </Text>
           <TextInput
             style={[
@@ -498,7 +504,7 @@ const EditBrandScreen = () => {
                     hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                     style={{ marginLeft: 10 }}
                   >
-                    <Ionicons name="close" size={16} color="#C41E3A" />
+                    <Ionicons name="close" size={16} color={colors.danger} />
                   </TouchableOpacity>
                 )}
             </View>

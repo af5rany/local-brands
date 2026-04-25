@@ -8,6 +8,9 @@ import {
   TouchableOpacity,
   Image,
   RefreshControl,
+  Modal,
+  TextInput,
+  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -47,6 +50,9 @@ interface BrandAnalytics {
   totalViews: number;
   topProducts: TopProduct[];
   recentOrders: RecentOrder[];
+  activePromoCodes?: number;
+  pendingReturns?: number;
+  totalDiscountGiven?: number;
 }
 
 const BrandDashboard = () => {
@@ -59,6 +65,10 @@ const BrandDashboard = () => {
   const [brandName, setBrandName] = useState("");
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [notifyModal, setNotifyModal] = useState(false);
+  const [notifyTitle, setNotifyTitle] = useState("");
+  const [notifyMessage, setNotifyMessage] = useState("");
+  const [notifySending, setNotifySending] = useState(false);
 
   const fetchAnalytics = useCallback(async () => {
     if (!token || !brandId) return;
@@ -100,6 +110,34 @@ const BrandDashboard = () => {
 
   const formatNumber = (n: number) =>
     n >= 1000 ? `${(n / 1000).toFixed(1)}k` : n.toString();
+
+  const handleSendNotification = async () => {
+    if (!notifyTitle.trim() || !notifyMessage.trim()) {
+      Alert.alert("Required", "Title and message are required.");
+      return;
+    }
+    setNotifySending(true);
+    try {
+      const res = await fetch(`${getApiUrl()}/brands/${brandId}/notifications/send`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ title: notifyTitle.trim(), message: notifyMessage.trim() }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        Alert.alert("Sent", `Notification sent to ${data.sent} follower${data.sent !== 1 ? "s" : ""}.`);
+        setNotifyTitle("");
+        setNotifyMessage("");
+        setNotifyModal(false);
+      } else {
+        Alert.alert("Error", "Failed to send notification.");
+      }
+    } catch {
+      Alert.alert("Error", "Network error.");
+    } finally {
+      setNotifySending(false);
+    }
+  };
 
   const getStatusColor = (status: string) => {
     switch (status?.toLowerCase()) {
@@ -242,17 +280,96 @@ const BrandDashboard = () => {
               },
             ]}
           >
-            <Ionicons
-              name="time-outline"
-              size={20}
-              color={colors.text}
-            />
+            <Ionicons name="time-outline" size={20} color={colors.text} />
             <Text style={[styles.alertText, { color: colors.text }]}>
               {analytics.pendingOrders} pending order
               {analytics.pendingOrders > 1 ? "s" : ""} awaiting action
             </Text>
           </View>
         )}
+
+        {/* Pending Returns Alert */}
+        {(analytics.pendingReturns ?? 0) > 0 && (
+          <View
+            style={[
+              styles.alertCard,
+              {
+                backgroundColor: colors.surface,
+                borderColor: "#f59e0b",
+                marginTop: 8,
+              },
+            ]}
+          >
+            <Ionicons name="return-down-back-outline" size={20} color="#f59e0b" />
+            <Text style={[styles.alertText, { color: colors.text }]}>
+              {analytics.pendingReturns} pending return
+              {(analytics.pendingReturns ?? 0) > 1 ? "s" : ""} awaiting review
+            </Text>
+          </View>
+        )}
+
+        {/* Quick Actions */}
+        <View style={[styles.section, { marginTop: 24 }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>QUICK ACTIONS</Text>
+          <View style={styles.actionsGrid}>
+            {[
+              {
+                icon: "pricetag-outline" as const,
+                label: "PROMO CODES",
+                route: `/brands/${brandId}/promo-codes`,
+                sub: analytics.activePromoCodes != null ? `${analytics.activePromoCodes} active` : "",
+              },
+              {
+                icon: "airplane-outline" as const,
+                label: "SHIPPING",
+                route: `/brands/${brandId}/shipping`,
+                sub: "Manage zones & rates",
+              },
+              {
+                icon: "return-down-back-outline" as const,
+                label: "RETURNS",
+                route: `/brands/${brandId}/returns`,
+                sub: analytics.pendingReturns ? `${analytics.pendingReturns} pending` : "Manage returns",
+              },
+              {
+                icon: "document-text-outline" as const,
+                label: "RETURN POLICY",
+                route: `/brands/${brandId}/return-policy`,
+                sub: "Configure policy",
+              },
+            ].map((action) => (
+              <TouchableOpacity
+                key={action.label}
+                style={[
+                  styles.actionCard,
+                  {
+                    backgroundColor: colors.surface,
+                    borderColor: colors.border,
+                  },
+                ]}
+                onPress={() => router.push(action.route as any)}
+                activeOpacity={0.7}
+              >
+                <Ionicons name={action.icon} size={22} color={colors.text} />
+                <Text style={[styles.actionLabel, { color: colors.text }]}>{action.label}</Text>
+                {action.sub ? (
+                  <Text style={[styles.actionSub, { color: colors.textTertiary }]}>{action.sub}</Text>
+                ) : null}
+              </TouchableOpacity>
+            ))}
+            <TouchableOpacity
+              style={[styles.actionCard, { backgroundColor: colors.text, borderColor: colors.text }]}
+              onPress={() => setNotifyModal(true)}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="notifications-outline" size={22} color={colors.background} />
+              <Text style={[styles.actionLabel, { color: colors.background }]}>NOTIFY FOLLOWERS</Text>
+              <Text style={[styles.actionSub, { color: colors.background, opacity: 0.6 }]}>
+                {analytics.followerCount} followers
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
 
         {/* Top Products */}
         {analytics.topProducts.length > 0 && (
@@ -393,6 +510,60 @@ const BrandDashboard = () => {
 
         <View style={{ height: 40 }} />
       </ScrollView>
+
+      {/* Send Notification Modal */}
+      <Modal
+        visible={notifyModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setNotifyModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalSheet, { backgroundColor: colors.background }]}>
+            <View style={[styles.modalHeader, { borderBottomColor: colors.borderLight }]}>
+              <Text style={[styles.modalTitle, { color: colors.text }]}>NOTIFY FOLLOWERS</Text>
+              <TouchableOpacity onPress={() => setNotifyModal(false)}>
+                <Ionicons name="close" size={22} color={colors.text} />
+              </TouchableOpacity>
+            </View>
+            <View style={styles.modalBody}>
+              <Text style={[styles.inputLabel, { color: colors.textTertiary }]}>TITLE</Text>
+              <TextInput
+                style={[styles.modalInput, { color: colors.text, borderColor: colors.border }]}
+                value={notifyTitle}
+                onChangeText={setNotifyTitle}
+                placeholder="e.g. New Collection Drop"
+                placeholderTextColor={colors.textTertiary}
+                maxLength={100}
+              />
+              <Text style={[styles.inputLabel, { color: colors.textTertiary, marginTop: 16 }]}>MESSAGE</Text>
+              <TextInput
+                style={[styles.modalInput, styles.modalTextarea, { color: colors.text, borderColor: colors.border }]}
+                value={notifyMessage}
+                onChangeText={setNotifyMessage}
+                placeholder="Write your message to followers..."
+                placeholderTextColor={colors.textTertiary}
+                multiline
+                numberOfLines={4}
+                maxLength={300}
+              />
+              <TouchableOpacity
+                style={[styles.modalSendBtn, { backgroundColor: colors.text }, notifySending && { opacity: 0.5 }]}
+                onPress={handleSendNotification}
+                disabled={notifySending}
+              >
+                {notifySending ? (
+                  <ActivityIndicator color={colors.background} />
+                ) : (
+                  <Text style={[styles.modalSendText, { color: colors.background }]}>
+                    SEND TO {analytics.followerCount} FOLLOWERS
+                  </Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -531,6 +702,26 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
 
+  // Quick Actions
+  actionsGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+  },
+  actionCard: {
+    width: "47%",
+    borderWidth: 1,
+    padding: 16,
+    gap: 8,
+  },
+  actionLabel: {
+    fontSize: 12,
+    fontWeight: "800",
+  },
+  actionSub: {
+    fontSize: 10,
+  },
+
   // Recent Orders
   orderRow: {
     flexDirection: "row",
@@ -563,6 +754,58 @@ const styles = StyleSheet.create({
     fontSize: 9,
     fontWeight: "800",
     // letterSpacing: 1,
+  },
+
+  // Notify Modal
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "flex-end",
+  },
+  modalSheet: {
+    borderTopLeftRadius: 0,
+    borderTopRightRadius: 0,
+  },
+  modalHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+  },
+  modalTitle: {
+    fontSize: 14,
+    fontWeight: "800",
+  },
+  modalBody: {
+    padding: 20,
+    paddingBottom: 40,
+  },
+  inputLabel: {
+    fontSize: 10,
+    fontWeight: "700",
+    marginBottom: 8,
+  },
+  modalInput: {
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 14,
+  },
+  modalTextarea: {
+    height: 100,
+    textAlignVertical: "top",
+    paddingTop: 10,
+  },
+  modalSendBtn: {
+    paddingVertical: 16,
+    alignItems: "center",
+    marginTop: 24,
+  },
+  modalSendText: {
+    fontSize: 13,
+    fontWeight: "800",
   },
 });
 

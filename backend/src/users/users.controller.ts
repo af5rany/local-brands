@@ -27,7 +27,7 @@ import { UserRole } from 'src/common/enums/user.enum';
 export class UsersController {
   constructor(private usersService: UsersService) {}
 
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.BRAND_OWNER)
   @Get()
   async findAll(@Query('excludeGuests') excludeGuests?: string): Promise<User[]> {
     return this.usersService.findAll(excludeGuests === 'true');
@@ -60,6 +60,18 @@ export class UsersController {
     return this.usersService.create(userData);
   }
 
+  @Put('notification-preferences')
+  async updateNotificationPreferences(
+    @Body() body: { notificationPreferences: Record<string, boolean> },
+    @Request() req,
+  ): Promise<{ ok: boolean }> {
+    await this.usersService.updateNotificationPreferences(
+      req.user.id,
+      body.notificationPreferences,
+    );
+    return { ok: true };
+  }
+
   @Put(':id')
   async update(
     @Param('id', ParseIntPipe) id: number,
@@ -90,4 +102,5 @@ export class UsersController {
       );
     }
   }
+
 }

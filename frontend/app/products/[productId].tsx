@@ -29,6 +29,7 @@ import TryOnModal from "@/components/TryOnModal";
 import Header from "@/components/Header";
 import { ProductVariant } from "@/types/product";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useThemeColors } from "@/hooks/useThemeColor";
 
 const { width: W } = Dimensions.get("window");
 
@@ -44,6 +45,7 @@ const ProductDetailScreen = () => {
   const { incrementProductListVersion } = useBrand();
   const userRole = user?.role || user?.userRole;
   const insets = useSafeAreaInsets();
+  const colors = useThemeColors();
 
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
@@ -59,6 +61,8 @@ const ProductDetailScreen = () => {
   const [isSubscribedNotify, setIsSubscribedNotify] = useState(false);
   const [showTryOn, setShowTryOn] = useState(false);
   const [detailsExpanded, setDetailsExpanded] = useState(false);
+  const [shippingExpanded, setShippingExpanded] = useState(false);
+  const [returnsExpanded, setReturnsExpanded] = useState(false);
 
   const imageCarouselRef = useRef<FlatList>(null);
   const marqueeAnim = useRef(new Animated.Value(0)).current;
@@ -343,11 +347,11 @@ const ProductDetailScreen = () => {
   // ── Loading / Error ──────────────────────────
   if (loading) {
     return (
-      <SafeAreaView style={styles.safeArea}>
+      <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
         <Header showBack={true} />
-        <View style={styles.center}>
-          <ActivityIndicator size="large" color="#000000" />
-          <Text style={styles.loadingLabel}>LOADING</Text>
+        <View style={[styles.center, { backgroundColor: colors.background }]}>
+          <ActivityIndicator size="large" color={colors.text} />
+          <Text style={[styles.loadingLabel, { color: colors.textSecondary }]}>LOADING</Text>
         </View>
       </SafeAreaView>
     );
@@ -355,13 +359,13 @@ const ProductDetailScreen = () => {
 
   if (!product) {
     return (
-      <SafeAreaView style={styles.safeArea}>
+      <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
         <Header showBack={true} />
-        <View style={styles.center}>
-          <Ionicons name="alert-circle-outline" size={48} color="#C41E3A" />
-          <Text style={styles.errorTitle}>Product Not Found</Text>
-          <TouchableOpacity onPress={() => router.back()} style={styles.goBackBtn}>
-            <Text style={styles.goBackText}>GO BACK</Text>
+        <View style={[styles.center, { backgroundColor: colors.background }]}>
+          <Ionicons name="alert-circle-outline" size={48} color={colors.danger} />
+          <Text style={[styles.errorTitle, { color: colors.text }]}>Product Not Found</Text>
+          <TouchableOpacity onPress={() => router.back()} style={[styles.goBackBtn, { borderColor: colors.text }]}>
+            <Text style={[styles.goBackText, { color: colors.text }]}>GO BACK</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -377,7 +381,7 @@ const ProductDetailScreen = () => {
   const hasDiscount =
     product.salePrice !== undefined && product.salePrice < product.price;
   const price = hasDiscount ? product.salePrice : product.price;
-  const currencySymbol = product.currency === "EUR" ? "€" : product.currency === "GBP" ? "£" : "$";
+  const currencySymbol = "EGP";
   const currentStock = variant ? variant.stock : product.stock;
   const inStock = currentStock > 0;
   const allOutOfStock = hasVariants
@@ -412,7 +416,7 @@ const ProductDetailScreen = () => {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={["top"]}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]} edges={["top"]}>
       {/* Try On Modal */}
       {showTryOn && displayImages.length > 0 && (
         <TryOnModal
@@ -424,27 +428,27 @@ const ProductDetailScreen = () => {
 
       {/* Added to Bag Confirmation Overlay */}
       {showAddedConfirm && (
-        <View style={styles.addedOverlay}>
-          <View style={styles.addedCard}>
-            <View style={styles.addedCheckBox}>
-              <Ionicons name="checkmark" size={28} color="#fff" />
+        <View style={[styles.addedOverlay, { backgroundColor: colors.surfaceOverlay }]}>
+          <View style={[styles.addedCard, { backgroundColor: colors.background }]}>
+            <View style={[styles.addedCheckBox, { backgroundColor: colors.primary }]}>
+              <Ionicons name="checkmark" size={28} color={colors.primaryForeground} />
             </View>
-            <Text style={styles.addedTitle}>ADDED TO BAG</Text>
-            <Text style={styles.addedSubtitle}>{product.name}</Text>
+            <Text style={[styles.addedTitle, { color: colors.text }]}>ADDED TO BAG</Text>
+            <Text style={[styles.addedSubtitle, { color: colors.textSecondary }]}>{product.name}</Text>
             <TouchableOpacity
-              style={styles.addedViewBag}
+              style={[styles.addedViewBag, { backgroundColor: colors.primary }]}
               onPress={() => {
                 setShowAddedConfirm(false);
                 router.push("/cart");
               }}
             >
-              <Text style={styles.addedViewBagText}>VIEW BAG</Text>
+              <Text style={[styles.addedViewBagText, { color: colors.primaryForeground }]}>VIEW BAG</Text>
             </TouchableOpacity>
             <TouchableOpacity
               onPress={() => setShowAddedConfirm(false)}
-              style={styles.addedContinue}
+              style={[styles.addedContinue, { borderColor: colors.text }]}
             >
-              <Text style={styles.addedContinueText}>CONTINUE SHOPPING</Text>
+              <Text style={[styles.addedContinueText, { color: colors.text }]}>CONTINUE SHOPPING</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -460,7 +464,7 @@ const ProductDetailScreen = () => {
           contentContainerStyle={{ paddingBottom: 24 }}
         >
           {/* Hero Image Carousel */}
-          <View style={styles.heroContainer}>
+          <View style={[styles.heroContainer, { backgroundColor: colors.surfaceRaised }]}>
             {displayImages.length > 1 ? (
               <FlatList
                 ref={imageCarouselRef}
@@ -491,7 +495,7 @@ const ProductDetailScreen = () => {
               />
             ) : (
               <View style={styles.heroPlaceholder}>
-                <Ionicons name="image-outline" size={48} color="#acb3b4" />
+                <Ionicons name="image-outline" size={48} color={colors.textTertiary} />
               </View>
             )}
 
@@ -504,17 +508,17 @@ const ProductDetailScreen = () => {
                 activeOpacity={0.7}
               >
                 {wishlistLoading ? (
-                  <ActivityIndicator size="small" color="#2d3435" />
+                  <ActivityIndicator size="small" color={colors.text} />
                 ) : (
                   <Ionicons
                     name={isInWishlist ? "heart" : "heart-outline"}
                     size={20}
-                    color="#2d3435"
+                    color={colors.text}
                   />
                 )}
               </TouchableOpacity>
               <TouchableOpacity style={styles.heroActionBtn} activeOpacity={0.7}>
-                <Ionicons name="share-outline" size={20} color="#2d3435" />
+                <Ionicons name="share-outline" size={20} color={colors.text} />
               </TouchableOpacity>
             </View>
 
@@ -525,14 +529,14 @@ const ProductDetailScreen = () => {
                 onPress={() => setShowTryOn(true)}
                 activeOpacity={0.7}
               >
-                <Ionicons name="shirt-outline" size={20} color="#2d3435" />
+                <Ionicons name="shirt-outline" size={20} color={colors.text} />
               </TouchableOpacity>
             </View>
           </View>
 
           {/* Image Indicators (dash style) */}
           {displayImages.length > 1 && (
-            <View style={styles.indicatorRow}>
+            <View style={[styles.indicatorRow, { backgroundColor: colors.background }]}>
               {displayImages.map((_: string, i: number) => (
                 <TouchableOpacity
                   key={i}
@@ -542,9 +546,12 @@ const ProductDetailScreen = () => {
                   <View
                     style={[
                       styles.indicator,
-                      selectedImage === i
-                        ? styles.indicatorActive
-                        : styles.indicatorInactive,
+                      {
+                        backgroundColor:
+                          selectedImage === i
+                            ? colors.text
+                            : colors.border,
+                      },
                     ]}
                   />
                 </TouchableOpacity>
@@ -556,36 +563,36 @@ const ProductDetailScreen = () => {
           <View style={styles.infoSection}>
             {/* Title + Price on the same line */}
             <View style={styles.titlePriceRow}>
-              <Text style={styles.productName} numberOfLines={2}>
+              <Text style={[styles.productName, { color: colors.text }]} numberOfLines={2}>
                 {product.name?.toUpperCase()}
               </Text>
               <View style={styles.priceContainer}>
                 {hasDiscount ? (
                   <View style={styles.priceGroup}>
-                    <Text style={styles.priceCurrent}>
+                    <Text style={[styles.priceCurrent, { color: colors.text }]}>
                       {currencySymbol}{price?.toFixed(2)}
                     </Text>
-                    <Text style={styles.priceOriginalStrike}>
+                    <Text style={[styles.priceOriginalStrike, { color: colors.danger }]}>
                       {currencySymbol}{product.price.toFixed(2)}
                     </Text>
                   </View>
                 ) : (
-                  <Text style={styles.priceCurrent}>{currencySymbol}{price?.toFixed(2)}</Text>
+                  <Text style={[styles.priceCurrent, { color: colors.text }]}>{currencySymbol}{price?.toFixed(2)}</Text>
                 )}
               </View>
             </View>
 
             {/* Status badge if not published */}
             {product.status !== "published" && (
-              <View style={styles.statusChip}>
-                <Text style={styles.statusChipText}>
+              <View style={[styles.statusChip, { backgroundColor: colors.surfaceContainer }]}>
+                <Text style={[styles.statusChipText, { color: colors.textSecondary }]}>
                   {(product.status || "draft").toUpperCase()}
                 </Text>
               </View>
             )}
 
             {/* SKU / Product ID */}
-            <Text style={styles.skuText}>
+            <Text style={[styles.skuText, { color: colors.textSecondary }]}>
               {`SKU${String(product.id).padStart(6, "0")}`}
             </Text>
 
@@ -599,7 +606,7 @@ const ProductDetailScreen = () => {
                 activeOpacity={0.7}
                 style={styles.brandLink}
               >
-                <Text style={styles.brandName}>
+                <Text style={[styles.brandName, { color: colors.textSecondary }]}>
                   {product.brand.name.toUpperCase()}
                 </Text>
               </TouchableOpacity>
@@ -607,7 +614,7 @@ const ProductDetailScreen = () => {
 
             {/* Category */}
             {product.subcategory && (
-              <Text style={styles.categoryText}>
+              <Text style={[styles.categoryText, { color: colors.textSecondary }]}>
                 {product.subcategory.toUpperCase()}
               </Text>
             )}
@@ -624,14 +631,14 @@ const ProductDetailScreen = () => {
                         : "star-outline"
                     }
                     size={13}
-                    color="#2d3435"
+                    color={colors.text}
                   />
                 ))}
-                <Text style={styles.ratingText}>
+                <Text style={[styles.ratingText, { color: colors.text }]}>
                   {(product.averageRating || 0).toFixed(1)}
                 </Text>
                 {(product.reviewCount || 0) > 0 && (
-                  <Text style={styles.reviewCountText}>
+                  <Text style={[styles.reviewCountText, { color: colors.textSecondary }]}>
                     ({product.reviewCount} {product.reviewCount === 1 ? "REVIEW" : "REVIEWS"})
                   </Text>
                 )}
@@ -642,18 +649,18 @@ const ProductDetailScreen = () => {
             {(product.isNewArrival || product.isFeatured || (inStock && product.isLowStock)) && (
               <View style={styles.badgeRow}>
                 {product.isNewArrival && (
-                  <View style={styles.badge}>
-                    <Text style={styles.badgeText}>NEW ARRIVAL</Text>
+                  <View style={[styles.badge, { backgroundColor: colors.text }]}>
+                    <Text style={[styles.badgeText, { color: colors.primaryForeground }]}>NEW ARRIVAL</Text>
                   </View>
                 )}
                 {product.isFeatured && (
-                  <View style={styles.badge}>
-                    <Text style={styles.badgeText}>FEATURED</Text>
+                  <View style={[styles.badge, { backgroundColor: colors.text }]}>
+                    <Text style={[styles.badgeText, { color: colors.primaryForeground }]}>FEATURED</Text>
                   </View>
                 )}
                 {inStock && product.isLowStock && (
-                  <View style={[styles.badge, styles.badgeLowStock]}>
-                    <Text style={[styles.badgeText, styles.badgeLowStockText]}>LOW STOCK</Text>
+                  <View style={[styles.badge, { backgroundColor: "transparent", borderWidth: 1, borderColor: colors.danger }]}>
+                    <Text style={[styles.badgeText, { color: colors.danger }]}>LOW STOCK</Text>
                   </View>
                 )}
               </View>
@@ -663,8 +670,8 @@ const ProductDetailScreen = () => {
             {product.tags && product.tags.length > 0 && (
               <View style={styles.tagsRow}>
                 {product.tags.map((tag, i) => (
-                  <View key={i} style={styles.tagChip}>
-                    <Text style={styles.tagText}>{tag.toUpperCase()}</Text>
+                  <View key={i} style={[styles.tagChip, { borderColor: colors.border }]}>
+                    <Text style={[styles.tagText, { color: colors.textSecondary }]}>{tag.toUpperCase()}</Text>
                   </View>
                 ))}
               </View>
@@ -677,8 +684,8 @@ const ProductDetailScreen = () => {
             {(variantColors.length > 0 || product.color) && (
               <View style={styles.colorSection}>
                 <View style={styles.colorLabelRow}>
-                  <Text style={styles.configLabel}>COLOR:</Text>
-                  <Text style={styles.configValue}>
+                  <Text style={[styles.configLabel, { color: colors.textSecondary }]}>COLOR:</Text>
+                  <Text style={[styles.configValue, { color: colors.text }]}>
                     {(
                       selectedColor ||
                       product.color ||
@@ -697,7 +704,7 @@ const ProductDetailScreen = () => {
                           onPress={() => setSelectedColor(color)}
                           style={[
                             styles.swatchOuter,
-                            isSelected && styles.swatchOuterSelected,
+                            isSelected && [styles.swatchOuterSelected, { borderColor: colors.text }],
                           ]}
                           activeOpacity={0.8}
                         >
@@ -719,8 +726,8 @@ const ProductDetailScreen = () => {
             {hasVariants && availableSizes.length > 0 && (
               <View style={styles.sizeSection}>
                 <View style={styles.sizeHeaderRow}>
-                  <Text style={styles.configLabel}>SIZE:</Text>
-                  <Text style={styles.sizeGuideLink}>SIZE GUIDE</Text>
+                  <Text style={[styles.configLabel, { color: colors.textSecondary }]}>SIZE:</Text>
+                  <Text style={[styles.sizeGuideLink, { color: colors.link }]}>SIZE GUIDE</Text>
                 </View>
                 <View style={styles.sizeRow}>
                   {availableSizes.map((size) => {
@@ -736,15 +743,16 @@ const ProductDetailScreen = () => {
                         disabled={!sizeInStock}
                         style={[
                           styles.sizeBox,
-                          isActive && styles.sizeBoxSelected,
+                          isActive && [styles.sizeBoxSelected, { borderColor: colors.text }],
                         ]}
                         activeOpacity={0.8}
                       >
                         <Text
                           style={[
                             styles.sizeBoxText,
-                            isActive && styles.sizeBoxTextSelected,
-                            !sizeInStock && styles.sizeBoxTextOos,
+                            { color: colors.textSecondary },
+                            isActive && { color: colors.text, fontFamily: "Inter_700Bold" },
+                            !sizeInStock && { color: colors.textTertiary, fontStyle: "italic" as const },
                           ]}
                         >
                           {size}
@@ -758,26 +766,26 @@ const ProductDetailScreen = () => {
           </View>
 
           {/* Accordion Sections */}
-          <View style={styles.accordionContainer}>
+          <View style={[styles.accordionContainer, { borderTopColor: colors.borderLight }]}>
             {/* DETAILS row */}
             <TouchableOpacity
               style={styles.accordionRow}
               onPress={() => setDetailsExpanded(!detailsExpanded)}
               activeOpacity={0.7}
             >
-              <Text style={styles.accordionLabel}>DETAILS</Text>
+              <Text style={[styles.accordionLabel, { color: colors.text }]}>DETAILS</Text>
               <Ionicons
                 name={detailsExpanded ? "chevron-up" : "chevron-down"}
                 size={18}
-                color="#757c7d"
+                color={colors.textSecondary}
               />
             </TouchableOpacity>
 
             {/* Expanded details content */}
             {detailsExpanded && (
-              <View style={styles.accordionContent}>
+              <View style={[styles.accordionContent, { backgroundColor: colors.surfaceRaised, borderBottomColor: colors.borderLight }]}>
                 {product.description ? (
-                  <Text style={styles.accordionBodyText}>
+                  <Text style={[styles.accordionBodyText, { color: colors.textSecondary }]}>
                     {product.description}
                   </Text>
                 ) : null}
@@ -790,32 +798,32 @@ const ProductDetailScreen = () => {
                   product.careInstructions) && (
                   <View style={styles.metaBlock}>
                     {product.material && (
-                      <Text style={styles.metaLine}>
+                      <Text style={[styles.metaLine, { color: colors.textSecondary }]}>
                         MATERIAL: {product.material.toUpperCase()}
                       </Text>
                     )}
                     {product.productType && (
-                      <Text style={styles.metaLine}>
+                      <Text style={[styles.metaLine, { color: colors.textSecondary }]}>
                         TYPE: {product.productType.toUpperCase()}
                       </Text>
                     )}
                     {product.gender && (
-                      <Text style={styles.metaLine}>
+                      <Text style={[styles.metaLine, { color: colors.textSecondary }]}>
                         GENDER: {product.gender.toUpperCase()}
                       </Text>
                     )}
                     {product.season && (
-                      <Text style={styles.metaLine}>
+                      <Text style={[styles.metaLine, { color: colors.textSecondary }]}>
                         SEASON: {product.season.toUpperCase()}
                       </Text>
                     )}
                     {product.origin && (
-                      <Text style={styles.metaLine}>
+                      <Text style={[styles.metaLine, { color: colors.textSecondary }]}>
                         ORIGIN: {product.origin.toUpperCase()}
                       </Text>
                     )}
                     {product.careInstructions && (
-                      <Text style={styles.metaLine}>
+                      <Text style={[styles.metaLine, { color: colors.textSecondary }]}>
                         CARE: {product.careInstructions.toUpperCase()}
                       </Text>
                     )}
@@ -825,16 +833,46 @@ const ProductDetailScreen = () => {
             )}
 
             {/* SHIPPING row */}
-            <View style={styles.accordionRow}>
-              <Text style={styles.accordionLabel}>SHIPPING</Text>
-              <Ionicons name="chevron-down" size={18} color="#757c7d" />
-            </View>
+            <TouchableOpacity
+              style={styles.accordionRow}
+              onPress={() => setShippingExpanded(!shippingExpanded)}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.accordionLabel, { color: colors.text }]}>SHIPPING</Text>
+              <Ionicons
+                name={shippingExpanded ? "chevron-up" : "chevron-down"}
+                size={18}
+                color={colors.textSecondary}
+              />
+            </TouchableOpacity>
+            {shippingExpanded && (
+              <View style={[styles.accordionContent, { backgroundColor: colors.surfaceRaised, borderBottomColor: colors.borderLight }]}>
+                <Text style={[styles.accordionBodyText, { color: colors.textSecondary }]}>
+                  Standard shipping 3–5 business days. Express shipping available at checkout. Free shipping on orders over $100.
+                </Text>
+              </View>
+            )}
 
             {/* RETURNS row */}
-            <View style={styles.accordionRow}>
-              <Text style={styles.accordionLabel}>RETURNS</Text>
-              <Ionicons name="chevron-down" size={18} color="#757c7d" />
-            </View>
+            <TouchableOpacity
+              style={styles.accordionRow}
+              onPress={() => setReturnsExpanded(!returnsExpanded)}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.accordionLabel, { color: colors.text }]}>RETURNS</Text>
+              <Ionicons
+                name={returnsExpanded ? "chevron-up" : "chevron-down"}
+                size={18}
+                color={colors.textSecondary}
+              />
+            </TouchableOpacity>
+            {returnsExpanded && (
+              <View style={[styles.accordionContent, { backgroundColor: colors.surfaceRaised, borderBottomColor: colors.borderLight }]}>
+                <Text style={[styles.accordionBodyText, { color: colors.textSecondary }]}>
+                  Free returns within 30 days of delivery. Items must be unworn with original tags attached. Refunds processed within 5–7 business days.
+                </Text>
+              </View>
+            )}
           </View>
 
           {/* Reviews */}
@@ -843,7 +881,7 @@ const ProductDetailScreen = () => {
           </View>
 
           {/* Marquee strip */}
-          <View style={styles.marqueeContainer}>
+          <View style={[styles.marqueeContainer, { backgroundColor: colors.primary }]}>
             <Animated.View
               style={[
                 styles.marqueeTrack,
@@ -859,7 +897,7 @@ const ProductDetailScreen = () => {
                 },
               ]}
             >
-              <Text style={styles.marqueeText}>
+              <Text style={[styles.marqueeText, { color: colors.primaryForeground }]}>
                 {MARQUEE_TEXT.repeat(6)}
               </Text>
             </Animated.View>
@@ -868,21 +906,21 @@ const ProductDetailScreen = () => {
           {/* Admin Controls */}
           {isOwnerOrAdmin && (
             <View style={styles.adminSection}>
-              <Text style={styles.adminLabel}>MANAGE</Text>
+              <Text style={[styles.adminLabel, { color: colors.textSecondary }]}>MANAGE</Text>
               <View style={styles.adminRow}>
                 <TouchableOpacity
                   onPress={() => router.push(`/products/edit/${productId}`)}
-                  style={styles.adminEditBtn}
+                  style={[styles.adminEditBtn, { borderColor: colors.text }]}
                 >
-                  <Ionicons name="create-outline" size={16} color="#000" />
-                  <Text style={styles.adminBtnLabel}>EDIT</Text>
+                  <Ionicons name="create-outline" size={16} color={colors.text} />
+                  <Text style={[styles.adminBtnLabel, { color: colors.text }]}>EDIT</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   onPress={handleDelete}
-                  style={styles.adminDeleteBtn}
+                  style={[styles.adminDeleteBtn, { borderColor: colors.danger }]}
                 >
-                  <Ionicons name="trash-outline" size={16} color="#C41E3A" />
-                  <Text style={styles.adminDeleteLabel}>DELETE</Text>
+                  <Ionicons name="trash-outline" size={16} color={colors.danger} />
+                  <Text style={[styles.adminDeleteLabel, { color: colors.danger }]}>DELETE</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -893,7 +931,7 @@ const ProductDetailScreen = () => {
         <View
           style={[
             styles.bottomBar,
-            { paddingBottom: insets.bottom + 12 },
+            { paddingBottom: insets.bottom + 12, borderTopColor: colors.border, backgroundColor: colors.surface },
           ]}
         >
           {allOutOfStock ? (
@@ -903,7 +941,7 @@ const ProductDetailScreen = () => {
                 {
                   flex: 0,
                   width: "100%",
-                  backgroundColor: isSubscribedNotify ? "#444" : "#000",
+                  backgroundColor: isSubscribedNotify ? colors.primaryMuted : colors.primary,
                 },
               ]}
               onPress={handleNotifyMe}
@@ -911,7 +949,7 @@ const ProductDetailScreen = () => {
               activeOpacity={0.85}
             >
               {notifyMeLoading ? (
-                <ActivityIndicator size="small" color="#fff" />
+                <ActivityIndicator size="small" color={colors.primaryForeground} />
               ) : (
                 <Text style={styles.addToBagText}>
                   {isSubscribedNotify ? "SUBSCRIBED" : "NOTIFY ME"}
@@ -923,14 +961,14 @@ const ProductDetailScreen = () => {
               <TouchableOpacity
                 style={[
                   styles.addToBagBtn,
-                  { backgroundColor: inStock ? "#000" : "#888" },
+                  { backgroundColor: inStock ? colors.primary : colors.textTertiary },
                 ]}
                 onPress={addToCart}
                 disabled={cartLoading || !inStock}
                 activeOpacity={0.85}
               >
                 {cartLoading ? (
-                  <ActivityIndicator size="small" color="#fff" />
+                  <ActivityIndicator size="small" color={colors.primaryForeground} />
                 ) : (
                   <Text style={styles.addToBagText}>ADD TO BAG</Text>
                 )}
@@ -942,7 +980,7 @@ const ProductDetailScreen = () => {
                 activeOpacity={0.85}
               >
                 {buyNowLoading ? (
-                  <ActivityIndicator size="small" color="#000" />
+                  <ActivityIndicator size="small" color={colors.text} />
                 ) : (
                   <Text style={styles.buyNowText}>BUY NOW</Text>
                 )}

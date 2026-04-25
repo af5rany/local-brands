@@ -2,7 +2,7 @@
 
 > **Platform:** Mobile-first (iOS & Android) with web support
 > **Framework:** React Native / Expo
-> **Date:** April 9, 2026
+> **Date:** April 25, 2026
 
 ---
 
@@ -121,7 +121,19 @@ A brand owner can assign team members with granular roles:
   └── [brandId]/
       ├── index           → Brand detail page
       ├── edit            → Edit brand
-      └── products        → Brand's product list
+      ├── dashboard       → Brand analytics dashboard (brand owner)
+      ├── products        → Brand's product list
+      ├── promo-codes/
+      │   ├── index       → Promo codes list
+      │   ├── create      → Create promo code
+      │   └── [promoId]   → Edit promo code + usage stats
+      ├── shipping/
+      │   ├── index       → Shipping zones list
+      │   └── zone        → Create zone or add rate
+      ├── returns/
+      │   ├── index       → Brand returns list
+      │   └── [returnId]  → Return request detail + actions
+      └── return-policy   → Return policy settings
 
 /products/
   ├── index               → Product catalog
@@ -158,7 +170,13 @@ A brand owner can assign team members with granular roles:
   └── index               → User management (admin only)
 
 /notifications/
-  └── index               → Notifications list
+  ├── index               → Notifications list
+  └── settings            → Notification preference toggles (push, email, order updates, promotions)
+
+/returns/
+  ├── index               → Customer's return history
+  ├── create              → Create return request (with ?orderId param)
+  └── [returnId]          → Return detail + status timeline + ship-back action
 
 /referral/
   └── index               → Referral program
@@ -171,7 +189,7 @@ A brand owner can assign team members with granular roles:
 ```
 
 ### Protected Routes (require authentication)
-`cart`, `checkout`, `orders`, `profile`, `users`, `notifications`, `referral`
+`cart`, `checkout`, `orders`, `profile`, `users`, `notifications`, `referral`, `returns`
 
 Unauthenticated users attempting to access these are shown sign-in prompts or redirected to `/auth/login`.
 
@@ -305,25 +323,6 @@ Accessible to admins and brand owners via the speedometer icon in the Header or 
 ---
 
 ### 4.3 Brand Screens
-
-#### 4.3a Brands List — `/brands/index`
-**Elements:**
-- Search bar
-- Filter button → filter modals (location, owner, status)
-- Sort button → sort modal (name, created date, updated date, location, product count)
-- Clear filters button (when active)
-- Brand cards list (vertical scroll):
-  - Logo (square, placeholder if missing)
-  - Brand name
-  - Status badge (B&W styled: text label with border)
-  - Description (2 lines, truncated)
-  - Location
-  - Product count
-  - Created date
-  - Delete button (admin/owner — shows confirmation alert)
-- "Load More" button for pagination
-- Pull-to-refresh
-
 #### 4.3b Create Brand — `/brands/create`
 **Elements:**
 - Back button in header
@@ -478,15 +477,104 @@ Similar to create product, pre-filled with existing product data. Can update all
 #### 4.7b Order Detail — `/orders/[orderId]`
 **Elements:**
 - Back button
-- Order header: order number, order date
-- Order items: thumbnail, product name, brand name, color/size, quantity × price, item total
-- Shipping address
-- Order summary: Subtotal, Tax, Shipping, Discount, **Total**
-- Status timeline:
+- Order header: order number, order date, status badge, tracking number (if set)
+- Status timeline (top bar style):
   ```
-  ● Pending → ● Confirmed → ● Processing → ● Shipped → ● Delivered
+  PLACED — CONFIRMED — SHIPPED — OUT FOR DELIVERY — DELIVERED
   ```
-- Status history log: each transition with timestamp and notes
+- Manifest: items list with thumbnail, product name, brand/color/size, quantity × unit price, item total
+- Logistics box (grey): DESTINATION address, SERVICE (shippingMethodName), CARRIER (shippingCarrier), TRACKING number
+- Financial summary box (black background): Subtotal, Shipping, Tax, Discount (if promo applied), **Grand Total**
+- Action buttons inside financial box: DOWNLOAD INVOICE, TRACK SHIPMENT, **REQUEST RETURN** (visible only when status is DELIVERED — navigates to `/returns/create?orderId=X`)
+
+---
+
+### 4.17 Returns Screens
+
+#### 4.17a Customer Returns List — `/returns/index`
+- List of customer's return requests
+- Each row: return ID, order ID, reason, status badge (color-coded)
+- Tap → return detail
+
+#### 4.17b Create Return Request — `/returns/create`
+- Loads order info from `?orderId` query param
+- Reason picker: Defective, Wrong Item, Not as Described, Changed Mind, Size/Fit, Damaged in Shipping, Other
+- Description textarea (optional)
+- Submit → `POST /returns`
+
+#### 4.17c Return Detail (Customer) — `/returns/[returnId]`
+- 5-step status timeline: REQUESTED → APPROVED → SHIPPED BACK → RECEIVED → REFUNDED
+- Return details: reason, description, rejection notes (shown if rejected)
+- **MARK AS SHIPPED** action: visible when status is APPROVED — text input for tracking number + submit button
+
+---
+
+### 4.18 Brand Owner — Promo Code Screens
+
+#### 4.18a Promo Codes List — `/brands/[brandId]/promo-codes/index`
+- List of brand's promo codes
+- Each row: code, type (% or $), value, status badge (ACTIVE / INACTIVE / EXPIRED / USED UP), uses/max
+- Toggle active switch, delete action
+
+#### 4.18b Create Promo Code — `/brands/[brandId]/promo-codes/create`
+- Fields: code (text input + GENERATE button for random code), type selector (PERCENTAGE / FIXED), value, min order amount, max discount amount (cap for % discounts), max uses total, max uses per user, start date, expiry date, description, isActive switch
+- CREATE button
+
+#### 4.18c Edit Promo Code + Stats — `/brands/[brandId]/promo-codes/[promoId]`
+- Usage stats grid: Total Uses, Total Discount Given, Uses/Max
+- Edit form: expiry date, description
+- Recent usage list: date, user, order ID, discount applied
+
+---
+
+### 4.19 Brand Owner — Shipping Screens
+
+#### 4.19a Shipping Zones List — `/brands/[brandId]/shipping/index`
+- Zones list, each expandable to show rates within
+- Zone row: name, country count, active badge
+- Rates: method name, price, estimated days, active badge; delete action
+- "ADD ZONE" and "ADD RATE" actions per zone
+
+#### 4.19b Zone / Rate Form — `/brands/[brandId]/shipping/zone`
+- When `?mode=zone`: create zone form (name, ISO country codes comma-separated)
+- When `?zoneId=X`: add rate form (method selector, price, estimated days, min/max weight)
+
+---
+
+### 4.20 Brand Owner — Returns Screens
+
+#### 4.20a Brand Returns List — `/brands/[brandId]/returns/index`
+- Horizontal status filter tabs: All, Requested, Approved, Rejected, Shipped Back, Received, Refunded
+- Return rows: return ID, customer name, reason, date
+- Tap → detail
+
+#### 4.20b Brand Return Detail — `/brands/[brandId]/returns/[returnId]`
+- Status banner (color-coded border) + refund amount if set
+- Customer info: name, email
+- Return details: reason, description, return tracking number
+- Customer photos (image grid)
+- Admin notes card (if previously set)
+- **Actions** (visible based on status):
+  - REQUESTED status: notes input + APPROVE button + REJECT button (notes required for rejection)
+  - SHIPPED_BACK status: MARK AS RECEIVED button
+  - RECEIVED status: PROCESS REFUND & RESTORE STOCK button (shows confirmation alert)
+
+---
+
+### 4.21 Brand Owner — Return Policy — `/brands/[brandId]/return-policy`
+- RETURN WINDOW (DAYS): number input
+- RESTOCKING FEE (%): decimal input
+- CONDITIONS: multiline text (optional)
+- REQUIRE PHOTOS: switch (customers must upload photos with return)
+- ACCEPT RETURNS: switch (disable to reject all returns)
+- SAVE POLICY button
+
+---
+
+### 4.22 Notification Settings — `/notifications/settings`
+- Toggle rows for: PUSH NOTIFICATIONS, EMAIL NOTIFICATIONS, ORDER UPDATES, PROMOTIONS & OFFERS
+- Each row: label, subtitle, iOS-style switch
+- SAVE PREFERENCES button
 
 ---
 
@@ -972,15 +1060,18 @@ Profile tab → Edit Profile (name, phone, DOB, avatar)
 
 ### Checkout & Orders
 - [x] Checkout with address selection
+- [x] Dynamic shipping rate calculation (by country from brand's zones — falls back to free standard if no zones set)
+- [x] Promo code apply/remove with live validation and discount line in order summary
 - [x] Order placement with idempotency key
 - [x] Order confirmation screen
 - [x] Order list (my orders)
-- [x] Order detail with item breakdown
+- [x] Order detail with item breakdown, carrier/service display
 - [x] Order status timeline visualization
 - [x] Order status history audit trail
 - [x] Status progression: Pending → Confirmed → Processing → Shipped → Delivered
 - [x] Order cancellation
 - [x] Admin order status updates
+- [x] REQUEST RETURN button on delivered orders
 
 ### Wishlist
 - [x] Toggle products in/out of wishlist
@@ -995,13 +1086,51 @@ Profile tab → Edit Profile (name, phone, DOB, avatar)
 - [x] Admin review moderation (approve/reject queue)
 - [x] Verified purchase badge
 
+### Returns
+- [x] Customer return request creation (reason, description, order selection)
+- [x] Customer returns list with status badges
+- [x] Customer return detail with 5-step status timeline
+- [x] Customer ship-back action (tracking number input)
+- [x] Brand owner returns list with status filter tabs
+- [x] Brand owner approve/reject returns (notes required for rejection)
+- [x] Brand owner mark received + process refund (restores stock)
+- [x] Return policy configuration per brand (window, restocking fee, photo requirement)
+
+### Promo Codes (Brand Owner)
+- [x] Create promo codes (%, fixed, min order, max discount cap, per-user limits, date range)
+- [x] List, toggle active, soft-delete promo codes
+- [x] Edit + usage stats view (uses count, total discount given, recent usage)
+- [x] Apply promo codes at checkout (customer-facing validation + discount)
+
+### Shipping Zones (Brand Owner)
+- [x] Create shipping zones (name + ISO country codes)
+- [x] Add/edit/delete shipping rates per zone (method, price, estimated days, weight range)
+- [x] Dynamic rate calculation at checkout based on address country
+- [x] Fallback: free standard shipping when no zones configured for brand
+
+### Push Notifications
+- [x] Expo push token registration on login (permission request → backend registration)
+- [x] Notification deep-link routing (tapping order notification → order detail, return notification → return detail)
+- [x] Notification preference settings (per-category toggles saved to backend)
+- [x] Brand owner: send push + in-app notification to all followers from dashboard
+
 ### User Profile
 - [x] Profile tab (6th bottom tab)
 - [x] Edit profile (name, phone, DOB, avatar)
 - [x] Avatar upload with Cloudinary
 - [x] Address management (CRUD + set default)
 - [x] Settings page with notification toggles
+- [x] Notification settings screen (push, email, order updates, promotions — saved to backend)
 - [x] Logout
+
+### Brand Owner Dashboard
+- [x] Analytics: revenue, orders, products, units sold, followers, views, active promo codes, pending returns, total discount given
+- [x] Pending orders alert
+- [x] Pending returns alert
+- [x] Quick Actions: Promo Codes, Shipping, Returns, Return Policy
+- [x] Notify Followers modal (title + message → push + in-app to all followers)
+- [x] Top products by sales
+- [x] Recent orders list
 
 ### Admin Features
 - [x] System-wide dashboard with stats
@@ -1060,14 +1189,15 @@ Profile tab → Edit Profile (name, phone, DOB, avatar)
 |---------|----------|---------------|
 | **System Analytics** | Admin dashboard quick action | "Coming soon" |
 | **Admin Settings** | Admin dashboard quick action | "Coming soon" |
-| **Order Management** (brand owner) | Brand owner dashboard | "Coming soon" |
-| **Brand Analytics** | Brand owner dashboard | "Coming soon" |
+| **Order Management** (brand owner) | Brand owner /manage dashboard | "Coming soon" — full dashboard at `/brands/[id]/dashboard` is functional |
 | **Privacy Policy** | Settings screen | Shows "coming soon" alert |
 | **Terms of Service** | Settings screen | Shows "coming soon" alert |
 | **Delete Account** | Settings screen | Shows alert with contact info (not automated) |
 | **Payment processing** | Checkout | No payment gateway — order is placed directly |
-| **Notification toggles** | Settings screen | UI toggles exist but not connected to backend |
-| **Tracking number** | Order entity | Field exists in backend but no UI for entering/displaying |
+| **DOWNLOAD INVOICE** | Order detail action button | Button exists but not functional |
+| **TRACK SHIPMENT** | Order detail action button | Button exists but not functional (no carrier link logic) |
+| **Product image tagging (pins)** | Feed / post creation | Chip-style product tags only — no spatial pin on image |
+| **Brand posts tab** | Brand detail page | Posts tab not yet added to brand detail |
 
 ---
 
@@ -1165,7 +1295,19 @@ Men, Women, Unisex, Kids
 Spring, Summer, Fall, Winter, All Season
 
 ### Order Statuses
-Pending → Confirmed → Processing → Shipped → Delivered / Cancelled / Returned
+Pending → Confirmed → Processing → Shipped → Delivered / Cancelled
+
+### Return Statuses
+Requested → Approved / Rejected → Shipped Back → Received → Refunded
+
+### Return Reasons
+Defective, Wrong Item, Not as Described, Changed Mind, Size/Fit, Damaged in Shipping, Other
+
+### Promo Code Types
+Percentage (% off), Fixed ($ off)
+
+### Shipping Methods
+Standard, Express, Overnight, Local Pickup
 
 ### Payment Statuses
 Pending, Paid, Failed, Refunded

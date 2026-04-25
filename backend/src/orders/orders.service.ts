@@ -26,6 +26,7 @@ import { MailService } from '../common/mail/mail.service';
 import { User } from '../users/user.entity';
 import { NotificationsService } from '../notifications/notifications.service';
 import { NotificationType } from '../notifications/notification.entity';
+import { PromoCodesService } from '../promo-codes/promo-codes.service';
 
 @Injectable()
 export class OrdersService {
@@ -33,6 +34,7 @@ export class OrdersService {
     private dataSource: DataSource,
     private readonly mailService: MailService,
     private readonly notificationsService: NotificationsService,
+    private readonly promoCodesService: PromoCodesService,
     @InjectRepository(Order)
     private orderRepository: Repository<Order>,
     @InjectRepository(OrderItem)
@@ -161,9 +163,31 @@ export class OrdersService {
 
       // 4. Calculate Final Totals
       const shippingCost = createOrderDto.shippingCost || 0;
-      const discountAmount = createOrderDto.discountAmount || 0;
+      let discountAmount = createOrderDto.discountAmount || 0;
+      let appliedPromoCode: string | undefined;
+
+      // Validate and apply promo code if provided
+      if (createOrderDto.promoCode) {
+        try {
+          const promoResult = await this.promoCodesService.validate(
+            createOrderDto.promoCode,
+            subtotal,
+            userId,
+          );
+          discountAmount = promoResult.discountAmount;
+          appliedPromoCode = createOrderDto.promoCode.toUpperCase();
+        } catch {
+          throw new BadRequestException(
+            `Promo code error: ${createOrderDto.promoCode} is invalid or expired`,
+          );
+        }
+      }
+
       const taxAmount = subtotal * 0.08; // 8% example
-      const totalAmount = subtotal + shippingCost + taxAmount - discountAmount;
+      const totalAmount = Math.max(
+        0,
+        subtotal + shippingCost + taxAmount - discountAmount,
+      );
 
       // 5. Create Order
       const order = manager.create(Order, {
@@ -182,6 +206,9 @@ export class OrdersService {
         billingAddress,
         notes: createOrderDto.notes,
         idempotencyKey,
+        promoCode: appliedPromoCode,
+        shippingMethodName: (createOrderDto as any).shippingMethodName,
+        shippingCarrier: (createOrderDto as any).shippingCarrier,
       });
 
       const savedOrder = await manager.save(Order, order);
@@ -230,6 +257,13 @@ export class OrdersService {
         notes: 'Order created via checkout',
       });
       await manager.save(OrderStatusHistory, history);
+
+      // Record promo code usage (non-blocking)
+      if (appliedPromoCode) {
+        this.promoCodesService
+          .applyPromo(appliedPromoCode, userId, savedOrder.id, discountAmount)
+          .catch(() => {});
+      }
 
       // Send order confirmation email (non-blocking)
       const user = await manager.findOne(User, { where: { id: userId } });
@@ -281,6 +315,8 @@ export class OrdersService {
       paymentMethod: checkoutDto.paymentMethod,
       idempotencyKey: checkoutDto.idempotencyKey,
       notes: checkoutDto.notes,
+      promoCode: checkoutDto.promoCode,
+      shippingCost: (checkoutDto as any).shippingCost,
     };
 
     return this.create(createOrderDto, userId);

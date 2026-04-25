@@ -98,8 +98,12 @@ const CheckoutScreen = () => {
   const [cart, setCart] = useState<any>(null);
   const [addresses, setAddresses] = useState<any[]>([]);
   const [selectedAddressId, setSelectedAddressId] = useState<number | null>(null);
-  const [shippingMethod, setShippingMethod] = useState<"standard" | "express">("standard");
   const [promoCode, setPromoCode] = useState("");
+  const [promoApplied, setPromoApplied] = useState<{ discount: number; code: string } | null>(null);
+  const [promoLoading, setPromoLoading] = useState(false);
+  const [promoError, setPromoError] = useState("");
+  const [availableRates, setAvailableRates] = useState<any[]>([]);
+  const [selectedRateId, setSelectedRateId] = useState<number | null>(null);
   const [cartExpanded, setCartExpanded] = useState(false);
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
@@ -125,8 +129,11 @@ const CheckoutScreen = () => {
         const addrData = await addrRes.json();
         setAddresses(addrData);
         const defaultAddr = addrData.find((a: any) => a.isDefault);
-        if (defaultAddr) setSelectedAddressId(defaultAddr.id);
-        else if (addrData.length > 0) setSelectedAddressId(addrData[0].id);
+        const chosen = defaultAddr || addrData[0];
+        if (chosen) {
+          setSelectedAddressId(chosen.id);
+          await fetchShippingRates(chosen);
+        }
       }
     } catch (error) {
       console.error("Error fetching checkout data:", error);
@@ -140,6 +147,56 @@ const CheckoutScreen = () => {
       fetchData();
     }, [fetchData])
   );
+
+  const fetchShippingRates = async (addr: any) => {
+    if (!addr?.country) return;
+    try {
+      const brandIds = [...new Set((cart?.cartItems || []).map((i: any) => i.product?.brandId).filter(Boolean))];
+      if (brandIds.length === 0) return;
+      const brandId = brandIds[0];
+      const res = await fetch(`${getApiUrl()}/shipping/calculate`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ brandId, countryCode: addr.country }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const rates = data.rates || [];
+        setAvailableRates(rates);
+        if (rates.length > 0) setSelectedRateId(rates[0].id);
+      }
+    } catch {}
+  };
+
+  const handleAddressSelect = async (addr: any) => {
+    setSelectedAddressId(addr.id);
+    await fetchShippingRates(addr);
+  };
+
+  const handleApplyPromo = async () => {
+    if (!promoCode.trim()) return;
+    setPromoLoading(true);
+    setPromoError("");
+    try {
+      const res = await fetch(`${getApiUrl()}/promo-codes/validate`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ code: promoCode.trim(), cartTotal: subtotal }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setPromoApplied({ discount: data.discountAmount, code: data.code });
+        setPromoError("");
+      } else {
+        setPromoError(data.message || "Invalid promo code");
+        setPromoApplied(null);
+      }
+    } catch {
+      setPromoError("Failed to apply promo code");
+    } finally {
+      setPromoLoading(false);
+    }
+  };
 
   const generateIdempotencyKey = () =>
     "key_" + Math.random().toString(36).substr(2, 9) + "_" + Date.now();
@@ -163,6 +220,8 @@ const CheckoutScreen = () => {
           shippingAddressId: selectedAddressId,
           paymentMethod: "credit_card",
           idempotencyKey,
+          promoCode: promoApplied?.code,
+          shippingCost: selectedRate ? Number(selectedRate.price) : 0,
         }),
       });
 
@@ -198,9 +257,11 @@ const CheckoutScreen = () => {
       sum + Number(item.unitPrice || 0) * (item.quantity || 1),
     0
   );
-  const shippingCost = shippingMethod === "express" ? 15 : 0;
+  const selectedRate = availableRates.find((r) => r.id === selectedRateId);
+  const shippingCost = selectedRate ? Number(selectedRate.price) : 0;
+  const promoDiscount = promoApplied?.discount || 0;
   const tax = subtotal * 0.08;
-  const total = subtotal + shippingCost + tax;
+  const total = Math.max(0, subtotal + shippingCost + tax - promoDiscount);
 
   if (loading) {
     return (
@@ -344,7 +405,7 @@ const CheckoutScreen = () => {
                       ? styles.addressCardSelected
                       : styles.addressCardUnselected,
                   ]}
-                  onPress={() => setSelectedAddressId(addr.id)}
+                  onPress={() => handleAddressSelect(addr)}
                   activeOpacity={0.8}
                 >
                   {addr.label && (
@@ -395,33 +456,35 @@ const CheckoutScreen = () => {
         <View style={styles.section}>
           <StepHeader number="03" label="SHIPPING METHOD" />
 
-          <TouchableOpacity
-            style={styles.shippingOption}
-            onPress={() => setShippingMethod("standard")}
-            activeOpacity={0.8}
-          >
-            <Text style={styles.shippingBullet}>
-              {shippingMethod === "standard" ? "■" : "□"}
-            </Text>
-            <View style={styles.shippingInfo}>
-              <Text style={styles.shippingOptionText}>STANDARD — 5-7 DAYS</Text>
-              <Text style={styles.shippingPrice}>FREE</Text>
+          {availableRates.length === 0 ? (
+            <View style={styles.shippingOption}>
+              <View style={styles.shippingInfo}>
+                <Text style={styles.shippingOptionText}>STANDARD SHIPPING</Text>
+                <Text style={styles.shippingPrice}>FREE</Text>
+              </View>
             </View>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.shippingOption}
-            onPress={() => setShippingMethod("express")}
-            activeOpacity={0.8}
-          >
-            <Text style={styles.shippingBullet}>
-              {shippingMethod === "express" ? "■" : "□"}
-            </Text>
-            <View style={styles.shippingInfo}>
-              <Text style={styles.shippingOptionText}>EXPRESS — 2-3 DAYS</Text>
-              <Text style={styles.shippingPrice}>$15.00</Text>
-            </View>
-          </TouchableOpacity>
+          ) : (
+            availableRates.map((rate: any) => (
+              <TouchableOpacity
+                key={rate.id}
+                style={styles.shippingOption}
+                onPress={() => setSelectedRateId(rate.id)}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.shippingBullet}>
+                  {selectedRateId === rate.id ? "■" : "□"}
+                </Text>
+                <View style={styles.shippingInfo}>
+                  <Text style={styles.shippingOptionText}>
+                    {rate.methodName.toUpperCase()} — {rate.estimatedDays} DAYS
+                  </Text>
+                  <Text style={styles.shippingPrice}>
+                    {Number(rate.price) === 0 ? "FREE" : `$${Number(rate.price).toFixed(2)}`}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            ))
+          )}
         </View>
 
         {/* ── ORDER SUMMARY ── */}
@@ -451,17 +514,30 @@ const CheckoutScreen = () => {
           {/* Promo code */}
           <View style={styles.promoRow}>
             <TextInput
-              style={styles.promoInput}
+              style={[styles.promoInput, promoApplied ? { borderBottomColor: "#22c55e" } : {}]}
               placeholder="PROMO CODE"
               placeholderTextColor={COLORS.gray}
               value={promoCode}
-              onChangeText={setPromoCode}
+              onChangeText={(t) => { setPromoCode(t); setPromoError(""); if (!t) setPromoApplied(null); }}
               autoCapitalize="characters"
+              editable={!promoApplied}
             />
-            <TouchableOpacity activeOpacity={0.7}>
-              <Text style={styles.applyText}>APPLY</Text>
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={promoApplied ? () => { setPromoApplied(null); setPromoCode(""); } : handleApplyPromo}
+              disabled={promoLoading}
+            >
+              <Text style={styles.applyText}>{promoApplied ? "REMOVE" : promoLoading ? "..." : "APPLY"}</Text>
             </TouchableOpacity>
           </View>
+          {promoError ? <Text style={{ color: COLORS.error, fontSize: 11, fontFamily: FONTS.mono, marginBottom: 8 }}>{promoError}</Text> : null}
+          {promoApplied ? <Text style={{ color: "#22c55e", fontSize: 11, fontFamily: FONTS.mono, marginBottom: 8 }}>PROMO APPLIED: -{promoApplied.code}</Text> : null}
+          {promoApplied && (
+            <View style={styles.summaryRow}>
+              <Text style={[styles.summaryLabel, { color: "#22c55e" }]}>DISCOUNT</Text>
+              <Text style={[styles.summaryValue, { color: "#22c55e" }]}>-${promoDiscount.toFixed(2)}</Text>
+            </View>
+          )}
 
           {/* Place order button */}
           <TouchableOpacity

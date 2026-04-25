@@ -1,11 +1,15 @@
-import { Controller, Get, Post, Delete, Patch, Param, ParseIntPipe, UseGuards, Request, Query } from '@nestjs/common';
+import { Controller, Get, Post, Delete, Patch, Param, ParseIntPipe, UseGuards, Request, Query, Body, Put } from '@nestjs/common';
 import { NotificationsService } from './notifications.service';
+import { PushNotificationService } from './push-notification.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 @Controller('notifications')
 @UseGuards(JwtAuthGuard)
 export class NotificationsController {
-  constructor(private notificationsService: NotificationsService) {}
+  constructor(
+    private notificationsService: NotificationsService,
+    private pushNotificationService: PushNotificationService,
+  ) {}
 
   @Get()
   async getMyNotifications(@Request() req, @Query('limit') limit?: string, @Query('offset') offset?: string) {
@@ -43,5 +47,26 @@ export class NotificationsController {
   @Get('notify-me/check/:productId')
   async checkStockSubscription(@Param('productId', ParseIntPipe) productId: number, @Request() req) {
     return this.notificationsService.isSubscribedToStock(req.user.id, productId);
+  }
+
+  @Post('push-token')
+  async registerPushToken(
+    @Body() body: { token: string; platform: string },
+    @Request() req,
+  ) {
+    return this.pushNotificationService.registerToken(
+      req.user.id,
+      body.token,
+      body.platform || 'unknown',
+    );
+  }
+
+  @Delete('push-token')
+  async unregisterPushToken(
+    @Body() body: { token: string },
+    @Request() req,
+  ) {
+    await this.pushNotificationService.unregisterToken(req.user.id, body.token);
+    return { success: true };
   }
 }

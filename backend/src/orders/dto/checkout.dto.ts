@@ -28,4 +28,8 @@ export class CheckoutDto {
   @IsOptional()
   @IsString()
   notes?: string;
+
+  @IsOptional()
+  @IsString()
+  promoCode?: string;
 }

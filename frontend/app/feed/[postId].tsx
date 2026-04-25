@@ -24,7 +24,19 @@ import { useAuth } from "@/context/AuthContext";
 import getApiUrl from "@/helpers/getApiUrl";
 import { useThemeColors } from "@/hooks/useThemeColor";
 import Header from "@/components/Header";
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+  withTiming,
+  withSequence,
+  withDelay,
+  runOnJS,
+} from "react-native-reanimated";
+import { Gesture, GestureDetector } from "react-native-gesture-handler";
+
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
+const PRODUCT_CARD_WIDTH = 150;
 
 export default function PostDetailScreen() {
   const { postId } = useLocalSearchParams<{ postId: string }>();
@@ -42,6 +54,26 @@ export default function PostDetailScreen() {
   const [hasMoreComments, setHasMoreComments] = useState(true);
   const [imageIndex, setImageIndex] = useState(0);
   const inputRef = useRef<TextInput>(null);
+
+  // Double-tap heart animation
+  const heartScale = useSharedValue(0);
+  const heartOpacity = useSharedValue(0);
+
+  const heartAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: heartScale.value }],
+    opacity: heartOpacity.value,
+  }));
+
+  const triggerHeartAnimation = useCallback(() => {
+    heartScale.value = withSequence(
+      withSpring(1.2, { damping: 8, stiffness: 300 }),
+      withDelay(400, withTiming(0, { duration: 300 })),
+    );
+    heartOpacity.value = withSequence(
+      withTiming(1, { duration: 100 }),
+      withDelay(400, withTiming(0, { duration: 300 })),
+    );
+  }, []);
 
   const fetchPost = useCallback(async () => {
     try {
@@ -93,6 +125,20 @@ export default function PostDetailScreen() {
       }
     } catch {}
   };
+
+  const handleDoubleTapLike = useCallback(() => {
+    triggerHeartAnimation();
+    // Only like, don't unlike on double-tap
+    if (!post?.isLiked) {
+      handleLike();
+    }
+  }, [post?.isLiked, token]);
+
+  const doubleTap = Gesture.Tap()
+    .numberOfTaps(2)
+    .onEnd(() => {
+      runOnJS(handleDoubleTapLike)();
+    });
 
   const handleSubmitComment = async () => {
     if (!commentText.trim() || submitting) return;
@@ -169,7 +215,6 @@ export default function PostDetailScreen() {
     if (!user) return false;
     if (user.role === "admin") return true;
     if (comment.userId === user.id) return true;
-    // Brand owner of the post's brand
     if (post?.brand && user.role === "brandOwner") return true;
     return false;
   };
@@ -251,49 +296,72 @@ export default function PostDetailScreen() {
               </View>
             </TouchableOpacity>
 
-            {/* Images */}
-            {post.images.length === 1 ? (
-              <Image
-                source={{ uri: post.images[0] }}
-                style={styles.postImage}
-                resizeMode="cover"
-              />
-            ) : (
-              <View>
-                <ScrollView
-                  horizontal
-                  pagingEnabled
-                  showsHorizontalScrollIndicator={false}
-                  onMomentumScrollEnd={(e) => {
-                    setImageIndex(
-                      Math.round(e.nativeEvent.contentOffset.x / SCREEN_WIDTH),
-                    );
-                  }}
-                >
-                  {post.images.map((uri: string, i: number) => (
+            {/* Images with double-tap to like */}
+            <GestureDetector gesture={doubleTap}>
+              <Animated.View>
+                {post.images.length === 1 ? (
+                  <View style={styles.imageContainer}>
                     <Image
-                      key={i}
-                      source={{ uri }}
-                      style={styles.postImage}
+                      source={{ uri: post.images[0] }}
+                      style={[styles.postImage, { backgroundColor: colors.borderLight }]}
                       resizeMode="cover"
                     />
-                  ))}
-                </ScrollView>
-                <View style={styles.dots}>
-                  {post.images.map((_: any, i: number) => (
-                    <View
-                      key={i}
-                      style={[
-                        styles.dot,
-                        i === imageIndex
-                          ? styles.dotActive
-                          : styles.dotInactive,
-                      ]}
-                    />
-                  ))}
-                </View>
-              </View>
-            )}
+                    <Animated.View
+                      style={[styles.heartOverlay, heartAnimatedStyle]}
+                      pointerEvents="none"
+                    >
+                      <Ionicons name="heart" size={80} color={colors.textInverse} />
+                    </Animated.View>
+                  </View>
+                ) : (
+                  <View>
+                    <ScrollView
+                      horizontal
+                      pagingEnabled
+                      showsHorizontalScrollIndicator={false}
+                      onMomentumScrollEnd={(e) => {
+                        setImageIndex(
+                          Math.round(
+                            e.nativeEvent.contentOffset.x / SCREEN_WIDTH,
+                          ),
+                        );
+                      }}
+                    >
+                      {post.images.map((uri: string, i: number) => (
+                        <Image
+                          key={i}
+                          source={{ uri }}
+                          style={[styles.postImage, { backgroundColor: colors.borderLight }]}
+                          resizeMode="cover"
+                        />
+                      ))}
+                    </ScrollView>
+                    <Animated.View
+                      style={[styles.heartOverlay, heartAnimatedStyle]}
+                      pointerEvents="none"
+                    >
+                      <Ionicons name="heart" size={80} color={colors.textInverse} />
+                    </Animated.View>
+                    <View style={styles.dots}>
+                      {post.images.map((_: any, i: number) => (
+                        <View
+                          key={i}
+                          style={[
+                            styles.dot,
+                            {
+                              backgroundColor:
+                                i === imageIndex
+                                  ? colors.text
+                                  : colors.border,
+                            },
+                          ]}
+                        />
+                      ))}
+                    </View>
+                  </View>
+                )}
+              </Animated.View>
+            </GestureDetector>
 
             {/* Actions */}
             <View style={styles.actions}>
@@ -301,7 +369,7 @@ export default function PostDetailScreen() {
                 <Ionicons
                   name={post.isLiked ? "heart" : "heart-outline"}
                   size={24}
-                  color={post.isLiked ? "#C41E3A" : colors.text}
+                  color={post.isLiked ? colors.danger : colors.text}
                 />
                 {post.likeCount > 0 && (
                   <Text
@@ -340,52 +408,115 @@ export default function PostDetailScreen() {
 
             {/* Tagged products */}
             {post.postProducts?.length > 0 && (
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                style={styles.productsScroll}
-                contentContainerStyle={styles.productsContainer}
-              >
-                {post.postProducts.map((pp: any) => (
-                  <TouchableOpacity
-                    key={pp.product.id}
-                    style={[
-                      styles.taggedProduct,
-                      { borderColor: colors.border },
-                    ]}
-                    onPress={() =>
-                      router.push(`/products/${pp.product.id}` as any)
-                    }
-                    activeOpacity={0.7}
-                  >
-                    {pp.product.images?.[0] && (
-                      <Image
-                        source={{ uri: pp.product.images[0] }}
-                        style={styles.taggedProductImage}
-                      />
-                    )}
-                    <View style={styles.taggedProductInfo}>
-                      <Text
-                        style={[
-                          styles.taggedProductName,
-                          { color: colors.text },
-                        ]}
-                        numberOfLines={1}
-                      >
-                        {pp.product.name}
-                      </Text>
-                      <Text
-                        style={[
-                          styles.taggedProductPrice,
-                          { color: colors.textTertiary },
-                        ]}
-                      >
-                        ${Number(pp.product.price).toFixed(2)}
-                      </Text>
-                    </View>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
+              <View style={styles.productsSection}>
+                <Text
+                  style={[
+                    styles.productsSectionTitle,
+                    { color: colors.textTertiary },
+                  ]}
+                >
+                  TAGGED PRODUCTS
+                </Text>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.productsContainer}
+                >
+                  {post.postProducts.map((pp: any) => (
+                    <TouchableOpacity
+                      key={pp.product.id}
+                      style={[
+                        styles.productCard,
+                        { borderColor: colors.border },
+                      ]}
+                      onPress={() =>
+                        router.push(`/products/${pp.product.id}` as any)
+                      }
+                      activeOpacity={0.7}
+                    >
+                      <View style={styles.productImageWrap}>
+                        {pp.product.images?.[0] || pp.product.mainImage ? (
+                          <Image
+                            source={{
+                              uri:
+                                pp.product.images?.[0] || pp.product.mainImage,
+                            }}
+                            style={[styles.productCardImage, { backgroundColor: colors.surfaceRaised }]}
+                            resizeMode="cover"
+                          />
+                        ) : (
+                          <View
+                            style={[
+                              styles.productCardImage,
+                              {
+                                backgroundColor: colors.border,
+                                justifyContent: "center",
+                                alignItems: "center",
+                              },
+                            ]}
+                          >
+                            <Ionicons
+                              name="cube-outline"
+                              size={28}
+                              color={colors.textTertiary}
+                            />
+                          </View>
+                        )}
+                      </View>
+                      <View style={styles.productCardInfo}>
+                        <Text
+                          style={[
+                            styles.productCardName,
+                            { color: colors.text },
+                          ]}
+                          numberOfLines={2}
+                        >
+                          {pp.product.name}
+                        </Text>
+                        <View style={styles.productPriceRow}>
+                          {pp.product.salePrice ? (
+                            <>
+                              <Text
+                                style={[
+                                  styles.productCardPrice,
+                                  { color: colors.text },
+                                ]}
+                              >
+                                $
+                                {Number(pp.product.salePrice).toFixed(2)}
+                              </Text>
+                              <Text
+                                style={[
+                                  styles.productCardOldPrice,
+                                  { color: colors.textTertiary },
+                                ]}
+                              >
+                                ${Number(pp.product.price).toFixed(2)}
+                              </Text>
+                            </>
+                          ) : (
+                            <Text
+                              style={[
+                                styles.productCardPrice,
+                                { color: colors.text },
+                              ]}
+                            >
+                              ${Number(pp.product.price).toFixed(2)}
+                            </Text>
+                          )}
+                        </View>
+                      </View>
+                      <View style={styles.productCardArrow}>
+                        <Ionicons
+                          name="chevron-forward"
+                          size={14}
+                          color={colors.textTertiary}
+                        />
+                      </View>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
             )}
 
             {/* Comments header */}
@@ -558,10 +689,22 @@ const styles = StyleSheet.create({
   brandName: { fontSize: 13, fontWeight: "700" },
 
   // Image
+  imageContainer: {
+    position: "relative",
+  },
   postImage: {
     width: SCREEN_WIDTH,
     height: SCREEN_WIDTH,
-    backgroundColor: "#f0f0f0",
+    // backgroundColor set dynamically via theme
+  },
+  heartOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: "center",
+    alignItems: "center",
   },
   dots: {
     flexDirection: "row",
@@ -570,8 +713,8 @@ const styles = StyleSheet.create({
     gap: 5,
   },
   dot: { width: 6, height: 6, borderRadius: 0 },
-  dotActive: { backgroundColor: "#000000" },
-  dotInactive: { backgroundColor: "#E5E5E5" },
+  dotActive: {},
+  dotInactive: {},
 
   // Actions
   actions: {
@@ -580,7 +723,12 @@ const styles = StyleSheet.create({
     paddingTop: 10,
     gap: 16,
   },
-  actionBtn: { flexDirection: "row", alignItems: "center", gap: 4, padding: 4 },
+  actionBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    padding: 4,
+  },
   actionCount: { fontSize: 13, fontWeight: "600" },
   caption: {
     fontSize: 13,
@@ -591,19 +739,60 @@ const styles = StyleSheet.create({
   captionBrand: { fontWeight: "700" },
 
   // Tagged products
-  productsScroll: { marginTop: 12 },
-  productsContainer: { paddingHorizontal: 16, gap: 10 },
-  taggedProduct: {
-    flexDirection: "row",
-    borderWidth: 1,
-    padding: 8,
-    width: 200,
-    gap: 8,
+  productsSection: {
+    marginTop: 16,
   },
-  taggedProductImage: { width: 40, height: 40, backgroundColor: "#f5f5f5" },
-  taggedProductInfo: { flex: 1, justifyContent: "center" },
-  taggedProductName: { fontSize: 12, fontWeight: "600" },
-  taggedProductPrice: { fontSize: 11, marginTop: 2 },
+  productsSectionTitle: {
+    fontSize: 11,
+    fontWeight: "700",
+    paddingHorizontal: 16,
+    marginBottom: 10,
+  },
+  productsContainer: {
+    paddingHorizontal: 16,
+    gap: 10,
+  },
+  productCard: {
+    width: PRODUCT_CARD_WIDTH,
+    borderWidth: 1,
+    overflow: "hidden",
+  },
+  productImageWrap: {
+    width: PRODUCT_CARD_WIDTH,
+    height: PRODUCT_CARD_WIDTH,
+  },
+  productCardImage: {
+    width: "100%",
+    height: "100%",
+    // backgroundColor set dynamically via theme
+  },
+  productCardInfo: {
+    padding: 10,
+  },
+  productCardName: {
+    fontSize: 12,
+    fontWeight: "600",
+    lineHeight: 16,
+    marginBottom: 4,
+  },
+  productPriceRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  productCardPrice: {
+    fontSize: 13,
+    fontWeight: "800",
+  },
+  productCardOldPrice: {
+    fontSize: 11,
+    textDecorationLine: "line-through",
+  },
+  productCardArrow: {
+    position: "absolute",
+    bottom: 10,
+    right: 10,
+  },
 
   // Comments
   commentsHeader: {
@@ -616,7 +805,6 @@ const styles = StyleSheet.create({
   commentsTitle: {
     fontSize: 11,
     fontWeight: "700",
-    // letterSpacing: 1.5,
   },
   commentRow: {
     flexDirection: "row",

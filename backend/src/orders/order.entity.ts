@@ -112,6 +112,15 @@ export class Order {
   deliveredAt: Date;
 
   @Column({ nullable: true })
+  promoCode: string;
+
+  @Column({ nullable: true })
+  shippingCarrier: string;
+
+  @Column({ nullable: true })
+  shippingMethodName: string;
+
+  @Column({ nullable: true })
   @Index()
   idempotencyKey: string;
 

@@ -62,11 +62,11 @@ export default function CreatePostScreen() {
     }
     setSelectedProductIds([]);
     setLoadingProducts(true);
-    fetch(`${getApiUrl()}/products?brandId=${chosenBrand.id}&limit=50`, {
+    fetch(`${getApiUrl()}/products?brandIds=${chosenBrand.id}&limit=50`, {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then((res) => res.json())
-      .then((data) => setProducts(Array.isArray(data.data) ? data.data : Array.isArray(data) ? data : []))
+      .then((data) => setProducts(Array.isArray(data.items) ? data.items : Array.isArray(data) ? data : []))
       .catch(() => {})
       .finally(() => setLoadingProducts(false));
   }, [chosenBrand?.id, token]);
@@ -222,7 +222,7 @@ export default function CreatePostScreen() {
         >
           {images.map((uri, i) => (
             <View key={i} style={styles.imageThumb}>
-              <Image source={{ uri }} style={styles.thumbImage} />
+              <Image source={{ uri }} style={[styles.thumbImage, { backgroundColor: colors.surfaceRaised }]} />
               <TouchableOpacity
                 style={[styles.removeBtn, { backgroundColor: colors.text }]}
                 onPress={() => removeImage(i)}
@@ -269,54 +269,77 @@ export default function CreatePostScreen() {
           maxLength={2000}
         />
 
-        {/* Tag Products */}
-        <Text style={[styles.sectionTitle, { color: colors.textTertiary }]}>
-          TAG PRODUCTS (optional)
-        </Text>
-        {loadingProducts ? (
-          <ActivityIndicator style={{ marginTop: 10 }} color={colors.textTertiary} />
-        ) : products.length === 0 ? (
-          <Text style={[styles.noProducts, { color: colors.textTertiary }]}>
-            No products available to tag
-          </Text>
-        ) : (
-          <View style={styles.productGrid}>
-            {products.map((p: any) => {
-              const selected = selectedProductIds.includes(p.id);
-              return (
-                <TouchableOpacity
-                  key={p.id}
-                  style={[
-                    styles.productChip,
-                    {
-                      borderColor: selected ? colors.text : colors.border,
-                      backgroundColor: selected
-                        ? colors.surfaceRaised
-                        : "transparent",
-                    },
-                  ]}
-                  onPress={() => toggleProduct(p.id)}
-                  activeOpacity={0.7}
-                >
-                  {p.images?.[0] && (
-                    <Image
-                      source={{ uri: p.images[0] }}
-                      style={styles.productChipImage}
-                    />
-                  )}
-                  <Text
-                    style={[styles.productChipName, { color: colors.text }]}
-                    numberOfLines={1}
-                  >
-                    {p.name}
-                  </Text>
-                  {selected && (
-                    <Ionicons name="checkmark" size={16} color={colors.text} />
-                  )}
-                </TouchableOpacity>
-              );
-            })}
-          </View>
+        {/* Tag Products — only show after brand is chosen */}
+        {chosenBrand && (
+          <>
+            <Text style={[styles.sectionTitle, { color: colors.textTertiary }]}>
+              TAG PRODUCTS (optional)
+            </Text>
+            {selectedProductIds.length > 0 && (
+              <Text style={[styles.selectedCount, { color: colors.text }]}>
+                {selectedProductIds.length} product{selectedProductIds.length > 1 ? "s" : ""} selected
+              </Text>
+            )}
+            {loadingProducts ? (
+              <ActivityIndicator style={{ marginTop: 10 }} color={colors.textTertiary} />
+            ) : products.length === 0 ? (
+              <Text style={[styles.noProducts, { color: colors.textTertiary }]}>
+                No products found for {chosenBrand.name}
+              </Text>
+            ) : (
+              <View style={styles.productGrid}>
+                {products.map((p: any) => {
+                  const selected = selectedProductIds.includes(p.id);
+                  return (
+                    <TouchableOpacity
+                      key={p.id}
+                      style={[
+                        styles.productCard,
+                        {
+                          borderColor: selected ? colors.text : colors.border,
+                          backgroundColor: selected
+                            ? colors.surfaceRaised
+                            : "transparent",
+                        },
+                      ]}
+                      onPress={() => toggleProduct(p.id)}
+                      activeOpacity={0.7}
+                    >
+                      {selected && (
+                        <View style={[styles.productCheckmark, { backgroundColor: colors.text }]}>
+                          <Ionicons name="checkmark" size={14} color={colors.background} />
+                        </View>
+                      )}
+                      <View style={styles.productImageWrap}>
+                        {p.images?.[0] ? (
+                          <Image
+                            source={{ uri: p.images[0] }}
+                            style={[styles.productCardImage, { backgroundColor: colors.surfaceRaised }]}
+                            resizeMode="cover"
+                          />
+                        ) : (
+                          <View style={[styles.productCardImage, { backgroundColor: colors.border, justifyContent: "center", alignItems: "center" }]}>
+                            <Ionicons name="cube-outline" size={24} color={colors.textTertiary} />
+                          </View>
+                        )}
+                      </View>
+                      <Text
+                        style={[styles.productCardName, { color: colors.text }]}
+                        numberOfLines={2}
+                      >
+                        {p.name}
+                      </Text>
+                      {p.price != null && (
+                        <Text style={[styles.productCardPrice, { color: colors.textTertiary }]}>
+                          ${Number(p.price).toFixed(2)}
+                        </Text>
+                      )}
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            )}
+          </>
         )}
 
         <View style={{ height: 40 }} />
@@ -386,7 +409,7 @@ const styles = StyleSheet.create({
   imagesScroll: { marginBottom: 28 },
   imagesContainer: { gap: 10 },
   imageThumb: { position: "relative" },
-  thumbImage: { width: 100, height: 100, backgroundColor: "#f5f5f5" },
+  thumbImage: { width: 100, height: 100 },
   removeBtn: {
     position: "absolute",
     top: 4,
@@ -420,17 +443,47 @@ const styles = StyleSheet.create({
 
   // Products
   noProducts: { fontSize: 13, marginBottom: 20 },
-  productGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  productChip: {
-    flexDirection: "row",
-    alignItems: "center",
+  selectedCount: { fontSize: 12, fontWeight: "600", marginBottom: 12 },
+  productGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
+  productCard: {
     borderWidth: 1,
-    paddingVertical: 8,
-    paddingHorizontal: 10,
-    gap: 8,
+    width: "47%" as any,
+    position: "relative",
+    overflow: "hidden",
   },
-  productChipImage: { width: 28, height: 28, backgroundColor: "#f5f5f5" },
-  productChipName: { fontSize: 12, fontWeight: "600", maxWidth: 120 },
+  productCheckmark: {
+    position: "absolute",
+    top: 8,
+    right: 8,
+    width: 24,
+    height: 24,
+    borderRadius: 0,
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 1,
+  },
+  productImageWrap: {
+    width: "100%",
+    aspectRatio: 1,
+  },
+  productCardImage: {
+    width: "100%",
+    height: "100%",
+    // backgroundColor set dynamically via theme
+  },
+  productCardName: {
+    fontSize: 12,
+    fontWeight: "600",
+    paddingHorizontal: 8,
+    paddingTop: 8,
+    paddingBottom: 2,
+  },
+  productCardPrice: {
+    fontSize: 11,
+    fontWeight: "500",
+    paddingHorizontal: 8,
+    paddingBottom: 10,
+  },
 
   // Footer
   footer: {
