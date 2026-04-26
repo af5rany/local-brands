@@ -50,6 +50,9 @@ const OrderDetailScreen = () => {
   const [order, setOrder] = useState<any>(null);
   const [history, setHistory] = useState<StatusHistoryItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [trackingData, setTrackingData] = useState<any>(null);
+  const [trackingLoading, setTrackingLoading] = useState(false);
+  const [showTracking, setShowTracking] = useState(false);
 
   useEffect(() => {
     const fetchOrder = async () => {
@@ -101,6 +104,29 @@ const OrderDetailScreen = () => {
   const copyTrackingNumber = () => {
     if (!order?.trackingNumber) return;
     Alert.alert("Copied", "Tracking number copied to clipboard.");
+  };
+
+  const fetchTracking = async () => {
+    if (!order?.trackingNumber) {
+      Alert.alert("No Tracking", "No tracking number available for this order.");
+      return;
+    }
+    setTrackingLoading(true);
+    try {
+      const res = await fetch(`${getApiUrl()}/orders/${orderId}/tracking`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        setTrackingData(await res.json());
+        setShowTracking(true);
+      } else {
+        Alert.alert("Error", "Could not fetch tracking information");
+      }
+    } catch {
+      Alert.alert("Error", "Could not fetch tracking information");
+    } finally {
+      setTrackingLoading(false);
+    }
   };
 
   const currentStep =
@@ -339,8 +365,10 @@ const OrderDetailScreen = () => {
                   DOWNLOAD INVOICE
                 </Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.btnFilledWhite}>
-                <Text style={styles.btnFilledWhiteText}>TRACK SHIPMENT</Text>
+              <TouchableOpacity style={styles.btnFilledWhite} onPress={fetchTracking} disabled={trackingLoading}>
+                {trackingLoading ? <ActivityIndicator color="#000" size="small" /> : (
+                  <Text style={styles.btnFilledWhiteText}>TRACK SHIPMENT</Text>
+                )}
               </TouchableOpacity>
               {order.status?.toUpperCase() === "DELIVERED" && (
                 <TouchableOpacity
@@ -357,6 +385,43 @@ const OrderDetailScreen = () => {
             </View>
           </View>
         </View>
+
+        {/* Carrier Tracking Events */}
+        {showTracking && trackingData && (
+          <View style={{ marginHorizontal: 16, marginBottom: 16, backgroundColor: "#fff", borderRadius: 8, padding: 16, borderWidth: 1, borderColor: "#eee" }}>
+            <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 12 }}>
+              <Text style={{ fontSize: 12, fontWeight: "700", letterSpacing: 1.5 }}>
+                SHIPMENT STATUS
+              </Text>
+              <TouchableOpacity onPress={() => setShowTracking(false)}>
+                <Text style={{ fontSize: 11, color: "#888" }}>CLOSE</Text>
+              </TouchableOpacity>
+            </View>
+            <Text style={{ fontSize: 14, fontWeight: "700", marginBottom: 4 }}>{trackingData.status}</Text>
+            {trackingData.estimatedDelivery && (
+              <Text style={{ fontSize: 11, color: "#888", marginBottom: 12 }}>
+                Est. delivery: {new Date(trackingData.estimatedDelivery).toLocaleDateString()}
+              </Text>
+            )}
+            {(trackingData.events || []).length > 0 && (
+              <View style={{ marginTop: 8 }}>
+                {(trackingData.events || []).map((e: any, i: number) => (
+                  <View key={i} style={{ flexDirection: "row", marginBottom: 10, gap: 10 }}>
+                    <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: "#000", marginTop: 5 }} />
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontSize: 12, fontWeight: "600" }}>{e.description}</Text>
+                      {e.location ? <Text style={{ fontSize: 11, color: "#888" }}>{e.location}</Text> : null}
+                      {e.timestamp ? <Text style={{ fontSize: 10, color: "#aaa" }}>{e.timestamp}</Text> : null}
+                    </View>
+                  </View>
+                ))}
+              </View>
+            )}
+            {(trackingData.events || []).length === 0 && (
+              <Text style={{ fontSize: 12, color: "#888" }}>No tracking events available yet.</Text>
+            )}
+          </View>
+        )}
 
         <View style={{ height: 48 }} />
       </ScrollView>

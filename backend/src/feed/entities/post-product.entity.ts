@@ -28,4 +28,11 @@ export class PostProduct {
   @ManyToOne(() => Product, { eager: true, onDelete: 'CASCADE' })
   @JoinColumn({ name: 'productId' })
   product: Product;
+
+  // Position of the pin on the image (percentage of image width/height)
+  @Column({ type: 'float', nullable: true })
+  xPercent: number;
+
+  @Column({ type: 'float', nullable: true })
+  yPercent: number;
 }

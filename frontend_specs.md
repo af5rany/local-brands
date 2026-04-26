@@ -82,6 +82,13 @@ Six bottom tabs (with label-less icons):
 - `brands/[brandId]/returns/index.tsx` — Brand owner return requests with horizontal status filter tabs (All / Requested / Approved / etc.).
 - `brands/[brandId]/returns/[returnId].tsx` — Full admin view: status banner, customer info, return reason, customer photos, approve/reject (with notes input), mark received, process refund buttons.
 - `brands/[brandId]/return-policy.tsx` — Return policy settings form (returnWindowDays, restockingFeePercent, conditions textarea, requiresImages switch, isActive switch).
+- `brands/[brandId]/size-guides/index.tsx` — List/create/edit size guides (title, unit, headers, rows). Brand-level or product-level scope.
+- `brands/[brandId]/email-campaigns/index.tsx` — Campaign list with status badges (DRAFT/SCHEDULED/SENDING/SENT/FAILED), sent count, send/delete actions.
+- `brands/[brandId]/email-campaigns/create.tsx` — Compose form (subject, body textarea, preview text, schedule toggle + date picker), SAVE DRAFT / SEND NOW.
+- `brands/[brandId]/email-campaigns/[campaignId].tsx` — Edit draft + stats (sent/recipient count) + SEND NOW / SCHEDULE / DELETE.
+- `brands/[brandId]/bundles/index.tsx` — Bundle list with active toggle, edit link, delete.
+- `brands/[brandId]/bundles/create.tsx` — Create form (name, discount type/value, min quantity, product multi-select, date range).
+- `brands/[brandId]/bundles/[bundleId].tsx` — Edit bundle form.
 
 ### 6. Products (`products/`)
 - `products/index.tsx` — All products listing with advanced search, filters, pagination.
@@ -93,8 +100,8 @@ Six bottom tabs (with label-less icons):
 - `cart/index.tsx` — Cart with item listing, quantity adjustment, variant display, total calculation, checkout navigation.
 
 ### 8. Checkout (`checkout/`)
-- `checkout/index.tsx` — Order placement with address selection, dynamic shipping rate calculation (calls `POST /shipping/calculate` after address selection, shows rate picker), promo code apply/remove (calls `POST /promo-codes/validate`, shows discount line in summary), idempotency key generation. Checkout body includes `promoCode` and `shippingCost`.
-- `checkout/confirmation.tsx` — Order confirmation screen shown after successful order placement.
+- `checkout/index.tsx` — Order placement with address selection, dynamic shipping rate picker, promo code apply/remove, idempotency key generation. Backend returns `Order[]` (one per brand); confirmation screen shows aggregated total + all order numbers.
+- `checkout/confirmation.tsx` — Order confirmation screen shown after successful order placement. Accepts `orderCount` param to display multi-vendor summary.
 
 ### 9. Orders (`orders/`)
 - `orders/index.tsx` — Order history listing with status badges.
@@ -217,6 +224,7 @@ Centralized via `useCloudinaryUpload` hook:
 | **Notification Settings** | Per-preference toggles (push, email, order updates, promotions) saved to backend |
 | **Referral** | Referral program with share code, copy, and referral history |
 | **AI Try-On** | Virtual try-on via Cloudinary upload + backend job polling + before/after result display |
+| **Search by Image** | Camera icon in SearchModal → `useImageSearch` hook → CLIP-based backend (`POST /image-search`) → results replace product grid. Also wired into `shop.tsx`. |
 | **Info / Static Pages** | About, Contact, Shipping Policy, Returns Policy screens |
 | **Order Confirmation** | Dedicated confirmation screen after order placement |
 | **Promo Codes (brand owner)** | List, create, edit, toggle, delete promo codes; usage stats with recent usage list |
@@ -231,6 +239,16 @@ Centralized via `useCloudinaryUpload` hook:
 | **Push Notifications** | Token registration on login (Expo push token → `POST /notifications/push-token`), deep-link routing from notification taps (order and return screens) |
 | **Brand Dashboard** | Analytics with quick action cards (promo codes, shipping, returns, return policy), pending returns alert, notify followers modal |
 | **Brand Notify Followers** | Compose modal in dashboard → sends title + message to all followers via backend (`POST /brands/:id/notifications/send`) |
+| **Social Sharing** | Native `Share.share()` wired on product detail share button + share icon in post detail header |
+| **Size Guide Modal** | Product detail fetches `/size-guides/product/:id?brandId=`; "SIZE GUIDE" pressable shows Modal with table (headers + rows) |
+| **Stock Alerts (subscribe)** | "NOTIFY ME" button on out-of-stock products → `POST /notifications/stock-subscribe`; users auto-notified when stock restored |
+| **Admin System Analytics** | AdminDashboard shows revenue cards, GMV bar chart (last 6 months), top brands list, orders-by-status — no longer "Coming Soon" |
+| **Size Guide Management** | 3 brand owner screens under `/brands/[brandId]/size-guides/` — list, create, edit |
+| **Email Campaigns** | 3 brand owner screens under `/brands/[brandId]/email-campaigns/` — list (with status + sent count), compose/create, edit + stats |
+| **Product Bundles** | 3 brand owner screens under `/brands/[brandId]/bundles/` — list, create, edit; bundle discount applied at checkout |
+| **Visual Pin Tags** | `feed/create.tsx`: location icon on product chip → tap image to place pin at x/y %. `feed/[postId].tsx`: absolute dot overlays, tap → product mini-card popup |
+| **Order Tracking (live)** | TRACK SHIPMENT button calls `GET /orders/:id/tracking`; events timeline shown below financial summary |
+| **Multi-Vendor Checkout** | Backend returns `Order[]`; frontend aggregates all order numbers + total for confirmation screen |
 
 ### Developed But Not Working / Incomplete
 
@@ -238,6 +256,7 @@ Centralized via `useCloudinaryUpload` hook:
 |---------|-------|
 | **ProductVariant Entity Migration** | New `ProductVariant` entity table exists but the system still uses the deprecated `variants` JSON column. Backend normalizes `variantImages → images` on read. |
 | **Auth Route Protection** | Login redirect in `_layout.tsx` only covers a subset of protected segments (`checkout`, `users`, `manage`, `orders`, `referral`). Returns, cart, and profile routes check auth individually at screen level. |
+| **Brand Posts Tab** | Posts fetched and displayed as a section in `brands/[brandId]/index.tsx`. Dedicated `brands/[brandId]/posts.tsx` screen also exists. However, there is **no tab switcher UI** — products and posts are not organized as "Products" / "Posts" tabs. |
 
 ### Not Started
 
@@ -250,17 +269,12 @@ Centralized via `useCloudinaryUpload` hook:
 
 ## Planned Features — To Be Done
 
-### [TODO] Visual Product Tagging on Post Images
+### [DONE ✓] Visual Product Tagging on Post Images
 
-**Goal:** Let brand owners tap a location on a post image during creation to pin a product tag there. In the feed and post detail, readers tap the pin to see a product card popup.
-
-**Screens affected:**
-- `feed/create.tsx` — image editing step after upload: overlay tap handler captures `(x%, y%)` → opens product picker modal → pin placed at that coordinate; pins shown as small dots over the image preview with product name label
-- `feed/[postId].tsx` and feed post cards — render `taggedProducts` pins as tappable dots overlaid on the image; tap reveals a compact product card (image, brand, name, price, "View" CTA)
-
-**New component needed:** `ProductTagPin` — absolute-positioned touchable dot rendered over an image, receives `{ x, y, product }` props, shows label, on press shows inline product card or navigates to product detail.
-
-**State:** `taggedProducts` in create form changes from `number[]` (product IDs) to `{ productId, imageIndex, x, y }[]`.
+**Status:** Fully implemented.
+- `feed/create.tsx`: `taggedProducts` state is `{ productId, xPercent?, yPercent? }[]`. Location icon on product chip enters pin-placement mode; `handleImageTap()` calculates percentage from tap coordinates relative to `imageLayout`. Pins shown as dot overlays on image preview.
+- `feed/[postId].tsx`: `activePinProductId` state; absolute-positioned dots at `xPercent/yPercent`%; tap shows product mini-card popup with name, price, "View" navigation.
+- Backend stores `xPercent/yPercent` on `PostProduct` entity.
 
 ---
 
@@ -299,24 +313,9 @@ Centralized via `useCloudinaryUpload` hook:
 
 ---
 
-### [TODO — Later] Search by Image
+### [DONE ✓] Search by Image
 
-**Goal:** Camera icon in SearchModal lets users photograph or upload any clothing item and find visually similar products.
-
-**Entry point:** SearchModal — camera icon button beside the text input.
-
-**Flow:**
-1. Tap camera icon → action sheet: "Take Photo" / "Choose from Gallery"
-2. Image compressed via `expo-image-manipulator` and uploaded to Cloudinary
-3. `POST /products/search-by-image` called with Cloudinary URL
-4. Results replace the product grid in SearchModal
-5. Loading state: spinner + "Analyzing your image…"
-6. Error state: "No matches found — try a different photo"
-7. User can still apply standard filters (category, price) to narrow results
-
-**New component needed:** None — reuses SearchModal's existing product grid and loading states.
-
-**Priority:** Low — deferred to a later phase.
+**Status:** Fully implemented — camera icon in SearchModal → `useImageSearch` hook → `POST /image-search` (CLIP-based) → results replace product grid. Also wired into `shop.tsx`.
 
 ---
 

@@ -1,4 +1,6 @@
 import { Module } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { UsersModule } from './users/users.module';
 import { BrandsModule } from './brands/brands.module';
@@ -24,10 +26,14 @@ import { ImageSearchModule } from './image-search/image-search.module';
 import { PromoCodesModule } from './promo-codes/promo-codes.module';
 import { ShippingModule } from './shipping/shipping.module';
 import { ReturnsModule } from './returns/returns.module';
+import { SizeGuidesModule } from './size-guides/size-guides.module';
+import { EmailCampaignsModule } from './email-campaigns/email-campaigns.module';
+import { BundlesModule } from './bundles/bundles.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    ThrottlerModule.forRoot([{ ttl: 60000, limit: 100 }]),
     EventEmitterModule.forRoot(),
     BullModule.forRoot({
       connection: process.env.REDIS_URL
@@ -70,8 +76,14 @@ import { ReturnsModule } from './returns/returns.module';
     PromoCodesModule,
     ShippingModule,
     ReturnsModule,
+    SizeGuidesModule,
+    EmailCampaignsModule,
+    BundlesModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    { provide: APP_GUARD, useClass: ThrottlerGuard },
+  ],
 })
 export class AppModule {}

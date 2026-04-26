@@ -52,6 +52,8 @@ The backend is a robust RESTful API built with **NestJS**, utilizing **TypeScrip
 - **Discovery**: Advanced search (`ILike`), pagination (`take`/`skip`), filter by category/type/brand/gender, sort by multiple fields.
 - **Status Lifecycle**: `DRAFT`, `PUBLISHED`, `ARCHIVED`.
 - **Soft Delete**: Supported.
+- **Back-in-Stock Alerts**: On `update()`, if `stock` transitions from 0 → >0, queries `StockNotification` (where `notified = false`) → `NotificationsService.createBulk()` + `PushNotificationService.sendPushToMany()` → marks subscribers notified.
+- **Low-Stock Inventory Alerts**: On `update()`, if stock drops below `lowStockThreshold`, queries `BrandUser` for brand owner user IDs → sends in-app + push notification to brand owners.
 
 ### 5. Shopping Cart (`CartModule`)
 - **Entities**: `Cart` (1:1 per user), `CartItem` (1:M with variant selection).
@@ -59,11 +61,12 @@ The backend is a robust RESTful API built with **NestJS**, utilizing **TypeScrip
 - Quantity management, variant-aware items.
 
 ### 6. Orders & Fulfillment (`OrdersModule`)
-- **Entities**: `Order`, `OrderItem`, `OrderStatusHistory`.
+- **Entities**: `Order` (has `brandId: number nullable`), `OrderItem`, `OrderStatusHistory`.
 - **Process**:
   - Product details snapshotted into `OrderItem` at creation (preserves historical price/data).
-  - Idempotency key (UUID) prevents duplicate submissions.
+  - Idempotency key (UUID) per brand group prevents duplicate submissions.
   - Stock deduction on order confirmation.
+- **Multi-Vendor Checkout**: `checkout()` groups cart items by `product.brandId`, calls `create()` once per brand group (passing `brandId`, `skipCartClear: true`), clears cart once after all orders created, returns `Order[]`. `POST /orders/checkout` → `Order[]`.
 - **Status Enum**: `PENDING` → `CONFIRMED` → `PROCESSING` → `SHIPPED` → `DELIVERED` → `CANCELLED`.
 - **Status History**: `OrderStatusHistory` records every transition with `oldStatus`, `newStatus`, `changedBy`, `notes`, `createdAt`.
 
@@ -79,14 +82,15 @@ The backend is a robust RESTful API built with **NestJS**, utilizing **TypeScrip
 - Admin approve/reject queue.
 
 ### 9. Statistics & Analytics (`StatisticsModule`)
-- **Admin**: Platform-wide revenue, user growth, active brand counts, product counts.
+- **Admin**: Platform-wide stats now include: `totalRevenue`, `revenueThisMonth`, `revenueLastMonth`, `ordersTotal`, `ordersThisMonth`, `newUsersThisMonth`, `userGrowthPercent`, `ordersByStatus` (grouped count per status), `topBrands` (top 5 by revenue with name + revenue), `gmvByMonth` (last 6 months array `[{ month, gmv }]`), plus legacy brand/product/user counts.
 - **Brand Owner**: Brand-specific sales, top products, inventory.
 - **Customer**: Personal order count, wishlist count, cart items.
 - Optimized SQL queries with indexing on `brandId` and `createdAt`.
 
 ### 10. Feed & Social (`FeedModule`)
-- **Entities**: `FeedPost`, `FeedPostLike`, `FeedPostComment`, `BrandFollow`.
+- **Entities**: `Post`, `PostLike`, `PostComment`, `PostProduct` (join table with `xPercent: float nullable`, `yPercent: float nullable`), `BrandFollow`.
 - **Feed Posts**: Brand owners create posts with images, captions, and tagged products. Only `BRAND_OWNER` role can create posts (admin excluded).
+- **Visual Pin Tags**: `CreatePostDto` accepts `products: { productId, xPercent?, yPercent? }[]` alongside legacy `productIds[]`. `PostProduct` stores `xPercent`/`yPercent` as % of image dimensions for responsive positioning.
 - **Likes**: Authenticated (non-guest) users can like/unlike posts. Toggle endpoint returns `{ liked: boolean, likeCount: number }`.
 - **Comments**: Authenticated users can add, edit, and delete comments on posts. Comments include user avatar and name.
 - **Brand Follow**: Users follow/unfollow brands. Feed can be filtered to show only posts from followed brands via `followedOnly=true` query param.
@@ -127,7 +131,49 @@ The backend is a robust RESTful API built with **NestJS**, utilizing **TypeScrip
   - `DELETE /brands/:brandId/promo-codes/:id` — soft delete
 - **Order integration**: `OrdersModule` imports `PromoCodesModule`. In `checkout()`: promo validated → discount applied → usage recorded fire-and-forget after order save. `Order` entity has `promoCode` (string, nullable) and `discountAmount` columns.
 
-### 14. Shipping (`ShippingModule`)
+### 14. Rate Limiting (`ThrottlerModule`)
+- **Package**: `@nestjs/throttler`
+- **Global**: `ThrottlerModule.forRoot([{ ttl: 60000, limit: 100 }])` + `APP_GUARD ThrottlerGuard` — 100 requests/min default for all routes
+- **Per-route overrides** via `@Throttle`:
+  - `POST /auth/login` / `POST /auth/register` — 5 requests/min
+  - `POST /promo-codes/validate` — 20 requests/min
+  - `POST /orders/checkout` — 10 requests/min
+
+### 15. Size Guides (`SizeGuidesModule`)
+- **Entity**: `SizeGuide` — `id`, `brandId` (FK nullable), `productId` (FK nullable), `title`, `description` (text, nullable), `headers` (simple-array — column names), `rows` (JSON — `{ label, values: Record<string, string> }[]`), `unit` (default 'in'), `createdAt`, `updatedAt`
+- **Service**: `findForProduct(productId, brandId)` — product-level first, falls back to brand-level; `create`, `update`, `remove`, `findByBrand`
+- **Endpoints**:
+  - `GET /size-guides/product/:productId?brandId=` — public
+  - `GET/POST /brands/:brandId/size-guides` — brand owner
+  - `PUT/DELETE /brands/:brandId/size-guides/:id` — brand owner
+
+### 16. Email Campaigns (`EmailCampaignsModule`)
+- **Entity**: `EmailCampaign` — `id`, `brandId` (FK), `subject`, `body` (text — HTML or plain), `previewText`, `status` ('draft'|'scheduled'|'sending'|'sent'|'failed'), `scheduledAt`, `sentAt`, `recipientCount`, `sentCount`
+- **Service**: `create(brandId, dto)`, `update(id, dto)`, `send(campaignId)` — chunks followers (50/batch) into BullMQ jobs, `schedule(campaignId, scheduledAt)` — delayed BullMQ job
+- **BullMQ processor**: `email-campaign.processor.ts` — dequeues batch, calls `mailService.sendCampaignEmail()`, increments `sentCount`
+- **Mail**: `sendCampaignEmail(to, subject, htmlBody, brandName?)` added to `MailService`
+- **Endpoints** (all BrandAccessGuard):
+  - `GET/POST /brands/:brandId/email-campaigns`
+  - `PUT/DELETE /brands/:brandId/email-campaigns/:id`
+  - `POST /brands/:brandId/email-campaigns/:id/send`
+  - `POST /brands/:brandId/email-campaigns/:id/schedule`
+
+### 17. Product Bundles (`BundlesModule`)
+- **Entity**: `Bundle` — `id`, `brandId`, `name`, `description`, `discountType` ('percentage'|'fixed'), `discountValue`, `minQuantity` (default 2), `isActive` (default true), `productIds` (simple-array), `startDate`, `endDate`
+- **Service**: CRUD, `toggleActive(id)`, `checkBundleDiscount(cartProductIds, brandId)` — finds best active matching bundle
+- **Endpoints**:
+  - `POST /bundles/check` — customer checks cart for bundle discount
+  - `GET/POST /brands/:brandId/bundles/` — brand owner list/create
+  - `GET/PUT/DELETE /brands/:brandId/bundles/:id` — brand owner detail/edit/delete
+
+### 18. Carrier Tracking (`CarrierTrackingService`)
+- Normalized tracking result: `{ carrier, trackingNumber, status, estimatedDelivery?, events: { timestamp, location, description }[] }`
+- Supports: FedEx (OAuth + Track API v1), UPS (OAuth + Track API), USPS (Web Tools XML), DHL (Shipment Tracking API)
+- Falls back to stored status for unknown carriers
+- Env vars: `FEDEX_API_KEY`, `FEDEX_SECRET`, `UPS_CLIENT_ID`, `UPS_CLIENT_SECRET`, `USPS_USER_ID`, `DHL_API_KEY`
+- **Endpoint**: `GET /orders/:orderId/tracking` — verifies order belongs to requesting user, calls tracking service
+
+### 19. Shipping (`ShippingModule`)
 - **Entities**:
   - `ShippingZone` — name, countries (simple-array of ISO-2 codes), regions, brandId, isActive.
   - `ShippingRate` — zoneId, methodName, method (enum `STANDARD|EXPRESS|OVERNIGHT|LOCAL_PICKUP`), minWeight, maxWeight, price, estimatedDays, isActive.
@@ -231,6 +277,18 @@ The backend is a robust RESTful API built with **NestJS**, utilizing **TypeScrip
 | **Return Policy** | Create/update per-brand policy | returnWindowDays, requiresImages, restockingFeePercent, isActive |
 | **Brand Analytics (extended)** | `GET /brands/:id/analytics` | Now includes `activePromoCodes`, `pendingReturns`, `totalDiscountGiven` |
 | **Brand Notify Followers** | `POST /brands/:id/notifications/send` | Sends in-app + push to all followers, returns `{ sent: N }` |
+| **Image Search** | `POST /image-search`, `POST /image-search/batch-embed` | CLIP-based visual similarity search; camera entry point in SearchModal |
+| **Rate Limiting** | All endpoints | Global 100 req/min via ThrottlerGuard; auth/checkout routes have stricter per-route limits |
+| **Admin System Analytics** | `GET /statistics/admin` | Revenue, GMV by month, top brands, orders by status, user growth |
+| **Back-in-Stock Alerts** | `products.service.ts` | Auto-triggers push + in-app when stock restored from 0 |
+| **Inventory Alerts (low stock)** | `products.service.ts` | Auto-notifies brand owners when stock drops below `lowStockThreshold` |
+| **Social Sharing** | Frontend only | Native `Share.share()` on product detail + post detail |
+| **Size Guides** | `SizeGuidesModule` | Brand owner CRUD; product detail modal for customers |
+| **Email Campaigns** | `EmailCampaignsModule` | BullMQ-based send/schedule to brand followers |
+| **Product Bundles** | `BundlesModule` | Bundle check at checkout; brand owner CRUD |
+| **Visual Pin Tags** | `PostProduct.xPercent/yPercent` | Stored as float %; returned in feed/post API responses |
+| **Carrier Tracking** | `CarrierTrackingService` | FedEx/UPS/USPS/DHL live tracking; `GET /orders/:id/tracking` |
+| **Multi-Vendor Checkout** | `orders.service.ts` | Groups cart by brand, creates `Order[]`, returns array |
 
 ### Developed But Not Working / Incomplete
 
@@ -245,31 +303,18 @@ The backend is a robust RESTful API built with **NestJS**, utilizing **TypeScrip
 | **Payment Processing** | No payment gateway integration |
 | **Server-side Autocomplete** | Search is basic `ILike` — no dedicated autocomplete/suggestion endpoint |
 | **File/Image Cleanup** | No Cloudinary cleanup when products are deleted |
-| **Rate Limiting** | No request rate limiting on API endpoints |
 
 ---
 
 ## Planned Features — To Be Done
 
-### [TODO] Visual Product Tagging on Post Images
+### [DONE ✓] Visual Product Tagging on Post Images
 
-**Goal:** Store per-image tap coordinates alongside tagged products in `FeedPost`, enabling Instagram-style pin-based product tagging.
-
-**Data model change** — `FeedPost.taggedProducts` (currently an array of product IDs) should become a structured array:
-```ts
-taggedProducts: Array<{
-  productId: number;
-  imageIndex: number;  // which image in the post the pin is on
-  x: number;          // horizontal position as % of image width (0–100)
-  y: number;          // vertical position as % of image height (0–100)
-}>
-```
-Backward-compatible: items without `x`/`y` fall back to the chip list display.
-
-**Backend changes needed:**
-- Update `FeedPost` entity — change `taggedProducts` column from `simple-array` / JSON array of IDs to JSONB array of `{ productId, imageIndex, x, y }` objects
-- Update `CreateFeedPostDto` and `UpdateFeedPostDto` to accept the new structure
-- `GET /feed` and `GET /feed/:id` already return `taggedProducts` — ensure the richer structure is included in the response
+**Status:** Fully implemented.
+- `PostProduct` entity has `xPercent: float nullable` and `yPercent: float nullable`
+- `CreatePostDto` accepts `products: { productId, xPercent?, yPercent? }[]` (legacy `productIds[]` still supported)
+- `GET /feed` and `GET /feed/:id` return full `postProducts` with coordinates via join
+- `feed.service.ts` `createPost()` and `updatePost()` handle both formats
 
 ---
 
@@ -300,20 +345,9 @@ Returns paginated `FeedPost` objects for the given brand (same shape as `GET /fe
 
 ---
 
-### [TODO — Later] Search by Image
+### [DONE ✓] Search by Image
 
-**Goal:** Accept an image URL and return visually similar products from the catalog.
-
-**New endpoint:**
-```
-POST /products/search-by-image
-Body: { imageUrl: string }   // Cloudinary URL uploaded by the client
-Returns: PublicProductDto[]
-```
-
-**Integration:** Requires a visual similarity service (e.g., Google Vision Product Search, AWS Rekognition, or a custom CLIP-based embedding). The endpoint submits the image to the external service and maps returned labels/embeddings to products in the DB.
-
-**Priority:** Low — deferred to a later phase.
+**Status:** Fully implemented — `POST /image-search` with CLIP-based embedding service. Admin `POST /image-search/batch-embed` for indexing all products.
 
 ---
 
@@ -384,3 +418,14 @@ Returns: PublicProductDto[]
 | `/brands/:id/returns/:returnId/refund` | PUT | Brand Owner | Process refund + restore stock |
 | `/brands/:id/return-policy` | GET/PUT | Brand Owner | Get / upsert return policy |
 | `/brands/:id/notifications/send` | POST | Brand Owner | Send push + in-app notification to all followers |
+| `/size-guides/product/:productId` | GET | Public | Size guide for a product (falls back to brand guide) |
+| `/brands/:id/size-guides` | GET/POST | Brand Owner | List / create size guides |
+| `/brands/:id/size-guides/:guideId` | PUT/DELETE | Brand Owner | Update / delete size guide |
+| `/brands/:id/email-campaigns` | GET/POST | Brand Owner | List / create email campaigns |
+| `/brands/:id/email-campaigns/:cId` | PUT/DELETE | Brand Owner | Update / delete campaign |
+| `/brands/:id/email-campaigns/:cId/send` | POST | Brand Owner | Send campaign to all followers |
+| `/brands/:id/email-campaigns/:cId/schedule` | POST | Brand Owner | Schedule campaign send |
+| `/brands/:id/bundles` | GET/POST | Brand Owner | List / create product bundles |
+| `/brands/:id/bundles/:bundleId` | GET/PUT/DELETE | Brand Owner | Bundle detail / update / delete |
+| `/bundles/check` | POST | Public | Check if cart qualifies for bundle discount |
+| `/orders/:orderId/tracking` | GET | Auth | Live carrier tracking events for an order |

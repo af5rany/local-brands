@@ -6,10 +6,11 @@ import { ProductsService } from './products.service';
 import { ProductsController } from './products.controller';
 import { BrandsModule } from 'src/brands/brands.module';
 import { NotificationsModule } from 'src/notifications/notifications.module';
+import { BrandUser } from 'src/brands/brand-user.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Product, ProductVariant]),
+    TypeOrmModule.forFeature([Product, ProductVariant, BrandUser]),
     BrandsModule,
     NotificationsModule,
   ],

@@ -114,4 +114,23 @@ export class MailService {
       console.error('Error sending welcome email:', error);
     }
   }
+
+  async sendCampaignEmail(
+    to: string,
+    subject: string,
+    htmlBody: string,
+    brandName?: string,
+  ): Promise<void> {
+    const mailOptions = {
+      from: `"${brandName || 'Local Brands'}" <noreply@localbrands.com>`,
+      to,
+      subject,
+      html: htmlBody,
+    };
+    try {
+      await this.transporter.sendMail(mailOptions);
+    } catch (error) {
+      console.error('Error sending campaign email:', error);
+    }
+  }
 }

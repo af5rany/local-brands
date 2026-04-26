@@ -9,21 +9,55 @@ import {
   ParseIntPipe,
   UseGuards,
   ValidationPipe,
+  Request,
+  NotFoundException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { ShippingService } from './shipping.service';
+import { CarrierTrackingService } from './carrier-tracking.service';
 import { CreateShippingZoneDto } from './dto/create-shipping-zone.dto';
 import { CreateShippingRateDto } from './dto/create-shipping-rate.dto';
 import { CalculateShippingDto } from './dto/calculate-shipping.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { BrandAccessGuard } from '../auth/brand-access.guard';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { Order } from '../orders/order.entity';
 
 @ApiTags('shipping')
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller()
 export class ShippingController {
-  constructor(private readonly shippingService: ShippingService) {}
+  constructor(
+    private readonly shippingService: ShippingService,
+    private readonly carrierTrackingService: CarrierTrackingService,
+    @InjectRepository(Order) private orderRepo: Repository<Order>,
+  ) {}
+
+  @Get('orders/:orderId/tracking')
+  @ApiOperation({ summary: 'Get live carrier tracking for an order' })
+  async getTracking(
+    @Param('orderId', ParseIntPipe) orderId: number,
+    @Request() req,
+  ) {
+    const order = await this.orderRepo.findOne({
+      where: { id: orderId },
+      relations: ['user'],
+    });
+    if (!order) throw new NotFoundException('Order not found');
+
+    // Allow order owner or admin
+    if (order.user?.id !== req.user.id && req.user.role !== 'admin') {
+      throw new ForbiddenException('Access denied');
+    }
+
+    return this.carrierTrackingService.getTrackingStatus(
+      order.shippingCarrier || 'OTHER',
+      order.trackingNumber,
+    );
+  }
 
   // ── Customer endpoint ─────────────────────────────────────────────────────────
 

@@ -2,7 +2,7 @@
 
 > **Platform:** Mobile-first (iOS & Android) with web support
 > **Framework:** React Native / Expo
-> **Date:** April 25, 2026
+> **Date:** April 26, 2026
 
 ---
 
@@ -133,7 +133,17 @@ A brand owner can assign team members with granular roles:
       ├── returns/
       │   ├── index       → Brand returns list
       │   └── [returnId]  → Return request detail + actions
-      └── return-policy   → Return policy settings
+      ├── return-policy   → Return policy settings
+      ├── size-guides/
+      │   └── index       → Size guide management (list, create, edit)
+      ├── email-campaigns/
+      │   ├── index       → Email campaigns list with send/delete
+      │   ├── create      → Compose campaign + schedule option
+      │   └── [campaignId] → Edit + stats + send/schedule actions
+      └── bundles/
+          ├── index       → Product bundles list (toggle/edit/delete)
+          ├── create      → Create bundle form
+          └── [bundleId]  → Edit bundle
 
 /products/
   ├── index               → Product catalog
@@ -441,15 +451,18 @@ Similar to create product, pre-filled with existing product data. Can update all
 
 ### 4.6 Checkout Screen — `/checkout/index`
 **Elements:**
-- Cart summary: items, quantities, prices, subtotal
+- Cart summary: items, quantities, prices, subtotal (collapsed/expanded toggle)
 - Shipping address section:
   - List of saved addresses (selectable)
   - Default address highlighted
   - **Add New Address** button
+- Shipping method picker (rates fetched dynamically by address country via `/shipping/calculate`)
 - Order summary: Subtotal, Shipping, Tax, **Total**
+- Promo code field (APPLY / REMOVE; discount line shown when applied)
 - **Place Order** button (black, full-width)
-- Generates unique idempotency key to prevent duplicates
+- Generates unique idempotency key per brand group to prevent duplicates
 - Validation: requires address selection
+- **Multi-vendor:** Cart items from multiple brands create separate orders per brand; confirmation screen shows all order numbers + combined grand total
 
 ### 4.6b Order Confirmation — `/checkout/confirmation`
 **Elements:**
@@ -485,7 +498,7 @@ Similar to create product, pre-filled with existing product data. Can update all
 - Manifest: items list with thumbnail, product name, brand/color/size, quantity × unit price, item total
 - Logistics box (grey): DESTINATION address, SERVICE (shippingMethodName), CARRIER (shippingCarrier), TRACKING number
 - Financial summary box (black background): Subtotal, Shipping, Tax, Discount (if promo applied), **Grand Total**
-- Action buttons inside financial box: DOWNLOAD INVOICE, TRACK SHIPMENT, **REQUEST RETURN** (visible only when status is DELIVERED — navigates to `/returns/create?orderId=X`)
+- Action buttons inside financial box: DOWNLOAD INVOICE, **TRACK SHIPMENT** (calls carrier API, shows live tracking events timeline with timestamp / location / description), **REQUEST RETURN** (visible only when status is DELIVERED — navigates to `/returns/create?orderId=X`)
 
 ---
 
@@ -571,7 +584,63 @@ Similar to create product, pre-filled with existing product data. Can update all
 
 ---
 
-### 4.22 Notification Settings — `/notifications/settings`
+### 4.22 Brand Owner — Size Guide Screens
+
+#### 4.22a Size Guide Management — `/brands/[brandId]/size-guides/index`
+- List of size guides for the brand (title, scope: brand-level or per-product)
+- Create guide form: title, unit (in/cm), headers (column names), size rows (label + per-column values), description
+- Edit existing guide; delete action
+- Brand-level guides serve as fallback when no product-level guide exists
+
+**Customer UX:** On product detail page, if a size guide exists for the product (or the brand), "SIZE GUIDE" link becomes tappable → opens modal with table (headers as columns, rows as sizes)
+
+---
+
+### 4.23 Brand Owner — Email Campaign Screens
+
+#### 4.23a Campaigns List — `/brands/[brandId]/email-campaigns/index`
+- List of campaigns with status badges: DRAFT / SCHEDULED / SENDING / SENT / FAILED
+- Sent count vs. recipient count shown per row
+- Send now button (for drafts), delete action
+
+#### 4.23b Create Campaign — `/brands/[brandId]/email-campaigns/create`
+- Subject line input
+- Body textarea (HTML or plain text)
+- Preview text (optional)
+- Schedule option: toggle → date/time picker
+- **SAVE DRAFT** and **SEND NOW** buttons
+
+#### 4.23c Edit + Stats — `/brands/[brandId]/email-campaigns/[campaignId]`
+- Edit form (subject, body, preview text — only for DRAFT status)
+- Stats: Sent Count, Recipient Count
+- Actions: SEND NOW, SCHEDULE, DELETE
+
+---
+
+### 4.24 Brand Owner — Product Bundle Screens
+
+#### 4.24a Bundles List — `/brands/[brandId]/bundles/index`
+- List of bundles: name, discount type/value, active badge, product count
+- Toggle active switch, edit link, delete action
+
+#### 4.24b Create Bundle — `/brands/[brandId]/bundles/create`
+- Bundle name, description (optional)
+- Discount type: PERCENTAGE or FIXED
+- Discount value (number input)
+- Min quantity (how many bundle products must be in cart)
+- Product selection: multi-select from brand's products
+- Start/end date (optional)
+- CREATE button
+
+#### 4.24c Edit Bundle — `/brands/[brandId]/bundles/[bundleId]`
+- Same fields as create, pre-filled
+- SAVE CHANGES button
+
+**Customer UX:** If cart contains enough bundle products, `/bundles/check` is called at checkout → bundle discount shown as a line item in order summary
+
+---
+
+### 4.25 Notification Settings — `/notifications/settings`
 - Toggle rows for: PUSH NOTIFICATIONS, EMAIL NOTIFICATIONS, ORDER UPDATES, PROMOTIONS & OFFERS
 - Each row: label, subtitle, iOS-style switch
 - SAVE PREFERENCES button
@@ -602,7 +671,8 @@ Similar to create product, pre-filled with existing product data. Can update all
 - **Brand Picker** (if multi-brand owner): horizontal chip row, auto-selects if one brand
 - Caption text input (multiline)
 - Image upload section (multi-image, Cloudinary)
-- **Product Tagging**: toggle product chips from selected brand
+- **Product Tagging**: toggle product chips from selected brand. Tap the location icon on a selected product chip to enter pin-placement mode — then tap anywhere on the image preview to pin that product at that exact spot (stored as x%/y% of image dimensions)
+- Pin preview overlay: small dot markers on the image for each pinned product
 - **Post** button (black, full-width)
 
 **Access:** Brand owners only (admin cannot create posts)
@@ -610,7 +680,11 @@ Similar to create product, pre-filled with existing product data. Can update all
 #### 4.8c Post Detail — `/feed/[postId]`
 **Elements:**
 - Back button
-- Post content (brand header, images, caption, tagged products)
+- Post content:
+  - Brand header with **Share** button (native share sheet with post caption)
+  - Images (single image shows tappable product pin dots at their x%/y% positions; tap pin → product mini-card popup with image, name, price, "View Product" → product detail)
+  - Caption
+  - Tagged products (horizontal chip scroll for products without coordinates; pins overlaid on image for those with coordinates)
 - Action row: Like (heart, `#C41E3A` when liked) + count, Comment + count
 - **Comments section:**
   - User avatar (square — image or initials placeholder)
@@ -1127,13 +1201,14 @@ Profile tab → Edit Profile (name, phone, DOB, avatar)
 - [x] Analytics: revenue, orders, products, units sold, followers, views, active promo codes, pending returns, total discount given
 - [x] Pending orders alert
 - [x] Pending returns alert
-- [x] Quick Actions: Promo Codes, Shipping, Returns, Return Policy
+- [x] Quick Actions: Promo Codes, Shipping, Returns, Return Policy, Size Guides, Email Campaigns, Bundles
 - [x] Notify Followers modal (title + message → push + in-app to all followers)
 - [x] Top products by sales
 - [x] Recent orders list
 
 ### Admin Features
 - [x] System-wide dashboard with stats
+- [x] System analytics: revenue, GMV-by-month chart, top brands by revenue, orders by status, user growth percent
 - [x] User management (search, filter, role assignment, brand assignment)
 - [x] Brand management (all brands, create, edit, delete, status changes)
 - [x] Review moderation queue
@@ -1148,8 +1223,18 @@ Profile tab → Edit Profile (name, phone, DOB, avatar)
 - [x] Brand follow/unfollow
 - [x] Feed filtering: followed brands only (authenticated) / all posts (guest)
 - [x] Infinite scroll pagination on feed
-- [ ] **[TODO]** Visual product tagging on post images (tap-to-tag pins on image, product popup on tap) — see §10.1
-- [ ] **[TODO]** Brand posts tab on Brand Detail page — see §10.3
+- [x] **Visual product pin tags on post images** — brand owners tap image to place product pin (x/y % coordinates stored), viewers tap pin dot to see product mini-card popup
+- [~] **[PARTIAL]** Brand posts on Brand Detail — posts shown as section + dedicated `/brands/[brandId]/posts` screen exists, but no Products/Posts tab switcher UI
+
+### Brand Owner — Advanced Tools
+- [x] **Size Guides** — brand owners create/edit size tables (headers, rows, unit); customers see SIZE GUIDE modal on product detail if guide exists
+- [x] **Email Campaigns** — compose, schedule, send HTML/plain-text emails to all brand followers via BullMQ queue; status tracking (draft/scheduled/sending/sent/failed) with sent count
+- [x] **Product Bundles** — create discount bundles (% or fixed, min quantity, date range); automatically applied at checkout when qualifying products in cart
+- [x] **Social Sharing** — native share sheet on product detail (share button wired) and post detail (share icon in header)
+- [x] **Stock Alerts** — customers subscribe to out-of-stock products ("NOTIFY ME" button); automatically notified (in-app + push) when stock is restored
+- [x] **Inventory Alerts** — brand owners automatically notified (in-app + push) when product stock drops below configured threshold
+- [x] **Order Tracking (Carrier API)** — TRACK SHIPMENT button on order detail calls live carrier APIs (FedEx, UPS, USPS, DHL); shows events timeline with timestamp, location, description
+- [x] **Multi-Vendor Checkout** — cart items from multiple brands create separate per-brand orders in one checkout action; each order is idempotency-protected; confirmation screen shows all order numbers and combined total
 
 ### AI & Media
 - [x] AI virtual try-on (camera/gallery → Cloudinary → backend job → polling → result)
@@ -1158,7 +1243,7 @@ Profile tab → Edit Profile (name, phone, DOB, avatar)
 
 ### Personalization
 - [x] "For You" personalized product section on Home feed (based on wishlist saves + order history)
-- [ ] **[TODO — Later]** Search by image — see §10.4
+- [x] **[DONE]** Search by image — camera icon in SearchModal, `useImageSearch` hook, backend CLIP-based embedding — see §10.4
 
 ### UX Features
 - [x] Dark mode / Light mode support
@@ -1187,7 +1272,6 @@ Profile tab → Edit Profile (name, phone, DOB, avatar)
 
 | Feature | Location | Current State |
 |---------|----------|---------------|
-| **System Analytics** | Admin dashboard quick action | "Coming soon" |
 | **Admin Settings** | Admin dashboard quick action | "Coming soon" |
 | **Order Management** (brand owner) | Brand owner /manage dashboard | "Coming soon" — full dashboard at `/brands/[id]/dashboard` is functional |
 | **Privacy Policy** | Settings screen | Shows "coming soon" alert |
@@ -1195,9 +1279,7 @@ Profile tab → Edit Profile (name, phone, DOB, avatar)
 | **Delete Account** | Settings screen | Shows alert with contact info (not automated) |
 | **Payment processing** | Checkout | No payment gateway — order is placed directly |
 | **DOWNLOAD INVOICE** | Order detail action button | Button exists but not functional |
-| **TRACK SHIPMENT** | Order detail action button | Button exists but not functional (no carrier link logic) |
-| **Product image tagging (pins)** | Feed / post creation | Chip-style product tags only — no spatial pin on image |
-| **Brand posts tab** | Brand detail page | Posts tab not yet added to brand detail |
+| **Brand posts tab** | Brand detail page | Posts fetched + displayed as a section; no Products/Posts tab switcher UI yet |
 
 ---
 
@@ -1205,22 +1287,16 @@ Profile tab → Edit Profile (name, phone, DOB, avatar)
 
 Features planned but not yet implemented. These should be designed and built.
 
-### 10.1 Visual Product Tagging in Posts — `[TODO]`
+### 10.1 Visual Product Tagging in Posts — `[DONE ✓]`
 
-**Goal:** Allow brand owners to tag specific products directly on post images (Instagram-style tap-to-tag), making products discoverable directly from the feed image.
+**Status:** Fully implemented.
 
-**Current state:** Basic product tagging exists — brand owners can select product chips when creating a post, and tagged products appear as a horizontal scroll below the post caption. However there is no visual/spatial tagging on the image itself.
-
-**Planned UX:**
-- In post creation (`/feed/create`): after uploading images, tap anywhere on the image to place a tag pin → shows a product picker modal → selected product is pinned at that coordinate
-- In feed and post detail: tappable dot pins on images → tap reveals a product card popup (image, name, price, "View Product" CTA → navigates to product detail)
-- Tag pins should be subtle (small dot or icon with brand name) so they don't overwhelm the image
-- Multiple products can be tagged per image
-- Pin coordinates stored as `{ x: %, y: %, productId }` relative to image dimensions
-
-**Data changes needed:**
-- `FeedPost.taggedProducts` moves from a flat array of product IDs to a structured array: `{ productId, x, y, imageIndex }[]`
-- Backward-compatible: posts with no coordinate data still show tagged products in the chip list below
+**How it works:**
+- `PostProduct` entity has `xPercent` (float, nullable) and `yPercent` (float, nullable) columns — coordinates as % of image dimensions
+- In post creation (`/feed/create`): tap the location icon on a selected product chip → image enters pin-placement mode → tap anywhere on image preview to place pin at that coordinate. Pins displayed as dots over image.
+- In post detail (`/feed/[postId]`): absolute-positioned dot overlays at `xPercent/yPercent` positions. Tap dot → product mini-card popup (image, name, price, "View Product" → product detail)
+- Backward-compatible: products without coordinates show in horizontal chip scroll below caption
+- Backend: `CreatePostDto` accepts `products: { productId, xPercent?, yPercent? }[]` alongside legacy `productIds[]`
 
 ---
 
@@ -1238,11 +1314,11 @@ Features planned but not yet implemented. These should be designed and built.
 
 ---
 
-### 10.3 Brand Posts on Brand Detail Page — `[TODO]`
+### 10.3 Brand Posts on Brand Detail Page — `[PARTIAL]`
 
 **Goal:** Show the brand's social feed posts directly on the brand detail screen so users can explore a brand's content without leaving the brand context.
 
-**Current state:** The brand detail page (`/brands/[brandId]/index`) only shows the brand's products. There is no way to view a brand's posts from within the brand profile.
+**Current state:** Brand posts are fetched and rendered as a section below products in `brands/[brandId]/index.tsx`. A dedicated `brands/[brandId]/posts.tsx` screen also exists. What's **not implemented** is a proper **Products | Posts tab switcher** — products and posts are currently stacked vertically rather than separated into tabs.
 
 **Planned UX:**
 - Add a tab row to the brand detail screen: **"Products"** | **"Posts"**
@@ -1258,11 +1334,14 @@ Features planned but not yet implemented. These should be designed and built.
 
 ---
 
-### 10.4 Search by Image — `[TODO — Later]`
+### 10.4 Search by Image — `[DONE ✓]`
 
 **Goal:** Allow users to take or upload a photo of any clothing item and find visually similar products in the catalog.
 
-**Priority:** Low — deferred to a later phase.
+**Status:** Fully implemented.
+- Backend: `POST /image-search` with CLIP-based embedding service. Admin `POST /image-search/batch-embed` for indexing all products.
+- Frontend: `useImageSearch` hook handles camera/gallery picker, image compression (512px), multipart upload, returns ranked `Product[]`.
+- **SearchModal** has a camera icon entry point (top right of search bar). Results replace the product grid. Loading state shown during search. Wired into `shop.tsx` as well.
 
 **Planned UX:**
 - Entry points:

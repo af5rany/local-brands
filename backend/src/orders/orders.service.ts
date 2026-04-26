@@ -53,7 +53,7 @@ export class OrdersService {
     private cartItemRepository: Repository<CartItem>,
   ) {}
 
-  async create(createOrderDto: CreateOrderDto, userId: number): Promise<Order> {
+  async create(createOrderDto: CreateOrderDto, userId: number, options: { skipCartClear?: boolean; brandId?: number } = {}): Promise<Order> {
     const { idempotencyKey } = createOrderDto;
 
     // 1. Idempotency Check
@@ -67,6 +67,7 @@ export class OrdersService {
     }
 
     return await this.dataSource.transaction(async (manager: EntityManager) => {
+      const { skipCartClear = false, brandId: orderBrandId } = options;
       // 2. Validate Addresses
       const shippingAddress = await manager.findOne(Address, {
         where: { id: createOrderDto.shippingAddressId },
@@ -209,6 +210,7 @@ export class OrdersService {
         promoCode: appliedPromoCode,
         shippingMethodName: (createOrderDto as any).shippingMethodName,
         shippingCarrier: (createOrderDto as any).shippingCarrier,
+        brandId: orderBrandId,
       });
 
       const savedOrder = await manager.save(Order, order);
@@ -239,13 +241,15 @@ export class OrdersService {
         }
       }
 
-      // 7. Clear Cart
-      const cart = await manager.findOne(Cart, {
-        where: { user: { id: userId } },
-      });
-      if (cart) {
-        await manager.delete(CartItem, { cartId: cart.id });
-        await manager.update(Cart, cart.id, { totalAmount: 0, totalItems: 0 });
+      // 7. Clear Cart (skip when checkout() handles multi-vendor grouping)
+      if (!skipCartClear) {
+        const cart = await manager.findOne(Cart, {
+          where: { user: { id: userId } },
+        });
+        if (cart) {
+          await manager.delete(CartItem, { cartId: cart.id });
+          await manager.update(Cart, cart.id, { totalAmount: 0, totalItems: 0 });
+        }
       }
 
       // 8. Record Status History
@@ -282,8 +286,8 @@ export class OrdersService {
     });
   }
 
-  async checkout(checkoutDto: CheckoutDto, userId: number): Promise<Order> {
-    // 1. Get the user's cart with items
+  async checkout(checkoutDto: CheckoutDto, userId: number): Promise<Order[]> {
+    // 1. Get the user's cart with items + product brand info
     const cart = await this.cartRepository.findOne({
       where: { user: { id: userId } },
       relations: [
@@ -298,28 +302,60 @@ export class OrdersService {
       throw new BadRequestException('Your cart is empty');
     }
 
-    // 2. Build items from cart
-    const items = cart.cartItems.map((ci) => ({
-      productId: ci.productId,
-      variantId: ci.variantId || undefined,
-      quantity: ci.quantity,
-      color: ci.selectedColor || undefined,
-      size: ci.selectedSize || undefined,
-    }));
+    // 2. Group cart items by brandId
+    const byBrand = new Map<number | null, typeof cart.cartItems>();
+    for (const ci of cart.cartItems) {
+      const brandId = ci.product?.brandId ?? null;
+      if (!byBrand.has(brandId)) byBrand.set(brandId, []);
+      byBrand.get(brandId)!.push(ci);
+    }
 
-    // 3. Delegate to existing create() with proper DTO
-    const createOrderDto: CreateOrderDto = {
-      items,
-      shippingAddressId: checkoutDto.shippingAddressId,
-      billingAddressId: checkoutDto.billingAddressId,
-      paymentMethod: checkoutDto.paymentMethod,
-      idempotencyKey: checkoutDto.idempotencyKey,
-      notes: checkoutDto.notes,
-      promoCode: checkoutDto.promoCode,
-      shippingCost: (checkoutDto as any).shippingCost,
-    };
+    // 3. Create one order per brand (skipping cart clear until all succeed)
+    const orders: Order[] = [];
+    for (const [brandId, items] of byBrand) {
+      const orderItems = items.map((ci) => ({
+        productId: ci.productId,
+        variantId: ci.variantId || undefined,
+        quantity: ci.quantity,
+        color: ci.selectedColor || undefined,
+        size: ci.selectedSize || undefined,
+      }));
 
-    return this.create(createOrderDto, userId);
+      const createOrderDto: CreateOrderDto = {
+        items: orderItems,
+        shippingAddressId: checkoutDto.shippingAddressId,
+        billingAddressId: checkoutDto.billingAddressId,
+        paymentMethod: checkoutDto.paymentMethod,
+        // unique key per brand to preserve idempotency
+        idempotencyKey: checkoutDto.idempotencyKey
+          ? `${checkoutDto.idempotencyKey}_brand${brandId ?? 0}`
+          : undefined,
+        notes: checkoutDto.notes,
+        // Apply promo only to first brand order to avoid double-dipping
+        promoCode: orders.length === 0 ? checkoutDto.promoCode : undefined,
+        shippingCost: (checkoutDto as any).shippingCost,
+      };
+
+      const order = await this.create(createOrderDto, userId, {
+        skipCartClear: true,
+        brandId: brandId ?? undefined,
+      });
+      orders.push(order);
+    }
+
+    // 4. Clear cart once after all orders created
+    const userCart = await this.cartRepository.findOne({
+      where: { user: { id: userId } },
+    });
+    if (userCart) {
+      await this.cartItemRepository.delete({ cartId: userCart.id });
+      await this.cartRepository.update(userCart.id, {
+        totalAmount: 0,
+        totalItems: 0,
+      });
+    }
+
+    return orders;
   }
 
   async findAll(query: OrderQueryDto, userId: number, userRole: UserRole) {

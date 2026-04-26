@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import {
   View,
   Text,
@@ -10,6 +10,8 @@ import {
   ActivityIndicator,
   Alert,
   Platform,
+  Pressable,
+  LayoutChangeEvent,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
@@ -32,11 +34,15 @@ export default function CreatePostScreen() {
   const [loadingBrands, setLoadingBrands] = useState(true);
   const [images, setImages] = useState<string[]>([]);
   const [caption, setCaption] = useState("");
-  const [selectedProductIds, setSelectedProductIds] = useState<number[]>([]);
+  const [taggedProducts, setTaggedProducts] = useState<{ productId: number; xPercent?: number; yPercent?: number }[]>([]);
   const [products, setProducts] = useState<any[]>([]);
   const [uploading, setUploading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [loadingProducts, setLoadingProducts] = useState(false);
+  const [placingPinForProduct, setPlacingPinForProduct] = useState<number | null>(null);
+  const [imageLayout, setImageLayout] = useState({ width: 1, height: 1 });
+
+  const selectedProductIds = taggedProducts.map((t) => t.productId);
 
   // Fetch user's owned brands
   useEffect(() => {
@@ -106,11 +112,24 @@ export default function CreatePostScreen() {
   };
 
   const toggleProduct = (productId: number) => {
-    setSelectedProductIds((prev) =>
-      prev.includes(productId)
-        ? prev.filter((id) => id !== productId)
-        : [...prev, productId],
+    const already = taggedProducts.some((t) => t.productId === productId);
+    if (already) {
+      setTaggedProducts((prev) => prev.filter((t) => t.productId !== productId));
+      if (placingPinForProduct === productId) setPlacingPinForProduct(null);
+    } else {
+      setTaggedProducts((prev) => [...prev, { productId }]);
+    }
+  };
+
+  const handleImageTap = (e: any) => {
+    if (!placingPinForProduct) return;
+    const { locationX, locationY } = e.nativeEvent;
+    const xPercent = Math.min(100, Math.max(0, (locationX / imageLayout.width) * 100));
+    const yPercent = Math.min(100, Math.max(0, (locationY / imageLayout.height) * 100));
+    setTaggedProducts((prev) =>
+      prev.map((t) => t.productId === placingPinForProduct ? { ...t, xPercent, yPercent } : t)
     );
+    setPlacingPinForProduct(null);
   };
 
   const handleSubmit = async () => {
@@ -130,7 +149,7 @@ export default function CreatePostScreen() {
         images,
         caption: caption.trim() || undefined,
       };
-      if (selectedProductIds.length) body.productIds = selectedProductIds;
+      if (taggedProducts.length) body.products = taggedProducts;
 
       const res = await fetch(`${getApiUrl()}/feed/posts`, {
         method: "POST",
@@ -269,6 +288,49 @@ export default function CreatePostScreen() {
           maxLength={2000}
         />
 
+        {/* Pin placement image preview */}
+        {placingPinForProduct && images.length > 0 && (
+          <View style={{ marginBottom: 16 }}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>
+              TAP IMAGE TO PLACE PIN
+            </Text>
+            <Pressable
+              onPress={handleImageTap}
+              onLayout={(e: LayoutChangeEvent) =>
+                setImageLayout({ width: e.nativeEvent.layout.width, height: e.nativeEvent.layout.height })
+              }
+              style={{ position: "relative" }}
+            >
+              <Image
+                source={{ uri: images[0] }}
+                style={{ width: "100%", aspectRatio: 1, borderRadius: 8 }}
+                resizeMode="cover"
+              />
+              {/* Show already-placed pins */}
+              {taggedProducts.filter((t) => t.xPercent !== undefined && t.yPercent !== undefined).map((t) => (
+                <View
+                  key={t.productId}
+                  style={{
+                    position: "absolute",
+                    left: `${t.xPercent}%` as any,
+                    top: `${t.yPercent}%` as any,
+                    width: 20, height: 20, borderRadius: 10,
+                    backgroundColor: "white",
+                    borderWidth: 2, borderColor: "black",
+                    transform: [{ translateX: -10 }, { translateY: -10 }],
+                  }}
+                />
+              ))}
+            </Pressable>
+            <TouchableOpacity
+              onPress={() => setPlacingPinForProduct(null)}
+              style={{ marginTop: 8, alignSelf: "center", padding: 8 }}
+            >
+              <Text style={{ color: colors.textSecondary, fontSize: 12 }}>Cancel pin placement</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
         {/* Tag Products — only show after brand is chosen */}
         {chosenBrand && (
           <>
@@ -333,6 +395,18 @@ export default function CreatePostScreen() {
                         <Text style={[styles.productCardPrice, { color: colors.textTertiary }]}>
                           ${Number(p.price).toFixed(2)}
                         </Text>
+                      )}
+                      {selected && images.length > 0 && (
+                        <TouchableOpacity
+                          onPress={(e) => { e.stopPropagation?.(); setPlacingPinForProduct(p.id); }}
+                          style={{ marginTop: 4, paddingVertical: 4, alignItems: "center" }}
+                        >
+                          <Ionicons
+                            name={taggedProducts.find((t) => t.productId === p.id)?.xPercent !== undefined ? "location" : "location-outline"}
+                            size={14}
+                            color={colors.text}
+                          />
+                        </TouchableOpacity>
                       )}
                     </TouchableOpacity>
                   );

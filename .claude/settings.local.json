@@ -102,7 +102,9 @@
       "Bash(python3:*)",
       "Bash(bash ~/.claude/hooks/block-heavy-files.sh)",
       "Bash(echo \"Exit: $?\")",
-      "Bash(claude plugin:*)"
+      "Bash(claude plugin:*)",
+      "Bash(grep -r \"Share\\\\|share\" /Users/f5rany/Documents/Work/local-brands/frontend --include=*.tsx --include=*.ts --include=*.json)",
+      "Bash(npm list:*)"
     ]
   }
 }

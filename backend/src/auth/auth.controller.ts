@@ -9,6 +9,7 @@ import {
   Param,
   ParseIntPipe,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
 import { LocalAuthGuard } from './local-auth.guard';
 import { JwtAuthGuard } from './jwt-auth.guard';
@@ -20,12 +21,14 @@ import { User } from 'src/users/user.entity';
 export class AuthController {
   constructor(private authService: AuthService) {}
 
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   @Post('register')
   @UsePipes(new ValidationPipe({ whitelist: true }))
   async register(@Body() userDto: CreateUserDto) {
     return this.authService.register(userDto);
   }
 
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   @UseGuards(LocalAuthGuard)
   @Post('login')
   async login(

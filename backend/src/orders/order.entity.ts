@@ -121,6 +121,9 @@ export class Order {
   shippingMethodName: string;
 
   @Column({ nullable: true })
+  brandId: number;
+
+  @Column({ nullable: true })
   @Index()
   idempotencyKey: string;
 

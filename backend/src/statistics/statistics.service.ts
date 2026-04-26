@@ -31,13 +31,138 @@ export class StatisticsService {
   ) {}
 
   async getAdminStats() {
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
+
     const [brands, products, users] = await Promise.all([
       this.brandsRepository.count(),
       this.productsRepository.count(),
       this.usersRepository.count(),
     ]);
 
-    return { brands, products, users };
+    // Revenue stats
+    const revenueResult = await this.ordersRepository
+      .createQueryBuilder('o')
+      .where('o.status != :cancelled', { cancelled: OrderStatus.CANCELLED })
+      .select('SUM(o.totalAmount)', 'total')
+      .getRawOne();
+    const totalRevenue = parseFloat(revenueResult?.total || '0');
+
+    const revenueThisMonthResult = await this.ordersRepository
+      .createQueryBuilder('o')
+      .where('o.status != :cancelled', { cancelled: OrderStatus.CANCELLED })
+      .andWhere('o.createdAt >= :start', { start: startOfMonth })
+      .select('SUM(o.totalAmount)', 'total')
+      .getRawOne();
+    const revenueThisMonth = parseFloat(revenueThisMonthResult?.total || '0');
+
+    const revenueLastMonthResult = await this.ordersRepository
+      .createQueryBuilder('o')
+      .where('o.status != :cancelled', { cancelled: OrderStatus.CANCELLED })
+      .andWhere('o.createdAt >= :start AND o.createdAt <= :end', {
+        start: startOfLastMonth,
+        end: endOfLastMonth,
+      })
+      .select('SUM(o.totalAmount)', 'total')
+      .getRawOne();
+    const revenueLastMonth = parseFloat(revenueLastMonthResult?.total || '0');
+
+    // Order counts
+    const [ordersTotal, ordersThisMonth] = await Promise.all([
+      this.ordersRepository.count(),
+      this.ordersRepository
+        .createQueryBuilder('o')
+        .where('o.createdAt >= :start', { start: startOfMonth })
+        .getCount(),
+    ]);
+
+    // User growth
+    const [newUsersThisMonth, newUsersLastMonth] = await Promise.all([
+      this.usersRepository
+        .createQueryBuilder('u')
+        .where('u.createdAt >= :start', { start: startOfMonth })
+        .getCount(),
+      this.usersRepository
+        .createQueryBuilder('u')
+        .where('u.createdAt >= :start AND u.createdAt <= :end', {
+          start: startOfLastMonth,
+          end: endOfLastMonth,
+        })
+        .getCount(),
+    ]);
+    const userGrowthPercent =
+      newUsersLastMonth > 0
+        ? Math.round(((newUsersThisMonth - newUsersLastMonth) / newUsersLastMonth) * 100)
+        : 0;
+
+    // Orders by status
+    const ordersByStatusRaw = await this.ordersRepository
+      .createQueryBuilder('o')
+      .select('o.status', 'status')
+      .addSelect('COUNT(*)', 'count')
+      .groupBy('o.status')
+      .getRawMany();
+    const ordersByStatus: Record<string, number> = {};
+    ordersByStatusRaw.forEach((r) => { ordersByStatus[r.status] = parseInt(r.count, 10); });
+
+    // Top brands by revenue
+    const topBrandsRaw = await this.orderItemsRepository
+      .createQueryBuilder('oi')
+      .leftJoin('oi.product', 'p')
+      .leftJoin('p.brand', 'b')
+      .leftJoin('oi.order', 'o')
+      .where('o.status != :cancelled', { cancelled: OrderStatus.CANCELLED })
+      .select('b.id', 'brandId')
+      .addSelect('b.name', 'brandName')
+      .addSelect('SUM(oi.totalPrice)', 'revenue')
+      .groupBy('b.id')
+      .addGroupBy('b.name')
+      .orderBy('revenue', 'DESC')
+      .limit(5)
+      .getRawMany();
+    const topBrands = topBrandsRaw.map((r) => ({
+      brandId: r.brandId,
+      brandName: r.brandName,
+      revenue: parseFloat(r.revenue || '0'),
+    }));
+
+    // GMV by month — last 6 months
+    const gmvByMonth: { month: string; gmv: number }[] = [];
+    for (let i = 5; i >= 0; i--) {
+      const monthStart = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const monthEnd = new Date(now.getFullYear(), now.getMonth() - i + 1, 0, 23, 59, 59);
+      const gmvResult = await this.ordersRepository
+        .createQueryBuilder('o')
+        .where('o.status != :cancelled', { cancelled: OrderStatus.CANCELLED })
+        .andWhere('o.createdAt >= :start AND o.createdAt <= :end', {
+          start: monthStart,
+          end: monthEnd,
+        })
+        .select('SUM(o.totalAmount)', 'total')
+        .getRawOne();
+      gmvByMonth.push({
+        month: monthStart.toLocaleString('default', { month: 'short' }),
+        gmv: parseFloat(gmvResult?.total || '0'),
+      });
+    }
+
+    return {
+      brands,
+      products,
+      users,
+      totalRevenue,
+      revenueThisMonth,
+      revenueLastMonth,
+      ordersTotal,
+      ordersThisMonth,
+      newUsersThisMonth,
+      userGrowthPercent,
+      ordersByStatus,
+      topBrands,
+      gmvByMonth,
+    };
   }
 
   async getBrandOwnerStats(userId: number, brandId?: number) {

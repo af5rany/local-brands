@@ -57,6 +57,18 @@ export class NotificationsService {
     return { subscribed: count > 0 };
   }
 
+  async getStockSubscriberIds(productId: number): Promise<number[]> {
+    const subs = await this.stockNotificationRepo.find({
+      where: { productId, notified: false },
+      select: ['userId'],
+    });
+    return subs.map((s) => s.userId);
+  }
+
+  async markStockSubscribersNotified(productId: number): Promise<void> {
+    await this.stockNotificationRepo.update({ productId, notified: false }, { notified: true });
+  }
+
   async createBulk(
     userIds: number[],
     type: NotificationType,

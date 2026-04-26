@@ -14,6 +14,8 @@ import {
   Platform,
   NativeSyntheticEvent,
   NativeScrollEvent,
+  Share,
+  Modal,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -63,6 +65,8 @@ const ProductDetailScreen = () => {
   const [detailsExpanded, setDetailsExpanded] = useState(false);
   const [shippingExpanded, setShippingExpanded] = useState(false);
   const [returnsExpanded, setReturnsExpanded] = useState(false);
+  const [sizeGuide, setSizeGuide] = useState<any>(null);
+  const [showSizeGuide, setShowSizeGuide] = useState(false);
 
   const imageCarouselRef = useRef<FlatList>(null);
   const marqueeAnim = useRef(new Animated.Value(0)).current;
@@ -95,6 +99,18 @@ const ProductDetailScreen = () => {
         if (!res.ok) throw new Error("Failed to fetch");
         const data = await res.json();
         setProduct(data);
+
+        // Fetch size guide (product-level, falls back to brand-level on backend)
+        try {
+          const brandId = data.brand?.id;
+          const sgRes = await fetch(
+            `${getApiUrl()}/size-guides/product/${productId}${brandId ? `?brandId=${brandId}` : ""}`,
+          );
+          if (sgRes.ok) {
+            const sgData = await sgRes.json();
+            setSizeGuide(sgData);
+          }
+        } catch (_) {}
 
         if (data.variants?.length > 0) {
           const firstVariant = data.variants[0];
@@ -426,6 +442,48 @@ const ProductDetailScreen = () => {
         />
       )}
 
+      {/* Size Guide Modal */}
+      <Modal
+        visible={showSizeGuide}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowSizeGuide(false)}
+      >
+        <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end" }}>
+          <View style={{ backgroundColor: colors.background, borderTopLeftRadius: 16, borderTopRightRadius: 16, padding: 24, maxHeight: "80%" }}>
+            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+              <Text style={{ fontSize: 14, fontWeight: "700", letterSpacing: 2, color: colors.text }}>
+                {sizeGuide?.title || "SIZE GUIDE"}
+              </Text>
+              <TouchableOpacity onPress={() => setShowSizeGuide(false)}>
+                <Ionicons name="close" size={22} color={colors.text} />
+              </TouchableOpacity>
+            </View>
+            {sizeGuide?.description ? (
+              <Text style={{ fontSize: 12, color: colors.textSecondary, marginBottom: 16 }}>{sizeGuide.description}</Text>
+            ) : null}
+            <ScrollView>
+              {/* Header row */}
+              <View style={{ flexDirection: "row", borderBottomWidth: 1, borderColor: colors.border, paddingBottom: 8, marginBottom: 8 }}>
+                {(sizeGuide?.headers || []).map((h: string, i: number) => (
+                  <Text key={i} style={{ flex: 1, fontSize: 11, fontWeight: "700", color: colors.textSecondary, textTransform: "uppercase" }}>{h}</Text>
+                ))}
+              </View>
+              {/* Data rows */}
+              {(sizeGuide?.rows || []).map((row: any, i: number) => (
+                <View key={i} style={{ flexDirection: "row", paddingVertical: 8, borderBottomWidth: 1, borderColor: colors.borderLight }}>
+                  <Text style={{ flex: 1, fontSize: 12, color: colors.text, fontWeight: "600" }}>{row.label}</Text>
+                  {(sizeGuide?.headers || []).slice(1).map((h: string, j: number) => (
+                    <Text key={j} style={{ flex: 1, fontSize: 12, color: colors.text }}>{row.values?.[h] || "—"}</Text>
+                  ))}
+                </View>
+              ))}
+              <Text style={{ fontSize: 11, color: colors.textSecondary, marginTop: 12 }}>Measurements in {sizeGuide?.unit || "in"}</Text>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
       {/* Added to Bag Confirmation Overlay */}
       {showAddedConfirm && (
         <View style={[styles.addedOverlay, { backgroundColor: colors.surfaceOverlay }]}>
@@ -517,7 +575,16 @@ const ProductDetailScreen = () => {
                   />
                 )}
               </TouchableOpacity>
-              <TouchableOpacity style={styles.heroActionBtn} activeOpacity={0.7}>
+              <TouchableOpacity
+                style={styles.heroActionBtn}
+                activeOpacity={0.7}
+                onPress={() => {
+                  Share.share({
+                    title: product?.name,
+                    message: `${product?.name} by ${product?.brand?.name}\n${product?.description || ""}`.trim(),
+                  });
+                }}
+              >
                 <Ionicons name="share-outline" size={20} color={colors.text} />
               </TouchableOpacity>
             </View>
@@ -727,7 +794,11 @@ const ProductDetailScreen = () => {
               <View style={styles.sizeSection}>
                 <View style={styles.sizeHeaderRow}>
                   <Text style={[styles.configLabel, { color: colors.textSecondary }]}>SIZE:</Text>
-                  <Text style={[styles.sizeGuideLink, { color: colors.link }]}>SIZE GUIDE</Text>
+                  {sizeGuide && (
+                    <TouchableOpacity onPress={() => setShowSizeGuide(true)}>
+                      <Text style={[styles.sizeGuideLink, { color: colors.link }]}>SIZE GUIDE</Text>
+                    </TouchableOpacity>
+                  )}
                 </View>
                 <View style={styles.sizeRow}>
                   {availableSizes.map((size) => {

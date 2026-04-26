@@ -337,6 +337,24 @@ const BrandDashboard = () => {
                 route: `/brands/${brandId}/return-policy`,
                 sub: "Configure policy",
               },
+              {
+                icon: "resize-outline" as const,
+                label: "SIZE GUIDES",
+                route: `/brands/${brandId}/size-guides`,
+                sub: "Manage size charts",
+              },
+              {
+                icon: "mail-outline" as const,
+                label: "EMAIL CAMPAIGNS",
+                route: `/brands/${brandId}/email-campaigns`,
+                sub: "Send to followers",
+              },
+              {
+                icon: "gift-outline" as const,
+                label: "BUNDLES",
+                route: `/brands/${brandId}/bundles`,
+                sub: "Bundle discounts",
+              },
             ].map((action) => (
               <TouchableOpacity
                 key={action.label}

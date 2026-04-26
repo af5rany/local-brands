@@ -1,32 +1,143 @@
-No-internet handling
-add a coment or review on products as a customer 
-prevent getting back after proceeding with an order 
+# ============================================================
+# REMAINING WORK — Updated April 26, 2026
+# ============================================================
 
-/Users/f5rany/Documents/Work/local-brands/frontend/app/(tabs)/index.tsx check this "ick Stats (authenticated users"
-about size and color i want to handle out of stock for a size and color and get notify for them as well
-handle synchronization for multiple users purchasing same product with stock 1
-handle add item to cart and make sure choosing color and size esists
-remove edit and delete brand and product from customer dashboard when admin is signed in
-make a dashboard for editing home page content
---------------------------
-fix the filter and add sort by price and review and name and date
-fix rating later /Users/f5rany/Documents/Work/local-brands/frontend/components/CustomerDashboard.tsx
-fix header style
-improve screen products managment 
-add same header for all tabs 
-check the difference between screens and tabs
+## INCOMPLETE / PARTIAL (exists but broken or missing)
 
-add email later
-loading states and place holders in case no data and handle no internet case and  optimistic updates
-update the docs
-fix the filter and add sort by price and review and name and date
-add way too much dummy data like brands and products for them
-fix rating later /Users/f5rany/Documents/Work/local-brands/frontend/components/CustomerDashboard.tsx
-fix this order checkout process /Users/f5rany/Documents/Work/local-brands/frontend/app/checkout/index.tsx
-fix header style
-improve screen products managment 
-fix buttom image style in product details page
-add loading states and place holders in case no data and handle no internet case
-wishlist optimistic update
-check stock and availableStock 
-check images and variant images
+- [ ] Brand detail page: add Products | Posts tab switcher UI (posts already fetched, no tab bar)
+- [ ] ProductVariant entity migration: system still reads deprecated `variants` JSON column — migrate to relational ProductVariant
+- [ ] Auth route protection: _layout.tsx only guards subset of segments (cart/profile/returns check auth per-screen, not centrally)
+- [ ] Google login broken — fix OAuth flow
+- [ ] Guest login broken — fix guest token flow
+- [ ] Dark/light theme: frontend has hardcoded colors throughout — replace all with useThemeColor() / Colors.ts tokens
+- [ ] Brand detail about section UI — needs redesign/fix
+- [ ] Unisex gender filter — should appear in both men and women filter results
+
+## NOT IMPLEMENTED
+
+- [ ] Payment processing — no gateway; orders placed without actual payment
+- [ ] DOWNLOAD INVOICE — button on order detail exists but does nothing
+- [ ] Privacy Policy screen — shows "coming soon" alert
+- [ ] Terms of Service screen — shows "coming soon" alert
+- [ ] Delete Account — shows alert with contact info, not automated
+- [ ] Admin Settings screen — quick action card in admin dashboard, no screen behind it
+- [ ] Order Management (brand owner /manage) — "coming soon" card; full dashboard exists at /brands/[id]/dashboard but /manage card not wired
+- [ ] Admin CMS — edit home page banners and featured sections from dashboard
+- [ ] Search autocomplete — no suggestion endpoint; only basic ILike search
+- [ ] Cloudinary cleanup — no image deletion when products are deleted
+- [ ] Email verification — no verify flow after registration
+- [ ] Skeleton loaders / placeholder loading states across all list screens
+- [ ] Offline / no-internet handling — detect and show appropriate UI
+- [ ] Outfit Builder (Phase 5) — feature set not yet scoped
+- [ ] Product videos — video support on product detail
+- [ ] Drops — limited release / drop mechanic
+
+# ============================================================
+
+DONE
+fix variant issue, make images and color out of variant and make sizes and stock in the variant. auto select category from the product name
+not deleting products immediatly
+add button for new brand
+or it is better to filter the list of useres not to show guests, and once a user is choosen, automatically change his role to brandowner and add this brand to his assigned brands and fix the droplist style and all the screen style
+fix regestering a new user
+add a button on product card to be add to fav
+fix assign brand owner to brand
+fix removing owner from brand or remove this logic from user managment 
+fix the buttom of the screen or the tab sometime is hidden from the buttom menu(profile tab, home tab, Brands tab)
+improve brand products screen
+add floating heart icon in the shop that navigates to wishlist
+add screens(shipping, return and refund, about us, content us)
+improve products managment screen
+improve (all managment screens)
+change the banners
+/Users/f5rany/Documents/Work/local-brands/frontend/app/(tabs)/index.tsx fix home images, use these /Users/f5rany/Documents/Work/local-brands/frontend/assets/images/man.jpg
+/Users/f5rany/Documents/Work/local-brands/frontend/assets/images/women.jpg
+fix home functions and navigations and filters, to navigate to sjop and filter on the gender
+add search by image
+find a way to tag product in posts
+
+
+fix logging in as google
+
+'/Users/f5rany/Documents/Work/local-brands/frontend/app/brands/[brandId]/index.tsx' make this has 2 columns same as shop grid '/Users/f5rany/Documents/Work/local-brands/frontend/app/(tabs)/shop.tsx', and apply best practice
+'/Users/f5rany/Documents/Work/local-brands/frontend/app/brands/[brandId]/index.tsx' add for the brand a section to view the brand posts, and apply best practice
+make the brand owner able to modify the brand details and add products to the brands he manage
+
+in the feed '/Users/f5rany/Documents/Work/local-brands/frontend/app/(tabs)/feed.tsx' show section suggested to you based on added to fav and already bought items, and if there is no appearing posts in "for you" fix the place holder, and suggest some posts, and apply best practice
+
+NOT DONE
+
+make sure all the frontend is following the dark and light theme based on the system not hardcoded colors
+'/Users/f5rany/Documents/Work/local-brands/frontend/app/brands/[brandId]/index.tsx' fix the brand about section and use this image as inspiration
+fix home page layout and UI
+
+fix logging in as guest
+make the unisex appear for both men and women
+
+
+# Local Brands — Remaining Tasks
+> Last updated: April 4, 2026 | Phases 1A–4: ✅ Completed
+
+
+---
+
+## 🔐 Admin & Dashboard
+
+- [ ] Improve product management screen
+- [ ] Remove edit/delete controls from customer dashboard when admin is signed in
+- [ ] Admin CMS dashboard — edit home page content (banners, featured sections)
+
+---
+
+## ⚡ Loading, Error States & UX
+
+- [ ] Loading states and skeleton placeholders when data is loading
+- [ ] Empty states when no data exists
+- [ ] No-internet handling — detect offline and show appropriate UI
+- [ ] Optimistic updates — wishlist, cart, and other user actions
+
+---
+
+## ✅ Recently Completed
+
+- [x] Fix order placement failure (PostgreSQL `FOR UPDATE` + LEFT JOIN incompatibility)
+- [x] Same header for all screens (auth, cart, orders, checkout, notifications)
+- [x] Bigger height for bottom tab menu (94px)
+- [x] Side menu with animated items, active route highlighting, and navigation
+- [x] Fix ActivityIndicator/spinner colors on product detail page
+- [x] Fix product grid carousel showing multiple images when product only has one
+- [x] Fix admin dashboard navigation routes
+- [x] Fix search modal: trending products on initial open, more padding, single-click navigation
+- [x] Remove menu icon backgrounds
+- [x] Fix cart badge — show dynamic count of added products
+- [x] Feed module — full social feed with posts, likes, comments, brand follows
+- [x] Feed post creation with brand picker for multi-brand owners and product tagging
+- [x] Only brand owners can create posts (admin removed from post creation)
+- [x] Like/comment counts inline with icons, red filled heart when liked
+- [x] Post detail screen with user avatars, comment styling, three-dot menu for delete
+- [x] Feed shows only followed brands' posts for logged-in users
+- [x] Fix user status: auto-approve on registration (removed pending/approval flow)
+- [x] Fix `req.user.userId` → `req.user.id` bug in brands controller, referrals controller, and RegisteredUsersOnlyGuard
+- [x] Docker compose watch mode for auto-rebuild on backend changes
+- [x] Notification system (entity, backend support)
+
+---
+
+## 🔮 Phase 5: Outfit Builder
+> Scope not yet defined — needs planning before implementation.
+
+- [ ] Define feature set and UI flow
+- [ ] Implementation TBD
+
+---
+
+## 🚀 Phase 6: Advanced (Deferred)
+
+- [ ] Videos — product video support
+- [ ] Drops — limited releases / drop mechanic
+- [ ] AI Try-On — on `fal-ai` branch, not yet tested end-to-end
+  - Includes: PostgreSQL caching, BullMQ + Redis, retry logic, async polling, TryOnModal
+  - Needs: `docker compose up -d` with Redis to test
+  - Deferred: preview mode (cheap FLUX before HD FASHN)
+  - Deferred: store results to S3/Supabase (fal.ai CDN URLs expire in 72h)
+- [ ] Email verification

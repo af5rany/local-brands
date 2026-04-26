@@ -22,8 +22,10 @@ import { UserRole } from 'src/common/enums/user.enum';
 import { PublicProductDto } from './dto/public-product.dto';
 import { BrandsService } from '../brands/brands.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { PushNotificationService } from '../notifications/push-notification.service';
 import { NotificationType } from '../notifications/notification.entity';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import { BrandUser } from '../brands/brand-user.entity';
 
 @Injectable()
 export class ProductsService {
@@ -34,9 +36,12 @@ export class ProductsService {
     private brandsRepository: Repository<Brand>,
     @InjectRepository(ProductVariant)
     private variantRepository: Repository<ProductVariant>,
+    @InjectRepository(BrandUser)
+    private brandUserRepository: Repository<BrandUser>,
     private dataSource: DataSource,
     private brandsService: BrandsService,
     private notificationsService: NotificationsService,
+    private pushNotificationService: PushNotificationService,
     private eventEmitter: EventEmitter2,
   ) {}
 
@@ -642,7 +647,7 @@ export class ProductsService {
     // Fetch current product state before update for comparison
     const currentProduct = await this.productsRepository.findOne({
       where: { id },
-      select: ['id', 'status', 'salePrice', 'price', 'name', 'brandId'],
+      select: ['id', 'status', 'salePrice', 'price', 'name', 'brandId', 'stock', 'lowStockThreshold'],
     });
 
     await this.dataSource.transaction(async (manager) => {
@@ -671,6 +676,22 @@ export class ProductsService {
         productId: id,
         imageUrl: (updateData as any).images[0],
       });
+    }
+
+    // Stock change triggers
+    if (currentProduct && updateData.stock !== undefined) {
+      const prevStock = Number(currentProduct.stock) || 0;
+      const newStock = Number(updateData.stock);
+      // Back-in-stock: was 0, now > 0
+      if (prevStock === 0 && newStock > 0) {
+        this.triggerBackInStockNotifications(id, currentProduct.name).catch(() => {});
+      }
+      // Low-stock: just went below threshold
+      const threshold = currentProduct.lowStockThreshold || 10;
+      if (newStock > 0 && newStock <= threshold && prevStock > threshold) {
+        const updatedProduct = { ...currentProduct, stock: newStock } as Product;
+        this.triggerLowStockAlert(updatedProduct).catch(() => {});
+      }
     }
 
     if (currentProduct?.brandId) {
@@ -815,5 +836,59 @@ export class ProductsService {
 
   async deleteAll(): Promise<void> {
     await this.productsRepository.softDelete({});
+  }
+
+  // ── Stock Alert: trigger when stock restored from 0 ──────────────────────
+  async triggerBackInStockNotifications(productId: number, productName: string): Promise<void> {
+    try {
+      const subscriberIds = await this.notificationsService.getStockSubscriberIds(productId);
+      if (subscriberIds.length === 0) return;
+
+      await this.notificationsService.createBulk(
+        subscriberIds,
+        NotificationType.STOCK_ALERT,
+        'Back in Stock',
+        `"${productName}" is now available again`,
+        { productId },
+      );
+      await this.pushNotificationService.sendPushToMany(
+        subscriberIds,
+        'Back in Stock',
+        `"${productName}" is now available again`,
+        { productId },
+      );
+      await this.notificationsService.markStockSubscribersNotified(productId);
+    } catch (err) {
+      console.error('[ProductsService] triggerBackInStockNotifications error:', err);
+    }
+  }
+
+  // ── Inventory Alert: notify brand owners when stock drops below threshold ──
+  async triggerLowStockAlert(product: Product): Promise<void> {
+    try {
+      const owners = await this.brandUserRepository.find({
+        where: { brandId: product.brandId },
+        select: ['userId'],
+      });
+      const ownerIds = owners.map((o) => o.userId);
+      if (ownerIds.length === 0) return;
+
+      const threshold = product.lowStockThreshold || 10;
+      await this.notificationsService.createBulk(
+        ownerIds,
+        NotificationType.GENERAL,
+        'Low Stock Alert',
+        `"${product.name}" has only ${product.stock} units left (threshold: ${threshold})`,
+        { productId: product.id, brandId: product.brandId },
+      );
+      await this.pushNotificationService.sendPushToMany(
+        ownerIds,
+        'Low Stock Alert',
+        `"${product.name}" has only ${product.stock} units left`,
+        { productId: product.id },
+      );
+    } catch (err) {
+      console.error('[ProductsService] triggerLowStockAlert error:', err);
+    }
   }
 }

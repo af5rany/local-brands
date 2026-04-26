@@ -18,6 +18,7 @@ import { Order } from './order.entity';
 import { OrderStatus } from 'src/common/enums/order.enum';
 import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
 import { Roles } from 'src/auth/roles.decorator';
+import { Throttle } from '@nestjs/throttler';
 import { UserRole } from 'src/common/enums/user.enum';
 import { RolesGuard } from 'src/auth/roles.guard';
 import { CreateOrderDto } from './dto/create-order.dto';
@@ -37,11 +38,12 @@ export class OrdersController {
   constructor(private readonly ordersService: OrdersService) {}
 
   // ✅ Checkout from cart (reads cart items server-side)
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   @Post('checkout')
   async checkout(
     @Body(ValidationPipe) checkoutDto: CheckoutDto,
     @Request() req,
-  ): Promise<Order> {
+  ): Promise<Order[]> {
     return this.ordersService.checkout(checkoutDto, Number(req.user.id));
   }
 

@@ -230,15 +230,20 @@ const CheckoutScreen = () => {
         throw new Error(errorData.message || "Checkout failed");
       }
 
-      const order = await response.json();
+      const orders: any[] = await response.json();
       refreshCart();
+      // Multiple orders created (one per brand) — summarise for confirmation screen
+      const firstOrder = orders[0] || {};
+      const totalAmount = orders.reduce((s: number, o: any) => s + Number(o.totalAmount || 0), 0);
+      const totalItems = orders.reduce((s: number, o: any) => s + Number(o.totalItems || 0), 0);
       router.replace({
         pathname: "/checkout/confirmation",
         params: {
-          orderId: order.id?.toString() || "",
-          orderNumber: order.orderNumber || "",
-          total: order.totalAmount?.toString() || "",
-          itemCount: order.totalItems?.toString() || "",
+          orderId: firstOrder.id?.toString() || "",
+          orderNumber: orders.map((o: any) => o.orderNumber).filter(Boolean).join(", "),
+          total: totalAmount.toFixed(2),
+          itemCount: totalItems.toString(),
+          orderCount: orders.length.toString(),
         },
       } as any);
     } catch (error: any) {

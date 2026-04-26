@@ -61,14 +61,25 @@ export class FeedService {
     });
     const savedPost = await this.postRepo.save(post);
 
-    // Tag products
-    if (dto.productIds?.length) {
+    // Tag products — support both legacy productIds[] and new products[] with x/y pins
+    const taggedProducts: { productId: number; xPercent?: number; yPercent?: number }[] =
+      (dto.products?.length ? dto.products : null) ??
+      (dto.productIds || []).map((id) => ({ productId: id }));
+
+    if (taggedProducts.length) {
+      const productIds = taggedProducts.map((t) => t.productId);
       const products = await this.productRepo.find({
-        where: { id: In(dto.productIds), brandId: dto.brandId },
+        where: { id: In(productIds), brandId: dto.brandId },
       });
-      const postProducts = products.map((p) =>
-        this.postProductRepo.create({ postId: savedPost.id, productId: p.id }),
-      );
+      const productMap = new Map(products.map((p) => [p.id, p]));
+      const postProducts = taggedProducts
+        .filter((t) => productMap.has(t.productId))
+        .map((t) => {
+          const pp = this.postProductRepo.create({ postId: savedPost.id, productId: t.productId });
+          if (t.xPercent !== undefined) pp.xPercent = t.xPercent;
+          if (t.yPercent !== undefined) pp.yPercent = t.yPercent;
+          return pp;
+        });
       await this.postProductRepo.save(postProducts);
     }
 
@@ -164,15 +175,25 @@ export class FeedService {
       await this.postRepo.save(post);
     }
 
-    if (dto.productIds !== undefined) {
+    if (dto.productIds !== undefined || (dto as any).products !== undefined) {
       await this.postProductRepo.delete({ postId: id });
-      if (dto.productIds.length) {
+      const taggedProducts = (dto as any).products?.length
+        ? (dto as any).products
+        : (dto.productIds || []).map((pid: number) => ({ productId: pid }));
+      if (taggedProducts.length) {
+        const productIds = taggedProducts.map((t: any) => t.productId);
         const products = await this.productRepo.find({
-          where: { id: In(dto.productIds), brandId: post.brandId },
+          where: { id: In(productIds), brandId: post.brandId },
         });
-        const postProducts = products.map((p) =>
-          this.postProductRepo.create({ postId: id, productId: p.id }),
-        );
+        const productMap = new Map(products.map((p) => [p.id, p]));
+        const postProducts = taggedProducts
+          .filter((t: any) => productMap.has(t.productId))
+          .map((t: any) => {
+            const pp = this.postProductRepo.create({ postId: id, productId: t.productId });
+            if (t.xPercent !== undefined) pp.xPercent = t.xPercent;
+            if (t.yPercent !== undefined) pp.yPercent = t.yPercent;
+            return pp;
+          });
         await this.postProductRepo.save(postProducts);
       }
     }

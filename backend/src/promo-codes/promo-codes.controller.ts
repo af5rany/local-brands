@@ -13,6 +13,7 @@ import {
   ValidationPipe,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 import { PromoCodesService } from './promo-codes.service';
 import { CreatePromoCodeDto } from './dto/create-promo-code.dto';
 import { UpdatePromoCodeDto } from './dto/update-promo-code.dto';
@@ -27,6 +28,7 @@ import { BrandAccessGuard } from '../auth/brand-access.guard';
 export class PromoCodesController {
   constructor(private readonly promoCodesService: PromoCodesService) {}
 
+  @Throttle({ default: { limit: 20, ttl: 60000 } })
   @ApiOperation({ summary: 'Validate a promo code against cart total' })
   @Post('promo-codes/validate')
   async validate(

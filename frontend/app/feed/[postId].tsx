@@ -13,6 +13,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Alert,
+  Share,
 } from "react-native";
 import {
   SafeAreaView,
@@ -53,6 +54,7 @@ export default function PostDetailScreen() {
   const [commentPage, setCommentPage] = useState(1);
   const [hasMoreComments, setHasMoreComments] = useState(true);
   const [imageIndex, setImageIndex] = useState(0);
+  const [activePinProductId, setActivePinProductId] = useState<number | null>(null);
   const inputRef = useRef<TextInput>(null);
 
   // Double-tap heart animation
@@ -294,6 +296,17 @@ export default function PostDetailScreen() {
                   {post.brand.name}
                 </Text>
               </View>
+              <TouchableOpacity
+                onPress={() =>
+                  Share.share({
+                    title: post.brand.name,
+                    message: `${post.caption || post.brand.name}`.trim(),
+                  })
+                }
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Ionicons name="share-outline" size={20} color={colors.textSecondary} />
+              </TouchableOpacity>
             </TouchableOpacity>
 
             {/* Images with double-tap to like */}
@@ -306,6 +319,54 @@ export default function PostDetailScreen() {
                       style={[styles.postImage, { backgroundColor: colors.borderLight }]}
                       resizeMode="cover"
                     />
+                    {/* Product pin overlays */}
+                    {(post.postProducts || [])
+                      .filter((pp: any) => pp.xPercent !== null && pp.yPercent !== null)
+                      .map((pp: any) => (
+                        <TouchableOpacity
+                          key={pp.productId}
+                          style={{
+                            position: "absolute",
+                            left: `${pp.xPercent}%` as any,
+                            top: `${pp.yPercent}%` as any,
+                            width: 22, height: 22, borderRadius: 11,
+                            backgroundColor: "white", borderWidth: 2, borderColor: "black",
+                            transform: [{ translateX: -11 }, { translateY: -11 }],
+                            justifyContent: "center", alignItems: "center",
+                          }}
+                          onPress={() => setActivePinProductId(activePinProductId === pp.productId ? null : pp.productId)}
+                        >
+                          <Ionicons name="pricetag" size={10} color="black" />
+                        </TouchableOpacity>
+                      ))}
+                    {/* Active pin popup */}
+                    {activePinProductId && (
+                      <TouchableOpacity
+                        style={[styles.pinPopup, { backgroundColor: colors.background }]}
+                        onPress={() => router.push(`/products/${activePinProductId}` as any)}
+                        activeOpacity={0.9}
+                      >
+                        {(() => {
+                          const pp = post.postProducts.find((p: any) => p.productId === activePinProductId);
+                          return pp ? (
+                            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                              {pp.product?.images?.[0] && (
+                                <Image source={{ uri: pp.product.images[0] }} style={{ width: 36, height: 36, borderRadius: 4 }} />
+                              )}
+                              <View>
+                                <Text style={{ color: colors.text, fontSize: 12, fontWeight: "700" }} numberOfLines={1}>
+                                  {pp.product?.name}
+                                </Text>
+                                <Text style={{ color: colors.textSecondary, fontSize: 11 }}>
+                                  ${Number(pp.product?.price || 0).toFixed(2)}
+                                </Text>
+                              </View>
+                              <Ionicons name="chevron-forward" size={14} color={colors.textTertiary} />
+                            </View>
+                          ) : null;
+                        })()}
+                      </TouchableOpacity>
+                    )}
                     <Animated.View
                       style={[styles.heartOverlay, heartAnimatedStyle]}
                       pointerEvents="none"
@@ -691,6 +752,19 @@ const styles = StyleSheet.create({
   // Image
   imageContainer: {
     position: "relative",
+  },
+  pinPopup: {
+    position: "absolute",
+    bottom: 12,
+    left: 12,
+    right: 12,
+    borderRadius: 8,
+    padding: 10,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 4,
   },
   postImage: {
     width: SCREEN_WIDTH,
