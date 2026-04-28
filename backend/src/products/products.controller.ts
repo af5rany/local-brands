@@ -86,6 +86,13 @@ export class ProductsController {
   }
 
   @Public()
+  @Get('suggestions')
+  async getSuggestions(@Query('q') q: string) {
+    if (!q || q.trim().length < 2) return { products: [], brands: [] };
+    return this.productsService.getSuggestions(q.trim());
+  }
+
+  @Public()
   @Header('Cache-Control', 'public, max-age=3600') // Cache for 1 hour
   @Get(':id')
   findOne(@Param('id', ParseIntPipe) id: number): Promise<PublicProductDto> {

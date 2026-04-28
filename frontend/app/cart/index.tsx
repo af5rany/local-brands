@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef, useEffect } from "react";
+import React, { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import {
   View,
   Text,
@@ -18,11 +18,17 @@ import Header from "@/components/Header";
 import { useAuth } from "@/context/AuthContext";
 import { useCart } from "@/context/CartContext";
 import getApiUrl from "@/helpers/getApiUrl";
+import { useThemeColors } from "@/hooks/useThemeColor";
+import type { ThemeColors } from "@/constants/Colors";
+import { useNetwork } from "@/context/NetworkContext";
+import OfflinePlaceholder from "@/components/OfflinePlaceholder";
 
 const MARQUEE_TEXT =
   "FREE SHIPPING ON ORDERS OVER $150 · COMPLIMENTARY GIFT WRAPPING · FREE SHIPPING ON ORDERS OVER $150 · COMPLIMENTARY GIFT WRAPPING · ";
 
 const MarqueeStrip = () => {
+  const colors = useThemeColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const translateX = useRef(new Animated.Value(0)).current;
   const textWidth = useRef(0);
 
@@ -71,7 +77,10 @@ const MarqueeStrip = () => {
 const CartScreen = () => {
   const router = useRouter();
   const { token } = useAuth();
+  const colors = useThemeColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const { refresh: refreshCart } = useCart();
+  const { isConnected } = useNetwork();
   const [cart, setCart] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState<number | null>(null);
@@ -101,6 +110,18 @@ const CartScreen = () => {
 
   const updateQuantity = async (itemId: number, quantity: number) => {
     if (quantity < 1) return;
+    const previousCart = cart;
+    setCart((prev: any) => {
+      if (!prev) return prev;
+      const updatedItems = prev.items.map((item: any) =>
+        item.id === itemId ? { ...item, quantity } : item
+      );
+      const totalAmount = updatedItems.reduce(
+        (sum: number, item: any) => sum + Number(item.unitPrice) * item.quantity,
+        0
+      );
+      return { ...prev, items: updatedItems, totalAmount };
+    });
     setUpdatingId(itemId);
     try {
       const response = await fetch(`${getApiUrl()}/cart/items/${itemId}`, {
@@ -112,9 +133,9 @@ const CartScreen = () => {
         body: JSON.stringify({ quantity }),
       });
       if (!response.ok) throw new Error("Failed to update quantity");
-      await fetchCart();
       refreshCart();
     } catch (error: any) {
+      setCart(previousCart);
       Alert.alert("Error", error.message);
     } finally {
       setUpdatingId(null);
@@ -122,12 +143,22 @@ const CartScreen = () => {
   };
 
   const removeItem = async (itemId: number) => {
+    const previousCart = cart;
     Alert.alert("Remove Item", "Are you sure you want to remove this item?", [
       { text: "Cancel", style: "cancel" },
       {
         text: "Remove",
         style: "destructive",
         onPress: async () => {
+          setCart((prev: any) => {
+            if (!prev) return prev;
+            const updatedItems = prev.items.filter((item: any) => item.id !== itemId);
+            const totalAmount = updatedItems.reduce(
+              (sum: number, item: any) => sum + Number(item.unitPrice) * item.quantity,
+              0
+            );
+            return { ...prev, items: updatedItems, totalAmount };
+          });
           try {
             const response = await fetch(
               `${getApiUrl()}/cart/items/${itemId}`,
@@ -137,9 +168,9 @@ const CartScreen = () => {
               }
             );
             if (!response.ok) throw new Error("Failed to remove item");
-            await fetchCart();
             refreshCart();
           } catch (error: any) {
+            setCart(previousCart);
             Alert.alert("Error", error.message);
           }
         },
@@ -200,7 +231,7 @@ const CartScreen = () => {
 
             <View style={styles.qtyCountBox}>
               {updatingId === item.id ? (
-                <ActivityIndicator size="small" color="#000000" />
+                <ActivityIndicator size="small" color={colors.text} />
               ) : (
                 <Text style={styles.qtyCount}>{item.quantity}</Text>
               )}
@@ -247,10 +278,14 @@ const CartScreen = () => {
       );
     }
 
+    if (!isConnected && !cart) {
+      return <OfflinePlaceholder onRetry={fetchCart} />;
+    }
+
     if (loading) {
       return (
         <View style={styles.center}>
-          <ActivityIndicator size="large" color="#000000" />
+          <ActivityIndicator size="large" color={colors.text} />
         </View>
       );
     }
@@ -333,19 +368,19 @@ const CartScreen = () => {
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "#f9f9f9",
+    backgroundColor: colors.surfaceRaised,
   },
   container: {
     flex: 1,
-    backgroundColor: "#f9f9f9",
+    backgroundColor: colors.surfaceRaised,
   },
 
   // Marquee
   marqueeContainer: {
-    backgroundColor: "#000000",
+    backgroundColor: colors.primary,
     height: 32,
     overflow: "hidden",
     justifyContent: "center",
@@ -353,7 +388,7 @@ const styles = StyleSheet.create({
   marqueeText: {
     fontFamily: undefined,
     fontSize: 10,
-    color: "#ffffff",
+    color: colors.textInverse,
     // letterSpacing: 3,
     textTransform: "uppercase",
   },
@@ -375,7 +410,7 @@ const styles = StyleSheet.create({
   collectionHeadline: {
     fontFamily: undefined,
     fontSize: 32,
-    color: "#000000",
+    color: colors.text,
     textTransform: "uppercase",
     // letterSpacing: -0.5,
     lineHeight: 36,
@@ -383,7 +418,7 @@ const styles = StyleSheet.create({
   refLabel: {
     fontFamily: undefined,
     fontSize: 10,
-    color: "#777777",
+    color: colors.textSecondary,
     // letterSpacing: 3,
     textTransform: "uppercase",
     marginTop: 8,
@@ -394,7 +429,7 @@ const styles = StyleSheet.create({
     marginBottom: 48,
   },
   cartItem: {
-    backgroundColor: "#f9f9f9",
+    backgroundColor: colors.surfaceRaised,
   },
   cartItemGap: {
     marginTop: 32,
@@ -407,7 +442,7 @@ const styles = StyleSheet.create({
   itemImage: {
     width: 80,
     height: 80,
-    backgroundColor: "#eeeeee",
+    backgroundColor: colors.surfaceContainer,
   },
   itemDetails: {
     flex: 1,
@@ -422,7 +457,7 @@ const styles = StyleSheet.create({
   itemName: {
     fontFamily: undefined,
     fontSize: 13,
-    color: "#000000",
+    color: colors.text,
     // letterSpacing: 1,
     textTransform: "uppercase",
     flex: 1,
@@ -431,14 +466,14 @@ const styles = StyleSheet.create({
   itemPrice: {
     fontFamily: undefined,
     fontSize: 14,
-    color: "#000000",
+    color: colors.text,
     fontWeight: "700",
     // letterSpacing: -0.5,
   },
   itemVariant: {
     fontFamily: undefined,
     fontSize: 10,
-    color: "#777777",
+    color: colors.textSecondary,
     // letterSpacing: 2,
     textTransform: "uppercase",
     marginTop: 6,
@@ -456,7 +491,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     borderBottomWidth: 2,
-    borderBottomColor: "#000000",
+    borderBottomColor: colors.text,
   },
   qtyBtn: {
     paddingHorizontal: 12,
@@ -465,11 +500,11 @@ const styles = StyleSheet.create({
   qtyBtnText: {
     fontFamily: undefined,
     fontSize: 16,
-    color: "#000000",
+    color: colors.text,
     lineHeight: 20,
   },
   qtyBtnDisabled: {
-    color: "#cccccc",
+    color: colors.border,
   },
   qtyCountBox: {
     paddingHorizontal: 16,
@@ -480,13 +515,13 @@ const styles = StyleSheet.create({
   qtyCount: {
     fontFamily: undefined,
     fontSize: 13,
-    color: "#000000",
+    color: colors.text,
     fontWeight: "700",
   },
   removeText: {
     fontFamily: undefined,
     fontSize: 10,
-    color: "#C41E3A",
+    color: colors.accentRed,
     // letterSpacing: 2,
     textTransform: "uppercase",
     textDecorationLine: "underline",
@@ -494,7 +529,7 @@ const styles = StyleSheet.create({
 
   // Summary box
   summaryBox: {
-    backgroundColor: "#eeeeee",
+    backgroundColor: colors.surfaceContainer,
     padding: 24,
   },
   summaryRow: {
@@ -506,21 +541,21 @@ const styles = StyleSheet.create({
   summaryLabel: {
     fontFamily: undefined,
     fontSize: 11,
-    color: "#777777",
+    color: colors.textSecondary,
     // letterSpacing: 3,
     textTransform: "uppercase",
   },
   summaryValue: {
     fontFamily: undefined,
     fontSize: 16,
-    color: "#000000",
+    color: colors.text,
     fontWeight: "700",
     // letterSpacing: -0.5,
   },
   summaryValueSmall: {
     fontFamily: undefined,
     fontSize: 9,
-    color: "#000000",
+    color: colors.text,
     // letterSpacing: 2,
     textTransform: "uppercase",
   },
@@ -529,14 +564,14 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     borderTopWidth: 1,
-    borderTopColor: "#c6c6c6",
+    borderTopColor: colors.outlineVariant,
     paddingTop: 20,
     marginBottom: 24,
   },
   totalLabel: {
     fontFamily: undefined,
     fontSize: 14,
-    color: "#000000",
+    color: colors.text,
     fontWeight: "700",
     // letterSpacing: 3,
     textTransform: "uppercase",
@@ -544,13 +579,13 @@ const styles = StyleSheet.create({
   totalValue: {
     fontFamily: undefined,
     fontSize: 22,
-    color: "#000000",
+    color: colors.text,
     // letterSpacing: -0.5,
   },
 
   // Checkout button
   checkoutBtn: {
-    backgroundColor: "#000000",
+    backgroundColor: colors.primary,
     paddingVertical: 20,
     alignItems: "center",
     justifyContent: "center",
@@ -558,7 +593,7 @@ const styles = StyleSheet.create({
   checkoutBtnText: {
     fontFamily: undefined,
     fontSize: 12,
-    color: "#ffffff",
+    color: colors.primaryForeground,
     // letterSpacing: 4,
     textTransform: "uppercase",
     fontWeight: "700",
@@ -566,7 +601,7 @@ const styles = StyleSheet.create({
   checkoutNote: {
     fontFamily: undefined,
     fontSize: 9,
-    color: "#777777",
+    color: colors.textSecondary,
     // letterSpacing: 2,
     textTransform: "uppercase",
     textAlign: "center",
@@ -589,7 +624,7 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontFamily: undefined,
     fontSize: 24,
-    color: "#000000",
+    color: colors.text,
     textTransform: "uppercase",
     // letterSpacing: 1,
     textAlign: "center",
@@ -598,20 +633,20 @@ const styles = StyleSheet.create({
   emptySubtitle: {
     fontFamily: "Inter_400Regular",
     fontSize: 14,
-    color: "#777777",
+    color: colors.textSecondary,
     textAlign: "center",
     marginBottom: 32,
     lineHeight: 22,
   },
   actionBtn: {
-    backgroundColor: "#000000",
+    backgroundColor: colors.primary,
     paddingVertical: 20,
     paddingHorizontal: 48,
   },
   actionBtnText: {
     fontFamily: undefined,
     fontSize: 12,
-    color: "#ffffff",
+    color: colors.primaryForeground,
     // letterSpacing: 4,
     textTransform: "uppercase",
     fontWeight: "700",

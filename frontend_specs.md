@@ -70,7 +70,7 @@ Six bottom tabs (with label-less icons):
 ### 5. Brands (`brands/`)
 - `brands/create.tsx` — Create new brand (admin only).
 - `brands/select.tsx` — Multi-brand owner context switcher.
-- `brands/[brandId]/index.tsx` — Brand detail with products. **[TODO]** Add "Posts" tab (see Planned Features).
+- `brands/[brandId]/index.tsx` — Brand detail with Products | Posts tab switcher. "Posts" tab shows a 2-column grid of brand feed posts; tap → `/feed/[postId]`.
 - `brands/[brandId]/edit.tsx` — Edit brand identity & location.
 - `brands/[brandId]/products.tsx` — Brand's product listing.
 - `brands/[brandId]/dashboard.tsx` — Brand owner analytics dashboard (stats grid, quick actions, top products, recent orders, pending alerts, notify followers modal).
@@ -89,6 +89,7 @@ Six bottom tabs (with label-less icons):
 - `brands/[brandId]/bundles/index.tsx` — Bundle list with active toggle, edit link, delete.
 - `brands/[brandId]/bundles/create.tsx` — Create form (name, discount type/value, min quantity, product multi-select, date range).
 - `brands/[brandId]/bundles/[bundleId].tsx` — Edit bundle form.
+- `brands/[brandId]/orders/index.tsx` — Brand owner order list: paginated orders with status badges, VIEW DETAILS navigation, and per-card fulfillment action button (CONFIRM ORDER / MARK PROCESSING / MARK AS SHIPPED with tracking modal / MARK DELIVERED). Optimistic status update; calls `PUT /orders/:id/fulfill`.
 
 ### 6. Products (`products/`)
 - `products/index.tsx` — All products listing with advanced search, filters, pagination.
@@ -131,6 +132,8 @@ Six bottom tabs (with label-less icons):
 - `info/contact.tsx` — Contact channels, message form.
 - `info/shipping.tsx` — Shipping policy cards.
 - `info/returns.tsx` — Returns & refunds policy steps and conditions.
+- `info/privacy.tsx` — Full privacy policy text.
+- `info/terms.tsx` — Full terms of service text.
 
 ---
 
@@ -152,6 +155,16 @@ Centralized via `useCloudinaryUpload` hook:
 | `BrandContext` | Active brand selection for multi-brand owners, management mode toggle |
 | `CartContext` | Cart item count tracking, `useCartCount` hook for header badge |
 | `ToastContext` | Global toast notifications |
+
+### Custom Hooks
+
+| Hook | Responsibility |
+|------|---------------|
+| `useRecentlyViewed` | AsyncStorage-backed list of up to 15 viewed product IDs. `addProduct(id)` prepends + deduplicates. `clearProducts()` wipes storage. Used in product detail (write) and home screen (read + display). |
+| `useInfiniteScroll` | Paginated list fetching with load-more trigger |
+| `useCloudinaryUpload` | Image selection, compression, Cloudinary upload with progress |
+| `useImageSearch` | Camera/gallery picker → compressed upload → `POST /image-search` → ranked product results |
+| `useCartCount` | Subscribes to cart item count for header badge |
 
 ---
 
@@ -200,17 +213,20 @@ Centralized via `useCloudinaryUpload` hook:
 |---------|-------------|
 | **Authentication** | Login, register, forgot/reset password, JWT token management, guest browsing |
 | **Brand Management** | Full CRUD, multi-brand ownership, brand listing with search/sort/filter |
-| **Product Management** | Full CRUD, variant system (color + images + stock), status lifecycle, Cloudinary image upload |
+| **Product Management** | Full CRUD, variant system (size + per-size stock; color and images are product-level), status lifecycle, Cloudinary image upload |
 | **Product Discovery** | Home dashboard, filter chips, pagination, debounced search |
 | **Product Detail** | Image gallery, variant color picker, pricing with discount, stock status, reviews, TryOn modal |
-| **Shopping Cart** | Add/remove items, quantity updates, variant-aware, total calculation |
-| **Wishlist** | Toggle add/remove, product card hearts, heart highlight on dashboard cards |
+| **Shopping Cart** | Add/remove items, quantity updates (optimistic), remove (optimistic with confirm), variant-aware, total calculation |
+| **Wishlist** | Toggle add/remove (optimistic — instant remove from list, reverts on error), product card hearts, Brands sub-tab with followed brands list |
 | **Orders** | Order placement with idempotency, order history, order detail with status timeline |
 | **Shipping Addresses** | Full CRUD, address selection in checkout, set default |
 | **Checkout** | Address selection, order summary, idempotency key, confirmation screen |
 | **Product Reviews** | Review display, can-review check (verified purchase), star rating, photo upload, submission |
 | **User Profile** | Personal details, avatar upload, shipping addresses, settings |
-| **Settings** | Notification toggles, change password link, privacy/terms placeholders, delete account |
+| **Settings** | Notification toggles, change password link, Privacy Policy → `/info/privacy`, Terms → `/info/terms`, delete account (calls `DELETE /users/me`) |
+| **Brand Owner Orders** | `/brands/[brandId]/orders` — paginated order list with per-card fulfillment action buttons: CONFIRM ORDER → MARK PROCESSING → MARK AS SHIPPED (tracking number modal) → MARK DELIVERED; optimistic status update |
+| **Search Autocomplete** | SearchModal suggestion rows while typing; backed by `GET /products/suggestions?q=` |
+| **Recently Viewed** | `useRecentlyViewed` hook stores up to 15 product IDs in AsyncStorage; tracked on every product detail fetch; home screen shows real images + prices in horizontal scroll, hidden when empty, CLEAR wipes storage |
 | **Admin Dashboard** | Platform-wide stats (brands, products, users, revenue) |
 | **Brand Owner Dashboard** | Brand-specific stats, product/order management |
 | **User Management** | Admin user listing, role management, brand assignment |
@@ -248,22 +264,22 @@ Centralized via `useCloudinaryUpload` hook:
 | **Product Bundles** | 3 brand owner screens under `/brands/[brandId]/bundles/` — list, create, edit; bundle discount applied at checkout |
 | **Visual Pin Tags** | `feed/create.tsx`: location icon on product chip → tap image to place pin at x/y %. `feed/[postId].tsx`: absolute dot overlays, tap → product mini-card popup |
 | **Order Tracking (live)** | TRACK SHIPMENT button calls `GET /orders/:id/tracking`; events timeline shown below financial summary |
+| **Invoice PDF** | DOWNLOAD INVOICE generates HTML invoice (items, totals, shipping address) via `expo-print`, shares as PDF via `expo-sharing`; no backend call needed, uses already-loaded order state |
+| **Search History** | `useSearchHistory` hook (AsyncStorage, max 8 queries, dedup, newest-first); chips shown in SearchModal when query is empty; saved on submit + suggestion tap; CLEAR wipes all history |
+| **Product Q&A** | `ProductQA` component on product detail (below reviews); public read; authenticated customers post questions; brand owners see pending + reply inline; `PUT /products/questions/:id/answer` |
+| **Conversion Funnel** | Brand dashboard Top Products row shows "N views → N carts → N sold" with stacked bar visualization; `cartAddCount` tracked server-side on new cart adds |
 | **Multi-Vendor Checkout** | Backend returns `Order[]`; frontend aggregates all order numbers + total for confirmation screen |
 
 ### Developed But Not Working / Incomplete
 
-| Feature | Issue |
-|---------|-------|
-| **ProductVariant Entity Migration** | New `ProductVariant` entity table exists but the system still uses the deprecated `variants` JSON column. Backend normalizes `variantImages → images` on read. |
-| **Auth Route Protection** | Login redirect in `_layout.tsx` only covers a subset of protected segments (`checkout`, `users`, `manage`, `orders`, `referral`). Returns, cart, and profile routes check auth individually at screen level. |
-| **Brand Posts Tab** | Posts fetched and displayed as a section in `brands/[brandId]/index.tsx`. Dedicated `brands/[brandId]/posts.tsx` screen also exists. However, there is **no tab switcher UI** — products and posts are not organized as "Products" / "Posts" tabs. |
+None — all previously incomplete features are now working.
 
 ### Not Started
 
 | Feature | Notes |
 |---------|-------|
 | **Payment Integration** | No payment gateway — checkout creates orders but no payment processing |
-| **Product Search Autocomplete** | Debounced search calls API; no dedicated autocomplete/suggestion endpoint |
+| **Email Verification** | No verify flow after registration — users auto-approved |
 
 ---
 
@@ -278,28 +294,18 @@ Centralized via `useCloudinaryUpload` hook:
 
 ---
 
-### [TODO] Brand Posts Tab on Brand Detail
+### [DONE ✓] Brand Posts Tab on Brand Detail
 
-**Goal:** Add a "Posts" tab to the Brand Detail screen so users can browse a brand's social content directly from the brand profile.
+**Status:** Fully implemented in `brands/[brandId]/index.tsx`.
 
-**Screen affected:** `brands/[brandId]/index.tsx`
-
-**UI changes:**
-- Add a two-tab switcher below the brand header: **"Products"** | **"Posts"**
-- "Products" tab — existing product grid (no change)
-- "Posts" tab — vertically scrollable list of the brand's feed posts
-  - Each post card: images carousel, caption (2 lines truncated), like count, comment count, tagged product chips, timestamp
-  - Tap post → `router.push('/feed/${postId}')`
-  - Pull-to-refresh
-  - Infinite scroll via `useInfiniteScroll` hook
-  - Empty state: "No posts yet"
-- Tab switcher uses the same B&W underline style as other tab bars in the app
-
-**Data:** `GET /feed?brandId=:brandId&page=:page&limit=10`
+- Products | Posts tab switcher added below brand header (B&W underline style)
+- "Posts" tab shows 2-column grid of brand's posts; tap → `/feed/[postId]`
+- Empty state: "No posts yet"
+- Data: `GET /feed?brandId=:brandId&page=:page&limit=10`
 
 ---
 
-### [TODO] "For You" Personalized Section on Home Screen
+### [DONE ✓] "For You" Personalized Section on Home Screen
 
 **Status: DONE ✓** — Implemented in `frontend/app/(tabs)/index.tsx`.
 
@@ -322,7 +328,16 @@ Centralized via `useCloudinaryUpload` hook:
 ## Performance Optimizations
 - **Debounced Search**: 300ms debounce on search inputs before triggering API calls.
 - **List Virtualization**: `FlatList` with `numColumns` for responsive grids.
-- **Optimistic Updates**: Wishlist toggle and like toggle update UI instantly before API confirmation.
+- **Optimistic Updates**: Applied across key user actions — all revert with `Alert` on API failure:
+  - Wishlist toggle (wishlist tab): instant removal from list, no spinner
+  - Wishlist toggle (shop grid): instant heart state flip before API
+  - Cart quantity update: instant count + total recalculation, no refetch
+  - Cart item remove: instant removal after confirm dialog, no refetch
+  - Feed like toggle: instant filled/unfilled heart
 - **Pagination**: Server-side pagination on products, brands, orders, and feed posts.
 - **Infinite Scroll**: `useInfiniteScroll` hook for feed and other paginated lists.
 - **Search Caching**: SearchModal caches trending products to avoid re-fetching on modal reopen.
+- **Skeleton Loaders**: `Skeleton.tsx` provides reusable skeleton primitives (`Skeleton`, `ProductCardSkeleton`, `ProductGridSkeleton`, `OrderCardSkeleton`, `OrderListSkeleton`, `BrandCardSkeleton`, `FeedPostSkeleton`). Used on shop, orders, feed, wishlist, home, brand detail, and dashboard during initial load.
+- **Offline Handling**: `NetworkContext` provides `useNetwork()` hook with `isConnected` state. A global animated banner shows on disconnect/reconnect. All 10 data-fetching screens (shop, feed, brands, wishlist, home, cart, orders, brand detail, dashboard, brand orders, product detail) show `OfflinePlaceholder` (wifi icon + retry button) when offline with no cached data. Stale data displays normally with the global banner.
+- **Press Feedback**: `ShopByLook` figures use `Pressable` with scale-down animation (1 → 0.96 spring) and `expo-haptics` medium impact on press.
+- **Recently Viewed Cache**: `useRecentlyViewed` hook reads/writes AsyncStorage. Product detail writes on fetch. Home screen reads IDs and batch-fetches product data in parallel.

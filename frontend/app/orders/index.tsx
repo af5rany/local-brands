@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useMemo } from "react";
 import {
   View,
   Text,
@@ -13,10 +13,18 @@ import { useRouter } from "expo-router";
 import Header from "@/components/Header";
 import { useAuth } from "@/context/AuthContext";
 import getApiUrl from "@/helpers/getApiUrl";
+import { useThemeColors } from "@/hooks/useThemeColor";
+import type { ThemeColors } from "@/constants/Colors";
+import { OrderListSkeleton } from "@/components/Skeleton";
+import { useNetwork } from "@/context/NetworkContext";
+import OfflinePlaceholder from "@/components/OfflinePlaceholder";
 
 const OrdersScreen = () => {
   const router = useRouter();
   const { token } = useAuth();
+  const colors = useThemeColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+  const { isConnected } = useNetwork();
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -159,6 +167,15 @@ const OrdersScreen = () => {
     );
   };
 
+  if (!isConnected && orders.length === 0) {
+    return (
+      <SafeAreaView style={styles.container} edges={["top"]}>
+        <Header showBack={true} />
+        <OfflinePlaceholder onRetry={fetchOrders} />
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <Header showBack={true} />
@@ -177,9 +194,7 @@ const OrdersScreen = () => {
           </TouchableOpacity>
         </View>
       ) : loading ? (
-        <View style={styles.center}>
-          <ActivityIndicator size="large" color="#000000" />
-        </View>
+        <OrderListSkeleton count={4} />
       ) : orders.length === 0 ? (
         <View style={styles.emptyContainer}>
           <Text style={styles.emptyTitle}>NO ORDERS YET</Text>
@@ -212,10 +227,10 @@ const OrdersScreen = () => {
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f9f9f9",
+    backgroundColor: colors.surfaceRaised,
   },
   center: {
     flex: 1,
@@ -232,13 +247,13 @@ const styles = StyleSheet.create({
   pageTitle: {
     fontFamily: undefined,
     fontSize: 40,
-    color: "#000000",
+    color: colors.text,
     // letterSpacing: -0.5,
   },
   titleAccent: {
     width: 80,
     height: 2,
-    backgroundColor: "#000000",
+    backgroundColor: colors.text,
     marginTop: 12,
   },
 
@@ -250,7 +265,7 @@ const styles = StyleSheet.create({
 
   /* Order card */
   orderCard: {
-    backgroundColor: "#ffffff",
+    backgroundColor: colors.surface,
     padding: 20,
     marginBottom: 16,
     borderRadius: 0,
@@ -270,7 +285,7 @@ const styles = StyleSheet.create({
     fontFamily: undefined,
     fontSize: 15,
     fontWeight: "700",
-    color: "#000000",
+    color: colors.text,
     // letterSpacing: 0.5,
   },
 
@@ -282,13 +297,13 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   badgeProcessing: {
-    borderColor: "#000000",
+    borderColor: colors.text,
   },
   badgeDelivered: {
-    borderColor: "rgba(0,0,0,0.3)",
+    borderColor: colors.border,
   },
   badgeCancelled: {
-    borderColor: "#C41E3A",
+    borderColor: colors.accentRed,
   },
   statusText: {
     fontFamily: undefined,
@@ -297,20 +312,20 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
   },
   badgeTextProcessing: {
-    color: "#000000",
+    color: colors.text,
   },
   badgeTextDelivered: {
-    color: "#888888",
+    color: colors.textTertiary,
   },
   badgeTextCancelled: {
-    color: "#C41E3A",
+    color: colors.accentRed,
   },
 
   /* Date */
   dateText: {
     fontFamily: undefined,
     fontSize: 9,
-    color: "#888888",
+    color: colors.textTertiary,
     // letterSpacing: 1,
     textTransform: "uppercase",
     marginBottom: 16,
@@ -325,7 +340,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 0,
-    backgroundColor: "#eeeeee",
+    backgroundColor: colors.surfaceContainer,
   },
 
   /* Bottom row */
@@ -337,7 +352,7 @@ const styles = StyleSheet.create({
   totalLabel: {
     fontFamily: undefined,
     fontSize: 9,
-    color: "#888888",
+    color: colors.textTertiary,
     // letterSpacing: 1.2,
     textTransform: "uppercase",
     marginBottom: 4,
@@ -345,13 +360,13 @@ const styles = StyleSheet.create({
   totalAmount: {
     fontFamily: undefined,
     fontSize: 22,
-    color: "#000000",
+    color: colors.text,
   },
 
   /* CTA buttons */
   ctaBordered: {
     borderWidth: 1,
-    borderColor: "#000000",
+    borderColor: colors.text,
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 0,
@@ -359,7 +374,7 @@ const styles = StyleSheet.create({
   ctaBorderedText: {
     fontFamily: undefined,
     fontSize: 10,
-    color: "#000000",
+    color: colors.text,
     // letterSpacing: 1.5,
     textTransform: "uppercase",
   },
@@ -370,7 +385,7 @@ const styles = StyleSheet.create({
   ctaGhostText: {
     fontFamily: undefined,
     fontSize: 10,
-    color: "#888888",
+    color: colors.textTertiary,
     // letterSpacing: 1.5,
     textTransform: "uppercase",
     textDecorationLine: "underline",
@@ -386,7 +401,7 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontFamily: undefined,
     fontSize: 14,
-    color: "#000000",
+    color: colors.text,
     // letterSpacing: 2,
     textTransform: "uppercase",
     marginBottom: 16,
@@ -394,20 +409,20 @@ const styles = StyleSheet.create({
   emptySubtitle: {
     fontFamily: "Inter_400Regular",
     fontSize: 14,
-    color: "#888888",
+    color: colors.textTertiary,
     textAlign: "center",
     lineHeight: 22,
     marginBottom: 40,
   },
   primaryBtn: {
-    backgroundColor: "#000000",
+    backgroundColor: colors.primary,
     paddingVertical: 16,
     paddingHorizontal: 40,
     borderRadius: 0,
   },
   primaryBtnText: {
     fontFamily: undefined,
-    color: "#ffffff",
+    color: colors.primaryForeground,
     fontSize: 11,
     // letterSpacing: 2,
     textTransform: "uppercase",

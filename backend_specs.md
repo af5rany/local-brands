@@ -47,8 +47,8 @@ The backend is a robust RESTful API built with **NestJS**, utilizing **TypeScrip
 ### 4. Products & Content (`ProductsModule`)
 - **Entities**:
   - `Product`: Base product data (price, salePrice, stock, status, gender, season, tags, material, dimensions).
-  - `ProductVariant` (Entity): Relational entity for per-variant color/stock/images tracking. **Currently unused** — system reads/writes the deprecated `variants` JSON column instead.
-- **Variant Data Flow**: Frontend sends `{ color, variantImages, stock }` → backend normalizes to `{ images, attributes: { color }, stock }` on save → normalizes `variantImages → images` and `color → attributes.color` on read via `mapToPublicDto`.
+  - `ProductVariant`: Per-size stock record — fields: `size` (string), `stock` (int), `isAvailable` (bool). Color and images are product-level (one color, shared image gallery per product). Fully in use.
+- **Variant Data Flow**: Each `ProductVariant` row = one size option with its own stock count. `mapToPublicDto` maps `product.productVariants` → `variants[]` with `{ id, productId, size, stock, isAvailable }`. `product.color` and `product.images` are returned at product level. The deprecated `variants` JSON column is no longer written to.
 - **Discovery**: Advanced search (`ILike`), pagination (`take`/`skip`), filter by category/type/brand/gender, sort by multiple fields.
 - **Status Lifecycle**: `DRAFT`, `PUBLISHED`, `ARCHIVED`.
 - **Soft Delete**: Supported.
@@ -226,8 +226,7 @@ The backend is a robust RESTful API built with **NestJS**, utilizing **TypeScrip
 ### Key Entity Relationships
 - `User` → `Brand` via `BrandUser` (M:M with roles)
 - `Brand` → `Product` (1:M, cascade delete)
-- `Product` → `ProductVariant` (1:M, cascade — **entity exists but not used in active data flow**)
-- `Product.variants` — deprecated JSON column (currently active)
+- `Product` → `ProductVariant` (1:M, cascade — fully active; one row per size option, stock tracked per size)
 - `User` → `Order` (1:M) → `OrderItem` (1:M) + `OrderStatusHistory` (1:M)
 - `User` → `Cart` (1:1) → `CartItem` (1:M)
 - `User` → `Wishlist` (1:M, links user to product)
@@ -289,20 +288,25 @@ The backend is a robust RESTful API built with **NestJS**, utilizing **TypeScrip
 | **Visual Pin Tags** | `PostProduct.xPercent/yPercent` | Stored as float %; returned in feed/post API responses |
 | **Carrier Tracking** | `CarrierTrackingService` | FedEx/UPS/USPS/DHL live tracking; `GET /orders/:id/tracking` |
 | **Multi-Vendor Checkout** | `orders.service.ts` | Groups cart by brand, creates `Order[]`, returns array |
+| **Search Autocomplete** | `products.service.ts` | `GET /products/suggestions?q=` — returns matching product name strings for live suggestion rows |
+| **Cloudinary Image Cleanup** | `products.service.ts` | `deleteCloudinaryImages()` fires on product `softDelete`; requires `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` in `.env` |
+| **Brand Owner Orders** | `orders.controller.ts` | `GET /orders/brand/:brandId` — paginated orders for a brand; BrandAccessGuard-protected |
+| **Brand Owner Order Fulfillment** | `orders.controller.ts` + `orders.service.ts` | `PUT /orders/:id/fulfill` — brand owner advances order status (PENDING→CONFIRMED→PROCESSING→SHIPPED→DELIVERED); ownership verified via `BrandUser` table; tracking number required for SHIPPED; delegates to existing `update()` for status history + notifications |
+| **Delete Account** | `users.controller.ts` | `DELETE /users/me` — soft-deletes authenticated user and logs them out |
+| **Product Q&A** | `ProductQuestionsModule` | `GET /products/:id/questions` (public); `POST /products/:id/questions` (authenticated); `PUT /products/questions/:id/answer` (brand owner / admin with brand ownership check); `DELETE /questions/:id` (owner or admin) |
+| **Cart-Add Conversion Tracking** | `cart.service.ts` + `product.entity.ts` | `cartAddCount` column on Product; incremented fire-and-forget on NEW cart adds (not re-adds); exposed in brand analytics per-product top-products list |
+| **Invoice PDF** | Frontend-only | `expo-print.printToFileAsync(html)` generates PDF from order HTML template; `expo-sharing.shareAsync()` opens system share sheet with PDF |
 
 ### Developed But Not Working / Incomplete
 
-| Module | Issue |
-|--------|-------|
-| **ProductVariant (Relational)** | Entity and relation exist on `Product` (`productVariants`) but **never loaded or used**. All variant data flows through the deprecated `variants` JSON column. Migration to relational model not complete. |
+None — all previously incomplete modules are now working.
 
 ### Not Implemented
 
 | Feature | Notes |
 |---------|-------|
 | **Payment Processing** | No payment gateway integration |
-| **Server-side Autocomplete** | Search is basic `ILike` — no dedicated autocomplete/suggestion endpoint |
-| **File/Image Cleanup** | No Cloudinary cleanup when products are deleted |
+| **Email Verification** | No verify flow after registration — users auto-approved |
 
 ---
 
@@ -318,7 +322,7 @@ The backend is a robust RESTful API built with **NestJS**, utilizing **TypeScrip
 
 ---
 
-### [TODO] Brand Posts Endpoint
+### [DONE ✓] Brand Posts Endpoint
 
 **Goal:** Expose the feed posts for a specific brand directly, for use on the Brand Detail screen.
 
@@ -332,7 +336,7 @@ Returns paginated `FeedPost` objects for the given brand (same shape as `GET /fe
 
 ---
 
-### [TODO] Personalized "For You" Feed Endpoint
+### [DONE ✓] Personalized "For You" Feed Endpoint
 
 **Status: DONE ✓** — `GET /products/for-you` is implemented in `ProductsService.getForYou()`.
 
@@ -364,11 +368,13 @@ Returns paginated `FeedPost` objects for the given brand (same shape as `GET /fe
 | `/products/filters` | GET | Public | Available filter options (categories, types) |
 | `/products/trending` | GET | Public | Trending products (used by search modal) |
 | `/products/for-you` | GET | Auth | Personalized recommendations based on wishlist + order history |
+| `/products/suggestions` | GET | Public | Autocomplete suggestions — `?q=query` returns matching product name strings |
 | `/cart/items` | POST | Auth | Add item to cart |
 | `/orders` | POST | Auth | Create order (with idempotency key, sends confirmation email) |
 | `/orders/my-orders` | GET | Auth | Current user's orders |
 | `/orders/:id` | GET | Auth | Single order detail |
 | `/orders/:id/history` | GET | Auth | Order status timeline |
+| `/orders/brand/:brandId` | GET | Brand Owner | Paginated orders for a brand (BrandAccessGuard) |
 | `/addresses` | GET/POST | Auth | List/create user addresses |
 | `/addresses/:id` | GET/PUT/DELETE | Auth | Get/update/delete address |
 | `/addresses/:id/default` | PATCH | Auth | Set address as default |
@@ -429,3 +435,4 @@ Returns paginated `FeedPost` objects for the given brand (same shape as `GET /fe
 | `/brands/:id/bundles/:bundleId` | GET/PUT/DELETE | Brand Owner | Bundle detail / update / delete |
 | `/bundles/check` | POST | Public | Check if cart qualifies for bundle discount |
 | `/orders/:orderId/tracking` | GET | Auth | Live carrier tracking events for an order |
+| `/users/me` | DELETE | Auth | Delete own account (soft delete + logout) |

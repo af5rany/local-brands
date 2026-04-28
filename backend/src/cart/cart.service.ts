@@ -272,6 +272,8 @@ export class CartService {
       }
     }
 
+    const isNewCartAdd = !cartItem;
+
     if (cartItem) {
       // Update existing item (upsert logic)
       cartItem.quantity = newQuantity;
@@ -294,6 +296,13 @@ export class CartService {
 
     await this.cartItemRepository.save(cartItem);
     await this.updateCartTotals(cart.id);
+
+    // Track cart-add conversion metric (fire-and-forget, only for new adds)
+    if (isNewCartAdd) {
+      this.productRepository
+        .increment({ id: productId }, 'cartAddCount', 1)
+        .catch(() => {});
+    }
 
     return cartItem;
   }

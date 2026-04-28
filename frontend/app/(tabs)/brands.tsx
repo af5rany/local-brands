@@ -20,12 +20,19 @@ import { Filters, PaginatedResult, SortOptions } from "@/types/filters";
 import { Brand } from "@/types/brand";
 import { BrandStatus } from "@/types/enums";
 import { useAuth } from "@/context/AuthContext";
+import { useThemeColors } from "@/hooks/useThemeColor";
+import type { ThemeColors } from "@/constants/Colors";
+import { useNetwork } from "@/context/NetworkContext";
+import OfflinePlaceholder from "@/components/OfflinePlaceholder";
 
 const BrandsScreen = () => {
   const { token, user } = useAuth();
+  const colors = useThemeColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const userRole = user?.role || user?.userRole;
   const isAdmin = userRole === "admin";
 
+  const { isConnected } = useNetwork();
   const [brandsData, setBrandsData] = useState<PaginatedResult<Brand> | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [refreshing, setRefreshing] = useState<boolean>(false);
@@ -253,7 +260,7 @@ const BrandsScreen = () => {
             onPress={() => router.push("/brands/create")}
             activeOpacity={0.7}
           >
-            <Ionicons name="add" size={18} color="#ffffff" />
+            <Ionicons name="add" size={18} color={colors.primaryForeground} />
             <Text style={styles.createButtonText}>NEW BRAND</Text>
           </TouchableOpacity>
         )}
@@ -265,11 +272,11 @@ const BrandsScreen = () => {
   const renderSearchBar = () => (
     <View style={styles.searchSection}>
       <View style={styles.searchRow}>
-        <Ionicons name="search-outline" size={16} color="#777777" />
+        <Ionicons name="search-outline" size={16} color={colors.textSecondary} />
         <TextInput
           style={styles.searchInput}
           placeholder="SEARCH BRANDS..."
-          placeholderTextColor="#aaaaaa"
+          placeholderTextColor={colors.textTertiary}
           value={searchQuery}
           onChangeText={handleSearch}
           returnKeyType="search"
@@ -277,7 +284,7 @@ const BrandsScreen = () => {
         />
         {searchQuery.length > 0 && (
           <TouchableOpacity onPress={() => setSearchQuery("")}>
-            <Ionicons name="close" size={16} color="#777777" />
+            <Ionicons name="close" size={16} color={colors.textSecondary} />
           </TouchableOpacity>
         )}
       </View>
@@ -296,7 +303,7 @@ const BrandsScreen = () => {
           <Ionicons
             name="options-outline"
             size={14}
-            color={hasActiveFilters ? "#ffffff" : "#000000"}
+            color={hasActiveFilters ? colors.primaryForeground : colors.text}
           />
           <Text
             style={[
@@ -313,7 +320,7 @@ const BrandsScreen = () => {
         onPress={() => setShowSort(true)}
         activeOpacity={0.8}
       >
-        <Ionicons name="swap-vertical-outline" size={14} color="#000000" />
+        <Ionicons name="swap-vertical-outline" size={14} color={colors.text} />
         <Text style={styles.controlBtnText}>SORT</Text>
       </TouchableOpacity>
       {(searchQuery || hasActiveFilters) && (
@@ -322,8 +329,8 @@ const BrandsScreen = () => {
           onPress={clearFilters}
           activeOpacity={0.8}
         >
-          <Ionicons name="close" size={14} color="#C41E3A" />
-          <Text style={[styles.controlBtnText, { color: "#C41E3A" }]}>
+          <Ionicons name="close" size={14} color={colors.danger} />
+          <Text style={[styles.controlBtnText, { color: colors.danger }]}>
             CLEAR
           </Text>
         </TouchableOpacity>
@@ -396,12 +403,12 @@ const BrandsScreen = () => {
               <View style={styles.metaRow}>
                 {item.location && (
                   <View style={styles.metaItem}>
-                    <Ionicons name="location-outline" size={11} color="#aaaaaa" />
+                    <Ionicons name="location-outline" size={11} color={colors.textTertiary} />
                     <Text style={styles.metaText}>{item.location}</Text>
                   </View>
                 )}
                 <View style={styles.metaItem}>
-                  <Ionicons name="cube-outline" size={11} color="#aaaaaa" />
+                  <Ionicons name="cube-outline" size={11} color={colors.textTertiary} />
                   <Text style={styles.metaText}>
                     {item?.products?.length || 0}
                   </Text>
@@ -424,12 +431,12 @@ const BrandsScreen = () => {
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
               {togglingId === item.id ? (
-                <ActivityIndicator size="small" color="#000000" />
+                <ActivityIndicator size="small" color={colors.text} />
               ) : (
                 <Ionicons
                   name={isFollowed ? "heart" : "heart-outline"}
                   size={20}
-                  color="#000000"
+                  color={colors.text}
                 />
               )}
             </TouchableOpacity>
@@ -466,7 +473,7 @@ const BrandsScreen = () => {
             <TextInput
               style={styles.filterInput}
               placeholder="Enter location..."
-              placeholderTextColor="#aaaaaa"
+              placeholderTextColor={colors.textTertiary}
               value={filters.location}
               onChangeText={(text) => handleFilterChange("location", text)}
             />
@@ -477,7 +484,7 @@ const BrandsScreen = () => {
             <TextInput
               style={styles.filterInput}
               placeholder="Enter owner ID..."
-              placeholderTextColor="#aaaaaa"
+              placeholderTextColor={colors.textTertiary}
               value={filters.ownerId}
               onChangeText={(text) => handleFilterChange("ownerId", text)}
               keyboardType="numeric"
@@ -553,7 +560,7 @@ const BrandsScreen = () => {
                 <Text style={styles.sortOptionText}>{option.label} (A-Z)</Text>
                 {sortOptions.sortBy === option.key &&
                   sortOptions.sortOrder === "ASC" && (
-                    <Ionicons name="checkmark" size={18} color="#000000" />
+                    <Ionicons name="checkmark" size={18} color={colors.text} />
                   )}
               </TouchableOpacity>
 
@@ -566,7 +573,7 @@ const BrandsScreen = () => {
                 <Text style={styles.sortOptionText}>{option.label} (Z-A)</Text>
                 {sortOptions.sortBy === option.key &&
                   sortOptions.sortOrder === "DESC" && (
-                    <Ionicons name="checkmark" size={18} color="#000000" />
+                    <Ionicons name="checkmark" size={18} color={colors.text} />
                   )}
               </TouchableOpacity>
             </View>
@@ -598,7 +605,7 @@ const BrandsScreen = () => {
         disabled={loadingMore}
       >
         {loadingMore ? (
-          <ActivityIndicator size="small" color="#000000" />
+          <ActivityIndicator size="small" color={colors.text} />
         ) : (
           <Text style={styles.loadMoreText}>LOAD MORE</Text>
         )}
@@ -634,7 +641,7 @@ const BrandsScreen = () => {
   if (loading && !brandsData) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="small" color="#000000" />
+        <ActivityIndicator size="small" color={colors.text} />
         <Text style={styles.loadingText}>Loading...</Text>
       </View>
     );
@@ -651,6 +658,14 @@ const BrandsScreen = () => {
         >
           <Text style={styles.retryButtonText}>TRY AGAIN</Text>
         </TouchableOpacity>
+      </View>
+    );
+  }
+
+  if (!isConnected && !brandsData) {
+    return (
+      <View style={styles.container}>
+        <OfflinePlaceholder onRetry={() => fetchBrands(1)} />
       </View>
     );
   }
@@ -682,7 +697,7 @@ const BrandsScreen = () => {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            tintColor="#000000"
+            tintColor={colors.primary}
           />
         }
       />
@@ -693,10 +708,10 @@ const BrandsScreen = () => {
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#ffffff",
+    backgroundColor: colors.background,
   },
   listContainer: {
     paddingBottom: 20,
@@ -716,13 +731,13 @@ const styles = StyleSheet.create({
   header: {
     fontFamily: undefined,
     fontSize: 28,
-    color: "#000000",
+    color: colors.text,
     // letterSpacing: 2,
   },
   headerCount: {
     fontFamily: undefined,
     fontSize: 10,
-    color: "#777777",
+    color: colors.textSecondary,
     marginTop: 4,
     // letterSpacing: 2,
   },
@@ -731,7 +746,7 @@ const styles = StyleSheet.create({
   createButton: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#000000",
+    backgroundColor: colors.primary,
     paddingVertical: 10,
     paddingHorizontal: 16,
     gap: 6,
@@ -739,15 +754,15 @@ const styles = StyleSheet.create({
   createButtonText: {
     fontFamily: undefined,
     fontSize: 11,
-    color: "#ffffff",
+    color: colors.primaryForeground,
     // letterSpacing: 1,
   },
 
   // ── Search ────────────────────────────────────────
   searchSection: {
     borderBottomWidth: 2,
-    borderBottomColor: "#000000",
-    backgroundColor: "#ffffff",
+    borderBottomColor: colors.primary,
+    backgroundColor: colors.background,
   },
   searchRow: {
     flexDirection: "row",
@@ -760,7 +775,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontFamily: undefined,
     fontSize: 11,
-    color: "#000000",
+    color: colors.text,
     // letterSpacing: 2,
     paddingVertical: 0,
   },
@@ -773,7 +788,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: "#eeeeee",
+    borderBottomColor: colors.border,
   },
   controlBtn: {
     flexDirection: "row",
@@ -782,24 +797,24 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 7,
     borderWidth: 1,
-    borderColor: "#000000",
+    borderColor: colors.primary,
   },
   controlBtnActive: {
-    backgroundColor: "#000000",
+    backgroundColor: colors.primary,
   },
   controlBtnText: {
     fontFamily: undefined,
     fontSize: 10,
-    color: "#000000",
+    color: colors.text,
     // letterSpacing: 1,
   },
   controlBtnTextActive: {
-    color: "#ffffff",
+    color: colors.primaryForeground,
   },
   resultsCount: {
     fontFamily: undefined,
     fontSize: 9,
-    color: "#777777",
+    color: colors.textSecondary,
     // letterSpacing: 2,
     marginLeft: "auto",
   },
@@ -809,7 +824,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: "#eeeeee",
+    borderBottomColor: colors.border,
   },
   brandRow: {
     flexDirection: "row",
@@ -825,14 +840,14 @@ const styles = StyleSheet.create({
   logoPlaceholder: {
     width: 48,
     height: 48,
-    backgroundColor: "#eeeeee",
+    backgroundColor: colors.surfaceRaised,
     alignItems: "center",
     justifyContent: "center",
   },
   logoInitial: {
     fontFamily: undefined,
     fontSize: 20,
-    color: "#000000",
+    color: colors.text,
   },
   brandInfo: {
     flex: 1,
@@ -847,7 +862,7 @@ const styles = StyleSheet.create({
   brandName: {
     fontFamily: undefined,
     fontSize: 15,
-    color: "#000000",
+    color: colors.text,
     flexShrink: 1,
   },
   statusBadge: {
@@ -855,10 +870,10 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
   },
   statusBadgeActive: {
-    backgroundColor: "#000000",
+    backgroundColor: colors.primary,
   },
   statusBadgeInactive: {
-    backgroundColor: "#eeeeee",
+    backgroundColor: colors.surfaceRaised,
   },
   statusText: {
     fontFamily: undefined,
@@ -866,15 +881,15 @@ const styles = StyleSheet.create({
     // letterSpacing: 1,
   },
   statusTextActive: {
-    color: "#ffffff",
+    color: colors.primaryForeground,
   },
   statusTextInactive: {
-    color: "#777777",
+    color: colors.textSecondary,
   },
   brandDescription: {
     fontFamily: "Inter_400Regular",
     fontSize: 13,
-    color: "#777777",
+    color: colors.textSecondary,
     lineHeight: 18,
     marginBottom: 6,
   },
@@ -891,13 +906,13 @@ const styles = StyleSheet.create({
   metaText: {
     fontFamily: undefined,
     fontSize: 9,
-    color: "#aaaaaa",
+    color: colors.textTertiary,
     // letterSpacing: 0.5,
   },
   arrowText: {
     fontFamily: undefined,
     fontSize: 16,
-    color: "#000000",
+    color: colors.text,
   },
   followButton: {
     width: 36,
@@ -914,7 +929,7 @@ const styles = StyleSheet.create({
   paginationText: {
     fontFamily: undefined,
     fontSize: 9,
-    color: "#777777",
+    color: colors.textSecondary,
     // letterSpacing: 2,
   },
 
@@ -925,19 +940,19 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     marginHorizontal: 24,
     borderWidth: 1,
-    borderColor: "#000000",
+    borderColor: colors.primary,
   },
   loadMoreText: {
     fontFamily: undefined,
     fontSize: 11,
-    color: "#000000",
+    color: colors.text,
     // letterSpacing: 2,
   },
 
   // ── Modal ─────────────────────────────────────────
   modalContainer: {
     flex: 1,
-    backgroundColor: "#ffffff",
+    backgroundColor: colors.background,
   },
   modalHeader: {
     flexDirection: "row",
@@ -946,24 +961,24 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingVertical: 16,
     borderBottomWidth: 2,
-    borderBottomColor: "#000000",
+    borderBottomColor: colors.primary,
   },
   modalTitle: {
     fontFamily: undefined,
     fontSize: 11,
-    color: "#000000",
+    color: colors.text,
     // letterSpacing: 2,
   },
   modalActionCancel: {
     fontFamily: undefined,
     fontSize: 11,
-    color: "#777777",
+    color: colors.textSecondary,
     // letterSpacing: 1,
   },
   modalActionDone: {
     fontFamily: undefined,
     fontSize: 11,
-    color: "#000000",
+    color: colors.text,
     // letterSpacing: 1,
   },
   modalContent: {
@@ -978,17 +993,17 @@ const styles = StyleSheet.create({
   filterLabel: {
     fontFamily: undefined,
     fontSize: 9,
-    color: "#777777",
+    color: colors.textSecondary,
     // letterSpacing: 2,
     marginBottom: 10,
   },
   filterInput: {
     fontFamily: undefined,
     fontSize: 13,
-    color: "#000000",
+    color: colors.text,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: "#eeeeee",
+    borderBottomColor: colors.border,
   },
 
   // ── Sort ──────────────────────────────────────────
@@ -998,12 +1013,12 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: "#eeeeee",
+    borderBottomColor: colors.border,
   },
   sortOptionText: {
     fontFamily: undefined,
     fontSize: 10,
-    color: "#000000",
+    color: colors.text,
     // letterSpacing: 2,
     textTransform: "uppercase",
   },
@@ -1018,19 +1033,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderWidth: 1,
-    borderColor: "#000000",
+    borderColor: colors.primary,
   },
   statusChipActive: {
-    backgroundColor: "#000000",
+    backgroundColor: colors.primary,
   },
   statusChipText: {
     fontFamily: undefined,
     fontSize: 10,
-    color: "#000000",
+    color: colors.text,
     // letterSpacing: 1,
   },
   statusChipTextActive: {
-    color: "#ffffff",
+    color: colors.primaryForeground,
   },
 
   // ── States ────────────────────────────────────────
@@ -1038,13 +1053,13 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#ffffff",
+    backgroundColor: colors.background,
   },
   loadingText: {
     fontFamily: undefined,
     marginTop: 12,
     fontSize: 11,
-    color: "#777777",
+    color: colors.textSecondary,
     // letterSpacing: 1,
   },
   errorContainer: {
@@ -1052,19 +1067,19 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     padding: 24,
-    backgroundColor: "#ffffff",
+    backgroundColor: colors.background,
   },
   errorTitle: {
     fontFamily: undefined,
     fontSize: 16,
-    color: "#000000",
+    color: colors.text,
     // letterSpacing: 2,
     marginBottom: 8,
   },
   errorText: {
     fontFamily: "Inter_400Regular",
     fontSize: 14,
-    color: "#777777",
+    color: colors.textSecondary,
     textAlign: "center",
     marginBottom: 28,
   },
@@ -1072,12 +1087,12 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 28,
     borderWidth: 1,
-    borderColor: "#000000",
+    borderColor: colors.primary,
   },
   retryButtonText: {
     fontFamily: undefined,
     fontSize: 11,
-    color: "#000000",
+    color: colors.text,
     // letterSpacing: 2,
   },
   emptyState: {
@@ -1088,14 +1103,14 @@ const styles = StyleSheet.create({
   emptyStateTitle: {
     fontFamily: undefined,
     fontSize: 16,
-    color: "#000000",
+    color: colors.text,
     // letterSpacing: 2,
     marginBottom: 8,
   },
   emptyStateText: {
     fontFamily: "Inter_400Regular",
     fontSize: 14,
-    color: "#777777",
+    color: colors.textSecondary,
     textAlign: "center",
     marginBottom: 24,
     lineHeight: 20,
@@ -1104,12 +1119,12 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 24,
     borderWidth: 1,
-    borderColor: "#000000",
+    borderColor: colors.primary,
   },
   clearButtonText: {
     fontFamily: undefined,
     fontSize: 11,
-    color: "#000000",
+    color: colors.text,
     // letterSpacing: 2,
   },
 });

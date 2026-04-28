@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
   View,
@@ -18,11 +18,13 @@ import { Ionicons } from "@expo/vector-icons";
 import getApiUrl from "@/helpers/getApiUrl";
 import { useRouter } from "expo-router";
 import { useThemeColors } from "@/hooks/useThemeColor";
+import type { ThemeColors } from "@/constants/Colors";
 import Header from "@/components/Header";
 
 const ForgotPasswordScreen = () => {
   const router = useRouter();
   const colors = useThemeColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -76,7 +78,7 @@ const ForgotPasswordScreen = () => {
           keyboardShouldPersistTaps="handled"
         >
           <Pressable style={styles.backButton} onPress={() => router.back()}>
-            <Ionicons name="arrow-back" size={24} color="#1e293b" />
+            <Ionicons name="arrow-back" size={24} color={colors.text} />
           </Pressable>
 
           <Image
@@ -95,7 +97,7 @@ const ForgotPasswordScreen = () => {
               <Ionicons
                 name="mail-outline"
                 size={20}
-                color="#64748b"
+                color={colors.textSecondary}
                 style={styles.inputIcon}
               />
               <TextInput
@@ -106,7 +108,7 @@ const ForgotPasswordScreen = () => {
                 keyboardType="email-address"
                 autoCapitalize="none"
                 editable={!loading}
-                placeholderTextColor="#94a3b8"
+                placeholderTextColor={colors.textTertiary}
               />
             </View>
           </View>
@@ -117,7 +119,7 @@ const ForgotPasswordScreen = () => {
             disabled={loading}
           >
             {loading ? (
-              <ActivityIndicator color="#fff" />
+              <ActivityIndicator color={colors.primaryForeground} />
             ) : (
               <Text style={styles.buttonText}>Send Reset Link</Text>
             )}
@@ -128,8 +130,8 @@ const ForgotPasswordScreen = () => {
   );
 };
 
-const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: "#fff" },
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
+  safeArea: { flex: 1, backgroundColor: colors.background },
   container: { flex: 1 },
   scroll: {
     flexGrow: 1,
@@ -145,21 +147,21 @@ const styles = StyleSheet.create({
     padding: 8,
   },
   logo: { width: 140, height: 80, marginBottom: 24 },
-  title: { fontSize: 24, fontWeight: "700", color: "#1e293b", marginBottom: 8 },
+  title: { fontSize: 24, fontWeight: "700", color: colors.text, marginBottom: 8 },
   subtitle: {
     fontSize: 16,
-    color: "#64748b",
+    color: colors.textSecondary,
     marginBottom: 32,
     textAlign: "center",
   },
   inputContainer: { width: "100%", marginBottom: 16 },
-  label: { fontSize: 14, fontWeight: "500", color: "#475569", marginBottom: 8 },
+  label: { fontSize: 14, fontWeight: "500", color: colors.textSecondary, marginBottom: 8 },
   inputWrapper: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#F5F5F5",
+    backgroundColor: colors.surfaceRaised,
     borderWidth: 1,
-    borderColor: "#E5E5E5",
+    borderColor: colors.border,
     borderRadius: 0,
     paddingHorizontal: 12,
     height: 48,
@@ -168,11 +170,11 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     fontSize: 16,
-    color: "#1e293b",
+    color: colors.text,
     height: "100%",
   },
   button: {
-    backgroundColor: "#000000",
+    backgroundColor: colors.primary,
     paddingVertical: 14,
     borderRadius: 0,
     marginTop: 24,
@@ -181,9 +183,9 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   buttonDisabled: {
-    backgroundColor: "#999999",
+    backgroundColor: colors.textTertiary,
   },
-  buttonText: { color: "#fff", fontSize: 16, fontWeight: "600" },
+  buttonText: { color: colors.primaryForeground, fontSize: 16, fontWeight: "600" },
 });
 
 export default ForgotPasswordScreen;

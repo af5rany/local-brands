@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState, useCallback } from "react";
+import React, { useRef, useEffect, useState, useCallback, useMemo } from "react";
 import {
   View,
   ScrollView,
@@ -8,7 +8,8 @@ import {
   NativeScrollEvent,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { useThemeColor } from "@/hooks/useThemeColor";
+import { useThemeColors } from "@/hooks/useThemeColor";
+import type { ThemeColors } from "@/constants/Colors";
 
 interface AutoSwipeImagesProps {
   images: string[];
@@ -27,14 +28,8 @@ const AutoSwipeImages: React.FC<AutoSwipeImagesProps> = ({
   const [activeIndex, setActiveIndex] = useState(0);
   const activeIndexRef = useRef(0);
 
-  const secondaryTextColor = useThemeColor(
-    { light: "#666666", dark: "#999999" },
-    "textTertiary",
-  );
-  const imageBackgroundColor = useThemeColor(
-    { light: "#f8f8f8", dark: "#2c2c2e" },
-    "background",
-  );
+  const colors = useThemeColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   const onScroll = useCallback(
     (e: NativeSyntheticEvent<NativeScrollEvent>) => {
@@ -74,11 +69,11 @@ const AutoSwipeImages: React.FC<AutoSwipeImagesProps> = ({
             width,
             height,
             borderRadius,
-            backgroundColor: imageBackgroundColor,
+            backgroundColor: colors.surfaceRaised,
           },
         ]}
       >
-        <Ionicons name="image-outline" size={40} color={secondaryTextColor} />
+        <Ionicons name="image-outline" size={40} color={colors.textTertiary} />
       </View>
     );
   }
@@ -128,7 +123,7 @@ const AutoSwipeImages: React.FC<AutoSwipeImagesProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   placeholder: {
     justifyContent: "center",
     alignItems: "center",
@@ -149,7 +144,7 @@ const styles = StyleSheet.create({
     borderRadius: 0,
   },
   dotActive: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: colors.textInverse,
     width: 8,
     height: 8,
     borderRadius: 0,

@@ -107,7 +107,7 @@ const AdminDashboard = ({
       description: "System configuration and settings",
       icon: "settings" as const,
       color: colors.danger,
-      onPress: showComingSoon,
+      onPress: () => navigateTo("/manage/settings"),
     },
     {
       title: "Continue as Customer",

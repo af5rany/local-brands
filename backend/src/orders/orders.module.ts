@@ -11,6 +11,7 @@ import { Address } from '../addresses/address.entity';
 import { Cart } from '../cart/cart.entity';
 import { CartItem } from '../cart/cart-item.entity';
 import { OrderStatusHistory } from './order-status-history.entity';
+import { BrandUser } from '../brands/brand-user.entity';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { PromoCodesModule } from '../promo-codes/promo-codes.module';
 
@@ -25,6 +26,7 @@ import { PromoCodesModule } from '../promo-codes/promo-codes.module';
       Cart,
       CartItem,
       OrderStatusHistory,
+      BrandUser,
     ]),
     NotificationsModule,
     PromoCodesModule,

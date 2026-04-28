@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import {
   View,
   Text,
@@ -7,6 +7,8 @@ import {
   useWindowDimensions,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useThemeColors } from "@/hooks/useThemeColor";
+import type { ThemeColors } from "@/constants/Colors";
 
 type Order = {
   id: string;
@@ -22,21 +24,24 @@ type RecentOrderCardProps = {
 };
 
 const RecentOrderCard = ({ order, onPress }: RecentOrderCardProps) => {
+  const colors = useThemeColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
       case "pending":
-        return "#f59e0b";
+        return colors.warning;
       case "processing":
-        return "#3b82f6";
+        return colors.toastInfo;
       case "shipped":
-        return "#8b5cf6";
+        return colors.toastInfo;
       case "delivered":
       case "completed":
-        return "#10b981";
+        return colors.toastSuccess;
       case "cancelled":
-        return "#ef4444";
+        return colors.toastError;
       default:
-        return "#64748b";
+        return colors.textSecondary;
     }
   };
 
@@ -93,7 +98,7 @@ const RecentOrderCard = ({ order, onPress }: RecentOrderCardProps) => {
           <Ionicons
             name={getStatusIcon(order.status) as any}
             size={12}
-            color="white"
+            color={colors.textInverse}
             style={styles.statusIcon}
           />
           <Text style={styles.statusText}>{order.status}</Text>
@@ -120,22 +125,22 @@ const RecentOrderCard = ({ order, onPress }: RecentOrderCardProps) => {
       <View style={styles.footer}>
         <View style={styles.viewDetailsButton}>
           <Text style={styles.viewDetailsText}>View Details</Text>
-          <Ionicons name="chevron-forward" size={14} color="#346beb" />
+          <Ionicons name="chevron-forward" size={14} color={colors.link} />
         </View>
       </View>
     </TouchableOpacity>
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   card: {
-    backgroundColor: "#ffffff",
+    backgroundColor: colors.surface,
     borderRadius: 0,
     padding: 16,
     marginRight: 16,
     width: 240,
     borderWidth: 1,
-    borderColor: "#E5E5E5",
+    borderColor: colors.border,
   },
   tabletCard: {
     width: 320,
@@ -150,7 +155,7 @@ const styles = StyleSheet.create({
   orderId: {
     fontSize: 16,
     fontWeight: "bold",
-    color: "#1e293b",
+    color: colors.text,
   },
   statusBadge: {
     flexDirection: "row",
@@ -165,7 +170,7 @@ const styles = StyleSheet.create({
   statusText: {
     fontSize: 12,
     fontWeight: "600",
-    color: "white",
+    color: colors.textInverse,
     textTransform: "capitalize",
   },
   content: {
@@ -179,22 +184,22 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 14,
-    color: "#64748b",
+    color: colors.textSecondary,
     fontWeight: "500",
   },
   value: {
     fontSize: 14,
-    color: "#1e293b",
+    color: colors.text,
     fontWeight: "600",
   },
   totalAmount: {
     fontSize: 16,
-    color: "#10b981",
+    color: colors.toastSuccess,
     fontWeight: "bold",
   },
   footer: {
     borderTopWidth: 1,
-    borderTopColor: "#f1f5f9",
+    borderTopColor: colors.borderLight,
     paddingTop: 12,
   },
   viewDetailsButton: {
@@ -204,7 +209,7 @@ const styles = StyleSheet.create({
   },
   viewDetailsText: {
     fontSize: 14,
-    color: "#346beb",
+    color: colors.link,
     fontWeight: "600",
     marginRight: 4,
   },

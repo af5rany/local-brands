@@ -152,7 +152,7 @@ const RecommendationCard = ({
               { backgroundColor: colors.discountBadge },
             ]}
           >
-            <Text style={styles.discountText}>-{discountPercentage}%</Text>
+            <Text style={[styles.discountText, { color: colors.textInverse }]}>-{discountPercentage}%</Text>
           </View>
         )}
       </View>
@@ -272,7 +272,6 @@ const styles = StyleSheet.create({
   discountText: {
     fontSize: 11,
     fontWeight: "800",
-    color: "#FFFFFF",
   },
   content: {
     padding: 12,

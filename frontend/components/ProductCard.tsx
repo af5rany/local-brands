@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import {
   View,
   Text,
@@ -12,6 +12,7 @@ import { useAuth } from "@/context/AuthContext";
 import { Ionicons } from "@expo/vector-icons";
 import { Product } from "@/types/product";
 import { useThemeColors } from "@/hooks/useThemeColor";
+import type { ThemeColors } from "@/constants/Colors";
 
 interface ProductCardProps {
   product: Product;
@@ -31,6 +32,7 @@ const ProductCard: React.FC<ProductCardProps> = React.memo(({
   const router = useRouter();
   const { token } = useAuth();
   const colors = useThemeColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   const hasDiscount = product.salePrice && product.salePrice < product.price;
   const displayPrice = hasDiscount ? product.salePrice! : product.price;
@@ -115,7 +117,7 @@ const ProductCard: React.FC<ProductCardProps> = React.memo(({
   );
 });
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   card: {
     flex: 1,
     marginBottom: 24,
@@ -140,7 +142,7 @@ const styles = StyleSheet.create({
   saleBadgeText: {
     fontFamily: undefined,
     fontSize: 9,
-    color: "#ffffff",
+    color: colors.textInverse,
     // // letterSpacing: 1,
   },
   heartBtn: {

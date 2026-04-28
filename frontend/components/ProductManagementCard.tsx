@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import {
   View,
   Text,
@@ -7,7 +7,8 @@ import {
   TouchableOpacity,
 } from "react-native";
 import { useRouter } from "expo-router";
-import { useThemeColor } from "@/hooks/useThemeColor";
+import { useThemeColors } from "@/hooks/useThemeColor";
+import type { ThemeColors } from "@/constants/Colors";
 import { Ionicons } from "@expo/vector-icons";
 import { Product } from "@/types/product";
 import { ProductStatus } from "@/types/enums";
@@ -17,39 +18,21 @@ interface ProductManagementCardProps {
   onEdit?: (productId: number) => void;
 }
 
-const STATUS_COLORS: Record<ProductStatus, string> = {
-  [ProductStatus.PUBLISHED]: "#10b981",
-  [ProductStatus.DRAFT]: "#64748b",
-  [ProductStatus.ARCHIVED]: "#ef4444",
-};
-
 const ProductManagementCard: React.FC<ProductManagementCardProps> = ({
   product,
   onEdit,
 }) => {
   const router = useRouter();
+  const colors = useThemeColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
-  const cardBackground = useThemeColor(
-    { light: "#ffffff", dark: "#1c1c1e" },
-    "background",
-  );
-  const borderColor = useThemeColor(
-    { light: "#f0f0f0", dark: "#2c2c2e" },
-    "text",
-  );
-  const textColor = useThemeColor({}, "text");
-  const secondaryTextColor = useThemeColor(
-    { light: "#666666", dark: "#999999" },
-    "text",
-  );
-  const imageBackgroundColor = useThemeColor(
-    { light: "#f8f8f8", dark: "#2c2c2e" },
-    "background",
-  );
-  const buttonColor = useThemeColor(
-    { light: "#007AFF", dark: "#0A84FF" },
-    "primary",
-  );
+  const getStatusColor = (status: ProductStatus): string => {
+    switch (status) {
+      case ProductStatus.PUBLISHED: return colors.toastSuccess;
+      case ProductStatus.ARCHIVED: return colors.toastError;
+      default: return colors.textSecondary;
+    }
+  };
 
   const thumbnail =
     product.images?.[0] ??
@@ -64,7 +47,7 @@ const ProductManagementCard: React.FC<ProductManagementCardProps> = ({
   const hasDiscount =
     product.salePrice != null && product.salePrice < product.price;
 
-  const statusColor = STATUS_COLORS[product.status] ?? "#64748b";
+  const statusColor = getStatusColor(product.status);
 
   const meta = [product.productType, product.gender, product.season]
     .filter(Boolean)
@@ -72,41 +55,41 @@ const ProductManagementCard: React.FC<ProductManagementCardProps> = ({
 
   return (
     <TouchableOpacity
-      style={[styles.card, { backgroundColor: cardBackground, borderColor }]}
+      style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.borderLight }]}
       onPress={() => router.push(`/products/${product.id}`)}
       activeOpacity={0.75}
     >
       {/* Thumbnail */}
-      <View style={[styles.thumbnail, { backgroundColor: imageBackgroundColor }]}>
+      <View style={[styles.thumbnail, { backgroundColor: colors.surfaceRaised }]}>
         {thumbnail ? (
           <Image source={{ uri: thumbnail }} style={styles.thumbnailImage} />
         ) : (
-          <Ionicons name="image-outline" size={24} color={secondaryTextColor} />
+          <Ionicons name="image-outline" size={24} color={colors.textSecondary} />
         )}
       </View>
 
       {/* Info */}
       <View style={styles.info}>
-        <Text style={[styles.name, { color: textColor }]} numberOfLines={1}>
+        <Text style={[styles.name, { color: colors.text }]} numberOfLines={1}>
           {product.name}
         </Text>
 
         <View style={styles.priceRow}>
-          <Text style={[styles.price, { color: hasDiscount ? "#10b981" : textColor }]}>
+          <Text style={[styles.price, { color: hasDiscount ? colors.toastSuccess : colors.text }]}>
             ${displayPrice}
           </Text>
           {hasDiscount && (
-            <Text style={[styles.originalPrice, { color: secondaryTextColor }]}>
+            <Text style={[styles.originalPrice, { color: colors.textSecondary }]}>
               ${product.price}
             </Text>
           )}
-          <Text style={[styles.stock, { color: secondaryTextColor }]}>
+          <Text style={[styles.stock, { color: colors.textSecondary }]}>
             · {product.stock > 0 ? `${product.stock} in stock` : "Out of stock"}
           </Text>
         </View>
 
         {meta ? (
-          <Text style={[styles.meta, { color: secondaryTextColor }]} numberOfLines={1}>
+          <Text style={[styles.meta, { color: colors.textSecondary }]} numberOfLines={1}>
             {meta}
           </Text>
         ) : null}
@@ -117,7 +100,7 @@ const ProductManagementCard: React.FC<ProductManagementCardProps> = ({
             <View
               style={[
                 styles.colorDot,
-                { backgroundColor: product.color, borderColor },
+                { backgroundColor: product.color, borderColor: colors.borderLight },
               ]}
             />
           </View>
@@ -132,14 +115,14 @@ const ProductManagementCard: React.FC<ProductManagementCardProps> = ({
 
         {onEdit && (
           <TouchableOpacity
-            style={[styles.editButton, { borderColor }]}
+            style={[styles.editButton, { borderColor: colors.borderLight }]}
             onPress={(e) => {
               e.stopPropagation();
               onEdit(product.id);
             }}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
-            <Ionicons name="create-outline" size={16} color={buttonColor} />
+            <Ionicons name="create-outline" size={16} color={colors.primary} />
           </TouchableOpacity>
         )}
       </View>
@@ -147,7 +130,7 @@ const ProductManagementCard: React.FC<ProductManagementCardProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   card: {
     flexDirection: "row",
     alignItems: "center",
@@ -223,7 +206,7 @@ const styles = StyleSheet.create({
   statusText: {
     fontSize: 9,
     fontWeight: "700",
-    color: "#ffffff",
+    color: colors.textInverse,
     textTransform: "uppercase",
     // letterSpacing: 0.4,
   },

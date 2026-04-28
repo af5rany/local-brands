@@ -20,6 +20,7 @@ import { useRouter } from "expo-router";
 import { useThemeColors } from "@/hooks/useThemeColor";
 import { useAuth } from "@/context/AuthContext";
 import { useImageSearch } from "@/hooks/useImageSearch";
+import { useSearchHistory } from "@/hooks/useSearchHistory";
 import getApiUrl from "@/helpers/getApiUrl";
 import { Product } from "@/types/product";
 
@@ -38,6 +39,7 @@ export default function SearchModal({ visible, onClose }: SearchModalProps) {
   const [query, setQuery] = useState("");
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(false);
+  const [suggestions, setSuggestions] = useState<string[]>([]);
   const cachedProducts = useRef<Product[]>([]);
 
   const {
@@ -50,6 +52,8 @@ export default function SearchModal({ visible, onClose }: SearchModalProps) {
     clear: clearImageSearch,
   } = useImageSearch();
 
+  const { history: searchHistory, addQuery, clearHistory } = useSearchHistory();
+
   const inImageSearchMode = !!searchedImageUri;
   const itemWidth = (width - 48) / 2;
 
@@ -58,6 +62,7 @@ export default function SearchModal({ visible, onClose }: SearchModalProps) {
     if (!visible) {
       setQuery("");
       setProducts([]);
+      setSuggestions([]);
       clearImageSearch();
       return;
     }
@@ -94,16 +99,29 @@ export default function SearchModal({ visible, onClose }: SearchModalProps) {
     async (text: string) => {
       if (!text.trim()) {
         setProducts(cachedProducts.current);
+        setSuggestions([]);
         return;
       }
       setLoading(true);
       try {
-        const res = await fetch(
-          `${getApiUrl()}/products?limit=20&status=published&search=${encodeURIComponent(text)}`,
-          { headers: { ...(token && { Authorization: `Bearer ${token}` }) } },
-        );
-        const data = await res.json();
+        const [productsRes, suggestionsRes] = await Promise.all([
+          fetch(
+            `${getApiUrl()}/products?limit=20&status=published&search=${encodeURIComponent(text)}`,
+            { headers: { ...(token && { Authorization: `Bearer ${token}` }) } },
+          ),
+          text.trim().length >= 2
+            ? fetch(`${getApiUrl()}/products/suggestions?q=${encodeURIComponent(text)}`)
+            : Promise.resolve(null),
+        ]);
+        const data = await productsRes.json();
         setProducts(data.items || []);
+        if (suggestionsRes?.ok) {
+          const sData = await suggestionsRes.json();
+          setSuggestions([
+            ...((sData.products as string[]) || []),
+            ...((sData.brands as string[]) || []),
+          ].slice(0, 6));
+        }
       } catch {
         setProducts([]);
       } finally {
@@ -124,6 +142,13 @@ export default function SearchModal({ visible, onClose }: SearchModalProps) {
   const handleProductPress = (id: number) => {
     router.push(`/products/${id}` as any);
     onClose();
+  };
+
+  const handleSearchSubmit = (text: string) => {
+    const q = text.trim();
+    if (!q) return;
+    addQuery(q);
+    searchProducts(q);
   };
 
   const handleOpenPicker = () => {
@@ -220,6 +245,7 @@ export default function SearchModal({ visible, onClose }: SearchModalProps) {
             placeholderTextColor={colors.textTertiary}
             value={query}
             onChangeText={handleChangeText}
+            onSubmitEditing={() => handleSearchSubmit(query)}
             autoCapitalize="none"
             autoCorrect={false}
             returnKeyType="search"
@@ -254,10 +280,60 @@ export default function SearchModal({ visible, onClose }: SearchModalProps) {
           </View>
         )}
 
+        {/* Recent search history — shown when query is empty and not in image search */}
+        {!inImageSearchMode && !query.trim() && searchHistory.length > 0 && (
+          <View style={[styles.historyContainer, { borderBottomColor: colors.border }]}>
+            <View style={styles.historyHeader}>
+              <Text style={[styles.historyTitle, { color: colors.textTertiary }]}>RECENT</Text>
+              <Pressable onPress={clearHistory} hitSlop={8}>
+                <Text style={[styles.historyClear, { color: colors.textTertiary }]}>CLEAR</Text>
+              </Pressable>
+            </View>
+            <View style={styles.historyChips}>
+              {searchHistory.map((term) => (
+                <Pressable
+                  key={term}
+                  style={[styles.historyChip, { borderColor: colors.border }]}
+                  onPress={() => {
+                    setQuery(term);
+                    handleSearchSubmit(term);
+                  }}
+                >
+                  <Ionicons name="time-outline" size={12} color={colors.textTertiary} />
+                  <Text style={[styles.historyChipText, { color: colors.text }]} numberOfLines={1}>
+                    {term}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+          </View>
+        )}
+
+        {/* Autocomplete suggestions */}
+        {!inImageSearchMode && suggestions.length > 0 && query.trim().length >= 2 && (
+          <View style={[styles.suggestionsContainer, { borderBottomColor: colors.border }]}>
+            {suggestions.map((s) => (
+              <Pressable
+                key={s}
+                style={[styles.suggestionRow, { borderBottomColor: colors.borderLight }]}
+                onPress={() => {
+                  setQuery(s);
+                  setSuggestions([]);
+                  addQuery(s);
+                  searchProducts(s);
+                }}
+              >
+                <Ionicons name="search-outline" size={14} color={colors.textTertiary} />
+                <Text style={[styles.suggestionText, { color: colors.text }]}>{s}</Text>
+              </Pressable>
+            ))}
+          </View>
+        )}
+
         {/* Error banner */}
         {imageError && inImageSearchMode && (
-          <View style={styles.errorBanner}>
-            <Text style={styles.errorText}>{imageError}</Text>
+          <View style={[styles.errorBanner, { backgroundColor: colors.dangerSoft }]}>
+            <Text style={[styles.errorText, { color: colors.danger }]}>{imageError}</Text>
           </View>
         )}
 
@@ -359,10 +435,8 @@ const styles = StyleSheet.create({
   errorBanner: {
     paddingHorizontal: 16,
     paddingVertical: 8,
-    backgroundColor: "#fff0f0",
   },
   errorText: {
-    color: "#cc0000",
     fontSize: 12,
   },
   sectionTitle: {
@@ -419,5 +493,59 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 14,
+  },
+  historyContainer: {
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 12,
+    borderBottomWidth: 0.5,
+  },
+  historyHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 10,
+  },
+  historyTitle: {
+    fontSize: 10,
+    fontWeight: "700",
+    letterSpacing: 1.5,
+  },
+  historyClear: {
+    fontSize: 10,
+    fontWeight: "700",
+  },
+  historyChips: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  historyChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderWidth: 1,
+    maxWidth: 180,
+  },
+  historyChipText: {
+    fontSize: 12,
+    flex: 1,
+  },
+  suggestionsContainer: {
+    borderBottomWidth: 0.5,
+  },
+  suggestionRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 11,
+    borderBottomWidth: 0.5,
+  },
+  suggestionText: {
+    fontSize: 14,
+    flex: 1,
   },
 });

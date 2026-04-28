@@ -89,6 +89,11 @@ export class UsersController {
     }
   }
 
+  @Delete('me')
+  async removeMe(@Request() req): Promise<void> {
+    return this.usersService.remove(req.user.id);
+  }
+
   @Delete(':id')
   async remove(@Param('id') id: number, @Request() req): Promise<void> {
     const currentUser = req.user;

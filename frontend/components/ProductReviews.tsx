@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   View,
   Text,
@@ -16,7 +16,8 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/context/AuthContext";
 import getApiUrl from "@/helpers/getApiUrl";
-import { useThemeColor } from "@/hooks/useThemeColor";
+import { useThemeColors } from "@/hooks/useThemeColor";
+import type { ThemeColors } from "@/constants/Colors";
 import { useCloudinaryUpload } from "@/hooks/useCloudinaryUpload";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
@@ -51,16 +52,8 @@ const ProductReviews = ({ productId }: ProductReviewsProps) => {
 
   const { pickAndUpload, isUploading } = useCloudinaryUpload();
 
-  const backgroundColor = useThemeColor({}, "background");
-  const textColor = useThemeColor({}, "text");
-  const secondaryTextColor = useThemeColor(
-    { light: "#737373", dark: "#A3A3A3" },
-    "text",
-  );
-  const cardBackground = useThemeColor(
-    { light: "#FAFAFA", dark: "#1C1C1E" },
-    "background",
-  );
+  const colors = useThemeColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   useEffect(() => {
     fetchReviews();
@@ -187,7 +180,7 @@ const ProductReviews = ({ productId }: ProductReviewsProps) => {
           <Ionicons
             name={i <= (interactive ? rating : count) ? "star" : "star-outline"}
             size={interactive ? 32 : 14}
-            color="#000000"
+            color={colors.text}
           />
         </TouchableOpacity>,
       );
@@ -216,14 +209,14 @@ const ProductReviews = ({ productId }: ProductReviewsProps) => {
     <View
       style={[
         styles.reviewItem,
-        { borderBottomColor: secondaryTextColor + "20" },
+        { borderBottomColor: colors.borderLight },
       ]}
     >
       <View style={styles.reviewHeader}>
-        <Text style={[styles.userName, { color: textColor }]}>
+        <Text style={[styles.userName, { color: colors.text }]}>
           {item.user.name}
         </Text>
-        <Text style={[styles.reviewDate, { color: secondaryTextColor }]}>
+        <Text style={[styles.reviewDate, { color: colors.textSecondary }]}>
           {new Date(item.createdAt).toLocaleDateString()}
         </Text>
       </View>
@@ -231,35 +224,35 @@ const ProductReviews = ({ productId }: ProductReviewsProps) => {
         {renderStars(item.rating)}
         {item.isVerifiedPurchase && (
           <View style={styles.verifiedBadge}>
-            <Ionicons name="checkmark-circle" size={12} color="#000000" />
+            <Ionicons name="checkmark-circle" size={12} color={colors.text} />
             <Text style={styles.verifiedText}>Verified Purchase</Text>
           </View>
         )}
       </View>
-      <Text style={[styles.comment, { color: textColor }]}>{item.comment}</Text>
+      <Text style={[styles.comment, { color: colors.text }]}>{item.comment}</Text>
       {renderReviewImages(item.images)}
     </View>
   );
 
   return (
     <View style={styles.container}>
-      <Text style={[styles.title, { color: textColor }]}>
+      <Text style={[styles.title, { color: colors.text }]}>
         CUSTOMER REVIEWS ({reviews.length})
       </Text>
 
       {canReview && (
-        <View style={[styles.box, { backgroundColor: cardBackground }]}>
-          <Text style={[styles.boxTitle, { color: textColor }]}>
+        <View style={[styles.box, { backgroundColor: colors.surface }]}>
+          <Text style={[styles.boxTitle, { color: colors.text }]}>
             WRITE A REVIEW
           </Text>
           <View style={styles.ratingRow}>{renderStars(0, true)}</View>
           <TextInput
             style={[
               styles.input,
-              { color: textColor, borderColor: secondaryTextColor + "40" },
+              { color: colors.text, borderColor: colors.border },
             ]}
             placeholder="Share your thoughts on this acquisition..."
-            placeholderTextColor={secondaryTextColor}
+            placeholderTextColor={colors.textTertiary}
             multiline
             numberOfLines={4}
             value={comment}
@@ -280,7 +273,7 @@ const ProductReviews = ({ productId }: ProductReviewsProps) => {
                     style={styles.removeImageBtn}
                     onPress={() => handleRemoveImage(index)}
                   >
-                    <Ionicons name="close" size={14} color="#FFFFFF" />
+                    <Ionicons name="close" size={14} color={colors.textInverse} />
                   </TouchableOpacity>
                 </View>
               ))}
@@ -288,22 +281,22 @@ const ProductReviews = ({ productId }: ProductReviewsProps) => {
                 <TouchableOpacity
                   style={[
                     styles.addImageBtn,
-                    { borderColor: secondaryTextColor + "40" },
+                    { borderColor: colors.border },
                   ]}
                   onPress={handlePickImage}
                   disabled={isUploading}
                 >
                   {isUploading ? (
-                    <ActivityIndicator size="small" color={textColor} />
+                    <ActivityIndicator size="small" color={colors.text} />
                   ) : (
                     <>
                       <Ionicons
                         name="camera-outline"
                         size={22}
-                        color={secondaryTextColor}
+                        color={colors.textSecondary}
                       />
                       <Text
-                        style={[styles.addImageText, { color: secondaryTextColor }]}
+                        style={[styles.addImageText, { color: colors.textSecondary }]}
                       >
                         ADD PHOTO
                       </Text>
@@ -312,20 +305,20 @@ const ProductReviews = ({ productId }: ProductReviewsProps) => {
                 </TouchableOpacity>
               )}
             </ScrollView>
-            <Text style={[styles.imageHint, { color: secondaryTextColor }]}>
+            <Text style={[styles.imageHint, { color: colors.textSecondary }]}>
               {selectedImages.length}/5 photos
             </Text>
           </View>
 
           <TouchableOpacity
-            style={[styles.submitBtn, { backgroundColor: textColor }]}
+            style={[styles.submitBtn, { backgroundColor: colors.primary }]}
             onPress={handleSubmitReview}
             disabled={submitting || isUploading}
           >
             {submitting ? (
-              <ActivityIndicator color={backgroundColor} />
+              <ActivityIndicator color={colors.background} />
             ) : (
-              <Text style={[styles.submitBtnText, { color: backgroundColor }]}>
+              <Text style={[styles.submitBtnText, { color: colors.primaryForeground }]}>
                 SUBMIT REVIEW
               </Text>
             )}
@@ -334,9 +327,9 @@ const ProductReviews = ({ productId }: ProductReviewsProps) => {
       )}
 
       {loading ? (
-        <ActivityIndicator size="small" color={textColor} />
+        <ActivityIndicator size="small" color={colors.text} />
       ) : reviews.length === 0 ? (
-        <Text style={[styles.emptyText, { color: secondaryTextColor }]}>
+        <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
           No reviews yet for this product.
         </Text>
       ) : (
@@ -360,7 +353,7 @@ const ProductReviews = ({ productId }: ProductReviewsProps) => {
             style={styles.viewerCloseBtn}
             onPress={() => setViewerVisible(false)}
           >
-            <Ionicons name="close" size={28} color="#FFFFFF" />
+            <Ionicons name="close" size={28} color={colors.textInverse} />
           </TouchableOpacity>
           <Image
             source={{ uri: viewerImage }}
@@ -373,7 +366,7 @@ const ProductReviews = ({ productId }: ProductReviewsProps) => {
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     marginTop: 32,
     paddingHorizontal: 24,
@@ -411,7 +404,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 4,
     marginLeft: 12,
-    backgroundColor: "#E5E5E5",
+    backgroundColor: colors.border,
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 0,
@@ -419,7 +412,7 @@ const styles = StyleSheet.create({
   verifiedText: {
     fontSize: 10,
     fontWeight: "700",
-    color: "#000000",
+    color: colors.text,
   },
   comment: {
     fontSize: 14,
@@ -433,7 +426,7 @@ const styles = StyleSheet.create({
     height: 72,
     borderRadius: 0,
     marginRight: 8,
-    backgroundColor: "#F5F5F5",
+    backgroundColor: colors.surfaceRaised,
   },
   emptyText: {
     fontSize: 14,
@@ -483,7 +476,7 @@ const styles = StyleSheet.create({
     width: 72,
     height: 72,
     borderRadius: 0,
-    backgroundColor: "#F5F5F5",
+    backgroundColor: colors.surfaceRaised,
   },
   removeImageBtn: {
     position: "absolute",
@@ -492,7 +485,7 @@ const styles = StyleSheet.create({
     width: 22,
     height: 22,
     borderRadius: 0,
-    backgroundColor: "#000000",
+    backgroundColor: colors.primary,
     justifyContent: "center",
     alignItems: "center",
   },

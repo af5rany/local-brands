@@ -151,9 +151,11 @@ export class TryOnService {
         input: {
           model_image: data.personImageUrl,
           garment_image: data.garmentImageUrl,
-          category: data.category,
-          mode: 'balanced',
+          category: data.category ?? 'auto',
+          mode: 'quality',
           output_format: 'jpeg',
+          // num_samples: 2,           // generate 2 images and pick best
+          seed: Math.floor(Math.random() * 1e6), // helps avoid same bad artifacts
         },
         logs: true,
       });

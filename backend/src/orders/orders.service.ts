@@ -27,6 +27,7 @@ import { User } from '../users/user.entity';
 import { NotificationsService } from '../notifications/notifications.service';
 import { NotificationType } from '../notifications/notification.entity';
 import { PromoCodesService } from '../promo-codes/promo-codes.service';
+import { BrandUser } from '../brands/brand-user.entity';
 
 @Injectable()
 export class OrdersService {
@@ -51,6 +52,8 @@ export class OrdersService {
     private cartRepository: Repository<Cart>,
     @InjectRepository(CartItem)
     private cartItemRepository: Repository<CartItem>,
+    @InjectRepository(BrandUser)
+    private brandUserRepository: Repository<BrandUser>,
   ) {}
 
   async create(createOrderDto: CreateOrderDto, userId: number, options: { skipCartClear?: boolean; brandId?: number } = {}): Promise<Order> {
@@ -544,6 +547,49 @@ export class OrdersService {
     });
 
     return this.findOne(id, userId, userRole);
+  }
+
+  async brandFulfillOrder(
+    orderId: number,
+    dto: { status: OrderStatus; trackingNumber?: string; notes?: string },
+    userId: number,
+  ): Promise<Order> {
+    const order = await this.orderRepository.findOne({
+      where: { id: orderId },
+      relations: ['user'],
+    });
+    if (!order) throw new NotFoundException('Order not found');
+
+    const brandUser = await this.brandUserRepository.findOne({
+      where: { userId, brandId: order.brandId },
+    });
+    if (!brandUser)
+      throw new ForbiddenException('You do not manage this brand');
+
+    const allowed: Partial<Record<OrderStatus, OrderStatus>> = {
+      [OrderStatus.PENDING]: OrderStatus.CONFIRMED,
+      [OrderStatus.CONFIRMED]: OrderStatus.PROCESSING,
+      [OrderStatus.PROCESSING]: OrderStatus.SHIPPED,
+      [OrderStatus.SHIPPED]: OrderStatus.DELIVERED,
+    };
+    if (allowed[order.status] !== dto.status) {
+      throw new BadRequestException(
+        `Cannot transition from ${order.status} to ${dto.status}`,
+      );
+    }
+
+    if (dto.status === OrderStatus.SHIPPED && !dto.trackingNumber) {
+      throw new BadRequestException(
+        'Tracking number is required when marking an order as shipped',
+      );
+    }
+
+    const updateDto: UpdateOrderDto = {
+      status: dto.status,
+      ...(dto.trackingNumber && { trackingNumber: dto.trackingNumber }),
+      ...(dto.notes && { notes: dto.notes }),
+    };
+    return this.update(orderId, updateDto, userId, UserRole.BRAND_OWNER);
   }
 
   async cancel(id: number, userId: number, userRole: UserRole): Promise<Order> {

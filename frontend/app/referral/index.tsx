@@ -156,7 +156,7 @@ const ReferralScreen = () => {
         <View
           style={[styles.giftCircle, { backgroundColor: colors.primary }]}
         >
-          <Ionicons name="gift" size={40} color="#FFFFFF" />
+          <Ionicons name="gift" size={40} color={colors.textInverse} />
         </View>
       </View>
 
@@ -223,8 +223,8 @@ const ReferralScreen = () => {
         activeOpacity={0.7}
         disabled={!referralCode}
       >
-        <Ionicons name="share-social-outline" size={20} color="#FFFFFF" />
-        <Text style={styles.shareBtnText}>Share with Friends</Text>
+        <Ionicons name="share-social-outline" size={20} color={colors.textInverse} />
+        <Text style={[styles.shareBtnText, { color: colors.textInverse }]}>Share with Friends</Text>
       </TouchableOpacity>
 
       {/* Referrals List Header */}
@@ -423,7 +423,6 @@ const styles = StyleSheet.create({
     marginBottom: 28,
   },
   shareBtnText: {
-    color: "#FFFFFF",
     fontSize: 15,
     fontWeight: "700",
   },

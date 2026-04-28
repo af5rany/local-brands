@@ -1,33 +1,64 @@
+add an indicator showing if there is no internet(is this best practice)
+3. Abandoned cart nudges — You track carts server-side, but there's no mechanism to remind users who added items and left. A scheduled job that checks for carts older than 24 hours and sends a push notification ("You left something behind") is a high-ROI feature that most e-commerce apps treat as essential. It hooks into your existing push notification and BullMQ infrastructure.
+done 6. Onboarding walkthrough — First-time users land on the home screen with no guidance. A 3-4 screen swipeable intro (what the app is, how to browse, how to follow brands, how to shop) shown once on first launch and stored in AsyncStorage would smooth the first experience, especially for a marketplace concept that isn't instantly obvious.
+7. Accessibility basics — There's zero mention of accessibility labels, screen reader support, or WCAG consideration anywhere in the specs. At minimum, adding accessibilityLabel and accessibilityRole to all interactive elements and ensuring adequate contrast ratios would make the app usable for a much wider audience — and is increasingly required for app store compliance.
+
+
+make brand spotlight accept swipe manually
+i want when pressing on a button in the bottom menu to go to the top of the screen
+
+is it better to add text between the two photos
+## ⚡ Loading, Error States & UX
+
+- [ ] Loading states and skeleton placeholders when data is loading
+- [ ] Empty states when no data exists
+- [ ] No-internet handling — detect offline and show appropriate UI
+- [ ] Optimistic updates — wishlist, cart, and other user actions
+
+
+
+done - iam getting this when i try t edit some products "please wait for images to get uploaded to edit"
+done - somtimes the product is out of stock and it labeled as limited stock
+
+recently viewed products. ← DONE (April 27, 2026): useRecentlyViewed hook (AsyncStorage, max 15 IDs); tracked on product detail fetch; home screen shows real product images + prices, hidden when empty, CLEAR works.
+
 # ============================================================
 # REMAINING WORK — Updated April 26, 2026
 # ============================================================
 
 ## INCOMPLETE / PARTIAL (exists but broken or missing)
 
-- [ ] Brand detail page: add Products | Posts tab switcher UI (posts already fetched, no tab bar)
-- [ ] ProductVariant entity migration: system still reads deprecated `variants` JSON column — migrate to relational ProductVariant
-- [ ] Auth route protection: _layout.tsx only guards subset of segments (cart/profile/returns check auth per-screen, not centrally)
+- [x] Brand detail page: Products | Posts tab switcher — replaced inline posts strip with full tab bar; posts tab shows 2-col grid
+- [x] ProductVariant inStock query — fixed to handle products without variants (OR product.stock > 0 fallback)
+- [x] Auth route protection — added cart, profile, returns, wishlist, notifications to PROTECTED_SEGMENTS in _layout.tsx
+- [x] Guest login — awaited login(token) in handleGuestLogin/handleLogin to eliminate race condition with router.replace
+- [x] Dark/light theme — (tabs)/index.tsx and (tabs)/brands.tsx converted to createStyles(colors) pattern; all hardcoded hex values replaced with Colors.ts tokens
+- [x] Unisex gender filter — backend now includes unisex when filtering by men/women; Unisex tab added to shop screen
+
 - [ ] Google login broken — fix OAuth flow
-- [ ] Guest login broken — fix guest token flow
-- [ ] Dark/light theme: frontend has hardcoded colors throughout — replace all with useThemeColor() / Colors.ts tokens
 - [ ] Brand detail about section UI — needs redesign/fix
-- [ ] Unisex gender filter — should appear in both men and women filter results
 
 ## NOT IMPLEMENTED
 
+- [x] DOWNLOAD INVOICE — shares formatted text receipt via Share API (April 27, 2026)
+- [x] Privacy Policy screen — /info/privacy.tsx created; settings.tsx wired (April 27, 2026)
+- [x] Terms of Service screen — /info/terms.tsx created; settings.tsx wired (April 27, 2026)
+- [x] Delete Account — DELETE /users/me endpoint added; frontend calls API then logs out (April 27, 2026)
+- [x] Admin Settings screen — /manage/settings.tsx created; AdminDashboard Settings card wired (April 27, 2026)
+- [x] Order Management (brand owner) — /brands/[id]/orders screen created; GET /orders/brand/:brandId endpoint added; ORDERS card added to dashboard (April 27, 2026)
+- [x] Brand owner order fulfillment — PUT /orders/:id/fulfill endpoint; PENDING→CONFIRMED→PROCESSING→SHIPPED(tracking)→DELIVERED; per-card action buttons in brand orders screen (April 27, 2026)
+- [x] Search autocomplete — GET /products/suggestions?q= endpoint added; SearchModal shows suggestion rows while typing (April 27, 2026)
+- [x] Search history — useSearchHistory hook (AsyncStorage, max 8, dedup); chips shown in SearchModal when empty; saved on submit/suggestion tap; CLEAR works (April 27, 2026)
+- [x] Invoice PDF — expo-print generates PDF from HTML order template (items, totals, address); expo-sharing shares PDF; replaces old Share.share text receipt (April 27, 2026)
+- [x] Product Q&A — ProductQuestionsModule (GET/POST/PUT/DELETE); ProductQA component on product detail; brand owners answer inline; pending queue visible to brand owners (April 27, 2026)
+- [x] Conversion analytics — cartAddCount added to Product entity; incremented on new cart adds; brand dashboard TopProducts shows views→carts→sold funnel with stacked bar (April 27, 2026)
+- [x] Cloudinary cleanup — deleteCloudinaryImages() fires on product softDelete; needs CLOUDINARY_CLOUD_NAME/API_KEY/API_SECRET in backend .env (April 27, 2026)
+- [x] Skeleton loaders — Skeleton.tsx component created; added to shop, orders, feed, wishlist (April 27, 2026)
+- [x] Offline / no-internet handling — NetworkProvider already implemented + wired in _layout.tsx (confirmed April 27, 2026)
+
 - [ ] Payment processing — no gateway; orders placed without actual payment
-- [ ] DOWNLOAD INVOICE — button on order detail exists but does nothing
-- [ ] Privacy Policy screen — shows "coming soon" alert
-- [ ] Terms of Service screen — shows "coming soon" alert
-- [ ] Delete Account — shows alert with contact info, not automated
-- [ ] Admin Settings screen — quick action card in admin dashboard, no screen behind it
-- [ ] Order Management (brand owner /manage) — "coming soon" card; full dashboard exists at /brands/[id]/dashboard but /manage card not wired
 - [ ] Admin CMS — edit home page banners and featured sections from dashboard
-- [ ] Search autocomplete — no suggestion endpoint; only basic ILike search
-- [ ] Cloudinary cleanup — no image deletion when products are deleted
 - [ ] Email verification — no verify flow after registration
-- [ ] Skeleton loaders / placeholder loading states across all list screens
-- [ ] Offline / no-internet handling — detect and show appropriate UI
 - [ ] Outfit Builder (Phase 5) — feature set not yet scoped
 - [ ] Product videos — video support on product detail
 - [ ] Drops — limited release / drop mechanic
@@ -67,12 +98,12 @@ in the feed '/Users/f5rany/Documents/Work/local-brands/frontend/app/(tabs)/feed.
 
 NOT DONE
 
-make sure all the frontend is following the dark and light theme based on the system not hardcoded colors
+make sure all the frontend is following the dark and light theme based on the system not hardcoded colors  ← partially done: index.tsx + brands.tsx fixed; remaining 46 files still have hardcoded values
 '/Users/f5rany/Documents/Work/local-brands/frontend/app/brands/[brandId]/index.tsx' fix the brand about section and use this image as inspiration
 fix home page layout and UI
 
-fix logging in as guest
-make the unisex appear for both men and women
+fix logging in as guest  ← DONE (April 26, 2026)
+make the unisex appear for both men and women  ← DONE (April 26, 2026)
 
 
 # Local Brands — Remaining Tasks
@@ -84,22 +115,25 @@ make the unisex appear for both men and women
 ## 🔐 Admin & Dashboard
 
 - [ ] Improve product management screen
-- [ ] Remove edit/delete controls from customer dashboard when admin is signed in
 - [ ] Admin CMS dashboard — edit home page content (banners, featured sections)
 
 ---
-
-## ⚡ Loading, Error States & UX
-
-- [ ] Loading states and skeleton placeholders when data is loading
-- [ ] Empty states when no data exists
-- [ ] No-internet handling — detect offline and show appropriate UI
-- [ ] Optimistic updates — wishlist, cart, and other user actions
 
 ---
 
 ## ✅ Recently Completed
 
+- [x] Admin Settings screen + search autocomplete + skeletons + Cloudinary cleanup (April 27, 2026)
+- [x] Privacy Policy + Terms of Service screens (April 27, 2026)
+- [x] Account deletion — automated via DELETE /users/me (April 27, 2026)
+- [x] Invoice download — shares formatted receipt via Share API (April 27, 2026)
+- [x] Brand owner orders screen — /brands/[id]/orders with pagination (April 27, 2026)
+- [x] Brand detail Products | Posts tab switcher (April 26, 2026)
+- [x] ProductVariant inStock query fallback for non-variant products (April 26, 2026)
+- [x] Central auth route protection — cart/profile/returns/wishlist/notifications in _layout.tsx (April 26, 2026)
+- [x] Guest login race condition — await login() before router.replace (April 26, 2026)
+- [x] Theme tokens — (tabs)/index.tsx + (tabs)/brands.tsx fully migrated to createStyles(colors) (April 26, 2026)
+- [x] Unisex gender filter — backend includes unisex in men/women queries; frontend adds Unisex tab (April 26, 2026)
 - [x] Fix order placement failure (PostgreSQL `FOR UPDATE` + LEFT JOIN incompatibility)
 - [x] Same header for all screens (auth, cart, orders, checkout, notifications)
 - [x] Bigger height for bottom tab menu (94px)

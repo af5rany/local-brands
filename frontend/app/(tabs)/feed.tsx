@@ -16,6 +16,9 @@ import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/context/AuthContext";
 import getApiUrl from "@/helpers/getApiUrl";
 import { useThemeColors } from "@/hooks/useThemeColor";
+import { FeedPostSkeleton } from "@/components/Skeleton";
+import { useNetwork } from "@/context/NetworkContext";
+import OfflinePlaceholder from "@/components/OfflinePlaceholder";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const COLUMN_GAP = 8;
@@ -223,6 +226,7 @@ export default function FeedScreen() {
   const colors = useThemeColors();
   const { token, user } = useAuth();
 
+  const { isConnected } = useNetwork();
   const [posts, setPosts] = useState<PostData[]>([]);
   const [suggestedProducts, setSuggestedProducts] = useState<SuggestedProduct[]>([]);
   const [suggestedPosts, setSuggestedPosts] = useState<PostData[]>([]);
@@ -406,11 +410,19 @@ export default function FeedScreen() {
     );
   };
 
+  if (!isConnected && posts.length === 0 && suggestedPosts.length === 0) {
+    return (
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <OfflinePlaceholder onRetry={() => fetchFeed(1)} />
+      </View>
+    );
+  }
+
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       {loading ? (
-        <View style={styles.center}>
-          <ActivityIndicator size="large" color={colors.text} />
+        <View>
+          {[0, 1, 2].map((i) => <FeedPostSkeleton key={i} />)}
         </View>
       ) : displayPosts.length === 0 ? (
         <ScrollView

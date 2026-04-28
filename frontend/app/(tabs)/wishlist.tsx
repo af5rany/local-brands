@@ -15,6 +15,9 @@ import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/context/AuthContext";
 import getApiUrl from "@/helpers/getApiUrl";
 import { useThemeColors } from "@/hooks/useThemeColor";
+import { ProductGridSkeleton } from "@/components/Skeleton";
+import { useNetwork } from "@/context/NetworkContext";
+import OfflinePlaceholder from "@/components/OfflinePlaceholder";
 
 type Tab = "products" | "brands";
 
@@ -32,12 +35,12 @@ const WishlistTab = () => {
   const router = useRouter();
   const { token } = useAuth();
   const colors = useThemeColors();
+  const { isConnected } = useNetwork();
   const [activeTab, setActiveTab] = useState<Tab>("products");
   const [wishlist, setWishlist] = useState<any[]>([]);
   const [followedBrands, setFollowedBrands] = useState<FollowedBrand[]>([]);
   const [loading, setLoading] = useState(true);
   const [brandsLoading, setBrandsLoading] = useState(true);
-  const [removingId, setRemovingId] = useState<number | null>(null);
   const [unfollowingId, setUnfollowingId] = useState<number | null>(null);
 
   const { width } = useWindowDimensions();
@@ -99,7 +102,8 @@ const WishlistTab = () => {
   );
 
   const toggleWishlist = async (productId: number) => {
-    setRemovingId(productId);
+    const previousWishlist = wishlist;
+    setWishlist((prev) => prev.filter((item) => item.product?.id !== productId));
     try {
       const response = await fetch(
         `${getApiUrl()}/wishlist/toggle/${productId}`,
@@ -112,11 +116,9 @@ const WishlistTab = () => {
         },
       );
       if (!response.ok) throw new Error("Failed to update wishlist");
-      await fetchWishlist();
     } catch (error: any) {
+      setWishlist(previousWishlist);
       Alert.alert("Error", error.message);
-    } finally {
-      setRemovingId(null);
     }
   };
 
@@ -157,13 +159,8 @@ const WishlistTab = () => {
         <TouchableOpacity
           style={[styles.removeIcon, { backgroundColor: colors.surface }]}
           onPress={() => toggleWishlist(product.id)}
-          disabled={removingId === product.id}
         >
-          {removingId === product.id ? (
-            <ActivityIndicator size="small" color={colors.text} />
-          ) : (
-            <Ionicons name="heart" size={20} color={colors.text} />
-          )}
+          <Ionicons name="heart" size={20} color={colors.text} />
         </TouchableOpacity>
         <View style={styles.cardContent}>
           <Text
@@ -256,6 +253,14 @@ const WishlistTab = () => {
     );
   }
 
+  if (!isConnected && wishlist.length === 0 && followedBrands.length === 0) {
+    return (
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <OfflinePlaceholder onRetry={() => { fetchWishlist(); fetchFollowedBrands(); }} />
+      </View>
+    );
+  }
+
   return (
     <View
       style={[styles.container, { backgroundColor: colors.background }]}
@@ -304,9 +309,7 @@ const WishlistTab = () => {
       {activeTab === "products" && (
         <>
           {loading ? (
-            <View style={styles.center}>
-              <ActivityIndicator size="large" color={colors.primary} />
-            </View>
+            <ProductGridSkeleton count={4} />
           ) : wishlist.length === 0 ? (
             <View style={styles.centeredContent}>
               <Ionicons

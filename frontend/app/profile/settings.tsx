@@ -7,6 +7,7 @@ import {
   Switch,
   ScrollView,
   Alert,
+  ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
@@ -14,12 +15,14 @@ import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/context/AuthContext";
 import { useThemeColors } from "@/hooks/useThemeColor";
 import { useThemePreference } from "@/context/ThemeContext";
+import getApiUrl from "@/helpers/getApiUrl";
 
 const SettingsScreen = () => {
   const router = useRouter();
   const colors = useThemeColors();
-  const { user, logout } = useAuth();
+  const { user, logout, token } = useAuth();
   const { preference, setPreference } = useThemePreference();
+  const [deletingAccount, setDeletingAccount] = useState(false);
 
   const [pushNotifications, setPushNotifications] = useState(true);
   const [emailNotifications, setEmailNotifications] = useState(true);
@@ -28,17 +31,29 @@ const SettingsScreen = () => {
   const handleDeleteAccount = () => {
     Alert.alert(
       "Delete Account",
-      "Are you sure you want to delete your account? This action cannot be undone.",
+      "Are you sure you want to delete your account? This action cannot be undone. All your data will be permanently removed.",
       [
         { text: "Cancel", style: "cancel" },
         {
           text: "Delete",
           style: "destructive",
-          onPress: () => {
-            Alert.alert(
-              "Contact Support",
-              "Please contact support@localbrands.com to request account deletion.",
-            );
+          onPress: async () => {
+            setDeletingAccount(true);
+            try {
+              const res = await fetch(`${getApiUrl()}/users/me`, {
+                method: "DELETE",
+                headers: { Authorization: `Bearer ${token}` },
+              });
+              if (res.ok || res.status === 204) {
+                await logout();
+              } else {
+                Alert.alert("Error", "Failed to delete account. Please try again or contact support@localbrands.com.");
+              }
+            } catch {
+              Alert.alert("Error", "Network error. Please try again.");
+            } finally {
+              setDeletingAccount(false);
+            }
           },
         },
       ],
@@ -75,12 +90,12 @@ const SettingsScreen = () => {
     {
       icon: "shield-outline",
       label: "Privacy Policy",
-      onPress: () => Alert.alert("Privacy Policy", "Coming soon."),
+      onPress: () => router.push("/info/privacy" as any),
     },
     {
       icon: "document-text-outline",
       label: "Terms of Service",
-      onPress: () => Alert.alert("Terms of Service", "Coming soon."),
+      onPress: () => router.push("/info/terms" as any),
     },
   ];
 

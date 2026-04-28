@@ -1,4 +1,4 @@
-import { Tabs } from "expo-router";
+import { Tabs, usePathname } from "expo-router";
 import React from "react";
 import { Platform, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -10,12 +10,16 @@ export default function TabLayout() {
   const colors = useThemeColors();
   const tintColor = colors.tabActive;
   const inactiveColor = colors.tabInactive;
+  const pathname = usePathname();
+  const isHome = pathname === "/" || pathname === "/(tabs)" || pathname === "/(tabs)/index";
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <SafeAreaView edges={["top"]} style={{ backgroundColor: colors.surface }}>
-        <Header />
-      </SafeAreaView>
+      {!isHome && (
+        <SafeAreaView edges={["top"]} style={{ backgroundColor: colors.surface }}>
+          <Header />
+        </SafeAreaView>
+      )}
       <Tabs
         screenOptions={{
           tabBarActiveTintColor: tintColor,
@@ -57,6 +61,7 @@ export default function TabLayout() {
         <Tabs.Screen name="wishlist" options={{ title: "Wishlist" }} />
         <Tabs.Screen name="brands" options={{ title: "Brands" }} />
         <Tabs.Screen name="profile" options={{ href: null }} />
+        <Tabs.Screen name="index copy" options={{ href: null }} />
       </Tabs>
     </View>
   );

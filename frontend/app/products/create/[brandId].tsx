@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useMemo } from "react";
 import {
   View,
   Text,
@@ -16,7 +16,8 @@ import * as ImagePicker from "expo-image-picker";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import getApiUrl from "@/helpers/getApiUrl";
 import { Dropdown } from "react-native-element-dropdown";
-import { useThemeColor } from "@/hooks/useThemeColor";
+import { useThemeColors } from "@/hooks/useThemeColor";
+import type { ThemeColors } from "@/constants/Colors";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/context/AuthContext";
 import { useBrand } from "@/context/BrandContext";
@@ -72,24 +73,8 @@ const CreateProductScreen = () => {
   const { token } = useAuth();
   const { incrementProductListVersion } = useBrand();
   const { brandId } = useLocalSearchParams();
-  const backgroundColor = useThemeColor({}, "background");
-  const textColor = useThemeColor({}, "text");
-  const cardBackground = useThemeColor(
-    { light: "#ffffff", dark: "#1c1c1e" },
-    "background",
-  );
-  const borderColor = useThemeColor(
-    { light: "#e1e5e9", dark: "#38383a" },
-    "text",
-  );
-  const primaryColor = useThemeColor(
-    { light: "#007AFF", dark: "#0A84FF" },
-    "primary",
-  );
-  const placeholderColor = useThemeColor(
-    { light: "#8e8e93", dark: "#8e8e93" },
-    "text",
-  );
+  const colors = useThemeColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   // Basic Information
   const [productName, setProductName] = useState("");
@@ -355,192 +340,6 @@ const CreateProductScreen = () => {
       setLoading(false);
     }
   };
-
-  const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor },
-    navHeader: {
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "space-between",
-      paddingHorizontal: 16,
-      paddingVertical: 12,
-      borderBottomWidth: 1,
-    },
-    backBtn: { padding: 2 },
-    backCircle: {
-      width: 36,
-      height: 36,
-      borderRadius: 0,
-      justifyContent: "center",
-      alignItems: "center",
-    },
-    navTitle: { fontSize: 16, fontWeight: "700", // letterSpacing: 0.2 
-},
-    scrollContainer: { padding: 20, paddingBottom: 100 },
-    header: {
-      fontSize: 32,
-      fontWeight: "700",
-      color: textColor,
-      marginBottom: 30,
-      textAlign: "center",
-    },
-    inputContainer: { marginBottom: 20 },
-    label: { fontSize: 16, fontWeight: "600", color: textColor, marginBottom: 8 },
-    required: { color: "#ff3b30" },
-    input: {
-      minHeight: 52,
-      borderColor,
-      borderWidth: 1.5,
-      borderRadius: 0,
-      paddingHorizontal: 16,
-      paddingVertical: 12,
-      fontSize: 16,
-      backgroundColor: cardBackground,
-      color: textColor,
-      textAlignVertical: "top",
-    },
-    textArea: { minHeight: 100 },
-    dropdown: {
-      height: 52,
-      borderColor,
-      borderWidth: 1.5,
-      borderRadius: 0,
-      paddingHorizontal: 16,
-      backgroundColor: cardBackground,
-    },
-    dropdownText: { fontSize: 16, color: textColor },
-    dropdownPlaceholder: { fontSize: 16, color: placeholderColor },
-    switchContainer: {
-      flexDirection: "row",
-      justifyContent: "space-between",
-      alignItems: "center",
-      marginBottom: 20,
-    },
-    imagePickerButton: {
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "center",
-      backgroundColor: primaryColor,
-      paddingVertical: 16,
-      paddingHorizontal: 24,
-      borderRadius: 0,
-      marginBottom: 15,
-    },
-    imagePickerText: { color: "#ffffff", fontSize: 16, fontWeight: "600", marginLeft: 8 },
-    imageGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
-    imageContainer: { position: "relative" },
-    imagePreview: {
-      width: 80,
-      height: 80,
-      borderRadius: 0,
-      backgroundColor: cardBackground,
-    },
-    removeImageButton: {
-      position: "absolute",
-      top: -5,
-      right: -5,
-      backgroundColor: "#ff3b30",
-      borderRadius: 0,
-      width: 24,
-      height: 24,
-      alignItems: "center",
-      justifyContent: "center",
-    },
-    rowContainer: { flexDirection: "row", gap: 10 },
-    halfWidth: { flex: 1 },
-    createButton: {
-      backgroundColor: primaryColor,
-      paddingVertical: 18,
-      borderRadius: 0,
-      alignItems: "center",
-      justifyContent: "center",
-      marginTop: 20,
-      flexDirection: "row",
-    },
-    createButtonDisabled: { backgroundColor: placeholderColor },
-    createButtonText: { color: "#ffffff", fontSize: 18, fontWeight: "700" },
-    loadingText: { color: "#ffffff", fontSize: 16, fontWeight: "600", marginLeft: 10 },
-    sectionTitle: {
-      fontSize: 20,
-      fontWeight: "600",
-      color: textColor,
-      marginTop: 25,
-      marginBottom: 15,
-    },
-    card: {
-      backgroundColor: cardBackground,
-      borderRadius: 0,
-      padding: 20,
-      marginBottom: 20,
-    },
-    colorPaletteContainer: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
-    colorOption: {
-      width: 40,
-      height: 40,
-      borderRadius: 0,
-      justifyContent: "center",
-      alignItems: "center",
-    },
-    selectedColor: { borderWidth: 3, borderColor: "#E4FDE1" },
-    tagsContainer: { flexDirection: "row", flexWrap: "wrap", marginTop: 10 },
-    tag: {
-      backgroundColor: "#000000",
-      paddingVertical: 6,
-      paddingHorizontal: 12,
-      borderRadius: 0,
-      marginRight: 8,
-      marginBottom: 8,
-      flexDirection: "row",
-      alignItems: "center",
-    },
-    tagText: { color: "#ffffff", fontSize: 14, marginRight: 6 },
-    removeTagText: { color: "#ffffff", fontSize: 14, fontWeight: "700" },
-    screenOverlay: {
-      ...StyleSheet.absoluteFillObject,
-      backgroundColor: "rgba(0,0,0,0.4)",
-      justifyContent: "center",
-      alignItems: "center",
-      zIndex: 10,
-    },
-    overlayText: { color: "#fff", marginTop: 12, fontSize: 16, fontWeight: "600" },
-    sizeChip: {
-      paddingHorizontal: 14,
-      paddingVertical: 8,
-      borderWidth: 1.5,
-      borderRadius: 0,
-    },
-    sizeChipText: { fontWeight: "600", fontSize: 14 },
-    sizeStockRow: {
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "space-between",
-      paddingVertical: 8,
-      paddingHorizontal: 4,
-      borderBottomWidth: 1,
-      borderBottomColor: borderColor,
-    },
-    sizeLabel: { fontSize: 16, fontWeight: "600", color: textColor, width: 60 },
-    sizeStockInput: {
-      flex: 1,
-      height: 44,
-      borderColor,
-      borderWidth: 1.5,
-      borderRadius: 0,
-      paddingHorizontal: 12,
-      fontSize: 16,
-      backgroundColor: cardBackground,
-      color: textColor,
-      marginLeft: 12,
-    },
-    autoDetectBadge: {
-      backgroundColor: primaryColor + "20",
-      paddingHorizontal: 8,
-      paddingVertical: 2,
-      borderRadius: 0,
-      marginLeft: 8,
-    },
-    autoDetectText: { fontSize: 11, color: primaryColor, fontWeight: "600" },
-  });
 
   return (
     <SafeAreaView edges={["top"]} style={styles.container}>

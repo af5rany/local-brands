@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useState } from "react";
 import { View, Text, StyleSheet, Animated } from "react-native";
 import NetInfo from "@react-native-community/netinfo";
 import { Ionicons } from "@expo/vector-icons";
+import { useThemeColors } from "@/hooks/useThemeColor";
 
 interface NetworkContextType {
   isConnected: boolean;
@@ -14,6 +15,7 @@ export const useNetwork = () => useContext(NetworkContext);
 export const NetworkProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
+  const colors = useThemeColors();
   const [isConnected, setIsConnected] = useState(true);
   const [showBanner, setShowBanner] = useState(false);
   const slideAnim = useState(() => new Animated.Value(-60))[0];
@@ -53,7 +55,7 @@ export const NetworkProvider: React.FC<{ children: React.ReactNode }> = ({
           style={[
             styles.banner,
             {
-              backgroundColor: isConnected ? "#2D7D46" : "#1A1A1A",
+              backgroundColor: isConnected ? colors.toastSuccess : colors.primary,
               transform: [{ translateY: slideAnim }],
             },
           ]}
@@ -61,7 +63,7 @@ export const NetworkProvider: React.FC<{ children: React.ReactNode }> = ({
           <Ionicons
             name={isConnected ? "wifi" : "cloud-offline-outline"}
             size={16}
-            color="#FFFFFF"
+            color={colors.textInverse}
           />
           <Text style={styles.bannerText}>
             {isConnected ? "Back online" : "No internet connection"}
@@ -88,7 +90,7 @@ const styles = StyleSheet.create({
     zIndex: 9999,
   },
   bannerText: {
-    color: "#FFFFFF",
+    color: "white",
     fontSize: 13,
     fontWeight: "600",
     // letterSpacing: 0.3,

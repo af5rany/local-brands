@@ -1,4 +1,4 @@
-import React, { useRef, useState, useCallback, useEffect } from "react";
+import React, { useRef, useState, useCallback, useEffect, useMemo } from "react";
 import {
   View,
   Text,
@@ -20,6 +20,7 @@ import ReAnimated, {
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter, usePathname } from "expo-router";
 import { useThemeColors } from "@/hooks/useThemeColor";
+import type { ThemeColors } from "@/constants/Colors";
 import { useAuth } from "@/context/AuthContext";
 import { useCart } from "@/context/CartContext";
 import SearchModal from "@/components/SearchModal";
@@ -147,13 +148,23 @@ const AnimatedSection: React.FC<{
   return <ReAnimated.View style={[animStyle, style]}>{children}</ReAnimated.View>;
 };
 
+export interface HeaderHandle {
+  openMenu: () => void;
+}
+
 interface HeaderProps {
   notificationCount?: number;
   showBack?: boolean;
+  dark?: boolean;
+  imperativeRef?: React.MutableRefObject<HeaderHandle | null>;
 }
 
-const Header: React.FC<HeaderProps> = ({ notificationCount = 0, showBack = false }) => {
+const Header: React.FC<HeaderProps> = ({ notificationCount = 0, showBack = false, dark = false, imperativeRef }) => {
   const colors = useThemeColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+  const iconColor = dark ? colors.textInverse : colors.text;
+  const bgColor = dark ? colors.primary : colors.surface;
+  const logoColor = dark ? colors.textInverse : colors.text;
   const { width } = useWindowDimensions();
   const router = useRouter();
   const pathname = usePathname();
@@ -180,6 +191,8 @@ const Header: React.FC<HeaderProps> = ({ notificationCount = 0, showBack = false
     }).start();
   };
 
+  if (imperativeRef) imperativeRef.current = { openMenu };
+
   const closeMenu = () => {
     Animated.timing(slideAnim, {
       toValue: -300, // ← slide back off-screen to the LEFT
@@ -202,7 +215,7 @@ const Header: React.FC<HeaderProps> = ({ notificationCount = 0, showBack = false
       style={[
         styles.headerWrapper,
         {
-          backgroundColor: colors.surface,
+          backgroundColor: bgColor,
         },
       ]}
     >
@@ -213,18 +226,18 @@ const Header: React.FC<HeaderProps> = ({ notificationCount = 0, showBack = false
           <View style={styles.rightActions}>
             {showBack ? (
               <Pressable style={styles.iconBtn} onPress={() => router.back()}>
-                <Ionicons name="arrow-back" size={20} color={colors.text} />
+                <Ionicons name="arrow-back" size={20} color={iconColor} />
               </Pressable>
             ) : (
               <Pressable style={styles.iconBtn} onPress={openMenu}>
-                <Ionicons name="menu" size={20} color={colors.text} />
+                <Ionicons name="menu" size={20} color={iconColor} />
               </Pressable>
             )}
             <Pressable
               style={styles.iconBtn}
               onPress={() => setSearchVisible(true)}
             >
-              <Ionicons name="search" size={20} color={colors.text} />
+              <Ionicons name="search" size={20} color={iconColor} />
             </Pressable>
           </View>
 
@@ -233,7 +246,7 @@ const Header: React.FC<HeaderProps> = ({ notificationCount = 0, showBack = false
             onPress={() => router.push("/(tabs)")}
             style={styles.logoContainer}
           >
-            <Text style={[styles.logoText, { color: colors.text, fontFamily: undefined }]}>
+            <Text style={[styles.logoText, { color: logoColor, fontFamily: undefined }]}>
               MONOLITH
             </Text>
           </Pressable>
@@ -244,13 +257,13 @@ const Header: React.FC<HeaderProps> = ({ notificationCount = 0, showBack = false
               style={styles.iconBtn}
               onPress={() => router.push("/(tabs)/profile" as any)}
             >
-              <Ionicons name="person-outline" size={20} color={colors.text} />
+              <Ionicons name="person-outline" size={20} color={iconColor} />
             </Pressable>
             <Pressable
               style={styles.iconBtn}
               onPress={() => router.push("/cart" as any)}
             >
-              <Ionicons name="bag-outline" size={22} color={colors.text} />
+              <Ionicons name="bag-outline" size={22} color={iconColor} />
               {cartItemCount > 0 && (
                 <View
                   style={[
@@ -424,7 +437,7 @@ const Header: React.FC<HeaderProps> = ({ notificationCount = 0, showBack = false
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   headerWrapper: {
     zIndex: 100,
     overflow: "visible",
@@ -527,7 +540,7 @@ const styles = StyleSheet.create({
   // Side Menu Modal
   menuOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    backgroundColor: colors.surfaceOverlay,
     flexDirection: "row",
     justifyContent: "flex-start",
   },

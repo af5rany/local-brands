@@ -57,7 +57,7 @@ const LoginScreen = () => {
         throw new Error(err?.message || "Invalid credentials");
       }
       const { token } = await res.json();
-      login(token);
+      await login(token);
       router.replace("/(tabs)");
     } catch (err: any) {
       Alert.alert("Login Error", err.message || "Something went wrong");
@@ -79,7 +79,7 @@ const LoginScreen = () => {
         throw new Error(err?.message || "Guest login failed");
       }
       const { token } = await res.json();
-      login(token);
+      await login(token);
       router.replace("/(tabs)");
       setTimeout(() => {
         Alert.alert(

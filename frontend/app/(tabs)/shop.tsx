@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect, useRef } from "react";
+import React, { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import {
   View,
   Text,
@@ -25,6 +25,11 @@ import FilterPanel, { PanelFilters } from "@/components/FilterPanel";
 import getApiUrl from "@/helpers/getApiUrl";
 import { Product } from "@/types/product";
 import { Brand } from "@/types/brand";
+import { useThemeColors } from "@/hooks/useThemeColor";
+import type { ThemeColors } from "@/constants/Colors";
+import { ProductGridSkeleton } from "@/components/Skeleton";
+import { useNetwork } from "@/context/NetworkContext";
+import OfflinePlaceholder from "@/components/OfflinePlaceholder";
 
 const CATEGORIES = [
   "ALL",
@@ -38,7 +43,7 @@ const CATEGORIES = [
   "HOODIES",
 ];
 
-const GENDERS = ["All", "Men", "Women"];
+const GENDERS = ["All", "Men", "Women", "Unisex"];
 
 // ── Monolith Product Card ────────────────────────────
 const MonolithProductCard = React.memo(
@@ -55,6 +60,8 @@ const MonolithProductCard = React.memo(
     onWishlistPress: () => void;
     isInWishlist: boolean;
   }) => {
+    const colors = useThemeColors();
+    const cardStyles = useMemo(() => createCardStyles(colors), [colors]);
     const images: string[] = item.images?.length
       ? item.images
       : item.mainImage
@@ -88,10 +95,10 @@ const MonolithProductCard = React.memo(
             <View style={cardStyles.imagePlaceholder} />
           )}
 
-          {/* LIMITED STOCK badge */}
+          {/* SALE badge */}
           {hasDiscount && (
             <View style={cardStyles.limitedBadge}>
-              <Text style={cardStyles.limitedBadgeText}>LIMITED STOCK</Text>
+              <Text style={cardStyles.limitedBadgeText}>SALE</Text>
             </View>
           )}
 
@@ -104,7 +111,7 @@ const MonolithProductCard = React.memo(
             <Ionicons
               name={isInWishlist ? "heart" : "heart-outline"}
               size={16}
-              color={isInWishlist ? "#C41E3A" : "#ffffff"}
+              color={isInWishlist ? colors.accentRed : colors.textInverse}
             />
           </TouchableOpacity>
         </View>
@@ -142,6 +149,9 @@ const ShopScreen = () => {
   }>();
   const { token, loading } = useAuth();
   const { showToast } = useToast();
+  const colors = useThemeColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+  const { isConnected } = useNetwork();
 
   // ── State ──────────────────────────────────────────
   // Initialize gender directly from param so first fetch uses it
@@ -355,6 +365,12 @@ const ShopScreen = () => {
   const toggleWishlist = useCallback(
     async (productId: number) => {
       if (!token) return;
+      const wasInWishlist = wishlistProductIds.includes(productId);
+      setWishlistProductIds((prev) =>
+        wasInWishlist
+          ? prev.filter((id) => id !== productId)
+          : [...prev, productId],
+      );
       try {
         const r = await fetch(
           `${getApiUrl()}/wishlist/toggle/${productId}`,
@@ -366,16 +382,17 @@ const ShopScreen = () => {
             },
           },
         );
-        if (r.ok) {
-          setWishlistProductIds((prev) =>
-            prev.includes(productId)
-              ? prev.filter((id) => id !== productId)
-              : [...prev, productId],
-          );
-        }
-      } catch {}
+        if (!r.ok) throw new Error();
+      } catch {
+        // Revert
+        setWishlistProductIds((prev) =>
+          wasInWishlist
+            ? [...prev, productId]
+            : prev.filter((id) => id !== productId),
+        );
+      }
     },
-    [token],
+    [token, wishlistProductIds],
   );
 
   // ── Search suggestions ─────────────────────────────
@@ -559,7 +576,7 @@ const ShopScreen = () => {
           <Ionicons
             name="options-outline"
             size={14}
-            color={activeFilterCount > 0 ? "#ffffff" : "#000000"}
+            color={activeFilterCount > 0 ? colors.textInverse : colors.text}
           />
           <Text
             style={[
@@ -575,6 +592,34 @@ const ShopScreen = () => {
         </TouchableOpacity>
 
         <TouchableOpacity
+          style={[
+            styles.filterBtn,
+            activeFilters.inStockOnly && styles.filterBtnActive,
+          ]}
+          onPress={() =>
+            setActiveFilters((prev) => ({
+              ...prev,
+              inStockOnly: !prev.inStockOnly,
+            }))
+          }
+          activeOpacity={0.8}
+        >
+          <Ionicons
+            name={activeFilters.inStockOnly ? "checkmark-circle" : "checkmark-circle-outline"}
+            size={14}
+            color={activeFilters.inStockOnly ? colors.textInverse : colors.text}
+          />
+          <Text
+            style={[
+              styles.filterBtnText,
+              activeFilters.inStockOnly && styles.filterBtnTextActive,
+            ]}
+          >
+            IN STOCK
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
           style={styles.filterBtn}
           onPress={() =>
             setActiveFilters((prev) => ({
@@ -584,7 +629,7 @@ const ShopScreen = () => {
           }
           activeOpacity={0.8}
         >
-          <Ionicons name="swap-vertical-outline" size={14} color="#000000" />
+          <Ionicons name="swap-vertical-outline" size={14} color={colors.text} />
           <Text style={styles.filterBtnText}>
             {activeFilters.sortOrder === "DESC" ? "NEWEST" : "OLDEST"}
           </Text>
@@ -618,7 +663,7 @@ const ShopScreen = () => {
               }
             >
               <Text style={styles.activeChipText}>{cat.toUpperCase()}</Text>
-              <Ionicons name="close" size={10} color="#000000" />
+              <Ionicons name="close" size={10} color={colors.text} />
             </TouchableOpacity>
           ))}
         </ScrollView>
@@ -630,7 +675,7 @@ const ShopScreen = () => {
     if (productsLoading && products.length > 0) {
       return (
         <View style={styles.footerLoader}>
-          <ActivityIndicator size="small" color="#000000" />
+          <ActivityIndicator size="small" color={colors.text} />
         </View>
       );
     }
@@ -647,7 +692,7 @@ const ShopScreen = () => {
   };
 
   const renderEmpty = () => {
-    if (productsLoading) return null;
+    if (productsLoading) return <ProductGridSkeleton count={6} />;
     return (
       <View style={styles.emptyContainer}>
         <Text style={styles.emptyTitle}>NO PRODUCTS FOUND</Text>
@@ -658,10 +703,18 @@ const ShopScreen = () => {
     );
   };
 
+  if (!isConnected && products.length === 0) {
+    return (
+      <View style={styles.safeArea}>
+        <OfflinePlaceholder onRetry={reset} />
+      </View>
+    );
+  }
+
   if (loading) {
     return (
       <View style={styles.loadingWrap}>
-        <ActivityIndicator size="large" color="#000000" />
+        <ProductGridSkeleton count={6} />
       </View>
     );
   }
@@ -671,11 +724,11 @@ const ShopScreen = () => {
       {/* ── Search bar ─────────────────────────────── */}
       <View style={styles.searchSection}>
         <View style={styles.searchRow}>
-          <Ionicons name="search-outline" size={16} color="#777777" />
+          <Ionicons name="search-outline" size={16} color={colors.textSecondary} />
           <TextInput
             style={styles.searchInput}
             placeholder="SEARCH PRODUCTS, BRANDS..."
-            placeholderTextColor="#aaaaaa"
+            placeholderTextColor={colors.textTertiary}
             value={searchQuery}
             onChangeText={handleSearchChange}
             returnKeyType="search"
@@ -686,7 +739,7 @@ const ShopScreen = () => {
               onPress={() => { setSearchQuery(""); setSuggestions([]); }}
               style={{ paddingHorizontal: 4 }}
             >
-              <Ionicons name="close" size={16} color="#777777" />
+              <Ionicons name="close" size={16} color={colors.textSecondary} />
             </Pressable>
           )}
           <Pressable
@@ -694,7 +747,7 @@ const ShopScreen = () => {
             hitSlop={8}
             style={{ paddingLeft: 6 }}
           >
-            <Ionicons name="camera-outline" size={18} color="#000000" />
+            <Ionicons name="camera-outline" size={18} color={colors.text} />
           </Pressable>
         </View>
 
@@ -762,7 +815,7 @@ const ShopScreen = () => {
             ? imageSearching
               ? (
                 <View style={styles.emptyContainer}>
-                  <ActivityIndicator size="large" color="#000000" />
+                  <ActivityIndicator size="large" color={colors.text} />
                 </View>
               )
               : (
@@ -781,7 +834,7 @@ const ShopScreen = () => {
         onEndReachedThreshold={0.5}
         refreshControl={
           !inImageSearchMode ? (
-            <RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor="#000000" />
+            <RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={colors.text} />
           ) : undefined
         }
       />
@@ -803,7 +856,7 @@ const ShopScreen = () => {
 };
 
 // ── Card Styles ──────────────────────────────────────
-const cardStyles = StyleSheet.create({
+const createCardStyles = (colors: ThemeColors) => StyleSheet.create({
   wrapper: {
     flex: 1,
     marginBottom: 48,
@@ -811,7 +864,7 @@ const cardStyles = StyleSheet.create({
   imageWrap: {
     width: "100%",
     aspectRatio: 3 / 4,
-    backgroundColor: "#f3f3f4",
+    backgroundColor: colors.surfaceContainerLow,
     overflow: "hidden",
     position: "relative",
   },
@@ -822,20 +875,20 @@ const cardStyles = StyleSheet.create({
   imagePlaceholder: {
     width: "100%",
     height: "100%",
-    backgroundColor: "#eeeeee",
+    backgroundColor: colors.surfaceContainer,
   },
   limitedBadge: {
     position: "absolute",
     top: 8,
     left: 8,
-    backgroundColor: "#C41E3A",
+    backgroundColor: colors.accentRed,
     paddingHorizontal: 8,
     paddingVertical: 4,
   },
   limitedBadgeText: {
     fontFamily: undefined,
     fontSize: 8,
-    color: "#ffffff",
+    color: colors.textInverse,
     // letterSpacing: 2,
     textTransform: "uppercase",
   },
@@ -855,14 +908,14 @@ const cardStyles = StyleSheet.create({
   brandLabel: {
     fontFamily: undefined,
     fontSize: 10,
-    color: "#777777",
+    color: colors.textSecondary,
     // letterSpacing: 2,
     textTransform: "uppercase",
   },
   productName: {
     fontFamily: undefined,
     fontSize: 11,
-    color: "#000000",
+    color: colors.text,
     // letterSpacing: 1,
     textTransform: "uppercase",
     lineHeight: 16,
@@ -876,34 +929,34 @@ const cardStyles = StyleSheet.create({
   price: {
     fontFamily: undefined,
     fontSize: 12,
-    color: "#000000",
+    color: colors.text,
   },
   originalPrice: {
     fontFamily: undefined,
     fontSize: 11,
-    color: "#aaaaaa",
+    color: colors.textTertiary,
     textDecorationLine: "line-through",
   },
 });
 
 // ── Screen Styles ────────────────────────────────────
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "#ffffff",
+    backgroundColor: colors.background,
   },
   loadingWrap: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#ffffff",
+    backgroundColor: colors.background,
   },
 
   // ── Search ────────────────────────────────────────
   searchSection: {
     borderBottomWidth: 2,
-    borderBottomColor: "#000000",
-    backgroundColor: "#ffffff",
+    borderBottomColor: colors.text,
+    backgroundColor: colors.background,
     zIndex: 100,
   },
   searchRow: {
@@ -917,14 +970,14 @@ const styles = StyleSheet.create({
     flex: 1,
     fontFamily: undefined,
     fontSize: 11,
-    color: "#000000",
+    color: colors.text,
     // letterSpacing: 2,
     paddingVertical: 0,
   },
   suggestionBox: {
     borderTopWidth: 1,
-    borderTopColor: "#eeeeee",
-    backgroundColor: "#ffffff",
+    borderTopColor: colors.surfaceContainer,
+    backgroundColor: colors.background,
   },
   suggestionItem: {
     flexDirection: "row",
@@ -935,19 +988,19 @@ const styles = StyleSheet.create({
   },
   suggestionBorder: {
     borderBottomWidth: 1,
-    borderBottomColor: "#eeeeee",
+    borderBottomColor: colors.surfaceContainer,
   },
   suggestionText: {
     fontFamily: undefined,
     fontSize: 10,
-    color: "#000000",
+    color: colors.text,
     // letterSpacing: 1,
     flex: 1,
   },
   suggestionType: {
     fontFamily: undefined,
     fontSize: 9,
-    color: "#777777",
+    color: colors.textSecondary,
     // letterSpacing: 2,
   },
 
@@ -959,37 +1012,37 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingVertical: 10,
     borderTopWidth: 1,
-    borderTopColor: "#eeeeee",
-    backgroundColor: "#ffffff",
+    borderTopColor: colors.surfaceContainer,
+    backgroundColor: colors.background,
   },
   visualThumb: {
     width: 28,
     height: 28,
     borderRadius: 2,
-    backgroundColor: "#f3f3f4",
+    backgroundColor: colors.surfaceContainerLow,
   },
   visualLabel: {
     flex: 1,
     fontFamily: undefined,
     fontSize: 10,
-    color: "#000000",
+    color: colors.text,
     // letterSpacing: 2,
     fontWeight: "700",
   },
   visualClear: {
     fontFamily: undefined,
     fontSize: 10,
-    color: "#777777",
+    color: colors.textSecondary,
     // letterSpacing: 2,
     fontWeight: "700",
   },
   visualError: {
     paddingHorizontal: 24,
     paddingVertical: 8,
-    backgroundColor: "#fff0f0",
+    backgroundColor: colors.dangerSoft,
   },
   visualErrorText: {
-    color: "#cc0000",
+    color: colors.danger,
     fontSize: 11,
     fontFamily: undefined,
   },
@@ -998,33 +1051,33 @@ const styles = StyleSheet.create({
   genderRow: {
     flexDirection: "row",
     borderBottomWidth: 2,
-    borderBottomColor: "#000000",
+    borderBottomColor: colors.text,
   },
   genderTab: {
     flex: 1,
     paddingVertical: 14,
     alignItems: "center",
     borderRightWidth: 1,
-    borderRightColor: "#eeeeee",
+    borderRightColor: colors.surfaceContainer,
   },
   genderTabActive: {
-    backgroundColor: "#000000",
+    backgroundColor: colors.primary,
   },
   genderTabText: {
     fontFamily: undefined,
     fontSize: 11,
-    color: "#000000",
+    color: colors.text,
     // letterSpacing: 3,
     textTransform: "uppercase",
   },
   genderTabTextActive: {
-    color: "#ffffff",
+    color: colors.textInverse,
   },
 
   // ── Category chips ────────────────────────────────
   categoryScrollWrap: {
     borderBottomWidth: 1,
-    borderBottomColor: "#eeeeee",
+    borderBottomColor: colors.surfaceContainer,
   },
   categoryScroll: {
     paddingHorizontal: 24,
@@ -1035,21 +1088,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 6,
     borderWidth: 1,
-    borderColor: "#e2e2e2",
+    borderColor: colors.outlineVariant,
   },
   categoryChipActive: {
-    backgroundColor: "#000000",
-    borderColor: "#000000",
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
   },
   categoryChipText: {
     fontFamily: undefined,
     fontSize: 10,
-    color: "#000000",
+    color: colors.text,
     // letterSpacing: 2,
     textTransform: "uppercase",
   },
   categoryChipTextActive: {
-    color: "#ffffff",
+    color: colors.textInverse,
   },
 
   // ── Filter bar ────────────────────────────────────
@@ -1061,7 +1114,7 @@ const styles = StyleSheet.create({
     paddingTop: 12,
     paddingBottom: 8,
     borderBottomWidth: 1,
-    borderBottomColor: "#eeeeee",
+    borderBottomColor: colors.surfaceContainer,
   },
   filterBtn: {
     flexDirection: "row",
@@ -1070,30 +1123,30 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 7,
     borderWidth: 1,
-    borderColor: "#000000",
+    borderColor: colors.primary,
   },
   filterBtnActive: {
-    backgroundColor: "#000000",
+    backgroundColor: colors.primary,
   },
   filterBtnText: {
     fontFamily: undefined,
     fontSize: 10,
-    color: "#000000",
+    color: colors.text,
     // letterSpacing: 1,
   },
   filterBtnTextActive: {
-    color: "#ffffff",
+    color: colors.textInverse,
   },
   filterBtnBadge: {
     fontFamily: undefined,
     fontSize: 10,
-    color: "#ffffff",
+    color: colors.textInverse,
     // letterSpacing: 0,
   },
   resultsCount: {
     fontFamily: undefined,
     fontSize: 9,
-    color: "#777777",
+    color: colors.textSecondary,
     // letterSpacing: 2,
     marginLeft: "auto",
   },
@@ -1112,12 +1165,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderWidth: 1,
-    borderColor: "#000000",
+    borderColor: colors.primary,
   },
   activeChipText: {
     fontFamily: undefined,
     fontSize: 9,
-    color: "#000000",
+    color: colors.text,
     // letterSpacing: 2,
   },
 
@@ -1144,12 +1197,12 @@ const styles = StyleSheet.create({
   endLine: {
     flex: 1,
     height: 1,
-    backgroundColor: "#000000",
+    backgroundColor: colors.text,
   },
   endText: {
     fontFamily: undefined,
     fontSize: 9,
-    color: "#000000",
+    color: colors.text,
     // letterSpacing: 3,
   },
   emptyContainer: {
@@ -1160,14 +1213,14 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontFamily: undefined,
     fontSize: 20,
-    color: "#000000",
+    color: colors.text,
     textTransform: "uppercase",
     // letterSpacing: 2,
   },
   emptySubtitle: {
     fontFamily: undefined,
     fontSize: 10,
-    color: "#777777",
+    color: colors.textSecondary,
     // letterSpacing: 2,
     textTransform: "uppercase",
   },

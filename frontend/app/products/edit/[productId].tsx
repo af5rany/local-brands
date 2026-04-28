@@ -119,7 +119,7 @@ const EditProductScreen = () => {
 
   const [autoDetectedType, setAutoDetectedType] = useState(false);
 
-  const { uploads, uploadImage, pickAndUpload } = useCloudinaryUpload();
+  const { uploads, uploadImage, pickAndUpload, isUploading } = useCloudinaryUpload();
 
   const [dynamicProductTypes, setDynamicProductTypes] = useState<
     { label: string; value: string }[]
@@ -155,7 +155,7 @@ const EditProductScreen = () => {
       setHeight(data.height ? String(data.height) : "");
       setStatus(data.status);
       setIsFeatured(data.isFeatured);
-      setProductImages(data.images || []);
+      setProductImages((data.images || []).filter(Boolean));
       setColor(data.color || "");
       if (data.variants && data.variants.length > 0) {
         const seen = new Set<string>();
@@ -245,13 +245,10 @@ const EditProductScreen = () => {
       return;
     }
 
-    const hasNonCloudinaryImage =
-      productImages.some((uri) => !uri.startsWith("https://res.cloudinary."));
-
-    if (hasNonCloudinaryImage) {
+    if (isUploading) {
       Alert.alert(
         "Please wait",
-        "Please wait for images to get uploaded before saving.",
+        "Please wait for images to finish uploading.",
       );
       return;
     }

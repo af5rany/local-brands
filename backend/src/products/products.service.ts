@@ -112,7 +112,15 @@ export class ProductsService {
       qb.andWhere('product.productType IN (:...productTypes)', {
         productTypes,
       });
-    if (gender) qb.andWhere('product.gender = :gender', { gender });
+    if (gender) {
+      if (gender === 'men' || gender === 'women') {
+        qb.andWhere('product.gender IN (:...genderFilter)', {
+          genderFilter: [gender, 'unisex'],
+        });
+      } else {
+        qb.andWhere('product.gender = :gender', { gender });
+      }
+    }
     if (season) qb.andWhere('product.season = :season', { season });
     if (minPrice) qb.andWhere('product.price >= :minPrice', { minPrice });
     if (maxPrice) qb.andWhere('product.price <= :maxPrice', { maxPrice });
@@ -144,11 +152,13 @@ export class ProductsService {
 
     if (inStock === true) {
       qb.andWhere(
-        `EXISTS (SELECT 1 FROM product_variant pv WHERE pv."productId" = product.id AND pv.stock > 0)`,
+        `(EXISTS (SELECT 1 FROM product_variant pv WHERE pv."productId" = product.id AND pv.stock > 0)
+          OR (NOT EXISTS (SELECT 1 FROM product_variant pv2 WHERE pv2."productId" = product.id) AND product.stock > 0))`,
       );
     } else if (inStock === false) {
       qb.andWhere(
-        `NOT EXISTS (SELECT 1 FROM product_variant pv WHERE pv."productId" = product.id AND pv.stock > 0)`,
+        `(NOT EXISTS (SELECT 1 FROM product_variant pv WHERE pv."productId" = product.id AND pv.stock > 0)
+          AND (EXISTS (SELECT 1 FROM product_variant pv2 WHERE pv2."productId" = product.id) OR product.stock = 0))`,
       );
     }
 
@@ -245,6 +255,29 @@ export class ProductsService {
     }
 
     return this.mapToPublicDto(product);
+  }
+
+  async getSuggestions(q: string): Promise<{ products: string[]; brands: string[] }> {
+    const term = `%${q.toLowerCase()}%`;
+    const [productRows, brandRows] = await Promise.all([
+      this.productsRepository
+        .createQueryBuilder('p')
+        .select('DISTINCT p.name', 'name')
+        .where('p.status = :status', { status: ProductStatus.PUBLISHED })
+        .andWhere('LOWER(p.name) LIKE :term', { term })
+        .limit(5)
+        .getRawMany(),
+      this.brandsRepository
+        .createQueryBuilder('b')
+        .select('DISTINCT b.name', 'name')
+        .where('LOWER(b.name) LIKE :term', { term })
+        .limit(5)
+        .getRawMany(),
+    ]);
+    return {
+      products: productRows.map((r) => r.name as string),
+      brands: brandRows.map((r) => r.name as string),
+    };
   }
 
   async getTrending(limit = 10): Promise<PublicProductDto[]> {
@@ -737,20 +770,63 @@ export class ProductsService {
     return result;
   }
 
-  async remove(id: number, user?: any): Promise<void> {
-    if (user) {
-      const product = await this.productsRepository.findOne({
-        where: { id },
-        select: ['id', 'brandId'],
-      });
-      if (product?.brandId) {
-        await this.validateBrandAccess(product.brandId, user);
-      }
+  private extractCloudinaryPublicId(url: string): string | null {
+    try {
+      // Matches: .../upload/{optional_transformations/}{optional_v123/}{public_id}.{ext}
+      const match = url.match(/\/upload\/(?:[^/]+\/)*(?:v\d+\/)?(.+)\.[a-z]+$/i);
+      return match ? match[1] : null;
+    } catch {
+      return null;
     }
+  }
+
+  private async deleteCloudinaryImages(images: string[]): Promise<void> {
+    const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
+    const apiKey = process.env.CLOUDINARY_API_KEY;
+    const apiSecret = process.env.CLOUDINARY_API_SECRET;
+    if (!cloudName || !apiKey || !apiSecret) return;
+
+    const auth = Buffer.from(`${apiKey}:${apiSecret}`).toString('base64');
+    await Promise.all(
+      images.map(async (url) => {
+        const publicId = this.extractCloudinaryPublicId(url);
+        if (!publicId) return;
+        try {
+          await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/destroy`, {
+            method: 'POST',
+            headers: {
+              Authorization: `Basic ${auth}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ public_id: publicId, invalidate: true }),
+          });
+        } catch (e) {
+          console.warn(`[Cloudinary] Failed to delete ${publicId}:`, e);
+        }
+      }),
+    );
+  }
+
+  async remove(id: number, user?: any): Promise<void> {
+    const product = await this.productsRepository.findOne({
+      where: { id },
+      select: ['id', 'brandId', 'images'],
+    });
+    if (!product) throw new NotFoundException(`Product with ID ${id} not found`);
+
+    if (user && product.brandId) {
+      await this.validateBrandAccess(product.brandId, user);
+    }
+
     const result = await this.productsRepository.softDelete(id);
     console.log(`[ProductsService] softDelete id=${id}, affected=${result.affected}`);
     if (result.affected === 0) {
       throw new NotFoundException(`Product with ID ${id} not found`);
+    }
+
+    // Fire-and-forget Cloudinary cleanup
+    if (product.images?.length) {
+      this.deleteCloudinaryImages(product.images).catch(() => {});
     }
   }
 

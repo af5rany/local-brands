@@ -555,7 +555,7 @@ export class BrandsService {
       where: { brandId, status: ProductStatus.PUBLISHED },
       order: { salesCount: 'DESC' },
       take: 5,
-      select: ['id', 'name', 'price', 'salePrice', 'salesCount', 'viewCount', 'averageRating', 'images'],
+      select: ['id', 'name', 'price', 'salePrice', 'salesCount', 'viewCount', 'cartAddCount', 'averageRating', 'images'],
     });
 
     // Revenue and order count
@@ -658,6 +658,7 @@ export class BrandsService {
         salePrice: p.salePrice ? Number(p.salePrice) : null,
         salesCount: p.salesCount,
         viewCount: p.viewCount,
+        cartAddCount: p.cartAddCount,
         averageRating: Number(p.averageRating),
         image: p.images?.[0] || '',
       })),

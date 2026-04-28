@@ -9,7 +9,9 @@ import { ToastProvider } from "@/context/ToastContext";
 import { NetworkProvider } from "@/context/NetworkContext";
 import { ThemeProvider } from "@/context/ThemeContext";
 import GlobalErrorBoundary from "@/components/GlobalErrorBoundary";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import OnboardingWalkthrough from "@/components/OnboardingWalkthrough";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { useFonts } from "expo-font";
 import {
@@ -28,6 +30,8 @@ Notifications.setNotificationHandler({
     shouldShowAlert: true,
     shouldPlaySound: true,
     shouldSetBadge: true,
+    shouldShowBanner: true,
+    shouldShowList: true,
   }),
 });
 
@@ -39,6 +43,11 @@ const PROTECTED_SEGMENTS = [
   "manage",
   "orders",
   "referral",
+  "cart",
+  "profile",
+  "returns",
+  "wishlist",
+  "notifications",
 ];
 
 async function registerForPushNotifications(token: string) {
@@ -67,8 +76,8 @@ function RootLayoutNav() {
   const { token, loading } = useAuth();
   const router = useRouter();
   const segments = useSegments();
-  const notificationListener = useRef<any>();
-  const responseListener = useRef<any>();
+  const notificationListener = useRef<Notifications.Subscription | null>(null);
+  const responseListener = useRef<Notifications.Subscription | null>(null);
 
   useEffect(() => {
     if (
@@ -99,8 +108,8 @@ function RootLayoutNav() {
       else if (data?.returnId) router.push(`/returns/${data.returnId}` as any);
     });
     return () => {
-      Notifications.removeNotificationSubscription(notificationListener.current);
-      Notifications.removeNotificationSubscription(responseListener.current);
+      notificationListener.current?.remove();
+      responseListener.current?.remove();
     };
   }, []);
 
@@ -148,6 +157,10 @@ function RootLayoutNav() {
       <Stack.Screen
         name="brands/[brandId]/index"
         options={{ headerShown: false, title: "Brand" }}
+      />
+      <Stack.Screen
+        name="brands/[brandId]/posts"
+        options={{ headerShown: false, title: "Brand Posts" }}
       />
       <Stack.Screen
         name="brands/[brandId]/edit"
@@ -329,6 +342,8 @@ function RootLayoutNav() {
   );
 }
 
+const ONBOARDING_KEY = "@monolith_onboarding_complete";
+
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({
     Inter_300Light,
@@ -337,15 +352,28 @@ export default function RootLayout() {
     Inter_600SemiBold,
   });
 
+  const [onboardingDone, setOnboardingDone] = useState<boolean | null>(null);
+
   useEffect(() => {
-    if (fontsLoaded) {
+    AsyncStorage.getItem(ONBOARDING_KEY).then((value) => {
+      setOnboardingDone(value === "true");
+    });
+  }, []);
+
+  useEffect(() => {
+    if (fontsLoaded && onboardingDone !== null) {
       SplashScreen.hideAsync();
     }
-  }, [fontsLoaded]);
+  }, [fontsLoaded, onboardingDone]);
 
-  if (!fontsLoaded) {
+  if (!fontsLoaded || onboardingDone === null) {
     return null;
   }
+
+  const handleOnboardingComplete = async () => {
+    await AsyncStorage.setItem(ONBOARDING_KEY, "true");
+    setOnboardingDone(true);
+  };
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
@@ -357,7 +385,11 @@ export default function RootLayout() {
                 <AuthProvider>
                   <BrandProvider>
                     <CartProvider>
-                      <RootLayoutNav />
+                      {onboardingDone ? (
+                        <RootLayoutNav />
+                      ) : (
+                        <OnboardingWalkthrough onComplete={handleOnboardingComplete} />
+                      )}
                     </CartProvider>
                   </BrandProvider>
                 </AuthProvider>

@@ -2,7 +2,7 @@ import React from "react";
 import { View, Image, Text, StyleSheet, ActivityIndicator } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { UploadState } from "../hooks/useCloudinaryUpload";
-import { useThemeColor } from "@/hooks/useThemeColor";
+import { useThemeColors } from "@/hooks/useThemeColor";
 
 interface ImageUploadProgressProps {
   upload: UploadState;
@@ -13,17 +13,13 @@ export const ImageUploadProgress: React.FC<ImageUploadProgressProps> = ({
   upload,
   size = 80,
 }) => {
-  const cardBackground = useThemeColor(
-    { light: "#f8f8f8", dark: "#2c2c2e" },
-    "background",
-  );
-  const textColor = useThemeColor({}, "text");
+  const colors = useThemeColors();
 
   return (
     <View
       style={[
         styles.container,
-        { width: size, height: size, backgroundColor: cardBackground },
+        { width: size, height: size, backgroundColor: colors.surfaceRaised },
       ]}
     >
       <Image source={{ uri: upload.uri }} style={styles.image} />
@@ -54,7 +50,7 @@ export const ImageUploadProgress: React.FC<ImageUploadProgressProps> = ({
 
       {upload.status === "error" && (
         <View style={[styles.overlay, styles.errorOverlay]}>
-          <Ionicons name="alert-circle" size={24} color="#C41E3A" />
+          <Ionicons name="alert-circle" size={24} color={colors.danger} />
           <Text style={[styles.text, { fontSize: 8 }]}>{upload.error}</Text>
         </View>
       )}

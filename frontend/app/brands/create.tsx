@@ -13,8 +13,8 @@ import {
   StatusBar,
   Platform,
   KeyboardAvoidingView,
-  useColorScheme,
 } from "react-native";
+import { useThemeColors } from "@/hooks/useThemeColor";
 import * as ImagePicker from "expo-image-picker";
 import { Dropdown } from "react-native-element-dropdown";
 import { Ionicons } from "@expo/vector-icons";
@@ -34,8 +34,7 @@ type User = {
 const CreateBrandScreen = () => {
   const { token } = useAuth();
   const router = useRouter();
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === "dark";
+  const colors = useThemeColors();
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -47,13 +46,6 @@ const CreateBrandScreen = () => {
   const [loading, setLoading] = useState(false);
   const dropdownRef = useRef<any>(null);
   const { uploads, uploadImage } = useCloudinaryUpload();
-
-  // B&W theme
-  const bg = isDark ? "#000000" : "#FFFFFF";
-  const text = isDark ? "#FFFFFF" : "#000000";
-  const secondary = isDark ? "#8E8E93" : "#6B6B6B";
-  const border = isDark ? "#2C2C2E" : "#E5E5E5";
-  const inputBg = isDark ? "#1C1C1E" : "#F5F5F5";
 
   // Fetch non-guest users
   const fetchUsers = async () => {
@@ -207,11 +199,11 @@ const CreateBrandScreen = () => {
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
       <StatusBar
-        barStyle={isDark ? "light-content" : "dark-content"}
-        backgroundColor={bg}
+        barStyle={colors.statusBar as any}
+        backgroundColor={colors.background}
       />
       <ScrollView
-        style={[styles.container, { backgroundColor: bg }]}
+        style={[styles.container, { backgroundColor: colors.background }]}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
@@ -222,21 +214,21 @@ const CreateBrandScreen = () => {
             onPress={() => router.back()}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
-            <Ionicons name="arrow-back" size={22} color={text} />
+            <Ionicons name="arrow-back" size={22} color={colors.text} />
           </TouchableOpacity>
-          <Text style={[styles.header, { color: text }]}>NEW BRAND</Text>
+          <Text style={[styles.header, { color: colors.text }]}>NEW BRAND</Text>
           <View style={{ width: 22 }} />
         </View>
 
         {/* Logo */}
         <View style={styles.section}>
-          <Text style={[styles.label, { color: secondary }]}>LOGO</Text>
+          <Text style={[styles.label, { color: colors.textSecondary }]}>LOGO</Text>
           <TouchableOpacity
             style={[
               styles.logoUpload,
               {
-                borderColor: logoUrl ? text : border,
-                backgroundColor: inputBg,
+                borderColor: logoUrl ? colors.text : colors.border,
+                backgroundColor: colors.surfaceRaised,
               },
             ]}
             onPress={handleImagePick}
@@ -256,20 +248,20 @@ const CreateBrandScreen = () => {
                 <View
                   style={[
                     styles.logoOverlay,
-                    { backgroundColor: isDark ? "#FFFFFF" : "#000000" },
+                    { backgroundColor: colors.text },
                   ]}
                 >
                   <Ionicons
                     name="camera-outline"
                     size={14}
-                    color={isDark ? "#000000" : "#FFFFFF"}
+                    color={colors.textInverse}
                   />
                 </View>
               </View>
             ) : (
               <View style={styles.logoPlaceholder}>
-                <Ionicons name="image-outline" size={28} color={secondary} />
-                <Text style={[styles.logoPlaceholderText, { color: secondary }]}>
+                <Ionicons name="image-outline" size={28} color={colors.textSecondary} />
+                <Text style={[styles.logoPlaceholderText, { color: colors.textSecondary }]}>
                   Tap to upload
                 </Text>
               </View>
@@ -279,16 +271,16 @@ const CreateBrandScreen = () => {
 
         {/* Name */}
         <View style={styles.section}>
-          <Text style={[styles.label, { color: secondary }]}>
-            BRAND NAME <Text style={{ color: "#C41E3A" }}>*</Text>
+          <Text style={[styles.label, { color: colors.textSecondary }]}>
+            BRAND NAME <Text style={{ color: colors.accentRed }}>*</Text>
           </Text>
           <TextInput
             style={[
               styles.input,
-              { backgroundColor: inputBg, color: text, borderColor: border },
+              { backgroundColor: colors.surfaceRaised, color: colors.text, borderColor: colors.border },
             ]}
             placeholder="Enter brand name"
-            placeholderTextColor={secondary}
+            placeholderTextColor={colors.textSecondary}
             value={name}
             onChangeText={setName}
           />
@@ -296,8 +288,8 @@ const CreateBrandScreen = () => {
 
         {/* Owner */}
         <View style={styles.section}>
-          <Text style={[styles.label, { color: secondary }]}>
-            ASSIGN OWNER <Text style={{ color: "#C41E3A" }}>*</Text>
+          <Text style={[styles.label, { color: colors.textSecondary }]}>
+            ASSIGN OWNER <Text style={{ color: colors.accentRed }}>*</Text>
           </Text>
 
           {/* Role filter chips */}
@@ -319,8 +311,8 @@ const CreateBrandScreen = () => {
                   style={[
                     styles.filterChip,
                     {
-                      backgroundColor: isActive ? text : "transparent",
-                      borderColor: isActive ? text : border,
+                      backgroundColor: isActive ? colors.text : "transparent",
+                      borderColor: isActive ? colors.text : colors.border,
                     },
                   ]}
                   onPress={() => {
@@ -331,7 +323,7 @@ const CreateBrandScreen = () => {
                   <Text
                     style={[
                       styles.filterChipText,
-                      { color: isActive ? bg : secondary },
+                      { color: isActive ? colors.background : colors.textSecondary },
                     ]}
                   >
                     {f.label} ({count})
@@ -360,24 +352,24 @@ const CreateBrandScreen = () => {
               searchPlaceholder="Search by name or email..."
               style={[
                 styles.dropdown,
-                { backgroundColor: inputBg, borderColor: border },
+                { backgroundColor: colors.surfaceRaised, borderColor: colors.border },
               ]}
-              placeholderStyle={[styles.dropdownPlaceholder, { color: secondary }]}
+              placeholderStyle={[styles.dropdownPlaceholder, { color: colors.textSecondary }]}
               selectedTextStyle={[styles.dropdownSelected, { color: text }]}
               inputSearchStyle={[
                 styles.dropdownSearch,
                 {
-                  backgroundColor: inputBg,
-                  color: text,
-                  borderColor: border,
+                  backgroundColor: colors.surfaceRaised,
+                  color: colors.text,
+                  borderColor: colors.border,
                 },
               ]}
               containerStyle={[
                 styles.dropdownContainer,
-                { backgroundColor: bg, borderColor: border },
+                { backgroundColor: colors.background, borderColor: colors.border },
               ]}
-              itemTextStyle={{ color: text, fontSize: 14 }}
-              activeColor={inputBg}
+              itemTextStyle={{ color: colors.text, fontSize: 14 }}
+              activeColor={colors.surfaceRaised}
               renderItem={(item) => {
                 const isSelected = item.value === owner;
                 const roleLabel =
@@ -388,21 +380,21 @@ const CreateBrandScreen = () => {
                   <View
                     style={[
                       styles.dropdownItem,
-                      { borderBottomColor: border },
-                      isSelected && { backgroundColor: inputBg },
+                      { borderBottomColor: colors.border },
+                      isSelected && { backgroundColor: colors.surfaceRaised },
                     ]}
                   >
                     <View style={styles.dropdownItemLeft}>
                       <View
                         style={[
                           styles.dropdownAvatar,
-                          { backgroundColor: isSelected ? text : inputBg },
+                          { backgroundColor: isSelected ? colors.text : colors.surfaceRaised },
                         ]}
                       >
                         <Text
                           style={[
                             styles.dropdownAvatarText,
-                            { color: isSelected ? bg : secondary },
+                            { color: isSelected ? colors.background : colors.textSecondary },
                           ]}
                         >
                           {(item.label?.charAt(0) || "?").toUpperCase()}
@@ -412,7 +404,7 @@ const CreateBrandScreen = () => {
                         <Text
                           style={[
                             styles.dropdownItemName,
-                            { color: text },
+                            { color: colors.text },
                             isSelected && { fontWeight: "800" },
                           ]}
                           numberOfLines={1}
@@ -421,7 +413,7 @@ const CreateBrandScreen = () => {
                         </Text>
                         {roleLabel && (
                           <Text
-                            style={[styles.dropdownItemRole, { color: secondary }]}
+                            style={[styles.dropdownItemRole, { color: colors.textSecondary }]}
                           >
                             {roleLabel}
                           </Text>
@@ -429,7 +421,7 @@ const CreateBrandScreen = () => {
                       </View>
                     </View>
                     {isSelected && (
-                      <Ionicons name="checkmark" size={16} color={text} />
+                      <Ionicons name="checkmark" size={16} color={colors.text} />
                     )}
                   </View>
                 );
@@ -439,22 +431,22 @@ const CreateBrandScreen = () => {
 
           {/* Selected user info */}
           {selectedUser && (
-            <View style={[styles.selectedInfo, { borderColor: border }]}>
+            <View style={[styles.selectedInfo, { borderColor: colors.border }]}>
               <View
-                style={[styles.selectedAvatar, { backgroundColor: text }]}
+                style={[styles.selectedAvatar, { backgroundColor: colors.text }]}
               >
-                <Text style={[styles.selectedAvatarText, { color: bg }]}>
+                <Text style={[styles.selectedAvatarText, { color: colors.background }]}>
                   {(selectedUser.label?.charAt(0) || "?").toUpperCase()}
                 </Text>
               </View>
               <View style={{ flex: 1 }}>
                 <Text
-                  style={[styles.selectedName, { color: text }]}
+                  style={[styles.selectedName, { color: colors.text }]}
                   numberOfLines={1}
                 >
                   {selectedUser.label}
                 </Text>
-                <Text style={[styles.selectedRole, { color: secondary }]}>
+                <Text style={[styles.selectedRole, { color: colors.textSecondary }]}>
                   {selectedUser.role === "brandOwner"
                     ? "BRAND OWNER"
                     : selectedUser.role?.toUpperCase()}
@@ -466,7 +458,7 @@ const CreateBrandScreen = () => {
                 onPress={() => setOwner("")}
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               >
-                <Ionicons name="close" size={16} color={secondary} />
+                <Ionicons name="close" size={16} color={colors.textSecondary} />
               </TouchableOpacity>
             </View>
           )}
@@ -474,17 +466,17 @@ const CreateBrandScreen = () => {
 
         {/* Description */}
         <View style={styles.section}>
-          <Text style={[styles.label, { color: secondary }]}>
-            DESCRIPTION <Text style={{ color: "#C41E3A" }}>*</Text>
+          <Text style={[styles.label, { color: colors.textSecondary }]}>
+            DESCRIPTION <Text style={{ color: colors.accentRed }}>*</Text>
           </Text>
           <TextInput
             style={[
               styles.input,
               styles.textArea,
-              { backgroundColor: inputBg, color: text, borderColor: border },
+              { backgroundColor: colors.surfaceRaised, color: colors.text, borderColor: colors.border },
             ]}
             placeholder="Tell us about this brand"
-            placeholderTextColor={secondary}
+            placeholderTextColor={colors.textSecondary}
             value={description}
             onChangeText={setDescription}
             multiline
@@ -494,16 +486,16 @@ const CreateBrandScreen = () => {
 
         {/* Location */}
         <View style={styles.section}>
-          <Text style={[styles.label, { color: secondary }]}>
-            LOCATION <Text style={{ color: "#C41E3A" }}>*</Text>
+          <Text style={[styles.label, { color: colors.textSecondary }]}>
+            LOCATION <Text style={{ color: colors.accentRed }}>*</Text>
           </Text>
           <TextInput
             style={[
               styles.input,
-              { backgroundColor: inputBg, color: text, borderColor: border },
+              { backgroundColor: colors.surfaceRaised, color: colors.text, borderColor: colors.border },
             ]}
             placeholder="Headquarters location"
-            placeholderTextColor={secondary}
+            placeholderTextColor={colors.textSecondary}
             value={location}
             onChangeText={setLocation}
           />
@@ -513,7 +505,7 @@ const CreateBrandScreen = () => {
         <TouchableOpacity
           style={[
             styles.submitButton,
-            { backgroundColor: text },
+            { backgroundColor: colors.primary },
             (loading || isUploading) && styles.submitDisabled,
           ]}
           onPress={handleCreateBrand}
@@ -521,9 +513,9 @@ const CreateBrandScreen = () => {
           activeOpacity={0.7}
         >
           {loading ? (
-            <ActivityIndicator size="small" color={bg} />
+            <ActivityIndicator size="small" color={colors.background} />
           ) : (
-            <Text style={[styles.submitText, { color: bg }]}>
+            <Text style={[styles.submitText, { color: colors.background }]}>
               CREATE BRAND
             </Text>
           )}

@@ -25,6 +25,9 @@ import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/context/ToastContext";
 import { useBrand } from "@/context/BrandContext";
 import { useBrandDetails, sortOptions, SortOption } from "@/hooks/useBrandDetails";
+import { ProductGridSkeleton } from "@/components/Skeleton";
+import { useNetwork } from "@/context/NetworkContext";
+import OfflinePlaceholder from "@/components/OfflinePlaceholder";
 
 const STATUS_CONFIG: Record<
   BrandStatus,
@@ -43,6 +46,7 @@ const BrandDetailScreen = () => {
   const { showToast } = useToast();
   const { productListVersion } = useBrand();
   const colors = useThemeColors();
+  const { isConnected } = useNetwork();
   const userRole = user?.role || user?.userRole;
 
   const {
@@ -84,6 +88,7 @@ const BrandDetailScreen = () => {
   const [changingStatus, setChangingStatus] = useState(false);
   const [posts, setPosts] = useState<any[]>([]);
   const [postsLoading, setPostsLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState<"products" | "posts">("products");
 
   const fetchPosts = useCallback(async () => {
     if (!brandId) return;
@@ -246,7 +251,15 @@ const BrandDetailScreen = () => {
     return count;
   };
 
-  // ── Loading / Error / Not Found ──────────────
+  // ── Offline / Loading / Error / Not Found ────
+  if (!isConnected && !brand) {
+    return (
+      <View style={[styles.center, { backgroundColor: colors.background }]}>
+        <OfflinePlaceholder onRetry={fetchBrandDetails} />
+      </View>
+    );
+  }
+
   if (loading) {
     return (
       <View style={[styles.center, { backgroundColor: colors.background }]}>
@@ -576,222 +589,248 @@ const BrandDetailScreen = () => {
           </View>
         )}
 
-        {/* ── Search & Filter ─────────────────────── */}
-        <View style={styles.searchFilterRow}>
-          <View
-            style={[
-              styles.searchBar,
-              {
-                backgroundColor: colors.surfaceRaised,
-                borderColor: colors.border,
-              },
-            ]}
-          >
-            <Ionicons
-              name="search"
-              size={18}
-              color={colors.textTertiary}
-              style={{ marginRight: 10 }}
-            />
-            <TextInput
-              style={[styles.searchInput, { color: colors.text }]}
-              placeholder="Search products..."
-              placeholderTextColor={colors.textTertiary}
-              value={filters.search}
-              onChangeText={(text) => handleFilterChange("search", text)}
-              onSubmitEditing={() => fetchProducts(1, true)}
-              returnKeyType="search"
-            />
-            {filters.search.length > 0 && (
-              <TouchableOpacity
-                onPress={() => {
-                  handleFilterChange("search", "");
-                  fetchProducts(1, true);
-                }}
-                style={[styles.clearSearchBtn, { backgroundColor: colors.border }]}
-              >
-                <Ionicons
-                  name="close"
-                  size={12}
-                  color={colors.textSecondary}
-                />
-              </TouchableOpacity>
-            )}
-          </View>
+        {/* ── Tab Switcher ────────────────────────── */}
+        <View style={[styles.tabBar, { borderColor: colors.border }]}>
           <TouchableOpacity
             style={[
-              styles.filterBtn,
-              {
-                backgroundColor:
-                  activeFiltersCount > 0
-                    ? colors.primary
-                    : colors.surfaceRaised,
-                borderColor:
-                  activeFiltersCount > 0 ? colors.primary : colors.border,
+              styles.tabItem,
+              activeTab === "products" && {
+                borderBottomColor: colors.primary,
+                borderBottomWidth: 2,
               },
             ]}
-            onPress={() => setShowFilters(true)}
+            onPress={() => setActiveTab("products")}
           >
-            <Ionicons
-              name="options"
-              size={18}
-              color={
-                activeFiltersCount > 0
-                  ? colors.primaryForeground
-                  : colors.text
-              }
-            />
-            {activeFiltersCount > 0 && (
-              <View
-                style={[
-                  styles.filterBadge,
-                  { backgroundColor: colors.danger },
-                ]}
-              >
-                <Text style={[styles.filterBadgeText, { color: colors.primaryForeground }]}>{activeFiltersCount}</Text>
-              </View>
-            )}
+            <Text
+              style={[
+                styles.tabItemText,
+                {
+                  color:
+                    activeTab === "products"
+                      ? colors.primary
+                      : colors.textSecondary,
+                },
+              ]}
+            >
+              PRODUCTS
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              styles.tabItem,
+              activeTab === "posts" && {
+                borderBottomColor: colors.primary,
+                borderBottomWidth: 2,
+              },
+            ]}
+            onPress={() => setActiveTab("posts")}
+          >
+            <Text
+              style={[
+                styles.tabItemText,
+                {
+                  color:
+                    activeTab === "posts"
+                      ? colors.primary
+                      : colors.textSecondary,
+                },
+              ]}
+            >
+              POSTS
+              {posts.length > 0 && (
+                <Text style={{ color: colors.textTertiary }}>
+                  {" "}
+                  ({posts.length})
+                </Text>
+              )}
+            </Text>
           </TouchableOpacity>
         </View>
 
-        {/* ── Sort Chips ──────────────────────────── */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={styles.sortScroll}
-          contentContainerStyle={styles.sortContent}
-        >
-          {sortOptions.map((option) => {
-            const isActive = selectedSortOption.key === option.key;
-            return (
-              <TouchableOpacity
-                key={option.key}
+        {/* ── Products Tab Content ─────────────────── */}
+        {activeTab === "products" && (
+          <>
+            {/* Search & Filter */}
+            <View style={styles.searchFilterRow}>
+              <View
                 style={[
-                  styles.sortChip,
+                  styles.searchBar,
                   {
-                    backgroundColor: isActive
-                      ? colors.primary
-                      : colors.surfaceRaised,
-                    borderColor: isActive ? colors.primary : colors.border,
+                    backgroundColor: colors.surfaceRaised,
+                    borderColor: colors.border,
                   },
                 ]}
-                onPress={() => handleSortChange(option)}
               >
-                <Text
-                  style={[
-                    styles.sortChipText,
-                    {
-                      color: isActive
-                        ? colors.primaryForeground
-                        : colors.textSecondary,
-                    },
-                  ]}
-                >
-                  {option.label}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
-
-        {/* ── Posts Section ──────────────────────── */}
-        {posts.length > 0 && (
-          <View style={styles.postsSection}>
-            <View style={styles.postsSectionHeader}>
-              <Text style={[styles.productsTitle, { color: colors.text }]}>
-                Posts
-              </Text>
+                <Ionicons
+                  name="search"
+                  size={18}
+                  color={colors.textTertiary}
+                  style={{ marginRight: 10 }}
+                />
+                <TextInput
+                  style={[styles.searchInput, { color: colors.text }]}
+                  placeholder="Search products..."
+                  placeholderTextColor={colors.textTertiary}
+                  value={filters.search}
+                  onChangeText={(text) => handleFilterChange("search", text)}
+                  onSubmitEditing={() => fetchProducts(1, true)}
+                  returnKeyType="search"
+                />
+                {filters.search.length > 0 && (
+                  <TouchableOpacity
+                    onPress={() => {
+                      handleFilterChange("search", "");
+                      fetchProducts(1, true);
+                    }}
+                    style={[styles.clearSearchBtn, { backgroundColor: colors.border }]}
+                  >
+                    <Ionicons name="close" size={12} color={colors.textSecondary} />
+                  </TouchableOpacity>
+                )}
+              </View>
               <TouchableOpacity
-                onPress={() => router.push(`/brands/${brandId}/posts` as any)}
-                hitSlop={8}
+                style={[
+                  styles.filterBtn,
+                  {
+                    backgroundColor:
+                      activeFiltersCount > 0 ? colors.primary : colors.surfaceRaised,
+                    borderColor:
+                      activeFiltersCount > 0 ? colors.primary : colors.border,
+                  },
+                ]}
+                onPress={() => setShowFilters(true)}
               >
-                <Text style={[styles.seeAllText, { color: colors.primary }]}>
-                  SEE ALL
-                </Text>
+                <Ionicons
+                  name="options"
+                  size={18}
+                  color={activeFiltersCount > 0 ? colors.primaryForeground : colors.text}
+                />
+                {activeFiltersCount > 0 && (
+                  <View style={[styles.filterBadge, { backgroundColor: colors.danger }]}>
+                    <Text style={[styles.filterBadgeText, { color: colors.primaryForeground }]}>
+                      {activeFiltersCount}
+                    </Text>
+                  </View>
+                )}
               </TouchableOpacity>
             </View>
+
+            {/* Sort Chips */}
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.postsScroll}
+              style={styles.sortScroll}
+              contentContainerStyle={styles.sortContent}
             >
-              {posts.map((post: any) => (
-                <TouchableOpacity
-                  key={post.id}
-                  style={[styles.postCard, { borderColor: colors.border }]}
-                  onPress={() => router.push(`/feed/${post.id}` as any)}
-                  activeOpacity={0.85}
-                >
-                  {post.images?.[0] ? (
-                    <Image
-                      source={{ uri: post.images[0] }}
-                      style={styles.postImage}
-                      resizeMode="cover"
-                    />
-                  ) : (
-                    <View style={[styles.postImage, { backgroundColor: colors.surfaceRaised }]}>
-                      <Ionicons name="image-outline" size={24} color={colors.textTertiary} />
-                    </View>
-                  )}
-                  {post.images?.length > 1 && (
-                    <View style={[styles.postMultiBadge, { backgroundColor: colors.surfaceOverlay }]}>
-                      <Ionicons name="copy-outline" size={10} color={colors.textInverse} />
-                    </View>
-                  )}
-                  <View style={styles.postMeta}>
-                    {post.caption ? (
-                      <Text
-                        style={[styles.postCaption, { color: colors.text }]}
-                        numberOfLines={2}
-                      >
-                        {post.caption}
-                      </Text>
-                    ) : null}
-                    <View style={styles.postStatsRow}>
-                      <Ionicons name="heart" size={10} color={colors.textTertiary} />
-                      <Text style={[styles.postStatText, { color: colors.textTertiary }]}>
-                        {post.likeCount || 0}
-                      </Text>
-                      <Ionicons name="chatbubble" size={10} color={colors.textTertiary} />
-                      <Text style={[styles.postStatText, { color: colors.textTertiary }]}>
-                        {post.commentCount || 0}
-                      </Text>
-                    </View>
-                  </View>
-                </TouchableOpacity>
-              ))}
+              {sortOptions.map((option) => {
+                const isActive = selectedSortOption.key === option.key;
+                return (
+                  <TouchableOpacity
+                    key={option.key}
+                    style={[
+                      styles.sortChip,
+                      {
+                        backgroundColor: isActive ? colors.primary : colors.surfaceRaised,
+                        borderColor: isActive ? colors.primary : colors.border,
+                      },
+                    ]}
+                    onPress={() => handleSortChange(option)}
+                  >
+                    <Text
+                      style={[
+                        styles.sortChipText,
+                        { color: isActive ? colors.primaryForeground : colors.textSecondary },
+                      ]}
+                    >
+                      {option.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
             </ScrollView>
+          </>
+        )}
+
+        {/* ── Posts Tab Content ────────────────────── */}
+        {activeTab === "posts" && (
+          <View style={styles.postsTabContent}>
+            {postsLoading && posts.length === 0 ? (
+              <ActivityIndicator
+                size="large"
+                color={colors.primary}
+                style={{ paddingVertical: 48 }}
+              />
+            ) : posts.length === 0 ? (
+              <View style={[styles.emptyState, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                <Ionicons name="images-outline" size={48} color={colors.textTertiary} />
+                <Text style={[styles.emptyTitle, { color: colors.textSecondary }]}>No posts yet</Text>
+              </View>
+            ) : (
+              <View style={styles.postsGrid}>
+                {posts.map((post: any) => (
+                  <TouchableOpacity
+                    key={post.id}
+                    style={[styles.postsGridItem, { borderColor: colors.border }]}
+                    onPress={() => router.push(`/feed/${post.id}` as any)}
+                    activeOpacity={0.85}
+                  >
+                    {post.images?.[0] ? (
+                      <Image
+                        source={{ uri: post.images[0] }}
+                        style={styles.postsGridImage}
+                        resizeMode="cover"
+                      />
+                    ) : (
+                      <View style={[styles.postsGridImage, { backgroundColor: colors.surfaceRaised }]}>
+                        <Ionicons name="image-outline" size={32} color={colors.textTertiary} />
+                      </View>
+                    )}
+                    {post.images?.length > 1 && (
+                      <View style={[styles.postMultiBadge, { backgroundColor: colors.surfaceOverlay }]}>
+                        <Ionicons name="copy-outline" size={10} color={colors.textInverse} />
+                      </View>
+                    )}
+                    <View style={styles.postMeta}>
+                      {post.caption ? (
+                        <Text
+                          style={[styles.postCaption, { color: colors.text }]}
+                          numberOfLines={2}
+                        >
+                          {post.caption}
+                        </Text>
+                      ) : null}
+                      <View style={styles.postStatsRow}>
+                        <Ionicons name="heart" size={10} color={colors.textTertiary} />
+                        <Text style={[styles.postStatText, { color: colors.textTertiary }]}>
+                          {post.likeCount || 0}
+                        </Text>
+                        <Ionicons name="chatbubble" size={10} color={colors.textTertiary} />
+                        <Text style={[styles.postStatText, { color: colors.textTertiary }]}>
+                          {post.commentCount || 0}
+                        </Text>
+                      </View>
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
           </View>
         )}
 
-        {postsLoading && posts.length === 0 && (
-          <View style={styles.postsSection}>
-            <View style={styles.postsSectionHeader}>
+        {/* ── Products Header + Grid ──────────────── */}
+        {activeTab === "products" && (
+          <>
+            <View style={styles.productsHeader}>
               <Text style={[styles.productsTitle, { color: colors.text }]}>
-                Posts
+                Products
+              </Text>
+              <Text style={[styles.productCount, { color: colors.textTertiary }]}>
+                {pagination.total} product{pagination.total !== 1 ? "s" : ""}
               </Text>
             </View>
-            <ActivityIndicator size="small" color={colors.primary} style={{ paddingVertical: 16 }} />
-          </View>
-        )}
 
-        {/* ── Products Header ─────────────────────── */}
-        <View style={styles.productsHeader}>
-          <Text style={[styles.productsTitle, { color: colors.text }]}>
-            Products
-          </Text>
-          <Text
-            style={[styles.productCount, { color: colors.textTertiary }]}
-          >
-            {pagination.total} product{pagination.total !== 1 ? "s" : ""}
-          </Text>
-        </View>
-
-        {/* ── Products Grid (2 columns) ──────────── */}
         {productsLoading && products.length === 0 ? (
-          <View style={styles.productsLoadingWrap}>
-            <ActivityIndicator size="large" color={colors.primary} />
-          </View>
+          <ProductGridSkeleton count={4} />
         ) : products.length > 0 ? (
           <View style={styles.productsList}>
             <FlatList
@@ -870,6 +909,8 @@ const BrandDetailScreen = () => {
                 : "Create your first product to get started"}
             </Text>
           </View>
+        )}
+          </>
         )}
 
         {/* ── Danger Zone (Owner/Admin) ───────────── */}
@@ -1078,6 +1119,48 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: "800",
     // letterSpacing: 1.5,
+  },
+
+  // ── Tab Bar ─────────────────────────────────
+  tabBar: {
+    flexDirection: "row",
+    marginHorizontal: 16,
+    marginTop: 16,
+    borderBottomWidth: 1,
+  },
+  tabItem: {
+    flex: 1,
+    paddingVertical: 12,
+    alignItems: "center",
+    borderBottomWidth: 2,
+    borderBottomColor: "transparent",
+  },
+  tabItemText: {
+    fontSize: 11,
+    fontWeight: "800",
+    textTransform: "uppercase",
+  },
+
+  // ── Posts Grid (tab view) ───────────────────
+  postsTabContent: {
+    marginTop: 16,
+    paddingHorizontal: 16,
+  },
+  postsGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  postsGridItem: {
+    width: "47.5%",
+    borderWidth: 1,
+    overflow: "hidden",
+  },
+  postsGridImage: {
+    width: "100%",
+    aspectRatio: 1,
+    justifyContent: "center",
+    alignItems: "center",
   },
 
   // ── Management Section ──────────────────────

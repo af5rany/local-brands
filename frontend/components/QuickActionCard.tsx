@@ -1,8 +1,9 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { View, Text, StyleSheet, Pressable, Animated } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { Swipeable, RectButton } from "react-native-gesture-handler";
 import { useThemeColors } from "@/hooks/useThemeColor";
+import type { ThemeColors } from "@/constants/Colors";
 
 type QuickActionCardProps = {
   title: string;
@@ -20,6 +21,7 @@ const QuickActionCard: React.FC<QuickActionCardProps> = ({
   onPress,
 }) => {
   const colors = useThemeColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   const renderRightActions = (
     progress: Animated.AnimatedInterpolation<number>,
@@ -78,7 +80,7 @@ const QuickActionCard: React.FC<QuickActionCardProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   card: {
     borderRadius: 0,
     padding: 16,
@@ -116,7 +118,7 @@ const styles = StyleSheet.create({
     marginRight: 4,
   },
   swipeText: {
-    color: "white",
+    color: colors.textInverse,
     fontSize: 11,
     fontWeight: "700",
     marginTop: 4,

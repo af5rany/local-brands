@@ -2,7 +2,7 @@
 
 > **Platform:** Mobile-first (iOS & Android) with web support
 > **Framework:** React Native / Expo
-> **Date:** April 26, 2026
+> **Date:** April 27, 2026
 
 ---
 
@@ -230,7 +230,13 @@ The home screen renders the Customer/Guest browsing view by default. Admin and b
 - Each card shows: logo, brand name, location
 - Same pagination as products
 
-**Data fetched:** Filter options (categories, product types), featured brands (paginated, 12/page), new arrivals (paginated, 12/page), wishlist items
+**Data fetched:** Filter options (categories, product types), featured brands (paginated, 12/page), new arrivals (paginated, 12/page), wishlist items, recently viewed product details (from AsyncStorage IDs)
+
+**Recently Viewed section:**
+- Horizontal scroll of up to 8 last-viewed products (product image + price)
+- Appears only after user has viewed at least one product
+- "CLEAR" button top-right — wipes history instantly
+- Tapping a card navigates to product detail
 
 ---
 
@@ -261,8 +267,8 @@ Accessible to admins and brand owners via the speedometer icon in the Header or 
   - **Manage Brands** — navigates to `/brands`
   - **Product Management** — navigates to `/products`
   - **User Management** — navigates to `/users`
-  - **System Analytics** — coming soon
-  - **Settings** — coming soon
+  - **System Analytics** — live (revenue, GMV by month, top brands, orders by status, user growth)
+  - **Settings** — navigates to `/manage/settings`
   - **Continue as Customer** — exits management mode and goes back
 
 #### Brand Owner Dashboard
@@ -270,9 +276,9 @@ Accessible to admins and brand owners via the speedometer icon in the Header or 
 - Same header as Admin
 - Stats section: My Products count, Orders count, Revenue
 - Quick Actions section:
-  - **My Products** — navigates to `/brands/select` (pick a brand first)
-  - **Order Management** — coming soon
-  - **Brand Analytics** — coming soon
+    - **My Products** — navigates to `/brands/select` (pick a brand first)
+  - **Order Management** — navigates to `/brands/[brandId]/orders`
+  - **Brand Analytics** — live on `/brands/[brandId]/dashboard`
   - **Continue as Customer** — exits management mode and goes back
 
 **Data fetched:** Statistics from `/statistics` (brand-scoped for brand owners via `?brandId=`); supports pull-to-refresh.
@@ -358,11 +364,22 @@ Accessible to admins and brand owners via the speedometer icon in the Header or 
 **Elements:**
 - Back button
 - Brand header: logo, name, status badge, description, location
-- Status change controls (owner/admin)
+- Follow/Unfollow button
 - Action buttons (owner/admin): Edit, Delete, Add Product
-- Products section: search, filter panel, sort options, product list, load more, pull-to-refresh
+- **"Products" | "Posts"** tab switcher:
+  - **Products tab** — 2-column product grid with search, filter panel, sort options, load more, pull-to-refresh
+  - **Posts tab** — 2-column grid of the brand's feed posts; tapping a post navigates to `/feed/[postId]`; empty state if brand has no posts
 
-> **[TODO]** Add **"Products" | "Posts"** tab switcher to brand detail. "Posts" tab shows the brand's feed posts (same card design as Feed tab, infinite scroll, taps to `/feed/[postId]`). See §10.3.
+#### 4.3e Brand Owner Orders — `/brands/[brandId]/orders`
+**Elements:**
+- Back button, "ORDERS" title
+- Paginated list of orders placed through this brand (infinite scroll)
+- Each row: order number, status badge (color-coded), customer name/email, item preview (name · color · size × qty), date, total
+- Tapping a card → `/orders/[orderId]` (read-only customer-facing detail)
+- Empty state when no orders
+- Pull-to-refresh
+
+> Brand owners can **view and fulfill** orders. Action button appears per order based on current status: PENDING → CONFIRM ORDER, CONFIRMED → MARK PROCESSING, PROCESSING → MARK AS SHIPPED (opens tracking number modal), SHIPPED → MARK DELIVERED. Transitions are forward-only; tracking number required for SHIPPED. Backend: `PUT /orders/:id/fulfill` with `BrandUser` ownership check.
 
 #### 4.3e Edit Brand — `/brands/[brandId]/edit`
 **Elements:**
@@ -403,15 +420,15 @@ Accessible to admins and brand owners via the speedometer icon in the Header or 
   - Price display: current price / original price (strikethrough)
   - Discount percentage badge (if on sale)
   - Star rating display
-- Variant selector:
-  - Color swatches (tappable, selected shows border)
-  - Stock status per variant
+- Color display: product-level single color (displayed as label, not a picker — one product = one color)
+- Size selector: size boxes (tappable chips); out-of-stock sizes shown italic/greyed and disabled; requires size selection before add to cart; **SIZE GUIDE** link opens modal if guide exists for the product/brand
 - Description section (expandable)
 - Product metadata: type, gender, season, material, care, origin, dimensions
 - **Add to Wishlist** button (heart icon, toggles state)
 - **Add to Cart** button (primary, full-width, black, disabled if out of stock)
 - **TRY ON** button — opens TryOnModal (full-screen AI virtual try-on)
 - Reviews section (ProductReviews component)
+- **Q&A section** (ProductQA component, below reviews) — customers can ask questions; brand owners see pending questions with inline answer form; all answered Q&As visible publicly
 - Fade-in and scale animations on load
 
 #### 4.4c Create Product — `/products/create/[brandId]`
@@ -439,13 +456,12 @@ Similar to create product, pre-filled with existing product data. Can update all
   - Product thumbnail image
   - Product name, selected color/variant
   - Unit price
-  - Quantity controls: − / count / + buttons
-  - Remove button
-  - Per-item loading state when updating
-- Order summary: Subtotal
+  - Quantity controls: − / count / + buttons (quantity updates instantly — optimistic UI)
+  - Remove button (shows confirmation alert; item removed instantly on confirm — optimistic UI)
+- Order summary: Subtotal, Shipping (calculated at next step), Total
 - **Proceed to Checkout** button (black, full-width)
-- Empty cart state: message + "Browse Products" link
-- Pull-to-refresh
+- Empty cart states: "No items" message + "Discover Products" link; sign-in prompt for guests
+- Marquee strip at top: scrolling promotional text
 
 ---
 
@@ -498,7 +514,7 @@ Similar to create product, pre-filled with existing product data. Can update all
 - Manifest: items list with thumbnail, product name, brand/color/size, quantity × unit price, item total
 - Logistics box (grey): DESTINATION address, SERVICE (shippingMethodName), CARRIER (shippingCarrier), TRACKING number
 - Financial summary box (black background): Subtotal, Shipping, Tax, Discount (if promo applied), **Grand Total**
-- Action buttons inside financial box: DOWNLOAD INVOICE, **TRACK SHIPMENT** (calls carrier API, shows live tracking events timeline with timestamp / location / description), **REQUEST RETURN** (visible only when status is DELIVERED — navigates to `/returns/create?orderId=X`)
+- Action buttons inside financial box: **DOWNLOAD INVOICE** (generates real PDF using `expo-print` from HTML template — items table, totals, shipping address — shared via `expo-sharing`), **TRACK SHIPMENT** (calls carrier API, shows live tracking events timeline with timestamp / location / description), **REQUEST RETURN** (visible only when status is DELIVERED — navigates to `/returns/create?orderId=X`)
 
 ---
 
@@ -700,13 +716,19 @@ Similar to create product, pre-filled with existing product data. Can update all
 ---
 
 ### 4.9 Wishlist Screen — `/(tabs)/wishlist`
-**Elements:**
-- Responsive grid (2-3 columns)
-- Product cards: image, name, price, remove button
+**Two-tab layout: "PRODUCTS" | "BRANDS"**
+
+**Products tab:**
+- Responsive grid (2-3 columns depending on device width)
+- Product cards: image, name, price, brand name, heart icon (tap to instantly remove — optimistic UI)
 - Tappable → product detail
-- Empty state: message + "Browse Products" link
+- Empty state with "BROWSE SHOP" CTA
 - Sign-in prompt for guests
-- Pull-to-refresh
+
+**Brands tab:**
+- List of followed brands: logo, name, product count, location
+- "FOLLOWING" button per row → tap to unfollow
+- Empty state with "DISCOVER BRANDS" CTA
 
 ---
 
@@ -743,9 +765,9 @@ Similar to create product, pre-filled with existing product data. Can update all
 #### 4.10b Settings — `/profile/settings`
 **Elements:**
 - **Notifications:** Push Notifications toggle, Email Notifications toggle, Order Updates toggle
-- **Account:** Change Password link, Privacy Policy link, Terms of Service link
+- **Account:** Change Password link, Privacy Policy link → `/info/privacy`, Terms of Service link → `/info/terms`
 - **Logout** button
-- **Delete Account** button (red, shows alert)
+- **Delete Account** button (red, shows confirmation alert → calls `DELETE /users/me` → logs out)
 
 #### 4.10c Addresses List — `/profile/addresses/index`
 **Elements:**
@@ -817,6 +839,19 @@ Similar to create product, pre-filled with existing product data. Can update all
 - Step-by-step return process cards
 - Return conditions list
 - Contact info box
+
+#### Privacy Policy — `/info/privacy`
+- Full privacy policy text with section headers
+
+#### Terms of Service — `/info/terms`
+- Full terms of service text with section headers
+
+---
+
+### Admin Settings — `/manage/settings`
+**Elements:**
+- Platform-level configuration accessible to admins only
+- Navigated from Admin dashboard "Settings" quick action card
 
 ---
 
@@ -894,6 +929,8 @@ Similar to create product, pre-filled with existing product data. Can update all
 | **Header** | Top navigation | Logo, greeting, search (opens SearchModal), cart badge, hamburger menu |
 | **SearchModal** | Global search | Full-page modal, trending products cache, 2-column product grid, debounced live search |
 | **TryOnModal** | AI virtual try-on | Camera/gallery picker, Cloudinary upload, job polling, before/after result, save to library |
+| **OfflinePlaceholder** | No-connection state | Wifi icon, "NO INTERNET CONNECTION" message, "RETRY" button; shown on all data-fetching screens when offline with no cached data |
+| **Skeleton** | Loading placeholders | Pulsing placeholder shapes for product grids, order lists, brand cards, feed posts, dashboard stats; used on shop, home, brand detail, dashboard |
 | **ScreenWrapper** | Screen layout wrapper | Safe area, theme background, consistent padding |
 
 ---
@@ -1127,9 +1164,9 @@ Profile tab → Edit Profile (name, phone, DOB, avatar)
 
 ### Shopping Cart
 - [x] Add products to cart with variant selection
-- [x] Update item quantity (increment/decrement)
-- [x] Remove individual items
-- [x] Cart total calculation
+- [x] Update item quantity (increment/decrement) — **optimistic UI** (instant update, reverts on error)
+- [x] Remove individual items — **optimistic UI** (instant removal after confirm, reverts on error)
+- [x] Cart total recalculates immediately on quantity/remove changes (no refetch)
 - [x] Navigate to checkout
 
 ### Checkout & Orders
@@ -1148,8 +1185,8 @@ Profile tab → Edit Profile (name, phone, DOB, avatar)
 - [x] REQUEST RETURN button on delivered orders
 
 ### Wishlist
-- [x] Toggle products in/out of wishlist
-- [x] Wishlist grid view (dedicated tab)
+- [x] Toggle products in/out of wishlist — **optimistic UI** (instant remove from list, reverts on error)
+- [x] Wishlist tab: Products sub-tab (grid) + Brands sub-tab (followed brands list with unfollow)
 - [x] Wishlist count in dashboard stats
 
 ### Reviews
@@ -1224,7 +1261,7 @@ Profile tab → Edit Profile (name, phone, DOB, avatar)
 - [x] Feed filtering: followed brands only (authenticated) / all posts (guest)
 - [x] Infinite scroll pagination on feed
 - [x] **Visual product pin tags on post images** — brand owners tap image to place product pin (x/y % coordinates stored), viewers tap pin dot to see product mini-card popup
-- [~] **[PARTIAL]** Brand posts on Brand Detail — posts shown as section + dedicated `/brands/[brandId]/posts` screen exists, but no Products/Posts tab switcher UI
+- [x] Brand posts on Brand Detail — Products | Posts tab switcher added, allowing users to toggle between brand products and brand feed posts
 
 ### Brand Owner — Advanced Tools
 - [x] **Size Guides** — brand owners create/edit size tables (headers, rows, unit); customers see SIZE GUIDE modal on product detail if guide exists
@@ -1243,6 +1280,7 @@ Profile tab → Edit Profile (name, phone, DOB, avatar)
 
 ### Personalization
 - [x] "For You" personalized product section on Home feed (based on wishlist saves + order history)
+- [x] **Recently Viewed** — horizontal scroll on home screen showing last 8 viewed products (real images + prices); hidden when empty; CLEAR button wipes history; tracked client-side via AsyncStorage (no backend needed)
 - [x] **[DONE]** Search by image — camera icon in SearchModal, `useImageSearch` hook, backend CLIP-based embedding — see §10.4
 
 ### UX Features
@@ -1250,8 +1288,10 @@ Profile tab → Edit Profile (name, phone, DOB, avatar)
 - [x] Responsive design (mobile + tablet)
 - [x] Pull-to-refresh on all list screens
 - [x] Toast notifications (success, error, info)
-- [x] Loading states and spinners
-- [x] Empty states with contextual messages
+- [x] Loading states, spinners, and skeleton loaders (shop, home, brand detail, dashboard, orders, feed)
+- [x] Offline-aware screens with `OfflinePlaceholder` on all 10+ data-fetching screens
+- [x] Haptic feedback + press scale animation on ShopByLook figures
+- [x] Empty states with contextual messages and CTAs on all screens (cart, wishlist, orders, shop, feed, notifications, referral)
 - [x] Error boundary (global error catching)
 - [x] Animated bottom sheet modals
 - [x] Haptic feedback on tab bar
@@ -1272,14 +1312,11 @@ Profile tab → Edit Profile (name, phone, DOB, avatar)
 
 | Feature | Location | Current State |
 |---------|----------|---------------|
-| **Admin Settings** | Admin dashboard quick action | "Coming soon" |
-| **Order Management** (brand owner) | Brand owner /manage dashboard | "Coming soon" — full dashboard at `/brands/[id]/dashboard` is functional |
-| **Privacy Policy** | Settings screen | Shows "coming soon" alert |
-| **Terms of Service** | Settings screen | Shows "coming soon" alert |
-| **Delete Account** | Settings screen | Shows alert with contact info (not automated) |
 | **Payment processing** | Checkout | No payment gateway — order is placed directly |
-| **DOWNLOAD INVOICE** | Order detail action button | Button exists but not functional |
-| **Brand posts tab** | Brand detail page | Posts fetched + displayed as a section; no Products/Posts tab switcher UI yet |
+| **Email verification** | Registration | No verify flow — users auto-approved on registration |
+| **Outfit Builder** | Phase 5 | Not yet scoped |
+| **Product Videos** | Product detail | Video support not implemented |
+| **Drops mechanic** | Phase 6 | Not yet scoped |
 
 ---
 
@@ -1314,23 +1351,16 @@ Features planned but not yet implemented. These should be designed and built.
 
 ---
 
-### 10.3 Brand Posts on Brand Detail Page — `[PARTIAL]`
+### 10.3 Brand Posts on Brand Detail Page — `[DONE ✓]`
 
-**Goal:** Show the brand's social feed posts directly on the brand detail screen so users can explore a brand's content without leaving the brand context.
+**Status:** Fully implemented.
 
-**Current state:** Brand posts are fetched and rendered as a section below products in `brands/[brandId]/index.tsx`. A dedicated `brands/[brandId]/posts.tsx` screen also exists. What's **not implemented** is a proper **Products | Posts tab switcher** — products and posts are currently stacked vertically rather than separated into tabs.
-
-**Planned UX:**
-- Add a tab row to the brand detail screen: **"Products"** | **"Posts"**
-- "Products" tab — existing product list (no change)
-- "Posts" tab — vertically scrollable list of the brand's feed posts
-  - Same post card design as the Feed tab: images carousel, caption, likes/comments counts, tagged products
-  - Tapping a post → navigates to `/feed/[postId]`
-  - Empty state: "No posts yet" if brand has not posted
-  - Infinite scroll (same pattern as the main feed)
-- Follow/unfollow button remains in the brand header, visible on both tabs
-
-**Data:** Uses existing `GET /feed?brandId=:id` endpoint (or add dedicated `GET /brands/:id/posts` for clarity).
+**What was built:**
+- Products | Posts tab switcher added to `brands/[brandId]/index.tsx`
+- "Products" tab — 2-column product grid (unchanged from before)
+- "Posts" tab — 2-column grid of brand's feed posts; tap → `/feed/[postId]`
+- Empty state: "No posts yet" when brand has no posts
+- Data: `GET /feed?brandId=:id&page=:p&limit=10`
 
 ---
 

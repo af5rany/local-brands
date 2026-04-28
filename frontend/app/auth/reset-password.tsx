@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
   View,
@@ -17,6 +17,7 @@ import { Ionicons } from "@expo/vector-icons";
 import getApiUrl from "@/helpers/getApiUrl";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { useThemeColors } from "@/hooks/useThemeColor";
+import type { ThemeColors } from "@/constants/Colors";
 import Header from "@/components/Header";
 
 type Status = "idle" | "loading" | "success" | "error";
@@ -24,6 +25,7 @@ type Status = "idle" | "loading" | "success" | "error";
 const ResetPasswordScreen = () => {
   const router = useRouter();
   const colors = useThemeColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const { token } = useLocalSearchParams<{ token: string }>();
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -92,8 +94,8 @@ const ResetPasswordScreen = () => {
             style={styles.logo}
             resizeMode="contain"
           />
-          <View style={[styles.iconCircle, { backgroundColor: "#F5F5F5" }]}>
-            <Ionicons name="checkmark-circle" size={48} color="#1A1A1A" />
+          <View style={[styles.iconCircle, { backgroundColor: colors.surfaceRaised }]}>
+            <Ionicons name="checkmark-circle" size={48} color={colors.text} />
           </View>
           <Text style={styles.title}>Password Reset!</Text>
           <Text style={styles.subtitle}>
@@ -126,7 +128,7 @@ const ResetPasswordScreen = () => {
           keyboardShouldPersistTaps="handled"
         >
           <Pressable style={styles.backButton} onPress={() => router.back()}>
-            <Ionicons name="arrow-back" size={24} color="#1e293b" />
+            <Ionicons name="arrow-back" size={24} color={colors.text} />
           </Pressable>
 
           <Image
@@ -140,7 +142,7 @@ const ResetPasswordScreen = () => {
           {/* Error banner */}
           {status === "error" && (
             <View style={styles.errorBanner}>
-              <Ionicons name="alert-circle-outline" size={18} color="#C41E3A" />
+              <Ionicons name="alert-circle-outline" size={18} color={colors.danger} />
               <Text style={styles.errorText}>{errorMessage}</Text>
             </View>
           )}
@@ -152,7 +154,7 @@ const ResetPasswordScreen = () => {
               <Ionicons
                 name="lock-closed-outline"
                 size={20}
-                color="#64748b"
+                color={colors.textSecondary}
                 style={styles.inputIcon}
               />
               <TextInput
@@ -165,13 +167,13 @@ const ResetPasswordScreen = () => {
                   if (status === "error") setStatus("idle");
                 }}
                 editable={status !== "loading"}
-                placeholderTextColor="#94a3b8"
+                placeholderTextColor={colors.textTertiary}
               />
               <Pressable onPress={() => setShowNew((p) => !p)} style={styles.eyeBtn}>
                 <Ionicons
                   name={showNew ? "eye-off-outline" : "eye-outline"}
                   size={20}
-                  color="#94a3b8"
+                  color={colors.textTertiary}
                 />
               </Pressable>
             </View>
@@ -184,7 +186,7 @@ const ResetPasswordScreen = () => {
               <Ionicons
                 name="lock-closed-outline"
                 size={20}
-                color="#64748b"
+                color={colors.textSecondary}
                 style={styles.inputIcon}
               />
               <TextInput
@@ -197,7 +199,7 @@ const ResetPasswordScreen = () => {
                   if (status === "error") setStatus("idle");
                 }}
                 editable={status !== "loading"}
-                placeholderTextColor="#94a3b8"
+                placeholderTextColor={colors.textTertiary}
               />
               <Pressable
                 onPress={() => setShowConfirm((p) => !p)}
@@ -206,7 +208,7 @@ const ResetPasswordScreen = () => {
                 <Ionicons
                   name={showConfirm ? "eye-off-outline" : "eye-outline"}
                   size={20}
-                  color="#94a3b8"
+                  color={colors.textTertiary}
                 />
               </Pressable>
             </View>
@@ -218,7 +220,7 @@ const ResetPasswordScreen = () => {
             disabled={status === "loading"}
           >
             {status === "loading" ? (
-              <ActivityIndicator color="#fff" />
+              <ActivityIndicator color={colors.primaryForeground} />
             ) : (
               <Text style={styles.buttonText}>Reset Password</Text>
             )}
@@ -229,8 +231,8 @@ const ResetPasswordScreen = () => {
   );
 };
 
-const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: "#fff" },
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
+  safeArea: { flex: 1, backgroundColor: colors.background },
   flex: { flex: 1 },
 
   // Centered (success) layout
@@ -267,13 +269,13 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: "700",
-    color: "#1e293b",
+    color: colors.text,
     marginBottom: 8,
     textAlign: "center",
   },
   subtitle: {
     fontSize: 15,
-    color: "#64748b",
+    color: colors.textSecondary,
     marginBottom: 28,
     textAlign: "center",
     lineHeight: 22,
@@ -283,37 +285,37 @@ const styles = StyleSheet.create({
   errorBanner: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#F5F5F5",
+    backgroundColor: colors.surfaceRaised,
     borderWidth: 1,
-    borderColor: "#E5E5E5",
+    borderColor: colors.border,
     borderRadius: 0,
     padding: 12,
     marginBottom: 16,
     width: "100%",
     gap: 8,
   },
-  errorText: { flex: 1, color: "#C41E3A", fontSize: 14 },
+  errorText: { flex: 1, color: colors.danger, fontSize: 14 },
 
   // Inputs
   inputContainer: { width: "100%", marginBottom: 16 },
-  label: { fontSize: 14, fontWeight: "500", color: "#475569", marginBottom: 8 },
+  label: { fontSize: 14, fontWeight: "500", color: colors.textSecondary, marginBottom: 8 },
   inputWrapper: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#F5F5F5",
+    backgroundColor: colors.surfaceRaised,
     borderWidth: 1,
-    borderColor: "#E5E5E5",
+    borderColor: colors.border,
     borderRadius: 0,
     paddingHorizontal: 12,
     height: 48,
   },
   inputIcon: { marginRight: 10 },
-  input: { flex: 1, fontSize: 16, color: "#1e293b", height: "100%" },
+  input: { flex: 1, fontSize: 16, color: colors.text, height: "100%" },
   eyeBtn: { padding: 4 },
 
   // Button
   button: {
-    backgroundColor: "#000000",
+    backgroundColor: colors.primary,
     paddingVertical: 14,
     borderRadius: 0,
     marginTop: 8,
@@ -321,8 +323,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  buttonDisabled: { backgroundColor: "#999999" },
-  buttonText: { color: "#fff", fontSize: 16, fontWeight: "600" },
+  buttonDisabled: { backgroundColor: colors.textTertiary },
+  buttonText: { color: colors.primaryForeground, fontSize: 16, fontWeight: "600" },
 });
 
 export default ResetPasswordScreen;

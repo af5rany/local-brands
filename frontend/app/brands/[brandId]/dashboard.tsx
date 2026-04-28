@@ -18,6 +18,9 @@ import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/context/AuthContext";
 import { useThemeColors } from "@/hooks/useThemeColor";
 import getApiUrl from "@/helpers/getApiUrl";
+import { Skeleton } from "@/components/Skeleton";
+import { useNetwork } from "@/context/NetworkContext";
+import OfflinePlaceholder from "@/components/OfflinePlaceholder";
 
 interface TopProduct {
   id: number;
@@ -26,6 +29,7 @@ interface TopProduct {
   salePrice: number | null;
   salesCount: number;
   viewCount: number;
+  cartAddCount: number;
   averageRating: number;
   image: string;
 }
@@ -61,6 +65,7 @@ const BrandDashboard = () => {
   const { brandId } = useLocalSearchParams();
   const { token } = useAuth();
 
+  const { isConnected } = useNetwork();
   const [analytics, setAnalytics] = useState<BrandAnalytics | null>(null);
   const [brandName, setBrandName] = useState("");
   const [loading, setLoading] = useState(true);
@@ -152,11 +157,49 @@ const BrandDashboard = () => {
     }
   };
 
+  if (!isConnected && !analytics) {
+    return (
+      <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
+        <View style={[styles.header, { borderBottomColor: colors.borderLight }]}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+            <Ionicons name="arrow-back" size={22} color={colors.text} />
+          </TouchableOpacity>
+          <View style={styles.headerCenter}>
+            <Text style={[styles.headerTitle, { color: colors.text }]}>DASHBOARD</Text>
+          </View>
+          <View style={styles.backBtn} />
+        </View>
+        <OfflinePlaceholder onRetry={fetchAnalytics} />
+      </SafeAreaView>
+    );
+  }
+
   if (loading) {
     return (
-      <View style={[styles.center, { backgroundColor: colors.background }]}>
-        <ActivityIndicator size="large" color={colors.primary} />
-      </View>
+      <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
+        <View style={[styles.header, { borderBottomColor: colors.borderLight }]}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+            <Ionicons name="arrow-back" size={22} color={colors.text} />
+          </TouchableOpacity>
+          <View style={styles.headerCenter}>
+            <Text style={[styles.headerTitle, { color: colors.text }]}>DASHBOARD</Text>
+          </View>
+          <View style={styles.backBtn} />
+        </View>
+        <View style={styles.statsGrid}>
+          {Array.from({ length: 6 }).map((_, i) => (
+            <View key={i} style={[styles.statCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <Skeleton width={18} height={18} style={{ borderRadius: 4 }} />
+              <Skeleton width="60%" height={20} style={{ marginTop: 8 }} />
+              <Skeleton width="40%" height={10} style={{ marginTop: 6 }} />
+            </View>
+          ))}
+        </View>
+        <View style={{ padding: 16, gap: 12 }}>
+          <Skeleton width="100%" height={80} />
+          <Skeleton width="100%" height={80} />
+        </View>
+      </SafeAreaView>
     );
   }
 
@@ -314,6 +357,12 @@ const BrandDashboard = () => {
           <View style={styles.actionsGrid}>
             {[
               {
+                icon: "receipt-outline" as const,
+                label: "ORDERS",
+                route: `/brands/${brandId}/orders`,
+                sub: analytics.totalOrders > 0 ? `${analytics.totalOrders} total` : "Manage orders",
+              },
+              {
                 icon: "pricetag-outline" as const,
                 label: "PROMO CODES",
                 route: `/brands/${brandId}/promo-codes`,
@@ -354,6 +403,12 @@ const BrandDashboard = () => {
                 label: "BUNDLES",
                 route: `/brands/${brandId}/bundles`,
                 sub: "Bundle discounts",
+              },
+              {
+                icon: "chatbubbles-outline" as const,
+                label: "Q&A",
+                route: `/brands/${brandId}/questions`,
+                sub: "Customer questions",
               },
             ].map((action) => (
               <TouchableOpacity
@@ -431,36 +486,44 @@ const BrandDashboard = () => {
                     {product.name}
                   </Text>
                   <View style={styles.productMeta}>
-                    <Text
-                      style={[
-                        styles.productMetaText,
-                        { color: colors.textTertiary },
-                      ]}
-                    >
-                      {product.salesCount} sold
-                    </Text>
-                    <Text
-                      style={[
-                        styles.productMetaText,
-                        { color: colors.textTertiary },
-                      ]}
-                    >
+                    <Text style={[styles.productMetaText, { color: colors.textTertiary }]}>
                       {product.viewCount} views
+                    </Text>
+                    {product.cartAddCount > 0 && (
+                      <Text style={[styles.productMetaText, { color: colors.textTertiary }]}>
+                        {product.cartAddCount} carts
+                      </Text>
+                    )}
+                    <Text style={[styles.productMetaText, { color: colors.textTertiary }]}>
+                      {product.salesCount} sold
                     </Text>
                     {product.averageRating > 0 && (
                       <View style={styles.ratingRow}>
                         <Ionicons name="star" size={10} color={colors.text} />
-                        <Text
-                          style={[
-                            styles.productMetaText,
-                            { color: colors.textTertiary },
-                          ]}
-                        >
+                        <Text style={[styles.productMetaText, { color: colors.textTertiary }]}>
                           {product.averageRating.toFixed(1)}
                         </Text>
                       </View>
                     )}
                   </View>
+                  {/* Conversion funnel bar */}
+                  {product.viewCount > 0 && (
+                    <View style={styles.funnelRow}>
+                      <View style={[styles.funnelBar, { width: "100%", backgroundColor: colors.borderLight }]} />
+                      {product.cartAddCount > 0 && (
+                        <View style={[styles.funnelBar, styles.funnelCartBar, {
+                          width: `${Math.min(100, (product.cartAddCount / product.viewCount) * 100)}%`,
+                          backgroundColor: colors.textSecondary,
+                        }]} />
+                      )}
+                      {product.salesCount > 0 && (
+                        <View style={[styles.funnelBar, styles.funnelSaleBar, {
+                          width: `${Math.min(100, (product.salesCount / product.viewCount) * 100)}%`,
+                          backgroundColor: colors.text,
+                        }]} />
+                      )}
+                    </View>
+                  )}
                 </View>
                 <Text style={[styles.productPrice, { color: colors.text }]}>
                   {formatCurrency(product.salePrice || product.price)}
@@ -715,6 +778,19 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 2,
   },
+  funnelRow: {
+    marginTop: 6,
+    height: 4,
+    position: "relative",
+  },
+  funnelBar: {
+    position: "absolute",
+    height: 4,
+    top: 0,
+    left: 0,
+  },
+  funnelCartBar: {},
+  funnelSaleBar: {},
   productPrice: {
     fontSize: 14,
     fontWeight: "700",

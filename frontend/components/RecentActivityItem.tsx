@@ -1,6 +1,8 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { View, Text, StyleSheet, Pressable } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useThemeColors } from "@/hooks/useThemeColor";
+import type { ThemeColors } from "@/constants/Colors";
 
 type RecentActivityItemProps = {
   title: string;
@@ -16,7 +18,10 @@ const RecentActivityItem: React.FC<RecentActivityItemProps> = ({
   time,
   icon,
   color,
-}) => (
+}) => {
+  const colors = useThemeColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+  return (
   <View style={styles.activityItem}>
     <View style={[styles.activityIcon, { backgroundColor: color + "20" }]}>
       <Ionicons
@@ -31,7 +36,8 @@ const RecentActivityItem: React.FC<RecentActivityItemProps> = ({
     </View>
     <Text style={styles.activityTime}>{time}</Text>
   </View>
-);
+  );
+};
 
 type Activity = {
   title: string;
@@ -49,7 +55,10 @@ type RecentActivityProps = {
 const RecentActivity: React.FC<RecentActivityProps> = ({
   activities,
   showComingSoon,
-}) => (
+}) => {
+  const colors = useThemeColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+  return (
   <View style={styles.section}>
     <View style={styles.sectionHeader}>
       <Text style={styles.sectionTitle}>Recent Activity</Text>
@@ -70,9 +79,10 @@ const RecentActivity: React.FC<RecentActivityProps> = ({
       ))}
     </View>
   </View>
-);
+  );
+};
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   section: {
     marginTop: 24,
     paddingHorizontal: 20,
@@ -80,7 +90,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 20,
     fontWeight: "bold",
-    color: "#1e293b",
+    color: colors.text,
     marginBottom: 16,
   },
   sectionHeader: {
@@ -91,11 +101,11 @@ const styles = StyleSheet.create({
   },
   seeAllText: {
     fontSize: 16,
-    color: "#346beb",
+    color: colors.link,
     fontWeight: "600",
   },
   activityContainer: {
-    backgroundColor: "#fff",
+    backgroundColor: colors.surface,
     borderRadius: 0,
   },
   activityItem: {
@@ -103,7 +113,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: "#f1f5f9",
+    borderBottomColor: colors.borderLight,
   },
   activityIcon: {
     width: 40,
@@ -119,16 +129,16 @@ const styles = StyleSheet.create({
   activityTitle: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#1e293b",
+    color: colors.text,
     marginBottom: 2,
   },
   activitySubtitle: {
     fontSize: 14,
-    color: "#64748b",
+    color: colors.textSecondary,
   },
   activityTime: {
     fontSize: 12,
-    color: "#94a3b8",
+    color: colors.textTertiary,
   },
 });
 

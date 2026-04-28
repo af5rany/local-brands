@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useMemo } from "react";
 import {
   View,
   Text,
@@ -13,21 +13,26 @@ import { useRouter, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/context/AuthContext";
 import { useThemeColors } from "@/hooks/useThemeColor";
+import type { ThemeColors } from "@/constants/Colors";
 import getApiUrl from "@/helpers/getApiUrl";
-
-const STATUS_COLORS: Record<string, string> = {
-  requested: "#f59e0b",
-  approved: "#3b82f6",
-  rejected: "#ef4444",
-  shipped_back: "#8b5cf6",
-  received: "#06b6d4",
-  refunded: "#22c55e",
-};
 
 const ReturnsListScreen = () => {
   const router = useRouter();
   const { token } = useAuth();
   const colors = useThemeColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+
+  const getStatusColor = (status: string): string => {
+    switch (status) {
+      case "requested": return colors.warning;
+      case "approved": return colors.toastInfo;
+      case "rejected": return colors.toastError;
+      case "shipped_back": return colors.toastInfo;
+      case "received": return colors.toastInfo;
+      case "refunded": return colors.toastSuccess;
+      default: return colors.text;
+    }
+  };
 
   const [returns, setReturns] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -96,7 +101,7 @@ const ReturnsListScreen = () => {
                   ORDER #{item.order?.orderNumber || item.orderId}
                 </Text>
               </View>
-              <Text style={[styles.statusBadge, { color: STATUS_COLORS[item.status] || colors.text }]}>
+              <Text style={[styles.statusBadge, { color: getStatusColor(item.status) }]}>
                 {item.status?.replace(/_/g, " ").toUpperCase()}
               </Text>
             </View>
@@ -113,7 +118,7 @@ const ReturnsListScreen = () => {
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   safe: { flex: 1 },
   center: { flex: 1, justifyContent: "center", alignItems: "center" },
   header: {

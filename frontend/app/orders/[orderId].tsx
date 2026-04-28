@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import {
   View,
   Text,
@@ -9,11 +9,15 @@ import {
   Image,
   Alert,
 } from "react-native";
+import * as Print from "expo-print";
+import * as Sharing from "expo-sharing";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useAuth } from "@/context/AuthContext";
 import getApiUrl from "@/helpers/getApiUrl";
 import Header from "@/components/Header";
+import { useThemeColors } from "@/hooks/useThemeColor";
+import type { ThemeColors } from "@/constants/Colors";
 
 interface StatusHistoryItem {
   id: number;
@@ -47,6 +51,8 @@ const OrderDetailScreen = () => {
   const { orderId } = useLocalSearchParams<{ orderId: string }>();
   const router = useRouter();
   const { token } = useAuth();
+  const colors = useThemeColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [order, setOrder] = useState<any>(null);
   const [history, setHistory] = useState<StatusHistoryItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -129,6 +135,109 @@ const OrderDetailScreen = () => {
     }
   };
 
+  const handleDownloadInvoice = async () => {
+    if (!order) return;
+    const items = order.orderItems || [];
+    const addr = order.shippingAddress;
+
+    const itemRows = items
+      .map(
+        (item: any) => `
+        <tr>
+          <td style="padding:8px 4px;border-bottom:1px solid #eee;">${item.productName}${item.productColor ? ` <span style="color:#888;font-size:11px;">${item.productColor}</span>` : ""}${item.productSize ? ` <span style="color:#888;font-size:11px;">${item.productSize}</span>` : ""}</td>
+          <td style="padding:8px 4px;border-bottom:1px solid #eee;text-align:center;">${item.quantity}</td>
+          <td style="padding:8px 4px;border-bottom:1px solid #eee;text-align:right;">$${Number(item.unitPrice ?? item.totalPrice / item.quantity).toFixed(2)}</td>
+          <td style="padding:8px 4px;border-bottom:1px solid #eee;text-align:right;font-weight:600;">$${Number(item.totalPrice).toFixed(2)}</td>
+        </tr>`
+      )
+      .join("");
+
+    const addrBlock = addr
+      ? `<p style="margin:4px 0;">${addr.fullName || ""}</p>
+         <p style="margin:4px 0;">${addr.addressLine1 || ""}${addr.addressLine2 ? ", " + addr.addressLine2 : ""}</p>
+         <p style="margin:4px 0;">${[addr.city, addr.state, addr.zipCode].filter(Boolean).join(", ")}</p>
+         <p style="margin:4px 0;">${addr.country || ""}</p>`
+      : "";
+
+    const html = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: Helvetica, Arial, sans-serif; color: #111; padding: 40px; font-size: 13px; }
+    h1 { font-size: 22px; font-weight: 900; letter-spacing: 4px; margin: 0 0 4px; }
+    .subtitle { font-size: 10px; letter-spacing: 2px; color: #888; margin-bottom: 32px; }
+    .meta-row { display: flex; justify-content: space-between; margin-bottom: 24px; }
+    .meta-block p { margin: 2px 0; }
+    .meta-label { font-size: 9px; letter-spacing: 1.5px; color: #888; text-transform: uppercase; margin-bottom: 4px; }
+    table { width: 100%; border-collapse: collapse; margin: 24px 0; }
+    thead th { font-size: 9px; letter-spacing: 1.5px; text-transform: uppercase; color: #888; padding: 4px; border-bottom: 2px solid #111; text-align: left; }
+    thead th:nth-child(2), thead th:nth-child(3), thead th:nth-child(4) { text-align: right; }
+    .totals { margin-left: auto; width: 240px; }
+    .totals-row { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid #eee; font-size: 12px; }
+    .total-final { display: flex; justify-content: space-between; padding: 10px 0 0; font-size: 16px; font-weight: 900; }
+    .footer { margin-top: 48px; font-size: 10px; color: #888; text-align: center; letter-spacing: 1px; }
+  </style>
+</head>
+<body>
+  <h1>LOCAL BRANDS</h1>
+  <p class="subtitle">INVOICE</p>
+
+  <div class="meta-row">
+    <div class="meta-block">
+      <p class="meta-label">Order</p>
+      <p style="font-size:16px;font-weight:700;">#ORD-${String(order.id).padStart(4, "0")}</p>
+      <p style="color:#888;font-size:12px;">${new Date(order.createdAt).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}</p>
+      <p style="margin-top:6px;font-size:10px;font-weight:700;letter-spacing:1px;">${order.status?.toUpperCase()}</p>
+    </div>
+    ${addr ? `<div class="meta-block" style="text-align:right;">
+      <p class="meta-label">Ship To</p>
+      ${addrBlock}
+    </div>` : ""}
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Item</th>
+        <th style="text-align:center;">Qty</th>
+        <th style="text-align:right;">Unit Price</th>
+        <th style="text-align:right;">Total</th>
+      </tr>
+    </thead>
+    <tbody>${itemRows}</tbody>
+  </table>
+
+  <div class="totals">
+    <div class="totals-row"><span>Subtotal</span><span>$${Number(order.subtotal).toFixed(2)}</span></div>
+    <div class="totals-row"><span>Shipping</span><span>$${Number(order.shippingCost || 0).toFixed(2)}</span></div>
+    <div class="totals-row"><span>Tax</span><span>$${Number(order.taxAmount || 0).toFixed(2)}</span></div>
+    ${Number(order.discountAmount) > 0 ? `<div class="totals-row"><span>Discount</span><span>-$${Number(order.discountAmount).toFixed(2)}</span></div>` : ""}
+    <div class="total-final"><span>Total</span><span>$${Number(order.totalAmount).toFixed(2)}</span></div>
+  </div>
+
+  <p class="footer">Thank you for shopping with Local Brands.</p>
+</body>
+</html>`;
+
+    try {
+      const { uri } = await Print.printToFileAsync({ html });
+      const canShare = await Sharing.isAvailableAsync();
+      if (canShare) {
+        await Sharing.shareAsync(uri, {
+          mimeType: "application/pdf",
+          dialogTitle: `Invoice #ORD-${String(order.id).padStart(4, "0")}`,
+          UTI: "com.adobe.pdf",
+        });
+      } else {
+        Alert.alert("PDF saved", `Saved to: ${uri}`);
+      }
+    } catch {
+      Alert.alert("Error", "Could not generate invoice PDF.");
+    }
+  };
+
   const currentStep =
     STATUS_TO_STEP[order?.status?.toUpperCase() ?? ""] ?? -1;
 
@@ -137,7 +246,7 @@ const OrderDetailScreen = () => {
       <SafeAreaView style={styles.container} edges={["top"]}>
         <Header showBack={true} />
         <View style={styles.center}>
-          <ActivityIndicator size="large" color="#000000" />
+          <ActivityIndicator size="large" color={colors.text} />
         </View>
       </SafeAreaView>
     );
@@ -360,13 +469,13 @@ const OrderDetailScreen = () => {
 
             {/* Buttons inside financial box */}
             <View style={styles.actionButtons}>
-              <TouchableOpacity style={styles.btnOutlineWhite}>
+              <TouchableOpacity style={styles.btnOutlineWhite} onPress={handleDownloadInvoice}>
                 <Text style={styles.btnOutlineWhiteText}>
                   DOWNLOAD INVOICE
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.btnFilledWhite} onPress={fetchTracking} disabled={trackingLoading}>
-                {trackingLoading ? <ActivityIndicator color="#000" size="small" /> : (
+                {trackingLoading ? <ActivityIndicator color={colors.text} size="small" /> : (
                   <Text style={styles.btnFilledWhiteText}>TRACK SHIPMENT</Text>
                 )}
               </TouchableOpacity>
@@ -388,18 +497,18 @@ const OrderDetailScreen = () => {
 
         {/* Carrier Tracking Events */}
         {showTracking && trackingData && (
-          <View style={{ marginHorizontal: 16, marginBottom: 16, backgroundColor: "#fff", borderRadius: 8, padding: 16, borderWidth: 1, borderColor: "#eee" }}>
+          <View style={{ marginHorizontal: 16, marginBottom: 16, backgroundColor: colors.background, borderRadius: 8, padding: 16, borderWidth: 1, borderColor: colors.surfaceRaised }}>
             <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 12 }}>
-              <Text style={{ fontSize: 12, fontWeight: "700", letterSpacing: 1.5 }}>
+              <Text style={{ fontSize: 12, fontWeight: "700", letterSpacing: 1.5, color: colors.text }}>
                 SHIPMENT STATUS
               </Text>
               <TouchableOpacity onPress={() => setShowTracking(false)}>
-                <Text style={{ fontSize: 11, color: "#888" }}>CLOSE</Text>
+                <Text style={{ fontSize: 11, color: colors.textTertiary }}>CLOSE</Text>
               </TouchableOpacity>
             </View>
-            <Text style={{ fontSize: 14, fontWeight: "700", marginBottom: 4 }}>{trackingData.status}</Text>
+            <Text style={{ fontSize: 14, fontWeight: "700", marginBottom: 4, color: colors.text }}>{trackingData.status}</Text>
             {trackingData.estimatedDelivery && (
-              <Text style={{ fontSize: 11, color: "#888", marginBottom: 12 }}>
+              <Text style={{ fontSize: 11, color: colors.textTertiary, marginBottom: 12 }}>
                 Est. delivery: {new Date(trackingData.estimatedDelivery).toLocaleDateString()}
               </Text>
             )}
@@ -407,18 +516,18 @@ const OrderDetailScreen = () => {
               <View style={{ marginTop: 8 }}>
                 {(trackingData.events || []).map((e: any, i: number) => (
                   <View key={i} style={{ flexDirection: "row", marginBottom: 10, gap: 10 }}>
-                    <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: "#000", marginTop: 5 }} />
+                    <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: colors.text, marginTop: 5 }} />
                     <View style={{ flex: 1 }}>
-                      <Text style={{ fontSize: 12, fontWeight: "600" }}>{e.description}</Text>
-                      {e.location ? <Text style={{ fontSize: 11, color: "#888" }}>{e.location}</Text> : null}
-                      {e.timestamp ? <Text style={{ fontSize: 10, color: "#aaa" }}>{e.timestamp}</Text> : null}
+                      <Text style={{ fontSize: 12, fontWeight: "600", color: colors.text }}>{e.description}</Text>
+                      {e.location ? <Text style={{ fontSize: 11, color: colors.textTertiary }}>{e.location}</Text> : null}
+                      {e.timestamp ? <Text style={{ fontSize: 10, color: colors.textTertiary }}>{e.timestamp}</Text> : null}
                     </View>
                   </View>
                 ))}
               </View>
             )}
             {(trackingData.events || []).length === 0 && (
-              <Text style={{ fontSize: 12, color: "#888" }}>No tracking events available yet.</Text>
+              <Text style={{ fontSize: 12, color: colors.textTertiary }}>No tracking events available yet.</Text>
             )}
           </View>
         )}
@@ -429,10 +538,10 @@ const OrderDetailScreen = () => {
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f9f9f9",
+    backgroundColor: colors.surfaceRaised,
   },
   center: {
     flex: 1,
@@ -442,7 +551,7 @@ const styles = StyleSheet.create({
   notFoundText: {
     fontFamily: undefined,
     fontSize: 12,
-    color: "#888888",
+    color: colors.textTertiary,
     // letterSpacing: 2,
   },
 
@@ -464,7 +573,7 @@ const styles = StyleSheet.create({
   orderNumberLarge: {
     fontFamily: undefined,
     fontSize: 28,
-    color: "#000000",
+    color: colors.text,
     // letterSpacing: -0.5,
     flex: 1,
     marginRight: 12,
@@ -472,14 +581,14 @@ const styles = StyleSheet.create({
   orderPlacedDate: {
     fontFamily: undefined,
     fontSize: 10,
-    color: "#888888",
+    color: colors.textTertiary,
     // letterSpacing: 1,
     marginBottom: 6,
   },
   trackingText: {
     fontFamily: undefined,
     fontSize: 10,
-    color: "#888888",
+    color: colors.textTertiary,
     // letterSpacing: 1,
   },
 
@@ -491,13 +600,13 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   badgeProcessing: {
-    borderColor: "#000000",
+    borderColor: colors.primary,
   },
   badgeDelivered: {
     borderColor: "rgba(0,0,0,0.3)",
   },
   badgeCancelled: {
-    borderColor: "#C41E3A",
+    borderColor: colors.danger,
   },
   statusText: {
     fontFamily: undefined,
@@ -506,13 +615,13 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
   },
   badgeTextProcessing: {
-    color: "#000000",
+    color: colors.text,
   },
   badgeTextDelivered: {
-    color: "#888888",
+    color: colors.textTertiary,
   },
   badgeTextCancelled: {
-    color: "#C41E3A",
+    color: colors.danger,
   },
 
   /* ── Status timeline ── */
@@ -530,10 +639,10 @@ const styles = StyleSheet.create({
     borderRadius: 0,
   },
   timelineBarDone: {
-    backgroundColor: "#000000",
+    backgroundColor: colors.text,
   },
   timelineBarPending: {
-    backgroundColor: "#cccccc",
+    backgroundColor: colors.border,
   },
   timelineLabel: {
     fontFamily: undefined,
@@ -542,11 +651,11 @@ const styles = StyleSheet.create({
     // letterSpacing: 0.5,
   },
   timelineLabelDone: {
-    color: "#000000",
+    color: colors.text,
     fontWeight: "700",
   },
   timelineLabelPending: {
-    color: "#aaaaaa",
+    color: colors.textTertiary,
   },
 
   /* ── Section spacing ── */
@@ -556,7 +665,7 @@ const styles = StyleSheet.create({
   sectionLabel: {
     fontFamily: undefined,
     fontSize: 10,
-    color: "#000000",
+    color: colors.text,
     // letterSpacing: 2,
     textTransform: "uppercase",
     fontWeight: "700",
@@ -573,11 +682,11 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 0,
-    backgroundColor: "#eeeeee",
+    backgroundColor: colors.surfaceRaised,
     marginRight: 16,
   },
   itemImagePlaceholder: {
-    backgroundColor: "#eeeeee",
+    backgroundColor: colors.surfaceRaised,
   },
   itemInfo: {
     flex: 1,
@@ -585,13 +694,13 @@ const styles = StyleSheet.create({
   itemName: {
     fontFamily: undefined,
     fontSize: 14,
-    color: "#000000",
+    color: colors.text,
     marginBottom: 4,
   },
   itemMeta: {
     fontFamily: undefined,
     fontSize: 9,
-    color: "#888888",
+    color: colors.textTertiary,
     // letterSpacing: 0.8,
     lineHeight: 14,
   },
@@ -602,26 +711,26 @@ const styles = StyleSheet.create({
   itemQtyPrice: {
     fontFamily: undefined,
     fontSize: 10,
-    color: "#888888",
+    color: colors.textTertiary,
     marginBottom: 4,
   },
   itemTotal: {
     fontFamily: undefined,
     fontSize: 12,
-    color: "#000000",
+    color: colors.text,
     fontWeight: "700",
   },
 
   /* ── Logistics box ── */
   logisticsBox: {
-    backgroundColor: "#eeeeee",
+    backgroundColor: colors.surfaceRaised,
     padding: 20,
     borderRadius: 0,
   },
   logisticsLabel: {
     fontFamily: undefined,
     fontSize: 10,
-    color: "#000000",
+    color: colors.text,
     // letterSpacing: 2,
     textTransform: "uppercase",
     fontWeight: "700",
@@ -633,7 +742,7 @@ const styles = StyleSheet.create({
   logisticsKey: {
     fontFamily: undefined,
     fontSize: 9,
-    color: "#888888",
+    color: colors.textTertiary,
     // letterSpacing: 1,
     textTransform: "uppercase",
     marginBottom: 4,
@@ -641,21 +750,21 @@ const styles = StyleSheet.create({
   logisticsVal: {
     fontFamily: undefined,
     fontSize: 11,
-    color: "#000000",
+    color: colors.text,
     // letterSpacing: 0.5,
     lineHeight: 18,
   },
 
   /* ── Financial summary box ── */
   financialBox: {
-    backgroundColor: "#000000",
+    backgroundColor: colors.primary,
     padding: 20,
     borderRadius: 0,
   },
   financialLabel: {
     fontFamily: undefined,
     fontSize: 10,
-    color: "#ffffff",
+    color: colors.primaryForeground,
     // letterSpacing: 2,
     textTransform: "uppercase",
     fontWeight: "700",
@@ -676,7 +785,7 @@ const styles = StyleSheet.create({
   financialVal: {
     fontFamily: undefined,
     fontSize: 10,
-    color: "#ffffff",
+    color: colors.primaryForeground,
     // letterSpacing: 0.5,
   },
   grandTotalRow: {
@@ -700,7 +809,7 @@ const styles = StyleSheet.create({
   grandTotalValue: {
     fontFamily: undefined,
     fontSize: 28,
-    color: "#ffffff",
+    color: colors.primaryForeground,
   },
 
   /* Action buttons */
@@ -709,7 +818,7 @@ const styles = StyleSheet.create({
   },
   btnOutlineWhite: {
     borderWidth: 1,
-    borderColor: "#ffffff",
+    borderColor: colors.primaryForeground,
     paddingVertical: 14,
     alignItems: "center",
     borderRadius: 0,
@@ -717,12 +826,12 @@ const styles = StyleSheet.create({
   btnOutlineWhiteText: {
     fontFamily: undefined,
     fontSize: 10,
-    color: "#ffffff",
+    color: colors.primaryForeground,
     // letterSpacing: 2,
     textTransform: "uppercase",
   },
   btnFilledWhite: {
-    backgroundColor: "#ffffff",
+    backgroundColor: colors.background,
     paddingVertical: 14,
     alignItems: "center",
     borderRadius: 0,
@@ -730,7 +839,7 @@ const styles = StyleSheet.create({
   btnFilledWhiteText: {
     fontFamily: undefined,
     fontSize: 10,
-    color: "#000000",
+    color: colors.text,
     // letterSpacing: 2,
     textTransform: "uppercase",
   },

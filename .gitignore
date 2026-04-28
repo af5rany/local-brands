@@ -15,6 +15,10 @@ yarn-debug.log*
 yarn-error.log*
 lerna-debug.log*
 
+local_data_only.sql
+local_dump.sql
+MCP.txt
+__docker-compose copy.yml
 # OS
 .DS_Store
 

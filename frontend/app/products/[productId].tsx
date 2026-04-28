@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useMemo } from "react";
 import {
   View,
   Text,
@@ -27,11 +27,16 @@ import { useCart } from "@/context/CartContext";
 import { useToast } from "@/context/ToastContext";
 import { useBrand } from "@/context/BrandContext";
 import ProductReviews from "@/components/ProductReviews";
+import ProductQA from "@/components/ProductQA";
 import TryOnModal from "@/components/TryOnModal";
 import Header from "@/components/Header";
 import { ProductVariant } from "@/types/product";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useThemeColors } from "@/hooks/useThemeColor";
+import type { ThemeColors } from "@/constants/Colors";
+import { useRecentlyViewed } from "@/hooks/useRecentlyViewed";
+import { useNetwork } from "@/context/NetworkContext";
+import OfflinePlaceholder from "@/components/OfflinePlaceholder";
 
 const { width: W } = Dimensions.get("window");
 
@@ -48,7 +53,10 @@ const ProductDetailScreen = () => {
   const userRole = user?.role || user?.userRole;
   const insets = useSafeAreaInsets();
   const colors = useThemeColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+  const { addProduct: trackView } = useRecentlyViewed();
 
+  const { isConnected } = useNetwork();
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
@@ -67,9 +75,11 @@ const ProductDetailScreen = () => {
   const [returnsExpanded, setReturnsExpanded] = useState(false);
   const [sizeGuide, setSizeGuide] = useState<any>(null);
   const [showSizeGuide, setShowSizeGuide] = useState(false);
+  const [similarProducts, setSimilarProducts] = useState<Product[]>([]);
 
   const imageCarouselRef = useRef<FlatList>(null);
   const marqueeAnim = useRef(new Animated.Value(0)).current;
+  const scrollY = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     const anim = Animated.loop(
@@ -99,6 +109,7 @@ const ProductDetailScreen = () => {
         if (!res.ok) throw new Error("Failed to fetch");
         const data = await res.json();
         setProduct(data);
+        trackView(Number(productId));
 
         // Fetch size guide (product-level, falls back to brand-level on backend)
         try {
@@ -111,6 +122,12 @@ const ProductDetailScreen = () => {
             setSizeGuide(sgData);
           }
         } catch (_) {}
+
+        // Fetch similar products (fire-and-forget)
+        fetch(`${getApiUrl()}/products/${productId}/similar?limit=8`)
+          .then((r) => r.json())
+          .then((d) => setSimilarProducts(Array.isArray(d) ? d : []))
+          .catch(() => {});
 
         if (data.variants?.length > 0) {
           const firstVariant = data.variants[0];
@@ -360,7 +377,16 @@ const ProductDetailScreen = () => {
     ]);
   };
 
-  // ── Loading / Error ──────────────────────────
+  // ── Offline / Loading / Error ────────────────
+  if (!isConnected && !product) {
+    return (
+      <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
+        <Header showBack={true} />
+        <OfflinePlaceholder onRetry={() => { setLoading(true); router.replace(`/products/${productId}` as any); }} />
+      </SafeAreaView>
+    );
+  }
+
   if (loading) {
     return (
       <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
@@ -417,6 +443,13 @@ const ProductDetailScreen = () => {
       user.id === product.brand.owner.id);
 
   const heroImage = displayImages[selectedImage] || displayImages[0] || null;
+
+  const heroH = W * (4 / 3);
+  const stickyTitleOpacity = scrollY.interpolate({
+    inputRange: [heroH - 80, heroH],
+    outputRange: [0, 1],
+    extrapolate: "clamp",
+  });
 
   const onCarouselScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
     const offsetX = e.nativeEvent.contentOffset.x;
@@ -514,12 +547,27 @@ const ProductDetailScreen = () => {
 
       <Header showBack={true} />
 
+      {/* Sticky product name bar — fades in after scrolling past hero */}
+      <Animated.View
+        pointerEvents="none"
+        style={[styles.stickyNameBar, { opacity: stickyTitleOpacity, backgroundColor: colors.background, borderBottomColor: colors.borderLight }]}
+      >
+        <Text style={[styles.stickyNameText, { color: colors.text }]} numberOfLines={1}>
+          {product.name?.toUpperCase()}
+        </Text>
+      </Animated.View>
+
       {/* Main scroll + sticky bottom bar in a flex column */}
       <View style={{ flex: 1, flexDirection: "column" }}>
-        <ScrollView
+        <Animated.ScrollView
           style={{ flex: 1 }}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingBottom: 24 }}
+          onScroll={Animated.event(
+            [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+            { useNativeDriver: true }
+          )}
+          scrollEventThrottle={16}
         >
           {/* Hero Image Carousel */}
           <View style={[styles.heroContainer, { backgroundColor: colors.surfaceRaised }]}>
@@ -599,31 +647,38 @@ const ProductDetailScreen = () => {
                 <Ionicons name="shirt-outline" size={20} color={colors.text} />
               </TouchableOpacity>
             </View>
+
+            {/* Counter chip */}
+            {displayImages.length > 1 && (
+              <View style={[styles.counterChip, { backgroundColor: colors.surfaceOverlay }]}>
+                <Text style={[styles.counterChipText, { color: colors.primaryForeground }]}>
+                  {selectedImage + 1}/{displayImages.length}
+                </Text>
+              </View>
+            )}
           </View>
 
-          {/* Image Indicators (dash style) */}
+          {/* Thumbnail row */}
           {displayImages.length > 1 && (
-            <View style={[styles.indicatorRow, { backgroundColor: colors.background }]}>
-              {displayImages.map((_: string, i: number) => (
-                <TouchableOpacity
-                  key={i}
-                  onPress={() => scrollToImage(i)}
-                  activeOpacity={0.8}
-                >
-                  <View
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={[styles.thumbRow, { backgroundColor: colors.background }]}
+              contentContainerStyle={styles.thumbRowContent}
+            >
+              {displayImages.slice(0, 6).map((uri: string, i: number) => (
+                <TouchableOpacity key={i} onPress={() => scrollToImage(i)} activeOpacity={0.8}>
+                  <Image
+                    source={{ uri }}
                     style={[
-                      styles.indicator,
-                      {
-                        backgroundColor:
-                          selectedImage === i
-                            ? colors.text
-                            : colors.border,
-                      },
+                      styles.thumb,
+                      { borderColor: selectedImage === i ? colors.text : "transparent" },
                     ]}
+                    resizeMode="cover"
                   />
                 </TouchableOpacity>
               ))}
-            </View>
+            </ScrollView>
           )}
 
           {/* Product Info Section */}
@@ -743,6 +798,22 @@ const ProductDetailScreen = () => {
                 ))}
               </View>
             )}
+          </View>
+
+          {/* Trust signals */}
+          <View style={[styles.trustRow, { borderTopColor: colors.borderLight, borderBottomColor: colors.borderLight }]}>
+            <View style={styles.trustItem}>
+              <Ionicons name="car-outline" size={16} color={colors.text} />
+              <Text style={[styles.trustLabel, { color: colors.textSecondary }]}>FREE DELIVERY</Text>
+            </View>
+            <View style={[styles.trustItem, styles.trustItemCenter, { borderLeftColor: colors.borderLight, borderRightColor: colors.borderLight }]}>
+              <Ionicons name="shield-checkmark-outline" size={16} color={colors.text} />
+              <Text style={[styles.trustLabel, { color: colors.textSecondary }]}>SECURE PAYMENT</Text>
+            </View>
+            <View style={styles.trustItem}>
+              <Ionicons name="refresh-outline" size={16} color={colors.text} />
+              <Text style={[styles.trustLabel, { color: colors.textSecondary }]}>EASY RETURNS</Text>
+            </View>
           </View>
 
           {/* Configuration / Selection */}
@@ -946,9 +1017,66 @@ const ProductDetailScreen = () => {
             )}
           </View>
 
+          {/* Similar products */}
+          {similarProducts.length > 0 && (
+            <View style={styles.similarSection}>
+              <Text style={[styles.similarTitle, { color: colors.text }]}>YOU MAY ALSO LIKE</Text>
+              <FlatList
+                data={similarProducts}
+                horizontal
+                keyExtractor={(item) => String(item.id)}
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.similarList}
+                renderItem={({ item }) => {
+                  const hasSale = item.salePrice !== undefined && item.salePrice < item.price;
+                  const displayPrice = hasSale ? item.salePrice : item.price;
+                  const img = item.images?.[0] || item.mainImage;
+                  return (
+                    <TouchableOpacity
+                      style={[styles.similarCard, { backgroundColor: colors.surfaceRaised }]}
+                      onPress={() => router.push(`/products/${item.id}` as any)}
+                      activeOpacity={0.85}
+                    >
+                      {img ? (
+                        <Image source={{ uri: img }} style={styles.similarImage} resizeMode="cover" />
+                      ) : (
+                        <View style={[styles.similarImage, { backgroundColor: colors.border, alignItems: "center", justifyContent: "center" }]}>
+                          <Ionicons name="image-outline" size={24} color={colors.textTertiary} />
+                        </View>
+                      )}
+                      {item.brand?.name && (
+                        <Text style={[styles.similarBrand, { color: colors.textSecondary }]} numberOfLines={1}>
+                          {item.brand.name.toUpperCase()}
+                        </Text>
+                      )}
+                      <Text style={[styles.similarName, { color: colors.text }]} numberOfLines={2}>
+                        {item.name?.toUpperCase()}
+                      </Text>
+                      <View style={styles.similarPriceRow}>
+                        <Text style={[styles.similarPrice, { color: colors.text }]}>
+                          EGP {displayPrice?.toFixed(2)}
+                        </Text>
+                        {hasSale && (
+                          <Text style={[styles.similarPriceOld, { color: colors.danger }]}>
+                            EGP {item.price.toFixed(2)}
+                          </Text>
+                        )}
+                      </View>
+                    </TouchableOpacity>
+                  );
+                }}
+              />
+            </View>
+          )}
+
           {/* Reviews */}
           <View style={{ paddingHorizontal: 24, marginTop: 40 }}>
             <ProductReviews productId={product.id} />
+          </View>
+
+          {/* Q&A */}
+          <View style={{ marginTop: 8 }}>
+            <ProductQA productId={product.id} brandId={product.brand?.id} />
           </View>
 
           {/* Marquee strip */}
@@ -996,7 +1124,7 @@ const ProductDetailScreen = () => {
               </View>
             </View>
           )}
-        </ScrollView>
+        </Animated.ScrollView>
 
         {/* Sticky Bottom Bar */}
         <View
@@ -1064,57 +1192,57 @@ const ProductDetailScreen = () => {
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "#f9f9f9",
+    backgroundColor: colors.background,
   },
 
   center: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#f9f9f9",
+    backgroundColor: colors.background,
   },
   loadingLabel: {
     marginTop: 16,
     fontSize: 10,
     fontFamily: undefined,
     // letterSpacing: 3,
-    color: "#757c7d",
+    color: colors.textSecondary,
   },
   errorTitle: {
     fontSize: 18,
     fontFamily: undefined,
     marginTop: 20,
-    color: "#2d3435",
+    color: colors.text,
   },
   goBackBtn: {
     marginTop: 28,
     paddingVertical: 14,
     paddingHorizontal: 28,
     borderWidth: 1,
-    borderColor: "#2d3435",
+    borderColor: colors.text,
   },
   goBackText: {
     fontSize: 12,
     fontFamily: "Inter_600SemiBold",
     // letterSpacing: 2,
-    color: "#2d3435",
+    color: colors.text,
     textTransform: "uppercase",
   },
 
   // ── Added to Bag Overlay ──────────────────────────
   addedOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0,0,0,0.55)",
+    backgroundColor: colors.surfaceOverlay,
     zIndex: 200,
     alignItems: "center",
     justifyContent: "center",
   },
   addedCard: {
     width: 300,
-    backgroundColor: "#f9f9f9",
+    backgroundColor: colors.background,
     paddingVertical: 36,
     paddingHorizontal: 28,
     alignItems: "center",
@@ -1122,7 +1250,7 @@ const styles = StyleSheet.create({
   addedCheckBox: {
     width: 56,
     height: 56,
-    backgroundColor: "#000",
+    backgroundColor: colors.primary,
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 18,
@@ -1131,25 +1259,25 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontFamily: undefined,
     // letterSpacing: 2.5,
-    color: "#2d3435",
+    color: colors.text,
     marginBottom: 6,
   },
   addedSubtitle: {
     fontSize: 13,
     fontFamily: "Inter_400Regular",
-    color: "#757c7d",
+    color: colors.textSecondary,
     textAlign: "center",
     marginBottom: 24,
   },
   addedViewBag: {
     width: "100%",
-    backgroundColor: "#000",
+    backgroundColor: colors.primary,
     paddingVertical: 16,
     alignItems: "center",
     marginBottom: 10,
   },
   addedViewBagText: {
-    color: "#fff",
+    color: colors.primaryForeground,
     fontSize: 12,
     fontFamily: "Inter_600SemiBold",
     // letterSpacing: 2,
@@ -1160,10 +1288,10 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     alignItems: "center",
     borderWidth: 1,
-    borderColor: "#2d3435",
+    borderColor: colors.text,
   },
   addedContinueText: {
-    color: "#2d3435",
+    color: colors.text,
     fontSize: 11,
     fontFamily: "Inter_600SemiBold",
     // letterSpacing: 1.5,
@@ -1174,7 +1302,7 @@ const styles = StyleSheet.create({
   heroContainer: {
     width: "100%",
     aspectRatio: 3 / 4,
-    backgroundColor: "#FAFAFA",
+    backgroundColor: colors.surfaceRaised,
     position: "relative",
   },
   heroImage: {
@@ -1185,7 +1313,7 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#FAFAFA",
+    backgroundColor: colors.surfaceRaised,
   },
   heroActionsTopRight: {
     position: "absolute",
@@ -1207,24 +1335,128 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
 
-  // ── Image Indicators ───────────────────────────────
-  indicatorRow: {
+  // ── Counter chip ──────────────────────────────────
+  counterChip: {
+    position: "absolute",
+    bottom: 56,
+    right: 16,
+    backgroundColor: "rgba(0,0,0,0.45)",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  counterChipText: {
+    fontSize: 10,
+    fontFamily: "Inter_500Medium",
+    color: "#fff",
+  },
+
+  // ── Thumbnail row ────────────────────────────────
+  thumbRow: {
+    backgroundColor: colors.background,
+  },
+  thumbRowContent: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  thumb: {
+    width: 60,
+    height: 80,
+    marginRight: 10,
+    borderWidth: 2,
+    borderColor: "transparent",
+  },
+
+  // ── Trust signals ────────────────────────────────
+  trustRow: {
     flexDirection: "row",
-    justifyContent: "center",
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    marginTop: 24,
+  },
+  trustItem: {
+    flex: 1,
     alignItems: "center",
-    paddingVertical: 14,
+    justifyContent: "center",
+    paddingVertical: 16,
     gap: 6,
-    backgroundColor: "#ffffff",
   },
-  indicator: {
-    width: 32,
-    height: 2,
+  trustItemCenter: {
+    borderLeftWidth: 1,
+    borderRightWidth: 1,
   },
-  indicatorActive: {
-    backgroundColor: "#000000",
+  trustLabel: {
+    fontSize: 8,
+    fontFamily: "Inter_500Medium",
+    textTransform: "uppercase",
+    textAlign: "center",
   },
-  indicatorInactive: {
-    backgroundColor: "#e5e5e5",
+
+  // ── Similar products ─────────────────────────────
+  similarSection: {
+    marginTop: 40,
+  },
+  similarTitle: {
+    fontSize: 11,
+    fontFamily: "Inter_500Medium",
+    textTransform: "uppercase",
+    paddingHorizontal: 24,
+    marginBottom: 16,
+  },
+  similarList: {
+    paddingHorizontal: 24,
+  },
+  similarCard: {
+    width: 140,
+    marginRight: 16,
+  },
+  similarImage: {
+    width: 140,
+    height: 186,
+    marginBottom: 8,
+  },
+  similarBrand: {
+    fontSize: 9,
+    fontFamily: "Inter_400Regular",
+    textTransform: "uppercase",
+    marginBottom: 2,
+  },
+  similarName: {
+    fontSize: 11,
+    fontFamily: "Inter_500Medium",
+    textTransform: "uppercase",
+    marginBottom: 4,
+  },
+  similarPriceRow: {
+    flexDirection: "row",
+    gap: 6,
+    alignItems: "baseline",
+  },
+  similarPrice: {
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+  },
+  similarPriceOld: {
+    fontSize: 10,
+    fontFamily: "Inter_400Regular",
+    textDecorationLine: "line-through",
+  },
+
+  // ── Sticky name bar ──────────────────────────────
+  stickyNameBar: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 50,
+    paddingVertical: 10,
+    paddingHorizontal: 24,
+    borderBottomWidth: 1,
+    alignItems: "center",
+  },
+  stickyNameText: {
+    fontSize: 12,
+    fontFamily: "Inter_500Medium",
+    textTransform: "uppercase",
   },
 
   // ── Product Info Section ──────────────────────────
@@ -1240,7 +1472,7 @@ const styles = StyleSheet.create({
   productName: {
     fontSize: 22,
     fontFamily: undefined,
-    color: "#2d3435",
+    color: colors.text,
     // letterSpacing: -0.3,
     textTransform: "uppercase",
     flex: 1,
@@ -1256,18 +1488,18 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontFamily: undefined,
     fontWeight: "300",
-    color: "#2d3435",
+    color: colors.text,
   },
   priceOriginalStrike: {
     fontSize: 14,
     fontFamily: undefined,
-    color: "#C41E3A",
+    color: colors.danger,
     textDecorationLine: "line-through",
     marginTop: 2,
   },
   statusChip: {
     alignSelf: "flex-start",
-    backgroundColor: "#eeeeee",
+    backgroundColor: colors.surfaceContainer,
     paddingHorizontal: 10,
     paddingVertical: 4,
     marginTop: 8,
@@ -1276,13 +1508,13 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontFamily: undefined,
     // letterSpacing: 1,
-    color: "#757c7d",
+    color: colors.textSecondary,
   },
   skuText: {
     fontSize: 10,
     fontFamily: undefined,
     // letterSpacing: 4,
-    color: "#757c7d",
+    color: colors.textSecondary,
     textTransform: "uppercase",
     marginTop: 8,
   },
@@ -1293,13 +1525,13 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontFamily: undefined,
     // letterSpacing: 3,
-    color: "#757c7d",
+    color: colors.textSecondary,
     textTransform: "uppercase",
   },
   categoryText: {
     fontSize: 10,
     fontFamily: "Inter_500Medium",
-    color: "#757c7d",
+    color: colors.textSecondary,
     textTransform: "uppercase",
     marginTop: 4,
   },
@@ -1312,13 +1544,13 @@ const styles = StyleSheet.create({
   ratingText: {
     fontSize: 12,
     fontFamily: "Inter_500Medium",
-    color: "#2d3435",
+    color: colors.text,
     marginLeft: 4,
   },
   reviewCountText: {
     fontSize: 10,
     fontFamily: "Inter_400Regular",
-    color: "#757c7d",
+    color: colors.textSecondary,
     marginLeft: 2,
   },
   badgeRow: {
@@ -1327,22 +1559,22 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   badge: {
-    backgroundColor: "#2d3435",
+    backgroundColor: colors.text,
     paddingHorizontal: 10,
     paddingVertical: 4,
   },
   badgeText: {
     fontSize: 9,
     fontFamily: "Inter_600SemiBold",
-    color: "#fff",
+    color: colors.primaryForeground,
   },
   badgeLowStock: {
     backgroundColor: "transparent",
     borderWidth: 1,
-    borderColor: "#C41E3A",
+    borderColor: colors.danger,
   },
   badgeLowStockText: {
-    color: "#C41E3A",
+    color: colors.danger,
   },
   tagsRow: {
     flexDirection: "row",
@@ -1352,14 +1584,14 @@ const styles = StyleSheet.create({
   },
   tagChip: {
     borderWidth: 1,
-    borderColor: "rgba(172,179,180,0.4)",
+    borderColor: colors.border,
     paddingHorizontal: 10,
     paddingVertical: 4,
   },
   tagText: {
     fontSize: 9,
     fontFamily: "Inter_400Regular",
-    color: "#757c7d",
+    color: colors.textSecondary,
   },
 
   // ── Configuration Section ────────────────────────
@@ -1380,14 +1612,14 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontFamily: "Inter_500Medium",
     // letterSpacing: 4,
-    color: "#757c7d",
+    color: colors.textSecondary,
     textTransform: "uppercase",
   },
   configValue: {
     fontSize: 10,
     fontFamily: "Inter_500Medium",
     // letterSpacing: 4,
-    color: "#2d3435",
+    color: colors.text,
     textTransform: "uppercase",
   },
   swatchRow: {
@@ -1402,7 +1634,7 @@ const styles = StyleSheet.create({
     borderColor: "transparent",
   },
   swatchOuterSelected: {
-    borderColor: "#2d3435",
+    borderColor: colors.text,
   },
   swatch: {
     flex: 1,
@@ -1421,7 +1653,7 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontFamily: "Inter_500Medium",
     // letterSpacing: 4,
-    color: "#3152d3",
+    color: colors.link,
     textTransform: "uppercase",
   },
   sizeRow: {
@@ -1436,19 +1668,19 @@ const styles = StyleSheet.create({
   },
   sizeBoxSelected: {
     borderWidth: 1,
-    borderColor: "#2d3435",
+    borderColor: colors.text,
   },
   sizeBoxText: {
     fontSize: 14,
     fontFamily: "Inter_400Regular",
-    color: "#757c7d",
+    color: colors.textSecondary,
   },
   sizeBoxTextSelected: {
-    color: "#2d3435",
+    color: colors.text,
     fontFamily: "Inter_700Bold",
   },
   sizeBoxTextOos: {
-    color: "rgba(172,179,180,0.3)",
+    color: colors.textTertiary,
     fontStyle: "italic",
   },
 
@@ -1456,7 +1688,7 @@ const styles = StyleSheet.create({
   accordionContainer: {
     marginTop: 32,
     borderTopWidth: 1,
-    borderTopColor: "rgba(172,179,180,0.2)",
+    borderTopColor: colors.borderLight,
   },
   accordionRow: {
     flexDirection: "row",
@@ -1465,27 +1697,27 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingVertical: 20,
     borderBottomWidth: 1,
-    borderBottomColor: "rgba(172,179,180,0.2)",
+    borderBottomColor: colors.borderLight,
   },
   accordionLabel: {
     fontSize: 11,
     fontFamily: "Inter_500Medium",
     // letterSpacing: 2,
-    color: "#2d3435",
+    color: colors.text,
     textTransform: "uppercase",
   },
   accordionContent: {
-    backgroundColor: "#f2f4f4",
+    backgroundColor: colors.surfaceRaised,
     paddingHorizontal: 24,
     paddingVertical: 24,
     borderBottomWidth: 1,
-    borderBottomColor: "rgba(172,179,180,0.2)",
+    borderBottomColor: colors.borderLight,
   },
   accordionBodyText: {
     fontSize: 14,
     fontFamily: "Inter_400Regular",
     lineHeight: 22,
-    color: "#596061",
+    color: colors.textSecondary,
   },
   metaBlock: {
     marginTop: 16,
@@ -1494,13 +1726,13 @@ const styles = StyleSheet.create({
   metaLine: {
     fontSize: 11,
     fontFamily: undefined,
-    color: "#596061",
+    color: colors.textSecondary,
     // letterSpacing: 0.5,
   },
 
   // ── Marquee ───────────────────────────────────────
   marqueeContainer: {
-    backgroundColor: "#000",
+    backgroundColor: colors.primary,
     paddingVertical: 12,
     marginTop: 40,
     overflow: "hidden",
@@ -1511,7 +1743,7 @@ const styles = StyleSheet.create({
   marqueeText: {
     fontSize: 10,
     fontFamily: undefined,
-    color: "#fff",
+    color: colors.primaryForeground,
     // letterSpacing: 2,
     textTransform: "uppercase",
   },
@@ -1526,7 +1758,7 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontFamily: "Inter_500Medium",
     // letterSpacing: 2,
-    color: "#757c7d",
+    color: colors.textSecondary,
     textTransform: "uppercase",
     marginBottom: 12,
   },
@@ -1542,7 +1774,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingVertical: 14,
     borderWidth: 1,
-    borderColor: "#2d3435",
+    borderColor: colors.text,
     gap: 8,
   },
   adminDeleteBtn: {
@@ -1552,31 +1784,31 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingVertical: 14,
     borderWidth: 1,
-    borderColor: "#C41E3A",
+    borderColor: colors.danger,
     gap: 8,
   },
   adminBtnLabel: {
     fontSize: 12,
     fontFamily: "Inter_600SemiBold",
     // letterSpacing: 1.5,
-    color: "#2d3435",
+    color: colors.text,
     textTransform: "uppercase",
   },
   adminDeleteLabel: {
     fontSize: 12,
     fontFamily: "Inter_600SemiBold",
     // letterSpacing: 1.5,
-    color: "#C41E3A",
+    color: colors.danger,
     textTransform: "uppercase",
   },
 
   // ── Sticky Bottom Bar ──────────────────────────────
   bottomBar: {
-    backgroundColor: "rgba(255,255,255,0.8)",
+    backgroundColor: colors.surface,
     paddingHorizontal: 24,
     paddingTop: 24,
     borderTopWidth: 1,
-    borderTopColor: "#e5e5e5",
+    borderTopColor: colors.border,
   },
   bottomBtnRow: {
     flexDirection: "row",
@@ -1587,13 +1819,13 @@ const styles = StyleSheet.create({
     height: 56,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#000000",
+    backgroundColor: colors.primary,
   },
   addToBagText: {
     fontSize: 12,
     fontFamily: "Inter_600SemiBold",
     // letterSpacing: 2,
-    color: "#fff",
+    color: colors.primaryForeground,
     textTransform: "uppercase",
   },
   buyNowBtn: {
@@ -1602,14 +1834,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
-    borderColor: "#000000",
+    borderColor: colors.primary,
     backgroundColor: "transparent",
   },
   buyNowText: {
     fontSize: 12,
     fontFamily: "Inter_600SemiBold",
     // letterSpacing: 2,
-    color: "#000000",
+    color: colors.text,
     textTransform: "uppercase",
   },
 });

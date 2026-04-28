@@ -12,7 +12,7 @@ import {
   UseGuards,
   Request,
 } from '@nestjs/common';
-import { IsEnum } from 'class-validator';
+import { IsEnum, IsOptional, IsString } from 'class-validator';
 import { OrdersService } from './orders.service';
 import { Order } from './order.entity';
 import { OrderStatus } from 'src/common/enums/order.enum';
@@ -30,6 +30,19 @@ import { OrderQueryDto } from './dto/get-orders.dto';
 export class UpdateOrderStatusDto {
   @IsEnum(OrderStatus)
   status: OrderStatus;
+}
+
+export class FulfillOrderDto {
+  @IsEnum(OrderStatus)
+  status: OrderStatus;
+
+  @IsOptional()
+  @IsString()
+  trackingNumber?: string;
+
+  @IsOptional()
+  @IsString()
+  notes?: string;
 }
 
 @Controller('orders')
@@ -66,6 +79,17 @@ export class OrdersController {
       Number(req.user.id),
       req.user.role as UserRole,
     );
+  }
+
+  // ✅ Get orders for a brand (Brand Owner / Admin)
+  @Get('brand/:brandId')
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.BRAND_OWNER)
+  async getBrandOrders(
+    @Param('brandId', ParseIntPipe) brandId: number,
+    @Query(ValidationPipe) query: OrderQueryDto,
+  ) {
+    return this.ordersService.findBrandOrders(brandId, query);
   }
 
   // ✅ Get current user's orders
@@ -151,6 +175,18 @@ export class OrdersController {
       Number(req.user.id),
       req.user.role as UserRole,
     );
+  }
+
+  // ✅ Fulfill order (Brand Owner — advance status forward with optional tracking)
+  @Put(':id/fulfill')
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.BRAND_OWNER)
+  async fulfillOrder(
+    @Param('id', ParseIntPipe) id: number,
+    @Body(ValidationPipe) dto: FulfillOrderDto,
+    @Request() req,
+  ): Promise<Order> {
+    return this.ordersService.brandFulfillOrder(id, dto, Number(req.user.id));
   }
 
   // ✅ Cancel order (Customer can cancel their own orders, Admin can cancel any)

@@ -104,7 +104,10 @@
       "Bash(echo \"Exit: $?\")",
       "Bash(claude plugin:*)",
       "Bash(grep -r \"Share\\\\|share\" /Users/f5rany/Documents/Work/local-brands/frontend --include=*.tsx --include=*.ts --include=*.json)",
-      "Bash(npm list:*)"
+      "Bash(npm list:*)",
+      "Bash(cp \"/Users/f5rany/Downloads/local-brands/project/design_handoff_monolith_home/figure-her.png\" \"/Users/f5rany/Documents/Work/local-brands/frontend/assets/images/figure-her.png\")",
+      "Bash(cp \"/Users/f5rany/Downloads/local-brands/project/design_handoff_monolith_home/figure-his.png\" \"/Users/f5rany/Documents/Work/local-brands/frontend/assets/images/figure-his.png\")",
+      "Bash(grep -r \"screenOptions\\\\|animationEnabled\\\\|cardStyleInterpolator\\\\|transitionSpec\" /Users/f5rany/Documents/Work/local-brands/frontend/app --include=*.tsx --include=*.ts)"
     ]
   }
 }

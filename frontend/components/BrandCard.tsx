@@ -1,7 +1,9 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { View, Text, Image, StyleSheet, TouchableOpacity } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { Brand } from "@/types/brand";
+import { useThemeColors } from "@/hooks/useThemeColor";
+import type { ThemeColors } from "@/constants/Colors";
 
 interface BrandCardProps {
   brand: Brand;
@@ -14,6 +16,8 @@ const BrandCard: React.FC<BrandCardProps> = ({
   onPress,
   size = "medium",
 }) => {
+  const colors = useThemeColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const isSmall = size === "small";
 
   return (
@@ -50,7 +54,7 @@ const BrandCard: React.FC<BrandCardProps> = ({
             <Ionicons
               name="business"
               size={isSmall ? 24 : 32}
-              color="#64748b"
+              color={colors.textSecondary}
             />
           </View>
         )}
@@ -67,7 +71,7 @@ const BrandCard: React.FC<BrandCardProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     alignItems: "center",
     marginRight: 16,
@@ -79,13 +83,13 @@ const styles = StyleSheet.create({
     width: 80,
   },
   logoContainer: {
-    backgroundColor: "#ffffff",
+    backgroundColor: colors.surface,
     borderRadius: 0,
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 8,
     borderWidth: 1,
-    borderColor: "#E5E5E5",
+    borderColor: colors.border,
     overflow: "hidden",
   },
   logoContainerMedium: {
@@ -111,18 +115,18 @@ const styles = StyleSheet.create({
   placeholder: {
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#f1f5f9",
+    backgroundColor: colors.surfaceRaised,
   },
   name: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#1e293b",
+    color: colors.text,
     textAlign: "center",
     width: "100%",
   },
   location: {
     fontSize: 12,
-    color: "#64748b",
+    color: colors.textSecondary,
     textAlign: "center",
     width: "100%",
     marginTop: 2,

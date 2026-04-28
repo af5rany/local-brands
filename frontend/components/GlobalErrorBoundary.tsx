@@ -9,6 +9,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
+import { Colors } from "@/constants/Colors";
 
 interface Props {
   children: ReactNode;
@@ -44,7 +45,7 @@ class GlobalErrorBoundary extends Component<Props, State> {
         <View style={styles.container}>
           <ScrollView contentContainerStyle={styles.content}>
             <View style={styles.iconContainer}>
-              <Ionicons name="alert-circle" size={80} color="#C41E3A" />
+              <Ionicons name="alert-circle" size={80} color={Colors.light.accentRed} />
             </View>
             <Text style={styles.title}>Oops! Something went wrong</Text>
             <Text style={styles.subtitle}>
@@ -70,10 +71,11 @@ class GlobalErrorBoundary extends Component<Props, State> {
   }
 }
 
+const C = Colors.light;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: C.background,
   },
   content: {
     flexGrow: 1,
@@ -83,40 +85,40 @@ const styles = StyleSheet.create({
   },
   iconContainer: {
     marginBottom: 24,
-    backgroundColor: "#F5F5F5",
+    backgroundColor: C.surfaceRaised,
     padding: 20,
     borderRadius: 0,
   },
   title: {
     fontSize: 24,
     fontWeight: "700",
-    color: "#1A1A1A",
+    color: C.text,
     marginBottom: 12,
     textAlign: "center",
   },
   subtitle: {
     fontSize: 16,
-    color: "#666666",
+    color: C.textSecondary,
     marginBottom: 32,
     textAlign: "center",
     lineHeight: 24,
   },
   errorBox: {
     width: "100%",
-    backgroundColor: "#F5F5F5",
+    backgroundColor: C.surfaceRaised,
     padding: 16,
     borderRadius: 0,
     borderWidth: 1,
-    borderColor: "#E5E5E5",
+    borderColor: C.border,
     marginBottom: 32,
   },
   errorText: {
-    color: "#666666",
+    color: C.textSecondary,
     fontSize: 12,
     fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace",
   },
   button: {
-    backgroundColor: "#000000",
+    backgroundColor: C.primary,
     paddingVertical: 14,
     paddingHorizontal: 32,
     borderRadius: 0,
@@ -124,7 +126,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   buttonText: {
-    color: "#fff",
+    color: C.primaryForeground,
     fontSize: 16,
     fontWeight: "600",
   },

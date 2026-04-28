@@ -171,6 +171,9 @@ export class Product {
   @Column({ default: 0 })
   salesCount: number;
 
+  @Column({ default: 0 })
+  cartAddCount: number;
+
   // Store brand ID as foreign key
   @Column({ name: 'brandId', nullable: false })
   brandId: number;

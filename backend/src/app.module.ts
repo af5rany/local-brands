@@ -29,6 +29,7 @@ import { ReturnsModule } from './returns/returns.module';
 import { SizeGuidesModule } from './size-guides/size-guides.module';
 import { EmailCampaignsModule } from './email-campaigns/email-campaigns.module';
 import { BundlesModule } from './bundles/bundles.module';
+import { ProductQuestionsModule } from './product-questions/product-questions.module';
 
 @Module({
   imports: [
@@ -79,6 +80,7 @@ import { BundlesModule } from './bundles/bundles.module';
     SizeGuidesModule,
     EmailCampaignsModule,
     BundlesModule,
+    ProductQuestionsModule,
   ],
   controllers: [AppController],
   providers: [

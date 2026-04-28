@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useMemo } from "react";
 import {
   View,
   Text,
@@ -19,6 +19,8 @@ import * as MediaLibrary from "expo-media-library";
 import { Ionicons } from "@expo/vector-icons";
 import getApiUrl from "@/helpers/getApiUrl";
 import { useAuth } from "@/context/AuthContext";
+import { useThemeColors } from "@/hooks/useThemeColor";
+import type { ThemeColors } from "@/constants/Colors";
 
 const CLOUDINARY_URL = "https://api.cloudinary.com/v1_1/dg4l2eelg/image/upload";
 const UPLOAD_PRESET = "UnsignedPreset";
@@ -38,6 +40,8 @@ export default function TryOnModal({
   onClose,
 }: TryOnModalProps) {
   const { token } = useAuth();
+  const colors = useThemeColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [stage, setStage] = useState<Stage>("pick");
   const [resultUrl, setResultUrl] = useState<string | null>(null);
   const [personUri, setPersonUri] = useState<string | null>(null);
@@ -242,7 +246,7 @@ export default function TryOnModal({
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={handleClose} disabled={isLoading}>
-            <Ionicons name="close" size={24} color="#fff" />
+            <Ionicons name="close" size={24} color={colors.primaryForeground} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>TRY ON</Text>
           <View style={{ width: 24 }} />
@@ -299,7 +303,7 @@ export default function TryOnModal({
                 />
               )}
 
-              <ActivityIndicator size="large" color="#fff" />
+              <ActivityIndicator size="large" color={colors.primaryForeground} />
 
               <Text style={styles.processingText}>
                 {stage === "uploading" ? "UPLOADING" : "GENERATING"}
@@ -331,7 +335,7 @@ export default function TryOnModal({
                   style={styles.iconBtn}
                   onPress={() => setFullscreen(true)}
                 >
-                  <Ionicons name="expand-outline" size={20} color="#fff" />
+                  <Ionicons name="expand-outline" size={20} color={colors.primaryForeground} />
                   <Text style={styles.iconBtnText}>FULL VIEW</Text>
                 </TouchableOpacity>
 
@@ -341,12 +345,12 @@ export default function TryOnModal({
                   disabled={saving}
                 >
                   {saving ? (
-                    <ActivityIndicator size="small" color="#fff" />
+                    <ActivityIndicator size="small" color={colors.primaryForeground} />
                   ) : (
                     <Ionicons
                       name="download-outline"
                       size={20}
-                      color="#fff"
+                      color={colors.primaryForeground}
                     />
                   )}
                   <Text style={styles.iconBtnText}>
@@ -375,7 +379,7 @@ export default function TryOnModal({
             style={styles.fullscreenClose}
             onPress={() => setFullscreen(false)}
           >
-            <Ionicons name="close" size={28} color="#fff" />
+            <Ionicons name="close" size={28} color={colors.primaryForeground} />
           </TouchableOpacity>
           {resultUrl && (
             <Image
@@ -390,8 +394,8 @@ export default function TryOnModal({
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#000" },
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.primary },
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -400,7 +404,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   headerTitle: {
-    color: "#fff",
+    color: colors.primaryForeground,
     fontSize: 13,
     fontWeight: "700",
     // letterSpacing: 2,
@@ -412,7 +416,7 @@ const styles = StyleSheet.create({
     gap: 16,
     paddingHorizontal: 32,
   },
-  garmentPreview: { width: 120, height: 150, backgroundColor: "#111" },
+  garmentPreview: { width: 120, height: 150, backgroundColor: colors.surfaceContainer },
   garmentLabel: {
     color: "rgba(255,255,255,0.4)",
     fontSize: 9,
@@ -431,19 +435,19 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     width: "100%",
   },
-  errorText: { color: "#fff", fontSize: 12, textAlign: "center" },
+  errorText: { color: colors.primaryForeground, fontSize: 12, textAlign: "center" },
   primaryBtn: {
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
-    backgroundColor: "#fff",
+    backgroundColor: colors.background,
     paddingHorizontal: 28,
     paddingVertical: 14,
     width: "100%",
     justifyContent: "center",
   },
   primaryBtnText: {
-    color: "#000",
+    color: colors.text,
     fontSize: 12,
     fontWeight: "700",
     // letterSpacing: 2,
@@ -460,14 +464,14 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   secondaryBtnText: {
-    color: "#fff",
+    color: colors.primaryForeground,
     fontSize: 12,
     fontWeight: "600",
     // letterSpacing: 2,
   },
-  personPreview: { width: 120, height: 150, backgroundColor: "#111" },
+  personPreview: { width: 120, height: 150, backgroundColor: colors.surfaceContainer },
   processingText: {
-    color: "#fff",
+    color: colors.primaryForeground,
     fontSize: 14,
     // letterSpacing: 3,
     fontWeight: "700",
@@ -481,12 +485,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    backgroundColor: "#fff",
+    backgroundColor: colors.background,
     paddingHorizontal: 24,
     paddingVertical: 12,
   },
   retryBtnText: {
-    color: "#000",
+    color: colors.text,
     fontSize: 12,
     fontWeight: "700",
     // letterSpacing: 2,
@@ -532,7 +536,7 @@ const styles = StyleSheet.create({
 
   fullscreenOverlay: {
     flex: 1,
-    backgroundColor: "#000",
+    backgroundColor: colors.primary,
     justifyContent: "center",
     alignItems: "center",
   },
