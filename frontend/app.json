@@ -5,18 +5,27 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "myapp",
+    "scheme": "localbrands",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/87a4ae1a-67bd-4a25-9d6a-6e90556f1ebf"
+    },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.fakharanii.localbrands",
+      "googleServicesFile": "./GoogleService-Info.plist",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "NSCameraUsageDescription": "Used for virtual try-on feature",
         "CFBundleURLTypes": [
           {
-            "CFBundleURLSchemes": ["com.googleusercontent.apps.3176566169-2hod2vokk278ra01ejlls4chh93pah46"]
+            "CFBundleURLSchemes": [
+              "com.googleusercontent.apps.3176566169-2hod2vokk278ra01ejlls4chh93pah46"
+            ]
           }
         ]
       }
@@ -27,6 +36,7 @@
         "backgroundColor": "#ffffff"
       },
       "package": "com.fakharanii.localbrands",
+      "googleServicesFile": "./google-services.json",
       "permissions": [
         "android.permission.CAMERA"
       ]
@@ -44,7 +54,7 @@
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 200,
           "resizeMode": "contain",
-          "backgroundColor": "#ffffff"
+          "backgroundColor": "#1C1917"
         }
       ],
       "expo-web-browser",

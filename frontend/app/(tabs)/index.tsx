@@ -3,15 +3,16 @@ import {
   View,
   Text,
   StyleSheet,
-  ActivityIndicator,
   ScrollView,
   TouchableOpacity,
   Image,
   RefreshControl,
   Animated,
   TextInput,
-  Dimensions,
   Easing,
+  Dimensions,
+  type NativeSyntheticEvent,
+  type NativeScrollEvent,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useFocusEffect, useRouter } from "expo-router";
@@ -26,6 +27,7 @@ import type { HeaderHandle } from "@/components/Header";
 import SearchModal from "@/components/SearchModal";
 import { useThemeColors } from "@/hooks/useThemeColor";
 import type { ThemeColors } from "@/constants/Colors";
+import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { useRecentlyViewed } from "@/hooks/useRecentlyViewed";
 import { Skeleton } from "@/components/Skeleton";
 import { useNetwork } from "@/context/NetworkContext";
@@ -253,6 +255,7 @@ const HomeScreen = () => {
   const router = useRouter();
   const { token } = useAuth();
   const insets = useSafeAreaInsets();
+  const tabBarHeight = useBottomTabBarHeight();
   const colors = useThemeColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
 
@@ -270,6 +273,8 @@ const HomeScreen = () => {
   const [searchVisible, setSearchVisible] = useState(false);
   const hasLoadedOnce = useRef(false);
   const headerRef = useRef<HeaderHandle>(null);
+  const spotlightScrollRef = useRef<ScrollView>(null);
+  const spotlightAutoTimer = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Scroll tracking
   const scrollY = useRef(new Animated.Value(0)).current;
@@ -280,13 +285,32 @@ const HomeScreen = () => {
   });
 
 
-  // Brand spotlight rotation
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setSpotlightIdx((i) => i + 1);
+  // Brand spotlight auto-rotation
+  const startSpotlightTimer = useCallback(() => {
+    if (spotlightAutoTimer.current) clearInterval(spotlightAutoTimer.current);
+    spotlightAutoTimer.current = setInterval(() => {
+      setSpotlightIdx((i) => {
+        const next = i + 1;
+        const screenW = Dimensions.get("window").width;
+        spotlightScrollRef.current?.scrollTo({ x: (next % spotlightSourceLenRef.current) * screenW, animated: true });
+        return next;
+      });
     }, 6000);
-    return () => clearInterval(interval);
   }, []);
+
+  const spotlightSourceLenRef = useRef(3);
+
+  useEffect(() => {
+    startSpotlightTimer();
+    return () => { if (spotlightAutoTimer.current) clearInterval(spotlightAutoTimer.current); };
+  }, [startSpotlightTimer]);
+
+  const onSpotlightSwipe = useCallback((e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const screenW = Dimensions.get("window").width;
+    const idx = Math.round(e.nativeEvent.contentOffset.x / screenW);
+    setSpotlightIdx(idx);
+    startSpotlightTimer(); // reset auto-rotation on manual swipe
+  }, [startSpotlightTimer]);
 
   // Data fetch
   const fetchData = async () => {
@@ -433,7 +457,8 @@ const HomeScreen = () => {
 
   const spotlightList = brands.filter((b) => !String(b.id).startsWith("f-")).slice(0, 3);
   const spotlightSource = spotlightList.length > 0 ? spotlightList : FALLBACK_SPOTLIGHTS;
-  const spotlight = spotlightSource[spotlightIdx % spotlightSource.length] as any;
+  spotlightSourceLenRef.current = spotlightSource.length;
+  const screenW = Dimensions.get("window").width;
   const displayPicks = picks.length > 0 ? picks : FALLBACK_PICKS;
   const displayFeed = feedPosts.length > 0 ? feedPosts : FALLBACK_FEED;
   const barBrands = brands.slice(0, 8);
@@ -443,6 +468,7 @@ const HomeScreen = () => {
       {/* ── Scrollable content (drop bar + header scroll away with content) ── */}
       <Animated.ScrollView
         style={styles.scroll}
+        contentContainerStyle={{ paddingBottom: tabBarHeight }}
         showsVerticalScrollIndicator={false}
         scrollEventThrottle={16}
         onScroll={Animated.event(
@@ -536,36 +562,53 @@ const HomeScreen = () => {
         </View>
 
         {/* ── 6. Brand Spotlight ── */}
-        <View style={styles.spotlight}>
-          <Text style={styles.spotlightEyebrow}>
-            {`BRAND SPOTLIGHT — ${String((spotlightIdx % spotlightSource.length) + 1).padStart(2, "0")} / ${String(spotlightSource.length).padStart(2, "0")}`}
-          </Text>
-          <Text style={styles.spotlightName}>{(spotlight.name || "").toUpperCase()}</Text>
-          <Text style={styles.spotlightLocation}>{spotlight.location || "—"}</Text>
-          <Image
-            source={{ uri: spotlight.logo || spotlight.image || "" }}
-            style={styles.spotlightImage}
-            resizeMode="cover"
-          />
-          <Text style={styles.spotlightBio}>{spotlight.description || spotlight.bio || ""}</Text>
-          <View style={styles.spotlightFooter}>
-            <TouchableOpacity
-              style={styles.spotlightCta}
-              onPress={() =>
-                !String(spotlight.id).startsWith("f-")
-                  ? router.push(`/brands/${spotlight.id}` as any)
-                  : router.push("/(tabs)/brands" as any)
-              }
-            >
-              <Text style={styles.spotlightCtaText}>EXPLORE BRAND</Text>
-            </TouchableOpacity>
-          </View>
+        <View>
+          <ScrollView
+            ref={spotlightScrollRef}
+            horizontal
+            pagingEnabled
+            showsHorizontalScrollIndicator={false}
+            onMomentumScrollEnd={onSpotlightSwipe}
+            scrollEventThrottle={16}
+          >
+            {spotlightSource.map((item: any, i: number) => (
+              <View key={item.id || i} style={[styles.spotlight, { width: screenW }]}>
+                <Text style={styles.spotlightEyebrow}>
+                  {`BRAND SPOTLIGHT — ${String(i + 1).padStart(2, "0")} / ${String(spotlightSource.length).padStart(2, "0")}`}
+                </Text>
+                <Text style={styles.spotlightName}>{(item.name || "").toUpperCase()}</Text>
+                <Text style={styles.spotlightLocation}>{item.location || "—"}</Text>
+                <Image
+                  source={{ uri: item.logo || item.image || "" }}
+                  style={styles.spotlightImage}
+                  resizeMode="cover"
+                />
+                <Text style={styles.spotlightBio}>{item.description || item.bio || ""}</Text>
+                <View style={styles.spotlightFooter}>
+                  <TouchableOpacity
+                    style={styles.spotlightCta}
+                    onPress={() =>
+                      !String(item.id).startsWith("f-")
+                        ? router.push(`/brands/${item.id}` as any)
+                        : router.push("/(tabs)/brands" as any)
+                    }
+                  >
+                    <Text style={styles.spotlightCtaText}>EXPLORE BRAND</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ))}
+          </ScrollView>
           {/* Dot indicators */}
           <View style={styles.spotlightDots}>
             {spotlightSource.map((_, i) => (
               <TouchableOpacity
                 key={i}
-                onPress={() => setSpotlightIdx(i)}
+                onPress={() => {
+                  setSpotlightIdx(i);
+                  spotlightScrollRef.current?.scrollTo({ x: i * screenW, animated: true });
+                  startSpotlightTimer();
+                }}
                 style={[
                   styles.spotlightDot,
                   i === spotlightIdx % spotlightSource.length && styles.spotlightDotActive,
@@ -1261,6 +1304,8 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     flexDirection: "row",
     gap: 8,
     justifyContent: "center",
+    paddingBottom: 32,
+    backgroundColor: colors.background,
   },
   spotlightDot: {
     width: 6,

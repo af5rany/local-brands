@@ -1,11 +1,14 @@
+fix the AI
+
+
 add an indicator showing if there is no internet(is this best practice)
 3. Abandoned cart nudges — You track carts server-side, but there's no mechanism to remind users who added items and left. A scheduled job that checks for carts older than 24 hours and sends a push notification ("You left something behind") is a high-ROI feature that most e-commerce apps treat as essential. It hooks into your existing push notification and BullMQ infrastructure.
 done 6. Onboarding walkthrough — First-time users land on the home screen with no guidance. A 3-4 screen swipeable intro (what the app is, how to browse, how to follow brands, how to shop) shown once on first launch and stored in AsyncStorage would smooth the first experience, especially for a marketplace concept that isn't instantly obvious.
 7. Accessibility basics — There's zero mention of accessibility labels, screen reader support, or WCAG consideration anywhere in the specs. At minimum, adding accessibilityLabel and accessibilityRole to all interactive elements and ensuring adequate contrast ratios would make the app usable for a much wider audience — and is increasingly required for app store compliance.
 
 
-make brand spotlight accept swipe manually
-i want when pressing on a button in the bottom menu to go to the top of the screen
+done make brand spotlight accept swipe manually
+done i want when pressing on a button in the bottom menu to go to the top of the screen
 
 is it better to add text between the two photos
 ## ⚡ Loading, Error States & UX

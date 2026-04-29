@@ -19,6 +19,7 @@ import { useThemeColors } from "@/hooks/useThemeColor";
 import { FeedPostSkeleton } from "@/components/Skeleton";
 import { useNetwork } from "@/context/NetworkContext";
 import OfflinePlaceholder from "@/components/OfflinePlaceholder";
+import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const COLUMN_GAP = 8;
@@ -224,6 +225,7 @@ function useMasonryColumns(posts: PostData[], imageHeights: Record<number, numbe
 export default function FeedScreen() {
   const router = useRouter();
   const colors = useThemeColors();
+  const tabBarHeight = useBottomTabBarHeight();
   const { token, user } = useAuth();
 
   const { isConnected } = useNetwork();
@@ -426,7 +428,7 @@ export default function FeedScreen() {
         </View>
       ) : displayPosts.length === 0 ? (
         <ScrollView
-          contentContainerStyle={styles.emptyScroll}
+          contentContainerStyle={[styles.emptyScroll, { paddingBottom: tabBarHeight }]}
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
           }
@@ -459,7 +461,7 @@ export default function FeedScreen() {
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
           }
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={[styles.scrollContent, { paddingBottom: tabBarHeight }]}
         >
           {/* Suggested products section */}
           {renderSuggestedSection()}
@@ -540,7 +542,6 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: PADDING,
     paddingTop: PADDING,
-    paddingBottom: 110,
   },
   masonryRow: {
     flexDirection: "row",
@@ -679,7 +680,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 10,
     paddingHorizontal: 40,
-    paddingBottom: 110,
   },
   emptyTitle: { fontSize: 18, fontWeight: "700" },
   emptySubtitle: { fontSize: 13, textAlign: "center" },

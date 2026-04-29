@@ -14,10 +14,12 @@ import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/context/AuthContext";
 import { useBrand } from "@/context/BrandContext";
 import { useThemeColors } from "@/hooks/useThemeColor";
+import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 
 const ProfileTab = () => {
   const router = useRouter();
   const colors = useThemeColors();
+  const tabBarHeight = useBottomTabBarHeight();
   const { user, token, logout, refreshUser } = useAuth();
   const { setIsManagementMode } = useBrand();
   const [refreshing, setRefreshing] = useState(false);
@@ -156,7 +158,7 @@ const ProfileTab = () => {
       style={[styles.container, { backgroundColor: colors.background }]}
     >
       <ScrollView
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: tabBarHeight }]}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
@@ -280,7 +282,6 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: 110,
   },
   centeredContent: {
     flex: 1,

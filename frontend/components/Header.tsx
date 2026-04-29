@@ -56,6 +56,7 @@ interface AnimatedMenuItemProps {
   active: boolean;
   colors: any;
   onPress: () => void;
+  styles: ReturnType<typeof createStyles>;
 }
 
 const AnimatedMenuItem: React.FC<AnimatedMenuItemProps> = ({
@@ -65,6 +66,7 @@ const AnimatedMenuItem: React.FC<AnimatedMenuItemProps> = ({
   active,
   colors,
   onPress,
+  styles
 }) => {
   const translateX = useSharedValue(-60);
   const opacity = useSharedValue(0);
@@ -346,6 +348,7 @@ const Header: React.FC<HeaderProps> = ({ notificationCount = 0, showBack = false
                       active={isActiveRoute(item.route)}
                       colors={colors}
                       onPress={() => handleMenuItemPress(item.route)}
+                      styles={styles}
                     />
                   ))}
                 </View>
@@ -365,6 +368,7 @@ const Header: React.FC<HeaderProps> = ({ notificationCount = 0, showBack = false
                       active={isActiveRoute(item.route)}
                       colors={colors}
                       onPress={() => handleMenuItemPress(item.route)}
+                      styles={styles}
                     />
                   ))}
                 </View>

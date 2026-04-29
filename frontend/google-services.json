@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "85998872782",
+    "project_id": "localbrands-522ab",
+    "storage_bucket": "localbrands-522ab.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:85998872782:android:a71a7051c69393c775889f",
+        "android_client_info": {
+          "package_name": "com.fakharanii.localbrands"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBLRDgLGDZ-nLG2qVopIqT_MdVp5XwTxwQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
