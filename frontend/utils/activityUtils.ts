@@ -1,5 +1,7 @@
 // export type UserRole = "admin" | "brandOwner" | "user";
 
+import { UserRole } from "@/types/enums";
+
 export const getRecentActivity = (userRole: UserRole) => {
   if (userRole === "admin") {
     return [

@@ -134,7 +134,7 @@ export default function EmailCampaignsScreen() {
                     <Ionicons name="pencil-outline" size={18} color={colors.text} />
                   </TouchableOpacity>
                   <TouchableOpacity onPress={() => deleteCampaign(c.id, c.subject)} style={styles.iconBtn}>
-                    <Ionicons name="trash-outline" size={18} color={colors.error} />
+                    <Ionicons name="trash-outline" size={18} color={colors.danger} />
                   </TouchableOpacity>
                 </View>
               </View>

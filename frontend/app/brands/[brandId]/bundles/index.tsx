@@ -118,7 +118,7 @@ export default function BundlesScreen() {
                     <Ionicons name="pencil-outline" size={18} color={colors.text} />
                   </TouchableOpacity>
                   <TouchableOpacity onPress={() => remove(b.id, b.name)} style={styles.iconBtn}>
-                    <Ionicons name="trash-outline" size={18} color={colors.error} />
+                    <Ionicons name="trash-outline" size={18} color={colors.danger} />
                   </TouchableOpacity>
                 </View>
               </View>

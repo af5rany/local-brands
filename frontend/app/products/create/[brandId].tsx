@@ -344,13 +344,13 @@ const CreateProductScreen = () => {
   return (
     <SafeAreaView edges={["top"]} style={styles.container}>
       {/* Nav header */}
-      <View style={[styles.navHeader, { borderBottomColor: borderColor }]}>
+      <View style={[styles.navHeader, { borderBottomColor: colors.border }]}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} activeOpacity={0.7}>
-          <View style={[styles.backCircle, { backgroundColor: cardBackground }]}>
-            <Ionicons name="chevron-back" size={22} color={textColor} />
+          <View style={[styles.backCircle, { backgroundColor: colors.surfaceRaised }]}>
+            <Ionicons name="chevron-back" size={22} color={colors.text} />
           </View>
         </TouchableOpacity>
-        <Text style={[styles.navTitle, { color: textColor }]}>Create Product</Text>
+        <Text style={[styles.navTitle, { color: colors.text }]}>Create Product</Text>
         <View style={{ width: 40 }} />
       </View>
 
@@ -379,7 +379,7 @@ const CreateProductScreen = () => {
             <TextInput
               style={styles.input}
               placeholder="Enter product name"
-              placeholderTextColor={placeholderColor}
+              placeholderTextColor={colors.textSecondary}
               value={productName}
               onChangeText={handleProductNameChange}
             />
@@ -390,7 +390,7 @@ const CreateProductScreen = () => {
             <TextInput
               style={[styles.input, styles.textArea]}
               placeholder="Detailed product description"
-              placeholderTextColor={placeholderColor}
+              placeholderTextColor={colors.textSecondary}
               value={description}
               onChangeText={setDescription}
               multiline
@@ -406,7 +406,7 @@ const CreateProductScreen = () => {
               <TextInput
                 style={styles.input}
                 placeholder="0.00"
-                placeholderTextColor={placeholderColor}
+                placeholderTextColor={colors.textSecondary}
                 value={productPrice}
                 onChangeText={setProductPrice}
                 keyboardType="numeric"
@@ -417,7 +417,7 @@ const CreateProductScreen = () => {
               <TextInput
                 style={styles.input}
                 placeholder="0.00"
-                placeholderTextColor={placeholderColor}
+                placeholderTextColor={colors.textSecondary}
                 value={salePrice}
                 onChangeText={setSalePrice}
                 keyboardType="numeric"
@@ -498,7 +498,7 @@ const CreateProductScreen = () => {
                   setSubcategory("");
                 }}
               >
-                <Text style={{ color: primaryColor, fontSize: 14, fontWeight: "600" }}>
+                <Text style={{ color: colors.primary, fontSize: 14, fontWeight: "600" }}>
                   {isNewSubcategory ? "Select Existing" : "Type New"}
                 </Text>
               </TouchableOpacity>
@@ -507,7 +507,7 @@ const CreateProductScreen = () => {
               <TextInput
                 style={styles.input}
                 placeholder="Enter new category"
-                placeholderTextColor={placeholderColor}
+                placeholderTextColor={colors.textSecondary}
                 value={subcategory}
                 onChangeText={setSubcategory}
               />
@@ -580,7 +580,7 @@ const CreateProductScreen = () => {
               ))}
             </View>
             {color ? (
-              <Text style={{ color: placeholderColor, fontSize: 12, marginTop: 6 }}>
+              <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 6 }}>
                 Selected: {colorPalette.find((c) => c.hex === color)?.name || color}
               </Text>
             ) : null}
@@ -615,12 +615,12 @@ const CreateProductScreen = () => {
                     alignItems: "center",
                     borderStyle: "dashed",
                     borderWidth: 1.5,
-                    borderColor: primaryColor,
+                    borderColor: colors.primary,
                   },
                 ]}
                 onPress={handleProductImagePick}
               >
-                <Ionicons name="add" size={32} color={primaryColor} />
+                <Ionicons name="add" size={32} color={colors.primary} />
               </TouchableOpacity>
             </View>
           </View>
@@ -648,15 +648,15 @@ const CreateProductScreen = () => {
                         style={[
                           styles.sizeChip,
                           {
-                            borderColor: isSelected ? primaryColor : borderColor,
-                            backgroundColor: isSelected ? primaryColor : "transparent",
+                            borderColor: isSelected ? colors.primary : colors.border,
+                            backgroundColor: isSelected ? colors.primary : "transparent",
                           },
                         ]}
                       >
                         <Text
                           style={[
                             styles.sizeChipText,
-                            { color: isSelected ? "#fff" : textColor },
+                            { color: isSelected ? "#fff" : colors.text },
                           ]}
                         >
                           {size}
@@ -676,7 +676,7 @@ const CreateProductScreen = () => {
                       <TextInput
                         style={styles.sizeStockInput}
                         placeholder="Stock quantity"
-                        placeholderTextColor={placeholderColor}
+                        placeholderTextColor={colors.textSecondary}
                         value={String(sv.stock)}
                         onChangeText={(text) =>
                           updateSizeStock(sv.size, parseInt(text) || 0)
@@ -687,7 +687,7 @@ const CreateProductScreen = () => {
                   ))}
                   <Text
                     style={{
-                      color: placeholderColor,
+                      color: colors.textSecondary,
                       fontSize: 13,
                       marginTop: 8,
                       textAlign: "right",
@@ -707,7 +707,7 @@ const CreateProductScreen = () => {
               <TextInput
                 style={styles.input}
                 placeholder="Enter total stock quantity"
-                placeholderTextColor={placeholderColor}
+                placeholderTextColor={colors.textSecondary}
                 value={String(stock)}
                 onChangeText={(text) => setStock(parseInt(text) || 0)}
                 keyboardType="numeric"
@@ -724,7 +724,7 @@ const CreateProductScreen = () => {
             <TextInput
               style={styles.input}
               placeholder="e.g. 100% Cotton, Polyester Blend"
-              placeholderTextColor={placeholderColor}
+              placeholderTextColor={colors.textSecondary}
               value={material}
               onChangeText={setMaterial}
             />
@@ -734,7 +734,7 @@ const CreateProductScreen = () => {
             <TextInput
               style={[styles.input, styles.textArea]}
               placeholder="e.g. Machine wash cold, tumble dry low"
-              placeholderTextColor={placeholderColor}
+              placeholderTextColor={colors.textSecondary}
               value={careInstructions}
               onChangeText={setCareInstructions}
               multiline
@@ -746,7 +746,7 @@ const CreateProductScreen = () => {
             <TextInput
               style={styles.input}
               placeholder="e.g. Made in USA, China"
-              placeholderTextColor={placeholderColor}
+              placeholderTextColor={colors.textSecondary}
               value={origin}
               onChangeText={setOrigin}
             />
@@ -761,7 +761,7 @@ const CreateProductScreen = () => {
             <TextInput
               style={styles.input}
               placeholder="0.0"
-              placeholderTextColor={placeholderColor}
+              placeholderTextColor={colors.textSecondary}
               value={weight}
               onChangeText={setWeight}
               keyboardType="numeric"
@@ -773,7 +773,7 @@ const CreateProductScreen = () => {
               <TextInput
                 style={styles.input}
                 placeholder="0.0"
-                placeholderTextColor={placeholderColor}
+                placeholderTextColor={colors.textSecondary}
                 value={length}
                 onChangeText={setLength}
                 keyboardType="numeric"
@@ -784,7 +784,7 @@ const CreateProductScreen = () => {
               <TextInput
                 style={styles.input}
                 placeholder="0.0"
-                placeholderTextColor={placeholderColor}
+                placeholderTextColor={colors.textSecondary}
                 value={width}
                 onChangeText={setWidth}
                 keyboardType="numeric"
@@ -796,7 +796,7 @@ const CreateProductScreen = () => {
             <TextInput
               style={styles.input}
               placeholder="0.0"
-              placeholderTextColor={placeholderColor}
+              placeholderTextColor={colors.textSecondary}
               value={height}
               onChangeText={setHeight}
               keyboardType="numeric"
@@ -830,7 +830,7 @@ const CreateProductScreen = () => {
             <Switch
               value={isFeatured}
               onValueChange={setIsFeatured}
-              trackColor={{ false: placeholderColor, true: primaryColor }}
+              trackColor={{ false: colors.textSecondary, true: colors.primary }}
               thumbColor={isFeatured ? "#ffffff" : "#f4f3f4"}
             />
           </View>
@@ -855,5 +855,170 @@ const CreateProductScreen = () => {
     </SafeAreaView>
   );
 };
+
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    container: { flex: 1, backgroundColor: colors.background },
+    navHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      borderBottomWidth: 1,
+    },
+    backBtn: { padding: 4 },
+    backCircle: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    navTitle: { fontSize: 16, fontWeight: "700" },
+    screenOverlay: {
+      ...StyleSheet.absoluteFillObject,
+      backgroundColor: "rgba(0,0,0,0.6)",
+      zIndex: 999,
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 12,
+    },
+    overlayText: { color: "#fff", fontSize: 16, fontWeight: "600" },
+    scrollContainer: { padding: 16, paddingBottom: 60 },
+    header: {
+      fontSize: 22,
+      fontWeight: "800",
+      color: colors.text,
+      marginBottom: 20,
+    },
+    card: {
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+      padding: 16,
+      marginBottom: 16,
+    },
+    sectionTitle: {
+      fontSize: 13,
+      fontWeight: "700",
+      color: colors.text,
+      marginBottom: 16,
+      textTransform: "uppercase",
+    },
+    inputContainer: { marginBottom: 14 },
+    label: {
+      fontSize: 11,
+      fontWeight: "700",
+      color: colors.textSecondary,
+      marginBottom: 6,
+      textTransform: "uppercase",
+    },
+    required: { color: colors.danger },
+    input: {
+      height: 48,
+      borderWidth: 1,
+      borderColor: colors.border,
+      paddingHorizontal: 14,
+      fontSize: 14,
+      color: colors.text,
+      backgroundColor: colors.surfaceRaised,
+    },
+    textArea: { height: 100, paddingTop: 12, textAlignVertical: "top" },
+    rowContainer: { flexDirection: "row", gap: 12 },
+    halfWidth: { flex: 1 },
+    dropdown: {
+      height: 48,
+      borderWidth: 1,
+      borderColor: colors.border,
+      paddingHorizontal: 14,
+      backgroundColor: colors.surfaceRaised,
+    },
+    dropdownPlaceholder: { fontSize: 14, color: colors.textSecondary },
+    dropdownText: { fontSize: 14, color: colors.text },
+    switchContainer: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingVertical: 4,
+    },
+    createButton: {
+      height: 52,
+      backgroundColor: colors.primary,
+      alignItems: "center",
+      justifyContent: "center",
+      flexDirection: "row",
+      gap: 10,
+      marginTop: 8,
+      marginBottom: 32,
+    },
+    createButtonDisabled: { opacity: 0.5 },
+    createButtonText: {
+      color: colors.primaryForeground,
+      fontSize: 14,
+      fontWeight: "800",
+    },
+    loadingText: { color: "#fff", fontSize: 14, fontWeight: "600" },
+    autoDetectBadge: {
+      marginLeft: 8,
+      backgroundColor: colors.surfaceRaised,
+      paddingHorizontal: 8,
+      paddingVertical: 2,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    autoDetectText: { fontSize: 10, color: colors.textSecondary, fontWeight: "600" },
+    tagsContainer: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: -4 },
+    tag: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+      backgroundColor: colors.surfaceRaised,
+      borderWidth: 1,
+      borderColor: colors.border,
+      paddingHorizontal: 10,
+      paddingVertical: 4,
+    },
+    tagText: { fontSize: 12, color: colors.text, fontWeight: "500" },
+    removeTagText: { fontSize: 10, color: colors.textSecondary, fontWeight: "700" },
+    colorPaletteContainer: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+    colorOption: {
+      width: 36,
+      height: 36,
+      borderWidth: 1,
+      borderColor: colors.border,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    selectedColor: { borderWidth: 2, borderColor: colors.text },
+    imageGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+    imageContainer: { width: 80, height: 80, position: "relative" },
+    imagePreview: { width: 80, height: 80, backgroundColor: colors.surfaceRaised },
+    removeImageButton: {
+      position: "absolute",
+      top: 4,
+      right: 4,
+      width: 20,
+      height: 20,
+      borderRadius: 10,
+      backgroundColor: "rgba(0,0,0,0.6)",
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    sizeChip: { paddingHorizontal: 14, paddingVertical: 8, borderWidth: 1 },
+    sizeChipText: { fontSize: 12, fontWeight: "600" },
+    sizeStockRow: { flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 8 },
+    sizeLabel: { width: 50, fontSize: 13, fontWeight: "700", color: colors.text },
+    sizeStockInput: {
+      flex: 1,
+      height: 44,
+      borderWidth: 1,
+      borderColor: colors.border,
+      paddingHorizontal: 12,
+      fontSize: 14,
+      color: colors.text,
+      backgroundColor: colors.surfaceRaised,
+    },
+  });
 
 export default CreateProductScreen;

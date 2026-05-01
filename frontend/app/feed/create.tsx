@@ -66,7 +66,7 @@ export default function CreatePostScreen() {
       setProducts([]);
       return;
     }
-    setSelectedProductIds([]);
+    setTaggedProducts([]);
     setLoadingProducts(true);
     fetch(`${getApiUrl()}/products?brandIds=${chosenBrand.id}&limit=50`, {
       headers: { Authorization: `Bearer ${token}` },

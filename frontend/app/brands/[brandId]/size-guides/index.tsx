@@ -160,7 +160,7 @@ export default function SizeGuidesScreen() {
                   <Ionicons name="pencil-outline" size={18} color={colors.text} />
                 </TouchableOpacity>
                 <TouchableOpacity onPress={() => deleteGuide(guide)} style={styles.iconBtn}>
-                  <Ionicons name="trash-outline" size={18} color={colors.error} />
+                  <Ionicons name="trash-outline" size={18} color={colors.danger} />
                 </TouchableOpacity>
               </View>
               <Text style={[styles.cardMeta, { color: colors.textSecondary }]}>

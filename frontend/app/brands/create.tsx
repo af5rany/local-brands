@@ -355,7 +355,7 @@ const CreateBrandScreen = () => {
                 { backgroundColor: colors.surfaceRaised, borderColor: colors.border },
               ]}
               placeholderStyle={[styles.dropdownPlaceholder, { color: colors.textSecondary }]}
-              selectedTextStyle={[styles.dropdownSelected, { color: text }]}
+              selectedTextStyle={[styles.dropdownSelected, { color: colors.text }]}
               inputSearchStyle={[
                 styles.dropdownSearch,
                 {
