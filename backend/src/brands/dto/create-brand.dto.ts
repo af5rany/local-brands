@@ -17,8 +17,9 @@ export class CreateBrandDto {
   @IsString()
   location?: string;
 
+  @IsOptional()
   @IsNumber()
-  ownerId: number;
+  ownerId?: number;
 
   @IsOptional()
   @IsEnum(BrandStatus)

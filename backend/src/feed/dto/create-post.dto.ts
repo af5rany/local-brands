@@ -30,15 +30,20 @@ export class CreatePostDto {
   @IsInt()
   brandId: number;
 
-  @ApiProperty({
-    description: 'Array of image URLs (1-10)',
+  @ApiPropertyOptional({
+    description: 'Array of image URLs (0-10; required unless videoUrl is provided)',
     example: ['https://res.cloudinary.com/...'],
   })
+  @IsOptional()
   @IsArray()
   @IsString({ each: true })
-  @ArrayMinSize(1)
   @ArrayMaxSize(10)
-  images: string[];
+  images?: string[];
+
+  @ApiPropertyOptional({ description: 'Video URL (Cloudinary)' })
+  @IsOptional()
+  @IsString()
+  videoUrl?: string;
 
   @ApiPropertyOptional({ description: 'Post caption (max 2000 chars)' })
   @IsOptional()

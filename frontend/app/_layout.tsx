@@ -50,6 +50,15 @@ const PROTECTED_SEGMENTS = [
   "notifications",
 ];
 
+// Guests have a token but cannot access these routes
+const REGISTERED_ONLY_SEGMENTS = [
+  "wishlist",
+  "manage",
+  "users",
+  "referral",
+  "returns",
+];
+
 async function registerForPushNotifications(token: string) {
   if (!Device.isDevice) return;
   const { status: existingStatus } = await Notifications.getPermissionsAsync();
@@ -73,22 +82,24 @@ async function registerForPushNotifications(token: string) {
 }
 
 function RootLayoutNav() {
-  const { token, loading } = useAuth();
+  const { token, loading, isGuest } = useAuth();
   const router = useRouter();
   const segments = useSegments();
   const notificationListener = useRef<Notifications.Subscription | null>(null);
   const responseListener = useRef<Notifications.Subscription | null>(null);
 
   useEffect(() => {
-    if (
-      !loading &&
-      !token &&
-      segments.length > 0 &&
-      PROTECTED_SEGMENTS.includes(segments[0])
-    ) {
+    if (loading) return;
+
+    if (!token && PROTECTED_SEGMENTS.includes(segments[0])) {
       router.replace("/auth/login");
+      return;
     }
-  }, [token, segments, loading]);
+
+    if (token && isGuest && REGISTERED_ONLY_SEGMENTS.includes(segments[0])) {
+      router.replace("/auth/register");
+    }
+  }, [token, isGuest, segments, loading]);
 
   // Register push token when user logs in
   useEffect(() => {

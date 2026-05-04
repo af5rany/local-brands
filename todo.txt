@@ -1,3 +1,22 @@
+done - If you scroll back to the end, it logs you out.
+done - If I'm adding a product, the publish button is below the mobile navigation bar.
+done - The like action in the shop product card is very slow.
+done - Uploading feed photos is difficult — we need to find an easier way.
+done - We want to add reels or videos to the feed, since currently only photos are supported.
+done - Feed images aren't showing at full size when you open them while scrolling.
+done - We want to change the image card shape in the feed from sharp corners to curved ones, similar to Pinterest.
+done - Add a delete option so if I post something to the feed, I can remove it.
+done - The post count on the brand profile isn't displaying correctly.
+done - Change the brand profile picture display from a square to a circle, and add a cover photo behind it similar to WhatsApp Business.
+done - On scroll down, the header should hide, and on scroll up, it should reappear.
+done - The brands section is empty even though I've added a brand.
+done - Make any image pinch-to-zoom.
+done - Products that are out of stock aren't labeled "Sold Out."
+
+When you tap on the search bar, the app dimensions change and it shifts way up.
+
+Try On isn't working.
+Image search isn't accurate — it returns irrelevant results.
 fix the AI
 
 

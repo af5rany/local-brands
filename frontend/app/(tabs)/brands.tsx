@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useMemo } from "react";
+import React, { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import {
   View,
   Text,
@@ -24,9 +24,14 @@ import { useThemeColors } from "@/hooks/useThemeColor";
 import type { ThemeColors } from "@/constants/Colors";
 import { useNetwork } from "@/context/NetworkContext";
 import OfflinePlaceholder from "@/components/OfflinePlaceholder";
+import { useHeaderVisibility } from "@/context/HeaderVisibilityContext";
+import { useScrollToTop } from "@/context/ScrollToTopContext";
 
 const BrandsScreen = () => {
   const { token, user } = useAuth();
+  const { reportScroll } = useHeaderVisibility();
+  const { register, unregister } = useScrollToTop();
+  const flatListRef = useRef<FlatList>(null);
   const colors = useThemeColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const userRole = user?.role || user?.userRole;
@@ -54,6 +59,10 @@ const BrandsScreen = () => {
   // UI States
   const [showFilters, setShowFilters] = useState<boolean>(false);
   const [showSort, setShowSort] = useState<boolean>(false);
+
+  // My brands (brand owner feature)
+  const [myBrands, setMyBrands] = useState<Brand[]>([]);
+  const isBrandOwner = userRole === "brandOwner";
 
   // Follow state (customer feature)
   const [followedIds, setFollowedIds] = useState<Set<number>>(new Set());
@@ -131,6 +140,20 @@ const BrandsScreen = () => {
     [buildApiUrl, token],
   );
 
+  // Fetch my brands (brand owner feature)
+  const fetchMyBrands = useCallback(async () => {
+    if (!token || !isBrandOwner) return;
+    try {
+      const response = await fetch(`${getApiUrl()}/brands/my-brands`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setMyBrands(Array.isArray(data) ? data : []);
+      }
+    } catch {}
+  }, [token, isBrandOwner]);
+
   // Fetch followed brands (customer feature)
   const fetchFollowedBrands = useCallback(async () => {
     if (!token || isAdmin) { setFollowedIds(new Set()); return; }
@@ -165,12 +188,22 @@ const BrandsScreen = () => {
     fetchFollowedBrands();
   }, [fetchFollowedBrands]);
 
+  useEffect(() => {
+    fetchMyBrands();
+  }, [fetchMyBrands]);
+
   useFocusEffect(
     useCallback(() => {
       fetchBrands(1, false);
       fetchFollowedBrands();
-    }, [fetchBrands, fetchFollowedBrands])
+      fetchMyBrands();
+    }, [fetchBrands, fetchFollowedBrands, fetchMyBrands])
   );
+
+  useEffect(() => {
+    register("brands", () => flatListRef.current?.scrollToOffset({ offset: 0, animated: true }));
+    return () => unregister("brands");
+  }, []);
 
   // Toggle follow (customer feature)
   const toggleFollow = async (brandId: number) => {
@@ -265,6 +298,42 @@ const BrandsScreen = () => {
           </TouchableOpacity>
         )}
       </View>
+
+      {/* My Brands section for brand owners */}
+      {isBrandOwner && myBrands.length > 0 && (
+        <View style={styles.myBrandsSection}>
+          <Text style={styles.myBrandsSectionTitle}>MY BRANDS</Text>
+          {myBrands.map((brand) => (
+            <TouchableOpacity
+              key={brand.id}
+              style={styles.myBrandRow}
+              onPress={() => router.push(`/brands/${brand.id}`)}
+              activeOpacity={0.7}
+            >
+              <View style={styles.myBrandLogoWrap}>
+                {brand.logo ? (
+                  <Image source={{ uri: brand.logo }} style={styles.myBrandLogo} />
+                ) : (
+                  <View style={[styles.myBrandLogo, { backgroundColor: colors.surfaceRaised, justifyContent: "center", alignItems: "center" }]}>
+                    <Text style={[styles.logoInitial, { fontSize: 14 }]}>
+                      {brand.name?.charAt(0)?.toUpperCase() || "B"}
+                    </Text>
+                  </View>
+                )}
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.myBrandName}>{brand.name?.toUpperCase()}</Text>
+                {(brand as any).status && (
+                  <Text style={[styles.myBrandStatus, { color: (brand as any).status === "active" ? colors.text : colors.textTertiary }]}>
+                    {(brand as any).status?.toUpperCase()}
+                  </Text>
+                )}
+              </View>
+              <Text style={styles.arrowText}>→</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      )}
     </View>
   );
 
@@ -673,6 +742,7 @@ const BrandsScreen = () => {
   return (
     <View style={styles.container}>
       <FlatList
+        ref={flatListRef}
         data={brandsData?.items || []}
         keyExtractor={(item) => item.id.toString()}
         renderItem={renderBrand}
@@ -693,6 +763,8 @@ const BrandsScreen = () => {
         }
         contentContainerStyle={styles.listContainer}
         showsVerticalScrollIndicator={false}
+        onScroll={(e) => reportScroll(e.nativeEvent.contentOffset.y)}
+        scrollEventThrottle={16}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -731,15 +803,17 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   header: {
     fontFamily: undefined,
     fontSize: 28,
+    fontWeight: "800",
     color: colors.text,
-    // letterSpacing: 2,
+    letterSpacing: -0.5,
+    textTransform: "uppercase",
   },
   headerCount: {
     fontFamily: undefined,
     fontSize: 10,
     color: colors.textSecondary,
     marginTop: 4,
-    // letterSpacing: 2,
+    letterSpacing: 2,
   },
 
   // ── Create button ─────────────────────────────────
@@ -755,7 +829,41 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     fontFamily: undefined,
     fontSize: 11,
     color: colors.primaryForeground,
-    // letterSpacing: 1,
+    letterSpacing: 1,
+  },
+
+  // ── My Brands ─────────────────────────────────────
+  myBrandsSection: {
+    marginTop: 20,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  myBrandsSectionTitle: {
+    fontSize: 9,
+    color: colors.textSecondary,
+    letterSpacing: 2,
+    marginBottom: 10,
+  },
+  myBrandRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  myBrandLogoWrap: { marginRight: 12 },
+  myBrandLogo: { width: 40, height: 40 },
+  myBrandName: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: colors.text,
+    letterSpacing: 0.5,
+  },
+  myBrandStatus: {
+    fontSize: 9,
+    letterSpacing: 1,
+    marginTop: 2,
   },
 
   // ── Search ────────────────────────────────────────
@@ -776,7 +884,7 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     fontFamily: undefined,
     fontSize: 11,
     color: colors.text,
-    // letterSpacing: 2,
+    letterSpacing: 2,
     paddingVertical: 0,
   },
 
@@ -806,7 +914,7 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     fontFamily: undefined,
     fontSize: 10,
     color: colors.text,
-    // letterSpacing: 1,
+    letterSpacing: 1,
   },
   controlBtnTextActive: {
     color: colors.primaryForeground,
@@ -815,7 +923,7 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     fontFamily: undefined,
     fontSize: 9,
     color: colors.textSecondary,
-    // letterSpacing: 2,
+    letterSpacing: 2,
     marginLeft: "auto",
   },
 
@@ -861,8 +969,11 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   },
   brandName: {
     fontFamily: undefined,
-    fontSize: 15,
+    fontSize: 13,
+    fontWeight: "700",
     color: colors.text,
+    letterSpacing: 1,
+    textTransform: "uppercase",
     flexShrink: 1,
   },
   statusBadge: {
@@ -878,7 +989,7 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   statusText: {
     fontFamily: undefined,
     fontSize: 9,
-    // letterSpacing: 1,
+    letterSpacing: 1,
   },
   statusTextActive: {
     color: colors.primaryForeground,
@@ -907,7 +1018,7 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     fontFamily: undefined,
     fontSize: 9,
     color: colors.textTertiary,
-    // letterSpacing: 0.5,
+    letterSpacing: 0.5,
   },
   arrowText: {
     fontFamily: undefined,
@@ -930,7 +1041,7 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     fontFamily: undefined,
     fontSize: 9,
     color: colors.textSecondary,
-    // letterSpacing: 2,
+    letterSpacing: 2,
   },
 
   // ── Load more ─────────────────────────────────────
@@ -946,7 +1057,7 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     fontFamily: undefined,
     fontSize: 11,
     color: colors.text,
-    // letterSpacing: 2,
+    letterSpacing: 2,
   },
 
   // ── Modal ─────────────────────────────────────────
@@ -967,19 +1078,19 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     fontFamily: undefined,
     fontSize: 11,
     color: colors.text,
-    // letterSpacing: 2,
+    letterSpacing: 2,
   },
   modalActionCancel: {
     fontFamily: undefined,
     fontSize: 11,
     color: colors.textSecondary,
-    // letterSpacing: 1,
+    letterSpacing: 1,
   },
   modalActionDone: {
     fontFamily: undefined,
     fontSize: 11,
     color: colors.text,
-    // letterSpacing: 1,
+    letterSpacing: 1,
   },
   modalContent: {
     flex: 1,
@@ -994,7 +1105,7 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     fontFamily: undefined,
     fontSize: 9,
     color: colors.textSecondary,
-    // letterSpacing: 2,
+    letterSpacing: 2,
     marginBottom: 10,
   },
   filterInput: {
@@ -1019,7 +1130,7 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     fontFamily: undefined,
     fontSize: 10,
     color: colors.text,
-    // letterSpacing: 2,
+    letterSpacing: 2,
     textTransform: "uppercase",
   },
 
@@ -1042,7 +1153,7 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     fontFamily: undefined,
     fontSize: 10,
     color: colors.text,
-    // letterSpacing: 1,
+    letterSpacing: 1,
   },
   statusChipTextActive: {
     color: colors.primaryForeground,
@@ -1060,7 +1171,7 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     marginTop: 12,
     fontSize: 11,
     color: colors.textSecondary,
-    // letterSpacing: 1,
+    letterSpacing: 1,
   },
   errorContainer: {
     flex: 1,
@@ -1073,7 +1184,7 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     fontFamily: undefined,
     fontSize: 16,
     color: colors.text,
-    // letterSpacing: 2,
+    letterSpacing: 2,
     marginBottom: 8,
   },
   errorText: {
@@ -1093,7 +1204,7 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     fontFamily: undefined,
     fontSize: 11,
     color: colors.text,
-    // letterSpacing: 2,
+    letterSpacing: 2,
   },
   emptyState: {
     alignItems: "center",
@@ -1104,7 +1215,7 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     fontFamily: undefined,
     fontSize: 16,
     color: colors.text,
-    // letterSpacing: 2,
+    letterSpacing: 2,
     marginBottom: 8,
   },
   emptyStateText: {
@@ -1125,7 +1236,7 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     fontFamily: undefined,
     fontSize: 11,
     color: colors.text,
-    // letterSpacing: 2,
+    letterSpacing: 2,
   },
 });
 

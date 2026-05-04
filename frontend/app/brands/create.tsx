@@ -32,14 +32,14 @@ type User = {
 };
 
 const CreateBrandScreen = () => {
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const router = useRouter();
   const colors = useThemeColors();
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [logoUrl, setLogoUrl] = useState("");
-  const [owner, setOwner] = useState("");
+  const [owner, setOwner] = useState(user?.id ? String(user.id) : "");
   const [location, setLocation] = useState("");
   const [users, setUsers] = useState<{ label: string; value: string; role: string }[]>([]);
   const [roleFilter, setRoleFilter] = useState<string>("all");
@@ -121,10 +121,6 @@ const CreateBrandScreen = () => {
     }
     if (!location.trim()) {
       Alert.alert("Validation Error", "Brand location is required");
-      return;
-    }
-    if (!owner) {
-      Alert.alert("Validation Error", "Please select an owner");
       return;
     }
     if (!logoUrl) {

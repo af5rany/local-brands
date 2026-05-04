@@ -30,7 +30,7 @@ import { useSocialAuth } from "@/hooks/useSocialAuth";
 const RegisterScreen = () => {
   const router = useRouter();
   const colors = useThemeColors();
-  const { login } = useAuth();
+  const { login, user, isGuest, token } = useAuth();
   const [formData, setFormData] = useState({
     name: "",
     username: "",
@@ -95,42 +95,46 @@ const RegisterScreen = () => {
 
     setLoading(true);
     try {
-      const response = await fetch(`${getApiUrl()}/auth/register`, {
+      const body = {
+        name: formData.name,
+        username: formData.username.trim() || null,
+        email: formData.email.trim().toLowerCase(),
+        password: formData.password,
+        phoneNumber: formData.phoneNumber || null,
+        dateOfBirth: formData.dateOfBirth || null,
+        avatar,
+        role: "customer",
+      };
+
+      const url =
+        isGuest && user?.id
+          ? `${getApiUrl()}/auth/convert-guest/${user.id}`
+          : `${getApiUrl()}/auth/register`;
+
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (isGuest && token) headers["Authorization"] = `Bearer ${token}`;
+
+      const response = await fetch(url, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: formData.name,
-          username: formData.username.trim() || null,
-          email: formData.email.trim().toLowerCase(),
-          password: formData.password,
-          phoneNumber: formData.phoneNumber || null,
-          dateOfBirth: formData.dateOfBirth || null,
-          avatar,
-          role: "customer",
-        }),
+        headers,
+        body: JSON.stringify(body),
       });
 
       const data = await response.json();
 
-      // if (response.status === 409) {
-      //   const msg: string = data.message || "";
-      //   if (msg.toLowerCase().includes("email")) {
-      //     setErrors((prev: any) => ({ ...prev, email: "This email is already registered." }));
-      //   } else if (msg.toLowerCase().includes("username")) {
-      //     setErrors((prev: any) => ({ ...prev, username: "This username is already taken." }));
-      //   } else {
-      //     setErrors((prev: any) => ({ ...prev, email: msg || "Email or username already exists." }));
-      //   }
-      //   return;
-      // }
-
       if (!response.ok) throw new Error(data.message || "Registration failed");
 
-      Alert.alert(
-        "Success",
-        "Account created! Please check your email to verify your account.",
-        [{ text: "OK", onPress: () => router.push("/auth/login") }],
-      );
+      if (isGuest) {
+        // Cart is preserved — same user id, just converted
+        await login(data.token);
+        router.replace("/(tabs)");
+      } else {
+        Alert.alert(
+          "Success",
+          "Account created! Please check your email to verify your account.",
+          [{ text: "OK", onPress: () => router.push("/auth/login") }],
+        );
+      }
     } catch (error: any) {
       Alert.alert(
         "Registration Error",

@@ -21,12 +21,16 @@ The backend is a robust RESTful API built with **NestJS**, utilizing **TypeScrip
   - `ADMIN`: Full platform access.
   - `BRAND_OWNER`: Access to own brands, products, and sales stats.
   - `CUSTOMER`: Public discovery and personal order management.
-  - `GUEST`: Limited browsing, no write operations.
+  - `GUEST`: Browse + cart + checkout only. Wishlist, reviews (write), and feed social actions require a registered account.
 - **Guards**:
   - `JwtAuthGuard`: Enforces valid token presence.
   - `RolesGuard`: Validates user role against route metadata.
   - `BrandAccessGuard`: Validates if the user has legitimate access to a specific `brandId`.
-  - `RegisteredUsersOnlyGuard`: Blocks guest users from protected actions.
+  - `RegisteredUsersOnlyGuard`: Blocks guest users (`role === GUEST`) from protected write actions. Applied on: all wishlist endpoints, reviews `POST` + `GET can-review`, feed like/comment/follow brand.
+- **Guest workflow**:
+  - `POST /auth/guest-login` — creates a `User` row (`isGuest=true`, `role=GUEST`, synthetic email `guest_<uuid>@temp.local`). JWT signed with 30-min expiry. Rate-limited to 10/min.
+  - `POST /auth/convert-guest/:id` — upgrades guest to `CUSTOMER`: validates ownership, checks email uniqueness (`ConflictException` on duplicate), forces `role=CUSTOMER`, hashes password, sends welcome email. Returns fresh JWT; same user ID preserves cart/orders.
+  - `GuestCleanupService` — `@Cron(EVERY_DAY_AT_3AM)` soft-deletes guest users where `isGuest=true`, `updatedAt < now-24h`, and no order rows exist for that user. Logs deleted count. Registered in `AuthModule`.
 - **Security Features**:
   - Bcrypt password hashing.
   - JWT payload: `{ id, role, isGuest, iat, exp }`.
@@ -74,12 +78,14 @@ The backend is a robust RESTful API built with **NestJS**, utilizing **TypeScrip
 - Add/remove/toggle products.
 - `findByUser` returns product data with relations.
 - Toggle endpoint returns `{ added: boolean }` for optimistic UI updates.
+- **All endpoints** protected by `JwtAuthGuard + RegisteredUsersOnlyGuard` at controller level — guests receive 403.
 
 ### 8. Reviews (`ReviewsModule`)
 - **Entity**: `ProductReview` with approval workflow.
 - Review submission and listing per product.
 - `/can-review/:productId` endpoint — checks if the authenticated user has a delivered/completed order containing this product and hasn't already reviewed it.
 - Admin approve/reject queue.
+- `POST /reviews` and `GET /reviews/can-review/:productId` protected by `RegisteredUsersOnlyGuard` — guests receive 403. `GET /reviews/product/:productId` remains public.
 
 ### 9. Statistics & Analytics (`StatisticsModule`)
 - **Admin**: Platform-wide stats now include: `totalRevenue`, `revenueThisMonth`, `revenueLastMonth`, `ordersTotal`, `ordersThisMonth`, `newUsersThisMonth`, `userGrowthPercent`, `ordersByStatus` (grouped count per status), `topBrands` (top 5 by revenue with name + revenue), `gmvByMonth` (last 6 months array `[{ month, gmv }]`), plus legacy brand/product/user counts.
@@ -136,6 +142,7 @@ The backend is a robust RESTful API built with **NestJS**, utilizing **TypeScrip
 - **Global**: `ThrottlerModule.forRoot([{ ttl: 60000, limit: 100 }])` + `APP_GUARD ThrottlerGuard` — 100 requests/min default for all routes
 - **Per-route overrides** via `@Throttle`:
   - `POST /auth/login` / `POST /auth/register` — 5 requests/min
+  - `POST /auth/guest-login` — 10 requests/min
   - `POST /promo-codes/validate` — 20 requests/min
   - `POST /orders/checkout` — 10 requests/min
 
@@ -255,13 +262,13 @@ The backend is a robust RESTful API built with **NestJS**, utilizing **TypeScrip
 
 | Module | Endpoints | Notes |
 |--------|-----------|-------|
-| **Auth** | login, register, guest login, forgot/reset password | JWT with Passport strategies, welcome email on registration |
+| **Auth** | login, register, guest-login, convert-guest, forgot/reset password | JWT with Passport strategies; guest scope = browse+cart+checkout; convert-guest preserves user ID; `GuestCleanupService` daily cron |
 | **Users** | CRUD, admin management | Role assignment, soft delete |
 | **Brands** | CRUD, admin listing, ownership | Multi-brand via BrandUser, search/filter/sort |
 | **Products** | CRUD, listing, filters, search | Variant normalization, status lifecycle, soft delete |
 | **Cart** | Add/remove/update items | Variant-aware, auto-create cart |
 | **Orders** | Create, list, status updates, history timeline | Idempotency, status history, stock deduction, email notifications |
-| **Wishlist** | Add/remove/toggle, list by user | Toggle returns added/removed state |
+| **Wishlist** | Add/remove/toggle, list by user | Toggle returns added/removed state; all endpoints require registered user (403 for guests) |
 | **Statistics** | Role-based dashboard stats | Admin, brand owner, customer views |
 | **Addresses** | Full CRUD, set default | User-scoped, auto-unsets other defaults |
 | **Reviews** | Submit, list by product, can-review check, admin approve/reject, pending list | Verified purchase check, product rating aggregation |
@@ -361,7 +368,8 @@ Returns paginated `FeedPost` objects for the given brand (same shape as `GET /fe
 |----------|--------|------|-------------|
 | `/auth/login` | POST | Public | JWT login |
 | `/auth/register` | POST | Public | User registration (sends welcome email) |
-| `/auth/guest` | POST | Public | Guest token |
+| `/auth/guest-login` | POST | Public | Create guest session (30-min JWT, creates User row, rate-limited 10/min) |
+| `/auth/convert-guest/:id` | POST | Auth (guest) | Convert guest to registered customer — validates ownership, checks email uniqueness, preserves cart/orders |
 | `/brands` | GET | Public | Paginated brand listing |
 | `/brands/admin` | GET | Admin | All brands (admin view) |
 | `/products` | GET | Public | Paginated product listing with filters |

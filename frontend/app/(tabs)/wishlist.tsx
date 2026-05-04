@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useRef, useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -18,6 +18,8 @@ import { useThemeColors } from "@/hooks/useThemeColor";
 import { ProductGridSkeleton } from "@/components/Skeleton";
 import { useNetwork } from "@/context/NetworkContext";
 import OfflinePlaceholder from "@/components/OfflinePlaceholder";
+import { useHeaderVisibility } from "@/context/HeaderVisibilityContext";
+import { useScrollToTop } from "@/context/ScrollToTopContext";
 
 type Tab = "products" | "brands";
 
@@ -36,6 +38,10 @@ const WishlistTab = () => {
   const { token } = useAuth();
   const colors = useThemeColors();
   const { isConnected } = useNetwork();
+  const { reportScroll } = useHeaderVisibility();
+  const { register, unregister } = useScrollToTop();
+  const productsListRef = useRef<FlatList>(null);
+  const brandsListRef = useRef<FlatList>(null);
   const [activeTab, setActiveTab] = useState<Tab>("products");
   const [wishlist, setWishlist] = useState<any[]>([]);
   const [followedBrands, setFollowedBrands] = useState<FollowedBrand[]>([]);
@@ -91,6 +97,17 @@ const WishlistTab = () => {
     fetchWishlist();
     fetchFollowedBrands();
   }, [fetchWishlist, fetchFollowedBrands]);
+
+  useEffect(() => {
+    register("wishlist", () => {
+      if (activeTab === "products") {
+        productsListRef.current?.scrollToOffset({ offset: 0, animated: true });
+      } else {
+        brandsListRef.current?.scrollToOffset({ offset: 0, animated: true });
+      }
+    });
+    return () => unregister("wishlist");
+  }, [activeTab]);
 
   useFocusEffect(
     useCallback(() => {
@@ -334,12 +351,15 @@ const WishlistTab = () => {
             </View>
           ) : (
             <FlatList
+              ref={productsListRef}
               data={wishlist}
               renderItem={renderProductItem}
               keyExtractor={(item) => item.id.toString()}
               numColumns={columnCount}
               contentContainerStyle={styles.listContent}
               showsVerticalScrollIndicator={false}
+              onScroll={(e) => reportScroll(e.nativeEvent.contentOffset.y)}
+              scrollEventThrottle={16}
             />
           )}
         </>
@@ -376,11 +396,14 @@ const WishlistTab = () => {
             </View>
           ) : (
             <FlatList
+              ref={brandsListRef}
               data={followedBrands}
               renderItem={renderBrandItem}
               keyExtractor={(item) => item.id.toString()}
               contentContainerStyle={styles.brandsListContent}
               showsVerticalScrollIndicator={false}
+              onScroll={(e) => reportScroll(e.nativeEvent.contentOffset.y)}
+              scrollEventThrottle={16}
             />
           )}
         </>
@@ -410,9 +433,10 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
   },
   title: {
-    fontSize: 14,
+    fontSize: 11,
     fontWeight: "700",
-    // letterSpacing: 2,
+    letterSpacing: 2,
+    textTransform: "uppercase",
   },
   tabRow: {
     flexDirection: "row",
@@ -432,7 +456,7 @@ const styles = StyleSheet.create({
   tabText: {
     fontSize: 11,
     fontWeight: "700",
-    // letterSpacing: 1.5,
+    letterSpacing: 1.5,
   },
   listContent: {
     padding: 16,
@@ -464,17 +488,21 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: "600",
     textTransform: "uppercase",
-    // letterSpacing: 1,
+    letterSpacing: 1,
     marginBottom: 4,
   },
   productName: {
-    fontSize: 14,
-    fontWeight: "500",
+    fontSize: 11,
+    fontWeight: "700",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
     marginBottom: 4,
+    lineHeight: 16,
   },
   productPrice: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: "700",
+    letterSpacing: 0.5,
   },
   brandCard: {
     flexDirection: "row",
@@ -511,12 +539,16 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   brandCardName: {
-    fontSize: 15,
+    fontSize: 12,
     fontWeight: "700",
+    textTransform: "uppercase",
+    letterSpacing: 1,
     marginBottom: 3,
   },
   brandCardMeta: {
-    fontSize: 12,
+    fontSize: 10,
+    letterSpacing: 0.5,
+    textTransform: "uppercase",
   },
   unfollowBtn: {
     borderWidth: 1,
@@ -527,19 +559,22 @@ const styles = StyleSheet.create({
   unfollowText: {
     fontSize: 10,
     fontWeight: "700",
-    // letterSpacing: 1,
+    letterSpacing: 1,
   },
   emptyTitle: {
-    fontSize: 20,
-    fontWeight: "700",
+    fontSize: 22,
+    fontWeight: "800",
     marginTop: 24,
     marginBottom: 8,
+    textTransform: "uppercase",
+    letterSpacing: -0.5,
   },
   emptySubtitle: {
-    fontSize: 14,
+    fontSize: 12,
     textAlign: "center",
     marginBottom: 32,
-    lineHeight: 20,
+    lineHeight: 18,
+    letterSpacing: 0.5,
   },
   shopBtn: {
     paddingVertical: 16,
@@ -549,7 +584,7 @@ const styles = StyleSheet.create({
     // color set via inline style (colors.primaryForeground)
     fontSize: 12,
     fontWeight: "700",
-    // letterSpacing: 1.5,
+    letterSpacing: 1.5,
   },
   authBtn: {
     paddingVertical: 16,
@@ -559,7 +594,7 @@ const styles = StyleSheet.create({
     // color set via inline style (colors.primaryForeground)
     fontSize: 12,
     fontWeight: "700",
-    // letterSpacing: 1.5,
+    letterSpacing: 1.5,
   },
 });
 

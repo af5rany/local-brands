@@ -22,6 +22,7 @@ import { useThemeColors } from "@/hooks/useThemeColor";
 import type { ThemeColors } from "@/constants/Colors";
 import { useNetwork } from "@/context/NetworkContext";
 import OfflinePlaceholder from "@/components/OfflinePlaceholder";
+import GuestBanner from "@/components/GuestBanner";
 
 const MARQUEE_TEXT =
   "FREE SHIPPING ON ORDERS OVER $150 · COMPLIMENTARY GIFT WRAPPING · FREE SHIPPING ON ORDERS OVER $150 · COMPLIMENTARY GIFT WRAPPING · ";
@@ -363,6 +364,7 @@ const CartScreen = () => {
     <SafeAreaView style={styles.safeArea} edges={["top", "bottom"]}>
       <Header showBack={true} />
       <MarqueeStrip />
+      <GuestBanner />
       <View style={styles.container}>{renderContent()}</View>
     </SafeAreaView>
   );

@@ -10,8 +10,9 @@ import {
   Image,
   ScrollView,
   Switch,
+  Platform,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import getApiUrl from "@/helpers/getApiUrl";
@@ -75,6 +76,7 @@ const CreateProductScreen = () => {
   const { brandId } = useLocalSearchParams();
   const colors = useThemeColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
+  const insets = useSafeAreaInsets();
 
   // Basic Information
   const [productName, setProductName] = useState("");
@@ -836,7 +838,10 @@ const CreateProductScreen = () => {
           </View>
         </View>
 
-        {/* Create Button */}
+      </ScrollView>
+
+      {/* Fixed footer — always above keyboard / nav bar */}
+      <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 16) }]}>
         <TouchableOpacity
           style={[styles.createButton, loading && styles.createButtonDisabled]}
           onPress={handleCreateProduct}
@@ -851,7 +856,7 @@ const CreateProductScreen = () => {
             <Text style={styles.createButtonText}>Create Product</Text>
           )}
         </TouchableOpacity>
-      </ScrollView>
+      </View>
     </SafeAreaView>
   );
 };
@@ -885,7 +890,14 @@ const createStyles = (colors: ThemeColors) =>
       gap: 12,
     },
     overlayText: { color: "#fff", fontSize: 16, fontWeight: "600" },
-    scrollContainer: { padding: 16, paddingBottom: 60 },
+    scrollContainer: { padding: 16, paddingBottom: 20 },
+    footer: {
+      paddingHorizontal: 16,
+      paddingTop: 12,
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+      backgroundColor: colors.background,
+    },
     header: {
       fontSize: 22,
       fontWeight: "800",

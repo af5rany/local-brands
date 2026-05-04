@@ -4,6 +4,7 @@ import {
   ConflictException,
   InternalServerErrorException,
   ForbiddenException,
+  NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -135,37 +136,49 @@ export class AuthService {
     return { user: newUser, token };
   }
 
-  // Optional: Convert guest to regular user
   async convertGuestToUser(
     guestId: number,
     userDto: CreateUserDto,
   ): Promise<{ user: User; token: string }> {
     const guestUser = await this.usersService.findById(guestId);
 
-    if (!guestUser || !guestUser.isGuest) {
-      throw new Error('Invalid guest user');
+    if (!guestUser) {
+      throw new NotFoundException('Guest user not found');
+    }
+    if (!guestUser.isGuest) {
+      throw new ForbiddenException('Account has already been converted');
+    }
+
+    const normalizedEmail = userDto.email.trim().toLowerCase();
+    const existingByEmail = await this.usersService.findByEmail(normalizedEmail);
+    if (existingByEmail && existingByEmail.id !== guestId) {
+      throw new ConflictException('Email already registered');
     }
 
     const hashedPassword = await bcrypt.hash(userDto.password, 10);
 
     const updatedUser = await this.usersService.update(guestId, {
       name: userDto.name,
-      email: userDto.email,
+      email: normalizedEmail,
       password: hashedPassword,
-      role: userDto.role,
+      role: UserRole.CUSTOMER,
       status: UserStatus.APPROVED,
       isGuest: false,
+      isEmailVerified: false,
     });
 
     updatedUser.password = '';
 
-    // Generate new token
     const payload: JwtPayload = {
       id: updatedUser.id,
       role: updatedUser.role,
       isGuest: false,
     };
     const token = await this.jwtService.signAsync(payload);
+
+    this.mailService
+      .sendWelcomeEmail(updatedUser.email, updatedUser.name)
+      .catch(() => {});
 
     return { user: updatedUser, token };
   }

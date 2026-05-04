@@ -41,6 +41,8 @@ Theme values are defined in `frontend/constants/Colors.ts` and accessed via `use
 
 ### 1. Root Layout & Contexts
 - `_layout.tsx`: Wraps the app in `AuthProvider`, `BrandProvider`, and `ToastProvider`. Handles initial session restoration, Expo push notification permission request + token registration with backend, and deep-link routing from notification taps (order and return deep links).
+  - `PROTECTED_SEGMENTS` — routes requiring any token (unauthenticated → `/auth/login`).
+  - `REGISTERED_ONLY_SEGMENTS` (`wishlist`, `manage`, `users`, `referral`, `returns`) — routes blocked for guest sessions (guest token → `/auth/register`).
 
 ### 2. Main Tabs (`(tabs)/`)
 Six bottom tabs (with label-less icons):
@@ -55,8 +57,8 @@ Six bottom tabs (with label-less icons):
 | **Profile** | `profile.tsx` | User profile overview with menu navigation; guest prompts for sign-in |
 
 ### 3. Authentication (`auth/`)
-- `login.tsx` — Email/password login with JWT.
-- `register.tsx` — Multi-field registration with avatar upload.
+- `login.tsx` — Email/password login with JWT. "Continue as Guest" button creates guest session (30-min token).
+- `register.tsx` — Multi-field registration with avatar upload. **If guest token is present** (`isGuest=true`), submits to `POST /auth/convert-guest/:id` (same user ID → cart preserved) instead of `POST /auth/register`. On success, logs in and navigates to tabs.
 - `forgot-password.tsx` — Password recovery via email.
 - `reset-password.tsx` — Password reset with token; shows success screen on completion.
 
@@ -151,7 +153,7 @@ Centralized via `useCloudinaryUpload` hook:
 
 | Context | Responsibility |
 |---------|---------------|
-| `AuthContext` | JWT storage (AsyncStorage), user state, token expiration polling (5-min interval), login/logout/refreshUser |
+| `AuthContext` | JWT storage (AsyncStorage), user state, token expiration polling (5-min interval), login/logout/refreshUser. Exposes `isGuest: boolean` derived from `user?.isGuest` — used by route gating, GuestBanner, profile tab, and wishlist/review UI. |
 | `BrandContext` | Active brand selection for multi-brand owners, management mode toggle |
 | `CartContext` | Cart item count tracking, `useCartCount` hook for header badge |
 | `ToastContext` | Global toast notifications |
@@ -192,6 +194,7 @@ Centralized via `useCloudinaryUpload` hook:
 | Component | Purpose |
 |-----------|---------|
 | **Header** | Logo, greeting, search bar (opens SearchModal), cart badge, hamburger menu |
+| **GuestBanner** | Yellow banner shown in cart and checkout for guest sessions. Text: "Shopping as guest. Create account to save your order." + "Sign Up" CTA → `/auth/register`. Hidden for registered users. |
 | **Toast** | Success/Error/Info notifications — slide animation, auto-dismiss |
 | **Pagination** | Prev/next arrows, smart page numbers with ellipsis |
 | **AutoSwipeImages** | Auto-swiping image carousel (3s interval) with dot indicators |
@@ -211,16 +214,16 @@ Centralized via `useCloudinaryUpload` hook:
 
 | Feature | Description |
 |---------|-------------|
-| **Authentication** | Login, register, forgot/reset password, JWT token management, guest browsing |
+| **Authentication** | Login, register, forgot/reset password, JWT token management, guest session (browse + cart + checkout), convert-guest flow in register screen |
 | **Brand Management** | Full CRUD, multi-brand ownership, brand listing with search/sort/filter |
 | **Product Management** | Full CRUD, variant system (size + per-size stock; color and images are product-level), status lifecycle, Cloudinary image upload |
 | **Product Discovery** | Home dashboard, filter chips, pagination, debounced search |
 | **Product Detail** | Image gallery, variant color picker, pricing with discount, stock status, reviews, TryOn modal |
-| **Shopping Cart** | Add/remove items, quantity updates (optimistic), remove (optimistic with confirm), variant-aware, total calculation |
-| **Wishlist** | Toggle add/remove (optimistic — instant remove from list, reverts on error), product card hearts, Brands sub-tab with followed brands list |
+| **Shopping Cart** | Add/remove items, quantity updates (optimistic), remove (optimistic with confirm), variant-aware, total calculation. GuestBanner shown for guest sessions. |
+| **Wishlist** | Toggle add/remove (optimistic — instant remove from list, reverts on error), product card hearts, Brands sub-tab with followed brands list. Wishlist heart on product detail shows "Create account" alert for guests (no API call). |
 | **Orders** | Order placement with idempotency, order history, order detail with status timeline |
 | **Shipping Addresses** | Full CRUD, address selection in checkout, set default |
-| **Checkout** | Address selection, order summary, idempotency key, confirmation screen |
+| **Checkout** | Address selection, order summary, idempotency key, confirmation screen. GuestBanner shown for guest sessions. Guests can complete full checkout. |
 | **Product Reviews** | Review display, can-review check (verified purchase), star rating, photo upload, submission |
 | **User Profile** | Personal details, avatar upload, shipping addresses, settings |
 | **Settings** | Notification toggles, change password link, Privacy Policy → `/info/privacy`, Terms → `/info/terms`, delete account (calls `DELETE /users/me`) |

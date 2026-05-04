@@ -22,8 +22,6 @@ import { useAuth } from "@/context/AuthContext";
 import getApiUrl from "@/helpers/getApiUrl";
 import LookbookHero from "@/components/LookbookHero";
 import ShopByLook from "@/components/ShopByLook";
-import Header from "@/components/Header";
-import type { HeaderHandle } from "@/components/Header";
 import SearchModal from "@/components/SearchModal";
 import { useThemeColors } from "@/hooks/useThemeColor";
 import type { ThemeColors } from "@/constants/Colors";
@@ -32,6 +30,8 @@ import { useRecentlyViewed } from "@/hooks/useRecentlyViewed";
 import { Skeleton } from "@/components/Skeleton";
 import { useNetwork } from "@/context/NetworkContext";
 import OfflinePlaceholder from "@/components/OfflinePlaceholder";
+import { useHeaderVisibility } from "@/context/HeaderVisibilityContext";
+import { useScrollToTop } from "@/context/ScrollToTopContext";
 
 // const { width: SCREEN_W } = Dimensions.get("window");
 
@@ -192,61 +192,10 @@ const DropBar: React.FC = () => {
   const colors = useThemeColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
   return (
-  <View style={styles.dropBar}>
-    <Text style={styles.dropBarLeft}>● NEXT DROP — 04.29 · 18:00 GMT</Text>
-    <Text style={styles.dropBarRight}>NOTIFY →</Text>
-  </View>
-  );
-};
-
-// ── Sticky Mini-Header ───────────────────────────────────────────────────────
-const StickyMiniHeader: React.FC<{
-  translateY: Animated.AnimatedInterpolation<number>;
-  insetTop: number;
-  onMenuPress: () => void;
-  onSearchPress: () => void;
-}> = ({ translateY, insetTop, onMenuPress, onSearchPress }) => {
-  const router = useRouter();
-  const colors = useThemeColors();
-  const styles = useMemo(() => createStyles(colors), [colors]);
-  return (
-    <Animated.View
-      style={[
-        styles.stickyHeader,
-        { paddingTop: insetTop, transform: [{ translateY }] },
-      ]}
-    >
-      <View style={styles.stickyHeaderInner}>
-        <View style={styles.stickyHeaderLeft}>
-          <TouchableOpacity style={styles.stickyIconBtn} onPress={onMenuPress}>
-            <Ionicons name="menu" size={18} color={colors.text} />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.stickyIconBtn}
-            onPress={onSearchPress}
-          >
-            <Ionicons name="search" size={18} color={colors.text} />
-          </TouchableOpacity>
-        </View>
-        <TouchableOpacity onPress={() => router.push("/(tabs)" as any)}>
-          <Text style={styles.stickyLogo}>MONOLITH</Text>
-        </TouchableOpacity>
-        <View style={styles.stickyHeaderRight}>
-          <TouchableOpacity
-            style={styles.stickyIconBtn}
-            onPress={() => router.push("/(tabs)/wishlist" as any)}
-          >
-            <Ionicons name="heart-outline" size={18} color={colors.text} />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.stickyIconBtn}
-            onPress={() => router.push("/cart" as any)}
-          >
-            <Ionicons name="bag-outline" size={18} color={colors.text} />
-          </TouchableOpacity>
-        </View>
-      </View>
-    </Animated.View>
+    <View style={styles.dropBar}>
+      <Text style={styles.dropBarLeft}>● NEXT DROP — 04.29 · 18:00 GMT</Text>
+      <Text style={styles.dropBarRight}>NOTIFY →</Text>
+    </View>
   );
 };
 
@@ -254,8 +203,8 @@ const StickyMiniHeader: React.FC<{
 const HomeScreen = () => {
   const router = useRouter();
   const { token } = useAuth();
-  const insets = useSafeAreaInsets();
   const tabBarHeight = useBottomTabBarHeight();
+  const insets = useSafeAreaInsets();
   const colors = useThemeColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
 
@@ -263,6 +212,9 @@ const HomeScreen = () => {
   const [recentProducts, setRecentProducts] = useState<any[]>([]);
 
   const { isConnected } = useNetwork();
+  const { reportScroll } = useHeaderVisibility();
+  const { register, unregister } = useScrollToTop();
+  const mainScrollRef = useRef<ScrollView>(null);
   const [brands, setBrands] = useState<Brand[]>(FALLBACK_BRANDS);
   const [stats, setStats] = useState({ brands: 0, products: 0 });
   const [feedPosts, setFeedPosts] = useState<typeof FALLBACK_FEED>([]);
@@ -272,17 +224,8 @@ const HomeScreen = () => {
   const [spotlightIdx, setSpotlightIdx] = useState(0);
   const [searchVisible, setSearchVisible] = useState(false);
   const hasLoadedOnce = useRef(false);
-  const headerRef = useRef<HeaderHandle>(null);
   const spotlightScrollRef = useRef<ScrollView>(null);
   const spotlightAutoTimer = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  // Scroll tracking
-  const scrollY = useRef(new Animated.Value(0)).current;
-  const stickyTranslateY = scrollY.interpolate({
-    inputRange: [380, 420],
-    outputRange: [-120, 0],
-    extrapolate: "clamp",
-  });
 
 
   // Brand spotlight auto-rotation
@@ -304,6 +247,11 @@ const HomeScreen = () => {
     startSpotlightTimer();
     return () => { if (spotlightAutoTimer.current) clearInterval(spotlightAutoTimer.current); };
   }, [startSpotlightTimer]);
+
+  useEffect(() => {
+    register("index", () => mainScrollRef.current?.scrollTo({ y: 0, animated: true }));
+    return () => unregister("index");
+  }, []);
 
   const onSpotlightSwipe = useCallback((e: NativeSyntheticEvent<NativeScrollEvent>) => {
     const screenW = Dimensions.get("window").width;
@@ -422,7 +370,6 @@ const HomeScreen = () => {
       <View style={styles.loadingWrap}>
         <View style={[styles.blackTopArea, { paddingTop: insets.top }]}>
           <DropBar />
-          <Header dark imperativeRef={headerRef} />
         </View>
         <OfflinePlaceholder onRetry={fetchData} />
       </View>
@@ -432,10 +379,10 @@ const HomeScreen = () => {
   if (loading) {
     return (
       <View style={styles.loadingWrap}>
-        <View style={[styles.blackTopArea, { paddingTop: insets.top }]}>
           <DropBar />
+        {/* <View style={[styles.blackTopArea, { paddingTop: insets.top }]}>
           <Header dark imperativeRef={headerRef} />
-        </View>
+        </View> */}
         <View style={{ flex: 1, backgroundColor: colors.background }}>
           {/* Hero skeleton */}
           <Skeleton width="100%" height={580} />
@@ -466,15 +413,13 @@ const HomeScreen = () => {
   return (
     <View style={styles.root}>
       {/* ── Scrollable content (drop bar + header scroll away with content) ── */}
-      <Animated.ScrollView
+      <ScrollView
+        ref={mainScrollRef}
         style={styles.scroll}
         contentContainerStyle={{ paddingBottom: tabBarHeight }}
         showsVerticalScrollIndicator={false}
         scrollEventThrottle={16}
-        onScroll={Animated.event(
-          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
-          { useNativeDriver: true }
-        )}
+        onScroll={(e) => reportScroll(e.nativeEvent.contentOffset.y)}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -484,10 +429,10 @@ const HomeScreen = () => {
         }
       >
         {/* ── Drop bar + black header (scroll with content) ── */}
-        <View style={[styles.blackTopArea, { paddingTop: insets.top }]}>
-          <DropBar />
+        <DropBar />
+        {/* <View style={[styles.blackTopArea, { paddingTop: insets.top }]}>
           <Header dark imperativeRef={headerRef} />
-        </View>
+        </View> */}
 
         {/* ── 1. Hero ── */}
         <View style={styles.hero}>
@@ -517,7 +462,7 @@ const HomeScreen = () => {
         </View>
 
         {/* ── 2. Shop By Look ── */}
-        <ShopByLook scrollY={scrollY} />
+        <ShopByLook />
 
         {/* ── 3. Marquee ── */}
         <Marquee />
@@ -905,15 +850,7 @@ const HomeScreen = () => {
             © 2026 MONOLITH LTD. — LOCAL BRANDS, GLOBALLY.
           </Text>
         </View>
-      </Animated.ScrollView>
-
-      {/* ── Sticky mini-header (slides in when black header scrolls off) ── */}
-      <StickyMiniHeader
-        translateY={stickyTranslateY}
-        insetTop={insets.top}
-        onMenuPress={() => headerRef.current?.openMenu()}
-        onSearchPress={() => setSearchVisible(true)}
-      />
+      </ScrollView>
 
       <SearchModal
         visible={searchVisible}

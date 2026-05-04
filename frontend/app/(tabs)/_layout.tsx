@@ -1,29 +1,55 @@
 import { Tabs, usePathname } from "expo-router";
-import React from "react";
+import React, { useEffect } from "react";
 import { Platform, View } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import Animated, { useAnimatedStyle } from "react-native-reanimated";
 import { HapticTab } from "@/components/HapticTab";
 import Header from "@/components/Header";
 import { useThemeColors } from "@/hooks/useThemeColor";
+import { HeaderVisibilityProvider, useHeaderVisibility } from "@/context/HeaderVisibilityContext";
+import { ScrollToTopProvider, useScrollToTop } from "@/context/ScrollToTopContext";
 
 const TAB_BAR_CONTENT_HEIGHT = 50;
 
 export default function TabLayout() {
+  return (
+    <HeaderVisibilityProvider>
+      <ScrollToTopProvider>
+        <TabLayoutInner />
+      </ScrollToTopProvider>
+    </HeaderVisibilityProvider>
+  );
+}
+
+function TabLayoutInner() {
   const colors = useThemeColors();
   const insets = useSafeAreaInsets();
   const tabBarHeight = TAB_BAR_CONTENT_HEIGHT + insets.bottom;
   const tintColor = colors.tabActive;
   const inactiveColor = colors.tabInactive;
   const pathname = usePathname();
-  const isHome = pathname === "/" || pathname === "/(tabs)" || pathname === "/(tabs)/index";
+  const { headerTranslateY, setHeaderHeight, resetHeader } = useHeaderVisibility();
+  const { trigger: triggerScrollToTop } = useScrollToTop();
+
+  useEffect(() => {
+    resetHeader();
+  }, [pathname]);
+
+  const headerAnimStyle = useAnimatedStyle(() => ({
+    marginTop: headerTranslateY.value,
+  }));
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
-      {!isHome && (
-        <SafeAreaView edges={["top"]} style={{ backgroundColor: colors.surface }}>
+      <Animated.View style={[{ zIndex: 100 }, headerAnimStyle]}>
+        <SafeAreaView
+          edges={["top"]}
+          style={{ backgroundColor: colors.surface }}
+          onLayout={(e) => setHeaderHeight(e.nativeEvent.layout.height)}
+        >
           <Header />
         </SafeAreaView>
-      )}
+      </Animated.View>
       <Tabs
         screenOptions={{
           tabBarActiveTintColor: tintColor,
@@ -58,13 +84,12 @@ export default function TabLayout() {
           },
         }}
       >
-        <Tabs.Screen name="index" options={{ title: "Home" }} />
-        <Tabs.Screen name="shop" options={{ title: "Shop" }} />
-        <Tabs.Screen name="feed" options={{ title: "Feed" }} />
-        <Tabs.Screen name="wishlist" options={{ title: "Wishlist" }} />
-        <Tabs.Screen name="brands" options={{ title: "Brands" }} />
+        <Tabs.Screen name="index" options={{ title: "Home" }} listeners={({ navigation }) => ({ tabPress: () => { if (navigation.isFocused()) triggerScrollToTop("index"); } })} />
+        <Tabs.Screen name="shop" options={{ title: "Shop" }} listeners={({ navigation }) => ({ tabPress: () => { if (navigation.isFocused()) triggerScrollToTop("shop"); } })} />
+        <Tabs.Screen name="feed" options={{ title: "Feed" }} listeners={({ navigation }) => ({ tabPress: () => { if (navigation.isFocused()) triggerScrollToTop("feed"); } })} />
+        <Tabs.Screen name="wishlist" options={{ title: "Wishlist" }} listeners={({ navigation }) => ({ tabPress: () => { if (navigation.isFocused()) triggerScrollToTop("wishlist"); } })} />
+        <Tabs.Screen name="brands" options={{ title: "Brands" }} listeners={({ navigation }) => ({ tabPress: () => { if (navigation.isFocused()) triggerScrollToTop("brands"); } })} />
         <Tabs.Screen name="profile" options={{ href: null }} />
-        <Tabs.Screen name="index copy" options={{ href: null }} />
       </Tabs>
     </View>
   );

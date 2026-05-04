@@ -43,6 +43,9 @@ export class Post {
   images: string[];
 
   @Column('text', { nullable: true })
+  videoUrl: string;
+
+  @Column('text', { nullable: true })
   caption: string;
 
   @Column({ type: 'enum', enum: PostStatus, default: PostStatus.ACTIVE })

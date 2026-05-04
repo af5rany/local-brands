@@ -15,6 +15,7 @@ interface AuthContextType {
   token: string | null;
   user: any; // User data
   loading: boolean;
+  isGuest: boolean;
   login: (token: string) => void;
   logout: () => void;
   refreshUser: () => Promise<void>;
@@ -124,13 +125,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     const checkTokenExpiration = () => {
       if (!isTokenValid()) {
-        console.log("Token expired, logging out");
-        logout();
+        console.log("Token expired, clearing session");
+        // Use clearExpiredToken instead of logout() to avoid triggering
+        // navigation redirects on non-protected screens mid-interaction.
+        // The _layout.tsx route guards handle redirecting protected segments.
+        clearExpiredToken();
       }
     };
 
-    // Check every 5 minutes
-    const interval = setInterval(checkTokenExpiration, 5 * 60 * 1000);
+    // Check every 10 minutes
+    const interval = setInterval(checkTokenExpiration, 10 * 60 * 1000);
 
     return () => clearInterval(interval);
   }, [token]);
@@ -196,12 +200,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     await AsyncStorage.removeItem("token");
   };
 
+  const isGuest: boolean = !!user?.isGuest;
+
   return (
     <AuthContext.Provider
       value={{
         token,
         user,
         loading,
+        isGuest,
         login,
         logout,
         refreshUser,

@@ -14,6 +14,7 @@ import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { ReviewsService } from './reviews.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
+import { RegisteredUsersOnlyGuard } from '../auth/registered-users-only.guard';
 import { Roles } from '../auth/roles.decorator';
 import { UserRole } from 'src/common/enums/user.enum';
 
@@ -23,7 +24,7 @@ export class ReviewsController {
   constructor(private readonly reviewsService: ReviewsService) {}
 
   @Post()
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RegisteredUsersOnlyGuard)
   @ApiOperation({ summary: 'Submit a product review' })
   async create(
     @Request() req,
@@ -57,7 +58,7 @@ export class ReviewsController {
   }
 
   @Get('can-review/:productId')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RegisteredUsersOnlyGuard)
   @ApiOperation({ summary: 'Check if user can review a product' })
   async canReview(
     @Param('productId', ParseIntPipe) productId: number,

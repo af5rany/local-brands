@@ -7,7 +7,7 @@ interface CartContextValue {
   refresh: () => Promise<void>;
 }
 
-const CartContext = createContext<CartContextValue>({ count: 0, refresh: async () => {} });
+const CartContext = createContext<CartContextValue>({ count: 0, refresh: async () => { } });
 
 export const useCart = () => useContext(CartContext);
 

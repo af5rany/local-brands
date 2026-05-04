@@ -124,9 +124,9 @@ export class BrandsController {
   @Post()
   @Roles(UserRole.ADMIN)
   @UsePipes(new ValidationPipe({ whitelist: true }))
-  async create(@Body() brandData: CreateBrandDto): Promise<Brand> {
+  async create(@Body() brandData: CreateBrandDto, @Request() req): Promise<Brand> {
     const { ownerId, ...data } = brandData;
-    return this.brandsService.createWithOwner(data, ownerId);
+    return this.brandsService.createWithOwner(data, ownerId ?? req.user.id);
   }
 
   // Batch import brands - Admin only

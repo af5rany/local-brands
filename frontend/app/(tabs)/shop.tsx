@@ -30,6 +30,8 @@ import type { ThemeColors } from "@/constants/Colors";
 import { ProductGridSkeleton } from "@/components/Skeleton";
 import { useNetwork } from "@/context/NetworkContext";
 import OfflinePlaceholder from "@/components/OfflinePlaceholder";
+import { useHeaderVisibility } from "@/context/HeaderVisibilityContext";
+import { useScrollToTop } from "@/context/ScrollToTopContext";
 
 const CATEGORIES = [
   "ALL",
@@ -70,6 +72,7 @@ const MonolithProductCard = React.memo(
     const imageUri = images[0] ?? null;
 
     const hasDiscount = item.salePrice != null && item.salePrice < item.price;
+    const isSoldOut = (item as any).stock === 0 && !((item as any).productVariants?.some((v: any) => v.stock > 0));
 
     const formatPrice = (amount: number) =>
       `$${amount.toLocaleString("en-US", { minimumFractionDigits: 0 })}`;
@@ -95,8 +98,15 @@ const MonolithProductCard = React.memo(
             <View style={cardStyles.imagePlaceholder} />
           )}
 
+          {/* SOLD OUT overlay */}
+          {isSoldOut && (
+            <View style={cardStyles.soldOutOverlay}>
+              <Text style={cardStyles.soldOutText}>SOLD OUT</Text>
+            </View>
+          )}
+
           {/* SALE badge */}
-          {hasDiscount && (
+          {hasDiscount && !isSoldOut && (
             <View style={cardStyles.limitedBadge}>
               <Text style={cardStyles.limitedBadgeText}>SALE</Text>
             </View>
@@ -152,6 +162,9 @@ const ShopScreen = () => {
   const colors = useThemeColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const { isConnected } = useNetwork();
+  const { reportScroll } = useHeaderVisibility();
+  const { register, unregister } = useScrollToTop();
+  const flatListRef = useRef<FlatList>(null);
 
   // ── State ──────────────────────────────────────────
   // Initialize gender directly from param so first fetch uses it
@@ -169,6 +182,7 @@ const ShopScreen = () => {
     { text: string; type: "Product" | "Brand" }[]
   >([]);
   const [wishlistProductIds, setWishlistProductIds] = useState<number[]>([]);
+  const wishlistRef = useRef<number[]>([]);
   const [featuredBrands, setFeaturedBrands] = useState<Brand[]>([]);
   const [totalCount, setTotalCount] = useState(0);
 
@@ -342,16 +356,27 @@ const ShopScreen = () => {
     }
   }, [gender]);
 
+  useEffect(() => {
+    register("shop", () => flatListRef.current?.scrollToOffset({ offset: 0, animated: true }));
+    return () => unregister("shop");
+  }, []);
+
   // ── Wishlist ───────────────────────────────────────
   const fetchWishlist = useCallback(async () => {
-    if (!token) return setWishlistProductIds([]);
+    if (!token) {
+      setWishlistProductIds([]);
+      wishlistRef.current = [];
+      return;
+    }
     try {
       const r = await fetch(`${getApiUrl()}/wishlist`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (r.ok) {
         const data = await r.json();
-        setWishlistProductIds(data.map((i: any) => i.product.id));
+        const ids = data.map((i: any) => i.product.id);
+        setWishlistProductIds(ids);
+        wishlistRef.current = ids;
       }
     } catch {}
   }, [token]);
@@ -365,34 +390,30 @@ const ShopScreen = () => {
   const toggleWishlist = useCallback(
     async (productId: number) => {
       if (!token) return;
-      const wasInWishlist = wishlistProductIds.includes(productId);
-      setWishlistProductIds((prev) =>
-        wasInWishlist
-          ? prev.filter((id) => id !== productId)
-          : [...prev, productId],
-      );
+      const wasInWishlist = wishlistRef.current.includes(productId);
+      const next = wasInWishlist
+        ? wishlistRef.current.filter((id) => id !== productId)
+        : [...wishlistRef.current, productId];
+      wishlistRef.current = next;
+      setWishlistProductIds(next);
       try {
-        const r = await fetch(
-          `${getApiUrl()}/wishlist/toggle/${productId}`,
-          {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${token}`,
-              "Content-Type": "application/json",
-            },
+        const r = await fetch(`${getApiUrl()}/wishlist/toggle/${productId}`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
           },
-        );
+        });
         if (!r.ok) throw new Error();
       } catch {
-        // Revert
-        setWishlistProductIds((prev) =>
-          wasInWishlist
-            ? [...prev, productId]
-            : prev.filter((id) => id !== productId),
-        );
+        const reverted = wasInWishlist
+          ? [...wishlistRef.current, productId]
+          : wishlistRef.current.filter((id) => id !== productId);
+        wishlistRef.current = reverted;
+        setWishlistProductIds(reverted);
       }
     },
-    [token, wishlistProductIds],
+    [token],
   );
 
   // ── Search suggestions ─────────────────────────────
@@ -802,12 +823,15 @@ const ShopScreen = () => {
 
       {/* ── Product grid ──────────────────────────── */}
       <FlatList
+        ref={flatListRef}
         data={inImageSearchMode ? imageResults : products}
         keyExtractor={(item) => item.id.toString()}
         renderItem={renderProductCard}
         numColumns={2}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
+        onScroll={(e) => reportScroll(e.nativeEvent.contentOffset.y)}
+        scrollEventThrottle={16}
         ListHeaderComponent={inImageSearchMode ? null : renderListHeader}
         ListFooterComponent={inImageSearchMode ? null : renderListFooter}
         ListEmptyComponent={
@@ -877,6 +901,19 @@ const createCardStyles = (colors: ThemeColors) => StyleSheet.create({
     height: "100%",
     backgroundColor: colors.surfaceContainer,
   },
+  soldOutOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0,0,0,0.45)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  soldOutText: {
+    color: "#fff",
+    fontSize: 10,
+    fontWeight: "800",
+    letterSpacing: 2,
+    textTransform: "uppercase",
+  },
   limitedBadge: {
     position: "absolute",
     top: 8,
@@ -889,7 +926,7 @@ const createCardStyles = (colors: ThemeColors) => StyleSheet.create({
     fontFamily: undefined,
     fontSize: 8,
     color: colors.textInverse,
-    // letterSpacing: 2,
+    letterSpacing: 2,
     textTransform: "uppercase",
   },
   heartBtn: {
@@ -909,14 +946,14 @@ const createCardStyles = (colors: ThemeColors) => StyleSheet.create({
     fontFamily: undefined,
     fontSize: 10,
     color: colors.textSecondary,
-    // letterSpacing: 2,
+    letterSpacing: 2,
     textTransform: "uppercase",
   },
   productName: {
     fontFamily: undefined,
     fontSize: 11,
     color: colors.text,
-    // letterSpacing: 1,
+    letterSpacing: 1,
     textTransform: "uppercase",
     lineHeight: 16,
   },
@@ -971,7 +1008,7 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     fontFamily: undefined,
     fontSize: 11,
     color: colors.text,
-    // letterSpacing: 2,
+    letterSpacing: 2,
     paddingVertical: 0,
   },
   suggestionBox: {
@@ -994,14 +1031,14 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     fontFamily: undefined,
     fontSize: 10,
     color: colors.text,
-    // letterSpacing: 1,
+    letterSpacing: 1,
     flex: 1,
   },
   suggestionType: {
     fontFamily: undefined,
     fontSize: 9,
     color: colors.textSecondary,
-    // letterSpacing: 2,
+    letterSpacing: 2,
   },
 
   // ── Visual search ─────────────────────────────────
@@ -1026,14 +1063,14 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     fontFamily: undefined,
     fontSize: 10,
     color: colors.text,
-    // letterSpacing: 2,
+    letterSpacing: 2,
     fontWeight: "700",
   },
   visualClear: {
     fontFamily: undefined,
     fontSize: 10,
     color: colors.textSecondary,
-    // letterSpacing: 2,
+    letterSpacing: 2,
     fontWeight: "700",
   },
   visualError: {
@@ -1067,7 +1104,7 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     fontFamily: undefined,
     fontSize: 11,
     color: colors.text,
-    // letterSpacing: 3,
+    letterSpacing: 3,
     textTransform: "uppercase",
   },
   genderTabTextActive: {
@@ -1098,7 +1135,7 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     fontFamily: undefined,
     fontSize: 10,
     color: colors.text,
-    // letterSpacing: 2,
+    letterSpacing: 2,
     textTransform: "uppercase",
   },
   categoryChipTextActive: {
@@ -1132,7 +1169,7 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     fontFamily: undefined,
     fontSize: 10,
     color: colors.text,
-    // letterSpacing: 1,
+    letterSpacing: 1,
   },
   filterBtnTextActive: {
     color: colors.textInverse,
@@ -1141,13 +1178,13 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     fontFamily: undefined,
     fontSize: 10,
     color: colors.textInverse,
-    // letterSpacing: 0,
+    letterSpacing: 0,
   },
   resultsCount: {
     fontFamily: undefined,
     fontSize: 9,
     color: colors.textSecondary,
-    // letterSpacing: 2,
+    letterSpacing: 2,
     marginLeft: "auto",
   },
 
@@ -1171,7 +1208,7 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     fontFamily: undefined,
     fontSize: 9,
     color: colors.text,
-    // letterSpacing: 2,
+    letterSpacing: 2,
   },
 
   // ── Grid ──────────────────────────────────────────
@@ -1203,7 +1240,7 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     fontFamily: undefined,
     fontSize: 9,
     color: colors.text,
-    // letterSpacing: 3,
+    letterSpacing: 3,
   },
   emptyContainer: {
     paddingVertical: 80,
@@ -1215,13 +1252,13 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     fontSize: 20,
     color: colors.text,
     textTransform: "uppercase",
-    // letterSpacing: 2,
+    letterSpacing: 2,
   },
   emptySubtitle: {
     fontFamily: undefined,
     fontSize: 10,
     color: colors.textSecondary,
-    // letterSpacing: 2,
+    letterSpacing: 2,
     textTransform: "uppercase",
   },
 });

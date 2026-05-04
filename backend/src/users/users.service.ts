@@ -119,6 +119,23 @@ export class UsersService {
     }
   }
 
+  async removeStaleGuests(olderThanHours = 24): Promise<number> {
+    const cutoff = new Date(Date.now() - olderThanHours * 60 * 60 * 1000);
+    const stale = await this.usersRepository
+      .createQueryBuilder('user')
+      .where('user.isGuest = :isGuest', { isGuest: true })
+      .andWhere('user.updatedAt < :cutoff', { cutoff })
+      .andWhere('user.deletedAt IS NULL')
+      .andWhere(
+        `user.id NOT IN (SELECT o."userId" FROM "order" o WHERE o."userId" IS NOT NULL)`,
+      )
+      .getMany();
+
+    if (stale.length === 0) return 0;
+    await this.usersRepository.softDelete(stale.map((u) => u.id));
+    return stale.length;
+  }
+
   async updateNotificationPreferences(
     userId: number,
     prefs: Record<string, boolean>,

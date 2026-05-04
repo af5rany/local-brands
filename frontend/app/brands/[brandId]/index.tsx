@@ -87,6 +87,7 @@ const BrandDetailScreen = () => {
   const [showFilters, setShowFilters] = useState(false);
   const [changingStatus, setChangingStatus] = useState(false);
   const [posts, setPosts] = useState<any[]>([]);
+  const [postsTotal, setPostsTotal] = useState(0);
   const [postsLoading, setPostsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<"products" | "posts">("products");
 
@@ -96,10 +97,11 @@ const BrandDetailScreen = () => {
     try {
       const headers: Record<string, string> = {};
       if (token) headers.Authorization = `Bearer ${token}`;
-      const res = await fetch(`${getApiUrl()}/feed/brand/${brandId}?limit=10`, { headers });
+      const res = await fetch(`${getApiUrl()}/feed/brand/${brandId}?limit=50`, { headers });
       if (res.ok) {
         const data = await res.json();
         setPosts(data.data || []);
+        setPostsTotal(data.pagination?.total ?? (data.data?.length ?? 0));
       }
     } catch {
       // silently fail
@@ -107,6 +109,29 @@ const BrandDetailScreen = () => {
       setPostsLoading(false);
     }
   }, [brandId, token]);
+
+  const handleDeletePost = (postId: number) => {
+    Alert.alert("Delete Post", "Remove this post permanently?", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Delete",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            const res = await fetch(`${getApiUrl()}/feed/posts/${postId}`, {
+              method: "DELETE",
+              headers: { Authorization: `Bearer ${token}` },
+            });
+            if (!res.ok) throw new Error("Failed");
+            setPosts((prev) => prev.filter((p) => p.id !== postId));
+            setPostsTotal((prev) => Math.max(0, prev - 1));
+          } catch (e: any) {
+            Alert.alert("Error", e.message);
+          }
+        },
+      },
+    ]);
+  };
 
   // ── Status color helpers ─────────────────────
   const getStatusColors = (_status: BrandStatus) => ({
@@ -369,40 +394,36 @@ const BrandDetailScreen = () => {
         }
       >
         {/* ── Brand Hero ──────────────────────────── */}
-        <View
-          style={[
-            styles.heroCard,
-            {
-              backgroundColor: colors.surface,
-              borderColor: colors.border,
-            },
-          ]}
-        >
-          {/* Logo */}
-          {brand.logo ? (
-            <Image
-              source={{ uri: brand.logo }}
-              style={[styles.heroLogo, { borderColor: colors.border }]}
-            />
-          ) : (
-            <View
-              style={[styles.heroLogo, { backgroundColor: colors.surfaceRaised }]}
-            >
-              <Text style={[styles.heroLogoText, { color: colors.text }]}>
-                {brand.name.charAt(0).toUpperCase()}
-              </Text>
-            </View>
-          )}
+        <View style={[styles.heroCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          {/* Cover Photo */}
+          <View style={[styles.heroCover, { backgroundColor: colors.primary }]}>
+            {(brand as any).coverImage ? (
+              <Image source={{ uri: (brand as any).coverImage }} style={styles.heroCoverImage} resizeMode="cover" />
+            ) : null}
+          </View>
 
+          {/* Circle Logo — overlapping cover */}
+          <View style={[styles.heroLogoWrap, { borderColor: colors.surface, backgroundColor: colors.surface }]}>
+            {brand.logo ? (
+              <Image source={{ uri: brand.logo }} style={styles.heroLogoCircle} />
+            ) : (
+              <View style={[styles.heroLogoCircle, { backgroundColor: colors.surfaceRaised, justifyContent: "center", alignItems: "center" }]}>
+                <Text style={[styles.heroLogoText, { color: colors.text }]}>
+                  {brand.name.charAt(0).toUpperCase()}
+                </Text>
+              </View>
+            )}
+          </View>
+
+          {/* Hero content */}
+          <View style={{ alignItems: "center", paddingHorizontal: 24 }}>
           {/* Name */}
           <Text style={[styles.heroName, { color: colors.text }]}>
             {brand.name}
           </Text>
 
           {/* Status Badge */}
-          <View
-            style={[styles.statusBadge, { borderColor: colors.border }]}
-          >
+          <View style={[styles.statusBadge, { borderColor: colors.border }]}>
             <Text style={[styles.statusBadgeText, { color: colors.textSecondary }]}>
               {statusCfg.label.toUpperCase()}
             </Text>
@@ -410,9 +431,7 @@ const BrandDetailScreen = () => {
 
           {/* Description */}
           {brand.description && (
-            <Text
-              style={[styles.heroDescription, { color: colors.textSecondary }]}
-            >
+            <Text style={[styles.heroDescription, { color: colors.textSecondary }]}>
               {brand.description}
             </Text>
           )}
@@ -420,14 +439,8 @@ const BrandDetailScreen = () => {
           {/* Location */}
           {brand.location && (
             <View style={styles.heroLocationRow}>
-              <Ionicons
-                name="location-outline"
-                size={14}
-                color={colors.textTertiary}
-              />
-              <Text
-                style={[styles.heroLocationText, { color: colors.textTertiary }]}
-              >
+              <Ionicons name="location-outline" size={14} color={colors.textTertiary} />
+              <Text style={[styles.heroLocationText, { color: colors.textTertiary }]}>
                 {brand.location}
               </Text>
             </View>
@@ -451,26 +464,15 @@ const BrandDetailScreen = () => {
               disabled={followLoading}
             >
               {followLoading ? (
-                <ActivityIndicator
-                  size="small"
-                  color={isFollowing ? colors.text : colors.primaryForeground}
-                />
+                <ActivityIndicator size="small" color={isFollowing ? colors.text : colors.primaryForeground} />
               ) : (
-                <Text
-                  style={[
-                    styles.followBtnText,
-                    {
-                      color: isFollowing
-                        ? colors.text
-                        : colors.primaryForeground,
-                    },
-                  ]}
-                >
+                <Text style={[styles.followBtnText, { color: isFollowing ? colors.text : colors.primaryForeground }]}>
                   {isFollowing ? "FOLLOWING" : "FOLLOW"}
                 </Text>
               )}
             </TouchableOpacity>
           )}
+          </View>{/* end hero content */}
 
           {/* Stats Row */}
           <View
@@ -637,10 +639,10 @@ const BrandDetailScreen = () => {
               ]}
             >
               POSTS
-              {posts.length > 0 && (
+              {postsTotal > 0 && (
                 <Text style={{ color: colors.textTertiary }}>
                   {" "}
-                  ({posts.length})
+                  ({postsTotal})
                 </Text>
               )}
             </Text>
@@ -772,6 +774,7 @@ const BrandDetailScreen = () => {
                     key={post.id}
                     style={[styles.postsGridItem, { borderColor: colors.border }]}
                     onPress={() => router.push(`/feed/${post.id}` as any)}
+                    onLongPress={() => isOwnerOrAdmin && handleDeletePost(post.id)}
                     activeOpacity={0.85}
                   >
                     {post.images?.[0] ? (
@@ -1041,18 +1044,29 @@ const styles = StyleSheet.create({
     marginHorizontal: 16,
     marginTop: 16,
     borderRadius: 0,
-    padding: 24,
-    borderWidth: 1,
-  },
-  heroLogo: {
-    width: 88,
-    height: 88,
-    borderRadius: 0,
-    marginBottom: 16,
+    paddingBottom: 24,
     borderWidth: 1,
     overflow: "hidden",
-    justifyContent: "center",
-    alignItems: "center",
+  },
+  heroCover: {
+    width: "100%",
+    height: 140,
+  },
+  heroCoverImage: {
+    width: "100%",
+    height: "100%",
+  },
+  heroLogoWrap: {
+    marginTop: -44,
+    borderRadius: 50,
+    borderWidth: 3,
+    marginBottom: 12,
+  },
+  heroLogoCircle: {
+    width: 88,
+    height: 88,
+    borderRadius: 44,
+    overflow: "hidden",
   },
   heroLogoText: { fontSize: 36, fontWeight: "700" },
   heroName: {

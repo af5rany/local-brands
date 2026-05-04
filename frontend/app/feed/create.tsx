@@ -33,6 +33,8 @@ export default function CreatePostScreen() {
   const [chosenBrand, setChosenBrand] = useState<any>(null);
   const [loadingBrands, setLoadingBrands] = useState(true);
   const [images, setImages] = useState<string[]>([]);
+  const [videoUrl, setVideoUrl] = useState<string | null>(null);
+  const [uploadingVideo, setUploadingVideo] = useState(false);
   const [caption, setCaption] = useState("");
   const [taggedProducts, setTaggedProducts] = useState<{ productId: number; xPercent?: number; yPercent?: number }[]>([]);
   const [products, setProducts] = useState<any[]>([]);
@@ -77,25 +79,11 @@ export default function CreatePostScreen() {
       .finally(() => setLoadingProducts(false));
   }, [chosenBrand?.id, token]);
 
-  const pickImages = async () => {
-    if (images.length >= 10) {
-      Alert.alert("Limit", "Maximum 10 images per post.");
-      return;
-    }
-
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ["images"],
-      allowsMultipleSelection: true,
-      selectionLimit: 10 - images.length,
-      quality: 0.8,
-    });
-
-    if (result.canceled || !result.assets.length) return;
-
+  const uploadFromAssets = async (assets: ImagePicker.ImagePickerAsset[]) => {
     setUploading(true);
     try {
       const newUrls: string[] = [];
-      for (const asset of result.assets) {
+      for (const asset of assets) {
         const url = await uploadImage(asset.uri);
         if (url) newUrls.push(url);
       }
@@ -104,6 +92,56 @@ export default function CreatePostScreen() {
       Alert.alert("Upload Error", e.message);
     } finally {
       setUploading(false);
+    }
+  };
+
+  const pickImages = async () => {
+    if (images.length >= 10) {
+      Alert.alert("Limit", "Maximum 10 images per post.");
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images"],
+      allowsMultipleSelection: true,
+      selectionLimit: 10 - images.length,
+      quality: 0.8,
+    });
+    if (result.canceled || !result.assets.length) return;
+    await uploadFromAssets(result.assets);
+  };
+
+  const takePhoto = async () => {
+    const perm = await ImagePicker.requestCameraPermissionsAsync();
+    if (!perm.granted) { Alert.alert("Permission required", "Camera access is needed."); return; }
+    const result = await ImagePicker.launchCameraAsync({ mediaTypes: ["images"], quality: 0.8 });
+    if (result.canceled || !result.assets.length) return;
+    await uploadFromAssets(result.assets);
+  };
+
+  const pickVideo = async () => {
+    if (videoUrl) { setVideoUrl(null); return; }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["videos"],
+      quality: 1,
+    });
+    if (result.canceled || !result.assets.length) return;
+    const asset = result.assets[0];
+    setUploadingVideo(true);
+    try {
+      const CLOUD_VIDEO_URL = "https://api.cloudinary.com/v1_1/dg4l2eelg/video/upload";
+      const formData = new FormData();
+      const filename = asset.uri.split("/").pop() || "video.mp4";
+      formData.append("file", { uri: asset.uri, name: filename, type: "video/mp4" } as any);
+      formData.append("upload_preset", "UnsignedPreset");
+      const res = await fetch(CLOUD_VIDEO_URL, { method: "POST", body: formData });
+      if (!res.ok) throw new Error("Video upload failed");
+      const data = await res.json();
+      if (data.secure_url) setVideoUrl(data.secure_url);
+      else throw new Error("No URL returned");
+    } catch (e: any) {
+      Alert.alert("Video Upload Error", e.message);
+    } finally {
+      setUploadingVideo(false);
     }
   };
 
@@ -133,8 +171,8 @@ export default function CreatePostScreen() {
   };
 
   const handleSubmit = async () => {
-    if (!images.length) {
-      Alert.alert("Required", "Add at least one image.");
+    if (!images.length && !videoUrl) {
+      Alert.alert("Required", "Add at least one photo or a video.");
       return;
     }
     if (!chosenBrand?.id) {
@@ -146,9 +184,10 @@ export default function CreatePostScreen() {
     try {
       const body: any = {
         brandId: chosenBrand.id,
-        images,
+        images: images.length ? images : ["placeholder"],
         caption: caption.trim() || undefined,
       };
+      if (videoUrl) body.videoUrl = videoUrl;
       if (taggedProducts.length) body.products = taggedProducts;
 
       const res = await fetch(`${getApiUrl()}/feed/posts`, {
@@ -229,47 +268,65 @@ export default function CreatePostScreen() {
           </View>
         )}
 
-        {/* Images */}
+        {/* Media: Photos + Video */}
         <Text style={[styles.sectionTitle, { color: colors.textTertiary }]}>
-          PHOTOS
+          PHOTOS & VIDEO
         </Text>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={styles.imagesScroll}
-          contentContainerStyle={styles.imagesContainer}
-        >
-          {images.map((uri, i) => (
-            <View key={i} style={styles.imageThumb}>
-              <Image source={{ uri }} style={[styles.thumbImage, { backgroundColor: colors.surfaceRaised }]} />
-              <TouchableOpacity
-                style={[styles.removeBtn, { backgroundColor: colors.text }]}
-                onPress={() => removeImage(i)}
-              >
-                <Ionicons name="close" size={14} color={colors.background} />
-              </TouchableOpacity>
-            </View>
-          ))}
 
-          {images.length < 10 && (
-            <TouchableOpacity
-              style={[styles.addImageBtn, { borderColor: colors.border }]}
-              onPress={pickImages}
-              disabled={uploading}
-            >
-              {uploading ? (
-                <ActivityIndicator color={colors.textTertiary} />
-              ) : (
-                <>
-                  <Ionicons name="camera-outline" size={28} color={colors.textTertiary} />
-                  <Text style={[styles.addImageText, { color: colors.textTertiary }]}>
-                    {images.length}/10
-                  </Text>
-                </>
-              )}
-            </TouchableOpacity>
-          )}
-        </ScrollView>
+        {/* Quick-add buttons */}
+        <View style={styles.mediaButtons}>
+          <TouchableOpacity
+            style={[styles.mediaBtn, { borderColor: colors.border }]}
+            onPress={takePhoto}
+            disabled={uploading || images.length >= 10}
+          >
+            <Ionicons name="camera" size={22} color={colors.text} />
+            <Text style={[styles.mediaBtnText, { color: colors.text }]}>CAMERA</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.mediaBtn, { borderColor: colors.border }]}
+            onPress={pickImages}
+            disabled={uploading || images.length >= 10}
+          >
+            <Ionicons name="images-outline" size={22} color={colors.text} />
+            <Text style={[styles.mediaBtnText, { color: colors.text }]}>GALLERY</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.mediaBtn, { borderColor: videoUrl ? colors.text : colors.border, backgroundColor: videoUrl ? colors.surfaceRaised : "transparent" }]}
+            onPress={pickVideo}
+            disabled={uploadingVideo}
+          >
+            {uploadingVideo ? (
+              <ActivityIndicator color={colors.textTertiary} size="small" />
+            ) : (
+              <Ionicons name={videoUrl ? "checkmark-circle" : "videocam-outline"} size={22} color={videoUrl ? colors.text : colors.textTertiary} />
+            )}
+            <Text style={[styles.mediaBtnText, { color: videoUrl ? colors.text : colors.textTertiary }]}>
+              {videoUrl ? "VIDEO ✓" : "VIDEO"}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {uploading && (
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 12 }}>
+            <ActivityIndicator color={colors.textTertiary} size="small" />
+            <Text style={{ color: colors.textTertiary, fontSize: 12 }}>Uploading photos...</Text>
+          </View>
+        )}
+
+        {/* Image thumbnails */}
+        {images.length > 0 && (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.imagesScroll} contentContainerStyle={styles.imagesContainer}>
+            {images.map((uri, i) => (
+              <View key={i} style={styles.imageThumb}>
+                <Image source={{ uri }} style={[styles.thumbImage, { backgroundColor: colors.surfaceRaised }]} />
+                <TouchableOpacity style={[styles.removeBtn, { backgroundColor: colors.text }]} onPress={() => removeImage(i)}>
+                  <Ionicons name="close" size={14} color={colors.background} />
+                </TouchableOpacity>
+              </View>
+            ))}
+          </ScrollView>
+        )}
 
         {/* Caption */}
         <Text style={[styles.sectionTitle, { color: colors.textTertiary }]}>
@@ -433,10 +490,10 @@ export default function CreatePostScreen() {
           style={[
             styles.submitBtn,
             { backgroundColor: colors.primary },
-            (submitting || !images.length || !chosenBrand) && { opacity: 0.5 },
+            (submitting || (!images.length && !videoUrl) || !chosenBrand) && { opacity: 0.5 },
           ]}
           onPress={handleSubmit}
-          disabled={submitting || !images.length || !chosenBrand}
+          disabled={submitting || (!images.length && !videoUrl) || !chosenBrand}
           activeOpacity={0.8}
         >
           {submitting ? (
@@ -477,6 +534,25 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     // letterSpacing: 1.5,
     marginBottom: 12,
+  },
+
+  // Media buttons
+  mediaButtons: {
+    flexDirection: "row",
+    gap: 10,
+    marginBottom: 16,
+  },
+  mediaBtn: {
+    flex: 1,
+    borderWidth: 1,
+    paddingVertical: 14,
+    alignItems: "center",
+    gap: 6,
+  },
+  mediaBtnText: {
+    fontSize: 9,
+    fontWeight: "700",
+    letterSpacing: 1,
   },
 
   // Images

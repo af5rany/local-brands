@@ -109,7 +109,12 @@
       "Bash(cp \"/Users/f5rany/Downloads/local-brands/project/design_handoff_monolith_home/figure-his.png\" \"/Users/f5rany/Documents/Work/local-brands/frontend/assets/images/figure-his.png\")",
       "Bash(grep -r \"screenOptions\\\\|animationEnabled\\\\|cardStyleInterpolator\\\\|transitionSpec\" /Users/f5rany/Documents/Work/local-brands/frontend/app --include=*.tsx --include=*.ts)",
       "Bash(echo \"EXIT: $?\")",
-      "Bash(npx expo-doctor *)"
+      "Bash(npx expo-doctor *)",
+      "WebFetch(domain:api.anthropic.com)",
+      "Bash(xargs cat *)",
+      "Bash(cat docker-compose.yml)",
+      "Bash(cat docker-compose.yaml)",
+      "Bash(docker run *)"
     ]
   }
 }

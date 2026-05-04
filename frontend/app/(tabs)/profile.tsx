@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -14,13 +14,17 @@ import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/context/AuthContext";
 import { useBrand } from "@/context/BrandContext";
 import { useThemeColors } from "@/hooks/useThemeColor";
+import type { ThemeColors } from "@/constants/Colors";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
+import { useHeaderVisibility } from "@/context/HeaderVisibilityContext";
 
 const ProfileTab = () => {
   const router = useRouter();
   const colors = useThemeColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const tabBarHeight = useBottomTabBarHeight();
-  const { user, token, logout, refreshUser } = useAuth();
+  const { user, token, logout, refreshUser, isGuest } = useAuth();
+  const { reportScroll } = useHeaderVisibility();
   const { setIsManagementMode } = useBrand();
   const [refreshing, setRefreshing] = useState(false);
 
@@ -47,42 +51,60 @@ const ProfileTab = () => {
     ]);
   };
 
-  // Guest state
+  // Not signed in
   if (!token) {
     return (
-      <View
-        style={[styles.container, { backgroundColor: colors.background }]}
-      >
-        <View style={styles.centeredContent}>
-          <View
-            style={[
-              styles.guestAvatar,
-              { backgroundColor: colors.surfaceRaised },
-            ]}
-          >
-            <Ionicons name="person-outline" size={48} color={colors.textTertiary} />
+      <View style={styles.container}>
+        <View style={styles.guestWrap}>
+          <View style={styles.guestAvatar}>
+            <Ionicons name="person-outline" size={40} color={colors.textTertiary} />
           </View>
-          <Text style={[styles.guestTitle, { color: colors.text }]}>
-            Welcome to Local Brands
-          </Text>
-          <Text style={[styles.guestSubtitle, { color: colors.textSecondary }]}>
-            Sign in to manage your profile, track orders, and save your
-            favorites.
+          <Text style={styles.guestEyebrow}>NOT SIGNED IN</Text>
+          <Text style={styles.guestTitle}>YOUR PROFILE</Text>
+          <Text style={styles.guestSubtitle}>
+            Sign in to track orders, save favourites, and manage your account.
           </Text>
           <TouchableOpacity
-            style={[styles.signInBtn, { backgroundColor: colors.primary }]}
+            style={styles.signInBtn}
             onPress={() => router.push("/auth/login")}
           >
-            <Ionicons name="log-in-outline" size={18} color={colors.primaryForeground} />
-            <Text style={[styles.signInBtnText, { color: colors.primaryForeground }]}>SIGN IN</Text>
+            <Text style={styles.signInBtnText}>SIGN IN →</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.registerBtn, { borderColor: colors.primary }]}
+            style={styles.registerBtn}
             onPress={() => router.push("/auth/register")}
           >
-            <Text style={[styles.registerBtnText, { color: colors.primary }]}>
-              CREATE ACCOUNT
-            </Text>
+            <Text style={styles.registerBtnText}>CREATE ACCOUNT</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
+
+  // Guest session — promote account creation
+  if (isGuest) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.guestWrap}>
+          <View style={styles.guestAvatar}>
+            <Ionicons name="person-outline" size={40} color={colors.textTertiary} />
+          </View>
+          <Text style={styles.guestEyebrow}>GUEST SESSION</Text>
+          <Text style={styles.guestTitle}>YOUR PROFILE</Text>
+          <Text style={styles.guestSubtitle}>
+            Create an account to save your cart, track orders, and access your wishlist.
+          </Text>
+          <TouchableOpacity
+            style={styles.signInBtn}
+            onPress={() => router.push("/auth/register")}
+          >
+            <Text style={styles.signInBtnText}>CREATE ACCOUNT →</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.registerBtn}
+            onPress={() => router.push("/auth/login")}
+          >
+            <Text style={styles.registerBtnText}>SIGN IN</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -96,19 +118,23 @@ const ProfileTab = () => {
     .toUpperCase()
     .substring(0, 2);
 
+  const roleDisplay =
+    userRole === "brandOwner"
+      ? "BRAND OWNER"
+      : userRole
+      ? userRole.toUpperCase()
+      : "CUSTOMER";
+
   const menuItems = [
-    // Management entry point for admin/brand owner
     ...(isAdminOrOwner
       ? [
           {
-            icon: "speedometer-outline",
-            label: "Management Dashboard",
+            icon: "speedometer-outline" as const,
+            label: "MANAGEMENT DASHBOARD",
             subtitle:
               userRole === "admin"
-                ? "Manage brands, products & users"
-                : "Manage your brands & products",
-            color: colors.primary,
-            bg: colors.primarySoft,
+                ? "Brands, products & users"
+                : "Your brands & products",
             onPress: () => {
               setIsManagementMode(true);
               router.push("/manage" as any);
@@ -117,321 +143,404 @@ const ProfileTab = () => {
         ]
       : []),
     {
-      icon: "person-outline",
-      label: "Edit Profile",
-      color: colors.info,
-      bg: colors.infoSoft,
+      icon: "person-outline" as const,
+      label: "EDIT PROFILE",
       onPress: () => router.push("/profile/edit" as any),
     },
     {
-      icon: "location-outline",
-      label: "Shipping Addresses",
-      color: colors.warning,
-      bg: colors.warningSoft,
+      icon: "location-outline" as const,
+      label: "SHIPPING ADDRESSES",
       onPress: () => router.push("/profile/addresses"),
     },
     {
-      icon: "gift-outline",
-      label: "Invite Friends",
-      color: colors.success,
-      bg: colors.successSoft,
+      icon: "gift-outline" as const,
+      label: "INVITE FRIENDS",
       onPress: () => router.push("/referral" as any),
     },
     {
-      icon: "notifications-outline",
-      label: "Notifications",
-      color: colors.accent,
-      bg: colors.accentSoft,
+      icon: "notifications-outline" as const,
+      label: "NOTIFICATIONS",
       onPress: () => router.push("/notifications" as any),
     },
     {
-      icon: "settings-outline",
-      label: "Settings",
-      color: colors.textSecondary,
-      bg: colors.surfaceRaised,
+      icon: "settings-outline" as const,
+      label: "SETTINGS",
       onPress: () => router.push("/profile/settings" as any),
     },
   ];
 
   return (
-    <View
-      style={[styles.container, { backgroundColor: colors.background }]}
-    >
+    <View style={styles.container}>
       <ScrollView
-        contentContainerStyle={[styles.scrollContent, { paddingBottom: tabBarHeight }]}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: tabBarHeight + 24 }]}
+        showsVerticalScrollIndicator={false}
+        onScroll={(e) => reportScroll(e.nativeEvent.contentOffset.y)}
+        scrollEventThrottle={16}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={colors.text}
+          />
         }
       >
-        {/* Profile Header */}
-        <View style={[styles.header, { backgroundColor: colors.surface }]}>
-          <View style={styles.avatarContainer}>
+        {/* ── Profile Header ── */}
+        <View style={styles.header}>
+          <View style={styles.avatarWrap}>
             {user?.avatar ? (
               <Image source={{ uri: user.avatar }} style={styles.avatar} />
             ) : (
-              <View
-                style={[
-                  styles.initialsAvatar,
-                  { backgroundColor: colors.primarySoft },
-                ]}
-              >
-                <Text style={[styles.initialsText, { color: colors.primary }]}>
-                  {initials}
-                </Text>
+              <View style={styles.initialsAvatar}>
+                <Text style={styles.initialsText}>{initials}</Text>
               </View>
             )}
           </View>
-
-          <Text style={[styles.name, { color: colors.text }]}>
-            {user?.name || "User"}
+          <Text style={styles.headerEyebrow}>{roleDisplay}</Text>
+          <Text style={styles.headerName}>
+            {(user?.name || "USER").toUpperCase()}
           </Text>
-          <Text style={[styles.email, { color: colors.textTertiary }]}>
-            {user?.email || "No email provided"}
-          </Text>
-
-          <View
-            style={[styles.roleBadge, { backgroundColor: colors.primarySoft }]}
-          >
-            <Text style={[styles.roleText, { color: colors.primary }]}>
-              {userRole
-                ? userRole.charAt(0).toUpperCase() + userRole.slice(1)
-                : "Customer"}
-            </Text>
-          </View>
+          <Text style={styles.headerEmail}>{user?.email || ""}</Text>
         </View>
 
-        {/* Menu Items */}
-        <View
-          style={[
-            styles.menuContainer,
-            {
-              backgroundColor: colors.surface,
-              borderColor: colors.borderLight,
-            },
-          ]}
-        >
-          {menuItems.map((item, index) => (
-            <TouchableOpacity
-              key={item.label}
-              style={[
-                styles.menuItem,
-                index < menuItems.length - 1 && {
-                  borderBottomWidth: 1,
-                  borderBottomColor: colors.borderLight,
-                },
-              ]}
-              onPress={item.onPress}
-              activeOpacity={0.7}
-            >
-              <View style={[styles.iconBox, { backgroundColor: item.bg }]}>
-                <Ionicons
-                  name={item.icon as any}
-                  size={20}
-                  color={item.color}
-                />
-              </View>
-              <View style={styles.menuTextContainer}>
-                <Text style={[styles.menuText, { color: colors.text }]}>
-                  {item.label}
-                </Text>
-                {"subtitle" in item && item.subtitle ? (
-                  <Text
-                    style={[
-                      styles.menuSubtext,
-                      { color: colors.textTertiary },
-                    ]}
-                  >
-                    {item.subtitle}
-                  </Text>
-                ) : null}
-              </View>
-              <Ionicons
-                name="chevron-forward"
-                size={18}
-                color={colors.textTertiary}
-              />
-            </TouchableOpacity>
+        {/* ── Quick Stats ── */}
+        <View style={styles.statsRow}>
+          {[
+            { label: "ORDERS", value: "—" },
+            { label: "SAVED", value: "—" },
+            { label: "REVIEWS", value: "—" },
+          ].map((s) => (
+            <View key={s.label} style={styles.statCol}>
+              <Text style={styles.statNum}>{s.value}</Text>
+              <Text style={styles.statLabel}>{s.label}</Text>
+            </View>
           ))}
         </View>
 
-        {/* Logout Button */}
+        {/* ── Menu ── */}
+        <View style={styles.menuSection}>
+          <Text style={styles.sectionEyebrow}>ACCOUNT</Text>
+          <View style={styles.menuList}>
+            {menuItems.map((item, index) => (
+              <TouchableOpacity
+                key={item.label}
+                style={[
+                  styles.menuItem,
+                  index < menuItems.length - 1 && styles.menuItemBorder,
+                ]}
+                onPress={item.onPress}
+                activeOpacity={0.7}
+              >
+                <View style={styles.iconBox}>
+                  <Ionicons name={item.icon} size={18} color={colors.text} />
+                </View>
+                <View style={styles.menuTextWrap}>
+                  <Text style={styles.menuLabel}>{item.label}</Text>
+                  {"subtitle" in item && item.subtitle ? (
+                    <Text style={styles.menuSub}>{item.subtitle}</Text>
+                  ) : null}
+                </View>
+                <Ionicons name="chevron-forward" size={14} color={colors.textTertiary} />
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+
+        {/* ── Orders shortcut ── */}
         <TouchableOpacity
-          style={[
-            styles.logoutButton,
-            { backgroundColor: colors.dangerSoft, borderColor: colors.danger },
-          ]}
+          style={styles.ordersRow}
+          onPress={() => router.push("/orders" as any)}
+          activeOpacity={0.8}
+        >
+          <View style={styles.ordersLeft}>
+            <Text style={styles.ordersEyebrow}>RECENT</Text>
+            <Text style={styles.ordersTitle}>MY ORDERS</Text>
+          </View>
+          <Text style={styles.ordersArrow}>→</Text>
+        </TouchableOpacity>
+
+        {/* ── Logout ── */}
+        <TouchableOpacity
+          style={styles.logoutBtn}
           onPress={handleLogout}
           activeOpacity={0.7}
         >
-          <Ionicons name="log-out-outline" size={20} color={colors.danger} />
-          <Text style={[styles.logoutText, { color: colors.danger }]}>
-            Log Out
-          </Text>
+          <Ionicons name="log-out-outline" size={16} color={colors.danger} />
+          <Text style={styles.logoutText}>SIGN OUT</Text>
         </TouchableOpacity>
 
-        <Text style={[styles.versionText, { color: colors.textTertiary }]}>
-          Version 1.0.0
-        </Text>
+        <Text style={styles.version}>V 1.0.0 — MONOLITH</Text>
       </ScrollView>
     </View>
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  scrollContent: {
-  },
-  centeredContent: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 32,
-  },
-  guestAvatar: {
-    width: 100,
-    height: 100,
-    borderRadius: 0,
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 24,
-  },
-  guestTitle: {
-    fontSize: 22,
-    fontWeight: "800",
-    marginBottom: 8,
-    // letterSpacing: -0.3,
-  },
-  guestSubtitle: {
-    fontSize: 14,
-    textAlign: "center",
-    marginBottom: 32,
-    lineHeight: 20,
-  },
-  signInBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 16,
-    paddingHorizontal: 48,
-    borderRadius: 0,
-    gap: 8,
-    marginBottom: 12,
-  },
-  signInBtnText: {
-    fontSize: 14,
-    fontWeight: "700",
-    // letterSpacing: 1,
-  },
-  registerBtn: {
-    paddingVertical: 14,
-    paddingHorizontal: 40,
-    borderRadius: 0,
-    borderWidth: 1.5,
-  },
-  registerBtnText: {
-    fontSize: 13,
-    fontWeight: "700",
-    // letterSpacing: 1,
-  },
-  header: {
-    alignItems: "center",
-    paddingVertical: 32,
-    paddingHorizontal: 20,
-    marginBottom: 20,
-  },
-  avatarContainer: {
-    marginBottom: 16,
-  },
-  avatar: {
-    width: 100,
-    height: 100,
-    borderRadius: 0,
-  },
-  initialsAvatar: {
-    width: 100,
-    height: 100,
-    borderRadius: 0,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  initialsText: {
-    fontSize: 36,
-    fontWeight: "700",
-  },
-  name: {
-    fontSize: 24,
-    fontWeight: "800",
-    marginBottom: 4,
-    // letterSpacing: -0.3,
-  },
-  email: {
-    fontSize: 14,
-    marginBottom: 14,
-  },
-  roleBadge: {
-    paddingHorizontal: 14,
-    paddingVertical: 5,
-    borderRadius: 0,
-  },
-  roleText: {
-    fontSize: 12,
-    fontWeight: "700",
-    // letterSpacing: 0.3,
-  },
-  menuContainer: {
-    marginHorizontal: 16,
-    borderRadius: 0,
-    overflow: "hidden",
-    marginBottom: 24,
-    borderWidth: 1,
-  },
-  menuItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-  },
-  iconBox: {
-    width: 40,
-    height: 40,
-    borderRadius: 0,
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 14,
-  },
-  menuTextContainer: {
-    flex: 1,
-  },
-  menuText: {
-    fontSize: 15,
-    fontWeight: "600",
-  },
-  menuSubtext: {
-    fontSize: 12,
-    marginTop: 2,
-  },
-  logoutButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    marginHorizontal: 16,
-    paddingVertical: 16,
-    borderRadius: 0,
-    borderWidth: 1,
-    marginBottom: 24,
-    gap: 8,
-  },
-  logoutText: {
-    fontSize: 16,
-    fontWeight: "700",
-  },
-  versionText: {
-    textAlign: "center",
-    fontSize: 12,
-    fontWeight: "500",
-  },
-});
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    scrollContent: {
+      // paddingBottom injected inline with tabBarHeight
+    },
+
+    // ── Guest ──────────────────────────────────────────────────────────────────
+    guestWrap: {
+      flex: 1,
+      paddingHorizontal: 32,
+      paddingTop: 100,
+      paddingBottom: 60,
+      alignItems: "center",
+    },
+    guestAvatar: {
+      width: 80,
+      height: 80,
+      backgroundColor: colors.surfaceRaised,
+      alignItems: "center",
+      justifyContent: "center",
+      marginBottom: 28,
+    },
+    guestEyebrow: {
+      fontSize: 9,
+      color: colors.textTertiary,
+      letterSpacing: 2,
+      textTransform: "uppercase",
+      marginBottom: 8,
+    },
+    guestTitle: {
+      fontSize: 28,
+      fontWeight: "800",
+      color: colors.text,
+      letterSpacing: -0.5,
+      textTransform: "uppercase",
+      marginBottom: 12,
+      textAlign: "center",
+    },
+    guestSubtitle: {
+      fontSize: 13,
+      color: colors.textSecondary,
+      textAlign: "center",
+      lineHeight: 20,
+      marginBottom: 36,
+    },
+    signInBtn: {
+      backgroundColor: colors.primary,
+      paddingVertical: 16,
+      paddingHorizontal: 48,
+      marginBottom: 12,
+      width: "100%",
+      alignItems: "center",
+    },
+    signInBtnText: {
+      fontSize: 11,
+      fontWeight: "700",
+      color: colors.primaryForeground,
+      letterSpacing: 2,
+      textTransform: "uppercase",
+    },
+    registerBtn: {
+      borderWidth: 1,
+      borderColor: colors.primary,
+      paddingVertical: 14,
+      paddingHorizontal: 40,
+      width: "100%",
+      alignItems: "center",
+    },
+    registerBtnText: {
+      fontSize: 11,
+      fontWeight: "700",
+      color: colors.text,
+      letterSpacing: 2,
+      textTransform: "uppercase",
+    },
+
+    // ── Header ─────────────────────────────────────────────────────────────────
+    header: {
+      backgroundColor: colors.primary,
+      paddingTop: 64,
+      paddingBottom: 32,
+      paddingHorizontal: 24,
+      alignItems: "center",
+      gap: 6,
+    },
+    avatarWrap: {
+      marginBottom: 12,
+    },
+    avatar: {
+      width: 80,
+      height: 80,
+      backgroundColor: colors.primaryMuted,
+    },
+    initialsAvatar: {
+      width: 80,
+      height: 80,
+      backgroundColor: colors.primaryMuted,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    initialsText: {
+      fontSize: 28,
+      fontWeight: "800",
+      color: colors.primaryForeground,
+    },
+    headerEyebrow: {
+      fontSize: 9,
+      color: "rgba(255,255,255,0.5)",
+      letterSpacing: 2,
+      textTransform: "uppercase",
+    },
+    headerName: {
+      fontSize: 22,
+      fontWeight: "800",
+      color: colors.primaryForeground,
+      letterSpacing: -0.5,
+    },
+    headerEmail: {
+      fontSize: 12,
+      color: "rgba(255,255,255,0.55)",
+    },
+
+    // ── Stats ──────────────────────────────────────────────────────────────────
+    statsRow: {
+      flexDirection: "row",
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    statCol: {
+      flex: 1,
+      alignItems: "center",
+      paddingVertical: 20,
+      borderRightWidth: 1,
+      borderRightColor: colors.border,
+    },
+    statNum: {
+      fontSize: 20,
+      fontWeight: "800",
+      color: colors.text,
+      letterSpacing: -0.5,
+    },
+    statLabel: {
+      fontSize: 8,
+      color: colors.textTertiary,
+      letterSpacing: 1.5,
+      textTransform: "uppercase",
+      marginTop: 4,
+    },
+
+    // ── Menu ───────────────────────────────────────────────────────────────────
+    menuSection: {
+      paddingTop: 32,
+      paddingHorizontal: 20,
+      paddingBottom: 8,
+    },
+    sectionEyebrow: {
+      fontSize: 9,
+      color: colors.textTertiary,
+      letterSpacing: 2,
+      textTransform: "uppercase",
+      marginBottom: 12,
+    },
+    menuList: {
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    menuItem: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingVertical: 16,
+      paddingHorizontal: 16,
+      gap: 14,
+    },
+    menuItemBorder: {
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    iconBox: {
+      width: 36,
+      height: 36,
+      backgroundColor: colors.surfaceRaised,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    menuTextWrap: {
+      flex: 1,
+      gap: 2,
+    },
+    menuLabel: {
+      fontSize: 11,
+      fontWeight: "700",
+      color: colors.text,
+      letterSpacing: 1,
+      textTransform: "uppercase",
+    },
+    menuSub: {
+      fontSize: 11,
+      color: colors.textSecondary,
+    },
+
+    // ── Orders row ─────────────────────────────────────────────────────────────
+    ordersRow: {
+      marginHorizontal: 20,
+      marginTop: 16,
+      borderWidth: 1,
+      borderColor: colors.primary,
+      paddingVertical: 20,
+      paddingHorizontal: 20,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+    },
+    ordersLeft: {
+      gap: 4,
+    },
+    ordersEyebrow: {
+      fontSize: 9,
+      color: colors.textTertiary,
+      letterSpacing: 1.5,
+      textTransform: "uppercase",
+    },
+    ordersTitle: {
+      fontSize: 16,
+      fontWeight: "800",
+      color: colors.text,
+      letterSpacing: -0.3,
+      textTransform: "uppercase",
+    },
+    ordersArrow: {
+      fontSize: 18,
+      color: colors.text,
+    },
+
+    // ── Logout ─────────────────────────────────────────────────────────────────
+    logoutBtn: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      marginHorizontal: 20,
+      marginTop: 16,
+      paddingVertical: 16,
+      borderWidth: 1,
+      borderColor: colors.danger,
+      gap: 8,
+    },
+    logoutText: {
+      fontSize: 11,
+      fontWeight: "700",
+      color: colors.danger,
+      letterSpacing: 1.5,
+      textTransform: "uppercase",
+    },
+
+    // ── Footer ─────────────────────────────────────────────────────────────────
+    version: {
+      textAlign: "center",
+      fontSize: 8,
+      color: colors.textTertiary,
+      letterSpacing: 1.5,
+      textTransform: "uppercase",
+      marginTop: 28,
+      marginBottom: 8,
+    },
+  });
 
 export default ProfileTab;

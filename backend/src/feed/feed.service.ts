@@ -56,7 +56,8 @@ export class FeedService {
     const post = this.postRepo.create({
       brandId: dto.brandId,
       authorId: userId,
-      images: dto.images,
+      images: dto.images ?? [],
+      videoUrl: dto.videoUrl,
       caption: dto.caption,
     });
     const savedPost = await this.postRepo.save(post);

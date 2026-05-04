@@ -19,11 +19,12 @@ import { Wishlist } from './wishlist.entity';
 import { CreateWishlistDto } from './dto/create-wishlist.dto';
 import { UpdateWishlistDto } from './dto/update-wishlist.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { RegisteredUsersOnlyGuard } from '../auth/registered-users-only.guard';
 import { ForbiddenException } from '@nestjs/common';
 
 @ApiTags('wishlist')
 @Controller('wishlist')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RegisteredUsersOnlyGuard)
 export class WishlistController {
   constructor(private readonly wishlistService: WishlistService) {}
 

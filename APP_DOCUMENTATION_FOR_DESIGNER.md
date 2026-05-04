@@ -2,7 +2,7 @@
 
 > **Platform:** Mobile-first (iOS & Android) with web support
 > **Framework:** React Native / Expo
-> **Date:** April 27, 2026
+> **Date:** May 3, 2026
 
 ---
 
@@ -43,12 +43,14 @@
 
 ## 2. User Roles & Permissions
 
-| Role | Browse | Wishlist | Cart & Orders | Manage Brands | Manage Products | Manage Users | View Stats |
-|------|--------|----------|---------------|---------------|-----------------|--------------|------------|
-| **Guest** | Yes | No | No | No | No | No | No |
-| **Customer** | Yes | Yes | Yes | No | No | No | Personal only |
-| **Brand Owner** | Yes | Yes | Yes | Own brands only | Own products only | No | Own brand stats |
-| **Admin** | Yes | Yes | Yes | All brands | All products | Yes | System-wide |
+| Role | Browse | Cart & Checkout | Wishlist | Reviews | Feed Social | Manage Brands | Manage Products | Manage Users | View Stats |
+|------|--------|-----------------|----------|---------|-------------|---------------|-----------------|--------------|------------|
+| **Guest** | Yes | Yes | No | No | No (read-only) | No | No | No | No |
+| **Customer** | Yes | Yes | Yes | Yes | Yes | No | No | No | Personal only |
+| **Brand Owner** | Yes | Yes | Yes | Yes | Yes | Own brands only | Own products only | No | Own brand stats |
+| **Admin** | Yes | Yes | Yes | Yes | Yes | All brands | All products | Yes | System-wide |
+
+> **Guest scope:** Guests can browse, add to cart, and complete checkout. Wishlist saves, writing reviews, liking/commenting on posts, and following brands all require a registered account. Guests shopping as guest see a sign-up banner in cart and checkout prompting account creation (cart is preserved on conversion).
 
 ### Brand-Level Roles (within BrandUser)
 A brand owner can assign team members with granular roles:
@@ -198,10 +200,15 @@ A brand owner can assign team members with granular roles:
   └── returns             → Returns & refunds policy
 ```
 
-### Protected Routes (require authentication)
-`cart`, `checkout`, `orders`, `profile`, `users`, `notifications`, `referral`, `returns`
+### Protected Routes (require authentication token)
+`cart`, `checkout`, `orders`, `profile`, `users`, `notifications`, `referral`, `returns`, `wishlist`, `manage`
 
-Unauthenticated users attempting to access these are shown sign-in prompts or redirected to `/auth/login`.
+Unauthenticated users (no token) are redirected to `/auth/login`.
+
+### Registered-Only Routes (guests redirected to register)
+`wishlist`, `manage`, `users`, `referral`, `returns`
+
+Guests have a valid token but are blocked from these routes — they are redirected to `/auth/register` so they can create an account and convert their guest session (cart is preserved on conversion).
 
 ---
 
@@ -452,6 +459,7 @@ Similar to create product, pre-filled with existing product data. Can update all
 **Title:** "My Collection"
 
 **Elements:**
+- **GuestBanner** (visible to guest sessions only): yellow banner "Shopping as guest. Create account to save your order." with "Sign Up" CTA → `/auth/register`
 - Cart item list:
   - Product thumbnail image
   - Product name, selected color/variant
@@ -460,13 +468,16 @@ Similar to create product, pre-filled with existing product data. Can update all
   - Remove button (shows confirmation alert; item removed instantly on confirm — optimistic UI)
 - Order summary: Subtotal, Shipping (calculated at next step), Total
 - **Proceed to Checkout** button (black, full-width)
-- Empty cart states: "No items" message + "Discover Products" link; sign-in prompt for guests
+- Empty cart states: "No items" message + "Discover Products" link; sign-in prompt for unauthenticated users
 - Marquee strip at top: scrolling promotional text
+
+> Guests can fully use the cart. GuestBanner encourages account creation but doesn't block checkout.
 
 ---
 
 ### 4.6 Checkout Screen — `/checkout/index`
 **Elements:**
+- **GuestBanner** (visible to guest sessions only): same yellow sign-up prompt as cart
 - Cart summary: items, quantities, prices, subtotal (collapsed/expanded toggle)
 - Shipping address section:
   - List of saved addresses (selectable)
@@ -734,13 +745,23 @@ Similar to create product, pre-filled with existing product data. Can update all
 
 ### 4.10 Profile Tab — `/(tabs)/profile`
 
-**Guest state:**
+**Unauthenticated state (no token):**
 - Person icon placeholder (square)
-- "Welcome to Local Brands" heading
+- "NOT SIGNED IN" eyebrow text
+- "YOUR PROFILE" heading
+- Sign in description text
 - **Sign In** button (black) → `/auth/login`
 - **Create Account** button (outlined) → `/auth/register`
 
-**Authenticated state:**
+**Guest session state (has token, isGuest=true):**
+- Person icon placeholder (square)
+- "GUEST SESSION" eyebrow text
+- "YOUR PROFILE" heading
+- Description prompting account creation to save cart/orders/wishlist
+- **Create Account** button (primary black) → `/auth/register` (convert-guest flow)
+- **Sign In** button (outlined) → `/auth/login`
+
+**Authenticated state (registered user):**
 - Profile header:
   - Avatar (square — shows image if uploaded, or initials on grey background)
   - Full name
@@ -989,10 +1010,19 @@ The entire UI follows a **strict B&W minimalist aesthetic** — inspired by high
 ### 7.1 Guest → Customer Conversion
 ```
 Open App → Home (guest view, browsing products)
-  → Tap "Add to Cart" or access protected feature
-    → Redirected to Login
-      → Register (or) Login
-        → Return to previous action
+
+Guest shopping path:
+  → Browse products, add to cart (full cart + checkout available)
+  → GuestBanner visible on cart & checkout: "Create account to save your order"
+  → Tap "Sign Up" in banner (or profile tab → "Create Account")
+    → Register screen detects guest token → calls /auth/convert-guest/:id
+      → Same user ID preserved → cart, order history kept
+        → Logged in as registered customer
+
+Guest blocked path:
+  → Tap heart on product → modal "Create account to save favorites" → /auth/register
+  → Navigate to /wishlist → redirected to /auth/register
+  → Navigate to /referral or /returns → redirected to /auth/register
 ```
 
 ### 7.2 Customer Shopping Flow
@@ -1134,7 +1164,8 @@ Profile tab → Edit Profile (name, phone, DOB, avatar)
 
 ### Authentication & Accounts
 - [x] Email/password login
-- [x] Guest login (browse without account)
+- [x] Guest login (browse + cart + checkout without account; 30-min JWT, guest rows auto-cleaned after 24h)
+- [x] Guest → registered user conversion (`/auth/convert-guest/:id`): cart and orders preserved on same user ID
 - [x] User registration with avatar upload
 - [x] Password reset via email (forgot → reset flow)
 - [x] JWT-based authentication with auto-expiration check (every 5 min)

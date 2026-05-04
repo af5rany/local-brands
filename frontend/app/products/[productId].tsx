@@ -46,7 +46,7 @@ const MARQUEE_TEXT =
 const ProductDetailScreen = () => {
   const router = useRouter();
   const { productId } = useLocalSearchParams();
-  const { token, user } = useAuth();
+  const { token, user, isGuest } = useAuth();
   const { refresh: refreshCart } = useCart();
   const { showToast } = useToast();
   const { incrementProductListVersion } = useBrand();
@@ -179,11 +179,15 @@ const ProductDetailScreen = () => {
 
   // ── Actions ──────────────────────────────────
   const toggleWishlist = async () => {
-    if (!token) {
-      Alert.alert("Login Required", "Sign in to save items.", [
-        { text: "Cancel", style: "cancel" },
-        { text: "Sign In", onPress: () => router.push("/auth/login") },
-      ]);
+    if (!token || isGuest) {
+      Alert.alert(
+        "Account Required",
+        "Create an account to save items to your wishlist.",
+        [
+          { text: "Cancel", style: "cancel" },
+          { text: "Sign Up", onPress: () => router.push("/auth/register") },
+        ],
+      );
       return;
     }
     setWishlistLoading(true);
@@ -648,14 +652,6 @@ const ProductDetailScreen = () => {
               </TouchableOpacity>
             </View>
 
-            {/* Counter chip */}
-            {displayImages.length > 1 && (
-              <View style={[styles.counterChip, { backgroundColor: colors.surfaceOverlay }]}>
-                <Text style={[styles.counterChipText, { color: colors.primaryForeground }]}>
-                  {selectedImage + 1}/{displayImages.length}
-                </Text>
-              </View>
-            )}
           </View>
 
           {/* Thumbnail row */}

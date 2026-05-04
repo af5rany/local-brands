@@ -10,8 +10,8 @@ import { JwtStrategy } from './jwt.strategy';
 import { LocalStrategy } from './local.strategy';
 import { RolesGuard } from './roles.guard';
 import { JwtAuthGuard } from './jwt-auth.guard';
-import { GuestAuthGuard } from './guest-auth.guard';
 import { RegisteredUsersOnlyGuard } from './registered-users-only.guard';
+import { GuestCleanupService } from './guest-cleanup.service';
 import { SocialAuth } from './social-auth.entity';
 
 @Module({
@@ -30,15 +30,14 @@ import { SocialAuth } from './social-auth.entity';
     JwtStrategy,
     RolesGuard,
     JwtAuthGuard,
-    GuestAuthGuard,
     RegisteredUsersOnlyGuard,
+    GuestCleanupService,
   ],
   controllers: [AuthController],
   exports: [
     AuthService,
     RolesGuard,
     JwtAuthGuard,
-    GuestAuthGuard,
     RegisteredUsersOnlyGuard,
     JwtModule,
   ],

@@ -187,7 +187,7 @@ const Figure: React.FC<FigureProps> = ({
 };
 
 interface ShopByLookProps {
-  scrollY: Animated.Value;
+  scrollY?: Animated.Value;
 }
 
 const ShopByLook: React.FC<ShopByLookProps> = ({ scrollY }) => {
@@ -223,11 +223,14 @@ const ShopByLook: React.FC<ShopByLookProps> = ({ scrollY }) => {
   }, []);
 
   useEffect(() => {
+    if (!scrollY) {
+      setTriggered(true);
+      return;
+    }
     const id = scrollY.addListener(({ value }) => {
       if (triggered) return;
       if (containerY.current === null) return;
-      // Trigger when the section scrolls into the bottom ~80% of the viewport
-      const windowHeight = 700; // conservative viewport estimate
+      const windowHeight = 700;
       if (value + windowHeight > containerY.current) {
         setTriggered(true);
         scrollY.removeListener(id);

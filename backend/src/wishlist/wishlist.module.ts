@@ -6,9 +6,11 @@ import { WishlistService } from './wishlist.service';
 import { User } from '../users/user.entity';
 import { Product } from '../products/product.entity';
 import { Wishlist } from './wishlist.entity';
+import { AuthModule } from '../auth/auth.module';
+import { UsersModule } from '../users/users.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Wishlist, User, Product])],
+  imports: [TypeOrmModule.forFeature([Wishlist, User, Product]), AuthModule, UsersModule],
   controllers: [WishlistController],
   providers: [WishlistService],
   exports: [WishlistService],

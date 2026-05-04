@@ -18,6 +18,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useCart } from "@/context/CartContext";
 import getApiUrl from "@/helpers/getApiUrl";
 import Header from "@/components/Header";
+import GuestBanner from "@/components/GuestBanner";
 
 const COLORS = {
   background: "#f9f9f9",
@@ -297,6 +298,7 @@ const CheckoutScreen = () => {
     <SafeAreaView style={styles.safeArea} edges={["top", "bottom"]}>
       <Header showBack={true} />
       <MarqueeStrip />
+      <GuestBanner />
 
       <ScrollView
         style={styles.scroll}

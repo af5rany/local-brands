@@ -64,11 +64,6 @@ const PinCard: React.FC<{
           style={[styles.pinImage, { height: imageHeight }]}
           resizeMode="cover"
         />
-        {post.images.length > 1 && (
-          <View style={[styles.multiImageBadge, { backgroundColor: colors.surfaceOverlay }]}>
-            <Ionicons name="copy-outline" size={12} color={colors.textInverse} />
-          </View>
-        )}
       </View>
 
       <View style={styles.pinInfo}>

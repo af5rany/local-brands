@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from "react";
+import React, { useState, useCallback, useRef, useEffect } from "react";
 import {
   View,
   Text,
@@ -34,7 +34,7 @@ import Animated, {
   withDelay,
   runOnJS,
 } from "react-native-reanimated";
-import { Gesture, GestureDetector } from "react-native-gesture-handler";
+import { Gesture, GestureDetector, GestureHandlerRootView } from "react-native-gesture-handler";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const PRODUCT_CARD_WIDTH = 150;
@@ -55,7 +55,31 @@ export default function PostDetailScreen() {
   const [hasMoreComments, setHasMoreComments] = useState(true);
   const [imageIndex, setImageIndex] = useState(0);
   const [activePinProductId, setActivePinProductId] = useState<number | null>(null);
+  const [imageHeight, setImageHeight] = useState(SCREEN_WIDTH);
   const inputRef = useRef<TextInput>(null);
+
+  // Compute natural image height from first image
+  useEffect(() => {
+    if (post?.images?.[0]) {
+      Image.getSize(post.images[0], (w, h) => {
+        const scaled = (h / w) * SCREEN_WIDTH;
+        setImageHeight(Math.min(scaled, SCREEN_WIDTH * 1.5));
+      });
+    }
+  }, [post?.images]);
+
+  // Pinch-to-zoom
+  const scale = useSharedValue(1);
+  const savedScale = useSharedValue(1);
+  const pinchGesture = Gesture.Pinch()
+    .onUpdate((e) => { scale.value = Math.max(1, savedScale.value * e.scale); })
+    .onEnd(() => {
+      if (scale.value < 1) scale.value = withSpring(1);
+      savedScale.value = scale.value;
+    });
+  const zoomStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
 
   // Double-tap heart animation
   const heartScale = useSharedValue(0);
@@ -138,9 +162,9 @@ export default function PostDetailScreen() {
 
   const doubleTap = Gesture.Tap()
     .numberOfTaps(2)
-    .onEnd(() => {
-      runOnJS(handleDoubleTapLike)();
-    });
+    .onEnd(() => { runOnJS(handleDoubleTapLike)(); });
+
+  const composedGesture = Gesture.Simultaneous(doubleTap, pinchGesture);
 
   const handleSubmitComment = async () => {
     if (!commentText.trim() || submitting) return;
@@ -213,6 +237,32 @@ export default function PostDetailScreen() {
     ]);
   };
 
+  const canDeletePost = post && user && (
+    user.role === "admin" || user.id === post.author?.id
+  );
+
+  const handleDeletePost = () => {
+    Alert.alert("Delete Post", "Remove this post permanently?", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Delete",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            const res = await fetch(`${getApiUrl()}/feed/posts/${postId}`, {
+              method: "DELETE",
+              headers: { Authorization: `Bearer ${token}` },
+            });
+            if (!res.ok) throw new Error("Failed");
+            router.back();
+          } catch (e: any) {
+            Alert.alert("Error", e.message);
+          }
+        },
+      },
+    ]);
+  };
+
   const canDeleteComment = (comment: any) => {
     if (!user) return false;
     if (user.role === "admin") return true;
@@ -269,54 +319,49 @@ export default function PostDetailScreen() {
         ListHeaderComponent={
           <>
             {/* Brand header */}
-            <TouchableOpacity
-              style={styles.cardHeader}
-              onPress={() => router.push(`/brands/${post.brand.id}` as any)}
-              activeOpacity={0.7}
-            >
-              {post.brand.logo ? (
-                <Image
-                  source={{ uri: post.brand.logo }}
-                  style={styles.brandAvatar}
-                />
-              ) : (
-                <View
-                  style={[
-                    styles.brandAvatar,
-                    { backgroundColor: colors.surfaceRaised },
-                  ]}
-                >
-                  <Text style={[styles.brandInitial, { color: colors.text }]}>
-                    {post.brand.name?.charAt(0)}
+            <View style={styles.cardHeader}>
+              <TouchableOpacity
+                style={{ flexDirection: "row", alignItems: "center", flex: 1 }}
+                onPress={() => router.push(`/brands/${post.brand.id}` as any)}
+                activeOpacity={0.7}
+              >
+                {post.brand.logo ? (
+                  <Image source={{ uri: post.brand.logo }} style={styles.brandAvatar} />
+                ) : (
+                  <View style={[styles.brandAvatar, { backgroundColor: colors.surfaceRaised }]}>
+                    <Text style={[styles.brandInitial, { color: colors.text }]}>
+                      {post.brand.name?.charAt(0)}
+                    </Text>
+                  </View>
+                )}
+                <View style={styles.headerInfo}>
+                  <Text style={[styles.brandName, { color: colors.text }]}>
+                    {post.brand.name}
                   </Text>
                 </View>
-              )}
-              <View style={styles.headerInfo}>
-                <Text style={[styles.brandName, { color: colors.text }]}>
-                  {post.brand.name}
-                </Text>
-              </View>
+              </TouchableOpacity>
               <TouchableOpacity
-                onPress={() =>
-                  Share.share({
-                    title: post.brand.name,
-                    message: `${post.caption || post.brand.name}`.trim(),
-                  })
-                }
+                onPress={() => Share.share({ title: post.brand.name, message: `${post.caption || post.brand.name}`.trim() })}
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                style={{ marginRight: 8 }}
               >
                 <Ionicons name="share-outline" size={20} color={colors.textSecondary} />
               </TouchableOpacity>
-            </TouchableOpacity>
+              {canDeletePost && (
+                <TouchableOpacity onPress={handleDeletePost} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                  <Ionicons name="trash-outline" size={20} color={colors.danger} />
+                </TouchableOpacity>
+              )}
+            </View>
 
-            {/* Images with double-tap to like */}
-            <GestureDetector gesture={doubleTap}>
+            {/* Images with double-tap to like + pinch-to-zoom */}
+            <GestureDetector gesture={composedGesture}>
               <Animated.View>
                 {post.images.length === 1 ? (
                   <View style={styles.imageContainer}>
-                    <Image
+                    <Animated.Image
                       source={{ uri: post.images[0] }}
-                      style={[styles.postImage, { backgroundColor: colors.borderLight }]}
+                      style={[styles.postImage, { height: imageHeight, backgroundColor: colors.borderLight }, zoomStyle]}
                       resizeMode="cover"
                     />
                     {/* Product pin overlays */}
@@ -381,18 +426,14 @@ export default function PostDetailScreen() {
                       pagingEnabled
                       showsHorizontalScrollIndicator={false}
                       onMomentumScrollEnd={(e) => {
-                        setImageIndex(
-                          Math.round(
-                            e.nativeEvent.contentOffset.x / SCREEN_WIDTH,
-                          ),
-                        );
+                        setImageIndex(Math.round(e.nativeEvent.contentOffset.x / SCREEN_WIDTH));
                       }}
                     >
                       {post.images.map((uri: string, i: number) => (
-                        <Image
+                        <Animated.Image
                           key={i}
                           source={{ uri }}
-                          style={[styles.postImage, { backgroundColor: colors.borderLight }]}
+                          style={[styles.postImage, { height: imageHeight, backgroundColor: colors.borderLight }, zoomStyle]}
                           resizeMode="cover"
                         />
                       ))}
@@ -768,8 +809,7 @@ const styles = StyleSheet.create({
   },
   postImage: {
     width: SCREEN_WIDTH,
-    height: SCREEN_WIDTH,
-    // backgroundColor set dynamically via theme
+    // height set dynamically from image aspect ratio
   },
   heartOverlay: {
     position: "absolute",
