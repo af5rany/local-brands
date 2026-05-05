@@ -11,7 +11,7 @@ interface ThemeContextType {
 }
 
 const ThemeContext = createContext<ThemeContextType>({
-  preference: "system",
+  preference: "light",
   scheme: "light",
   setPreference: () => {},
 });
@@ -24,13 +24,15 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   const systemScheme = useColorScheme() ?? "light";
-  const [preference, setPreferenceState] = useState<ThemePreference>("system");
+  const [preference, setPreferenceState] = useState<ThemePreference>("light");
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
     AsyncStorage.getItem(STORAGE_KEY).then((val) => {
       if (val === "light" || val === "dark" || val === "system") {
         setPreferenceState(val);
+      } else {
+        setPreferenceState("light");
       }
       setLoaded(true);
     });

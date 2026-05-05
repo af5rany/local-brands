@@ -166,6 +166,11 @@ const ShopScreen = () => {
   const { register, unregister } = useScrollToTop();
   const flatListRef = useRef<FlatList>(null);
 
+  useEffect(() => {
+    register("shop", () => flatListRef.current?.scrollToOffset({ offset: 0, animated: true }));
+    return () => unregister("shop");
+  }, []);
+
   // ── State ──────────────────────────────────────────
   // Initialize gender directly from param so first fetch uses it
   const [selectedGender, setSelectedGender] = useState<string>(() => {
@@ -355,11 +360,6 @@ const ShopScreen = () => {
       if (GENDERS.includes(n)) setSelectedGender(n);
     }
   }, [gender]);
-
-  useEffect(() => {
-    register("shop", () => flatListRef.current?.scrollToOffset({ offset: 0, animated: true }));
-    return () => unregister("shop");
-  }, []);
 
   // ── Wishlist ───────────────────────────────────────
   const fetchWishlist = useCallback(async () => {

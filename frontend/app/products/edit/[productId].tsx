@@ -21,6 +21,7 @@ import { Dropdown } from "react-native-element-dropdown";
 import { useThemeColor } from "@/hooks/useThemeColor";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/context/AuthContext";
+import { useBrand } from "@/context/BrandContext";
 import { Product } from "@/types/product";
 import { useCloudinaryUpload } from "@/hooks/useCloudinaryUpload";
 import { ImageUploadProgress } from "@/components/ImageUploadProgress";
@@ -68,6 +69,7 @@ function detectProductType(name: string): string | null {
 const EditProductScreen = () => {
   const router = useRouter();
   const { token } = useAuth();
+  const { invalidateProduct, incrementProductListVersion } = useBrand();
   const { productId } = useLocalSearchParams();
 
   const backgroundColor = useThemeColor({}, "background");
@@ -300,6 +302,8 @@ const EditProductScreen = () => {
       });
 
       if (response.ok) {
+        invalidateProduct(Number(productId));
+        incrementProductListVersion();
         Alert.alert("Success", "Product updated successfully!", [
           { text: "OK", onPress: () => router.back() },
         ]);

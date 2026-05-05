@@ -1,3 +1,14 @@
+
+i have too much issues with alignments in different phone screens and different OS , is it has to do with SafeAreaView? if yes change all occurances of SafeAreaView that are depricated, if it will make problem
+add sign in as guest button as it is not there
+'/Users/f5rany/Documenests/Work/local-brands/frontend/app/products/[productId].tsx' why here when scrolling down the header is not getting hide, it is sticky at the top, and show that the product is soldout in product details screen
+When you tap on the search bar, the app dimensions change and it shifts way up.
+
+
+done - makr the default light mode /Users/f5rany/Documents/Work/local-brands/frontend/app/profile/settings.tsx
+done - revert the logic of ScrollToTop again from all pag
+done - pull up for refresh
+done - in brands screen remove load more and make it automatically fetch more data
 done - If you scroll back to the end, it logs you out.
 done - If I'm adding a product, the publish button is below the mobile navigation bar.
 done - The like action in the shop product card is very slow.
@@ -13,7 +24,6 @@ done - The brands section is empty even though I've added a brand.
 done - Make any image pinch-to-zoom.
 done - Products that are out of stock aren't labeled "Sold Out."
 
-When you tap on the search bar, the app dimensions change and it shifts way up.
 
 Try On isn't working.
 Image search isn't accurate — it returns irrelevant results.

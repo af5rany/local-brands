@@ -204,17 +204,22 @@ const HomeScreen = () => {
   const router = useRouter();
   const { token } = useAuth();
   const tabBarHeight = useBottomTabBarHeight();
-  const insets = useSafeAreaInsets();
   const colors = useThemeColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
 
   const { ids: recentIds, clearProducts: clearRecentlyViewed } = useRecentlyViewed();
   const [recentProducts, setRecentProducts] = useState<any[]>([]);
+  const insets = useSafeAreaInsets();
 
   const { isConnected } = useNetwork();
   const { reportScroll } = useHeaderVisibility();
   const { register, unregister } = useScrollToTop();
-  const mainScrollRef = useRef<ScrollView>(null);
+  const scrollViewRef = useRef<ScrollView>(null);
+
+  useEffect(() => {
+    register("index", () => scrollViewRef.current?.scrollTo({ y: 0, animated: true }));
+    return () => unregister("index");
+  }, []);
   const [brands, setBrands] = useState<Brand[]>(FALLBACK_BRANDS);
   const [stats, setStats] = useState({ brands: 0, products: 0 });
   const [feedPosts, setFeedPosts] = useState<typeof FALLBACK_FEED>([]);
@@ -247,11 +252,6 @@ const HomeScreen = () => {
     startSpotlightTimer();
     return () => { if (spotlightAutoTimer.current) clearInterval(spotlightAutoTimer.current); };
   }, [startSpotlightTimer]);
-
-  useEffect(() => {
-    register("index", () => mainScrollRef.current?.scrollTo({ y: 0, animated: true }));
-    return () => unregister("index");
-  }, []);
 
   const onSpotlightSwipe = useCallback((e: NativeSyntheticEvent<NativeScrollEvent>) => {
     const screenW = Dimensions.get("window").width;
@@ -414,7 +414,7 @@ const HomeScreen = () => {
     <View style={styles.root}>
       {/* ── Scrollable content (drop bar + header scroll away with content) ── */}
       <ScrollView
-        ref={mainScrollRef}
+        ref={scrollViewRef}
         style={styles.scroll}
         contentContainerStyle={{ paddingBottom: tabBarHeight }}
         showsVerticalScrollIndicator={false}

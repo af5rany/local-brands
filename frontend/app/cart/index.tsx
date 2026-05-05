@@ -11,6 +11,7 @@ import {
   Animated,
   Easing,
   ScrollView,
+  RefreshControl,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter, useFocusEffect } from "expo-router";
@@ -84,6 +85,7 @@ const CartScreen = () => {
   const { isConnected } = useNetwork();
   const [cart, setCart] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [updatingId, setUpdatingId] = useState<number | null>(null);
 
   const fetchCart = useCallback(async () => {
@@ -102,6 +104,12 @@ const CartScreen = () => {
       setLoading(false);
     }
   }, [token]);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await fetchCart();
+    setRefreshing(false);
+  }, [fetchCart]);
 
   useFocusEffect(
     useCallback(() => {
@@ -313,6 +321,9 @@ const CartScreen = () => {
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
       >
         <View style={styles.pageTitle}>
           <Text style={styles.collectionHeadline}>MY COLLECTION</Text>

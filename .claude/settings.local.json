@@ -114,7 +114,8 @@
       "Bash(xargs cat *)",
       "Bash(cat docker-compose.yml)",
       "Bash(cat docker-compose.yaml)",
-      "Bash(docker run *)"
+      "Bash(docker run *)",
+      "Bash(claude config *)"
     ]
   }
 }

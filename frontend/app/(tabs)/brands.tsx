@@ -115,9 +115,9 @@ const BrandsScreen = () => {
           setBrandsData((prev) =>
             prev
               ? {
-                  ...data,
-                  items: [...prev.items, ...data.items],
-                }
+                ...data,
+                items: [...prev.items, ...data.items],
+              }
               : data,
           );
         } else {
@@ -151,7 +151,7 @@ const BrandsScreen = () => {
         const data = await response.json();
         setMyBrands(Array.isArray(data) ? data : []);
       }
-    } catch {}
+    } catch { }
   }, [token, isBrandOwner]);
 
   // Fetch followed brands (customer feature)
@@ -699,10 +699,10 @@ const BrandsScreen = () => {
         filters.location ||
         filters.ownerId ||
         filters.status) && (
-        <TouchableOpacity style={styles.clearButton} onPress={clearFilters}>
-          <Text style={styles.clearButtonText}>CLEAR FILTERS</Text>
-        </TouchableOpacity>
-      )}
+          <TouchableOpacity style={styles.clearButton} onPress={clearFilters}>
+            <Text style={styles.clearButtonText}>CLEAR FILTERS</Text>
+          </TouchableOpacity>
+        )}
     </View>
   );
 

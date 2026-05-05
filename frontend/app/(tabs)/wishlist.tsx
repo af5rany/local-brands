@@ -39,9 +39,6 @@ const WishlistTab = () => {
   const colors = useThemeColors();
   const { isConnected } = useNetwork();
   const { reportScroll } = useHeaderVisibility();
-  const { register, unregister } = useScrollToTop();
-  const productsListRef = useRef<FlatList>(null);
-  const brandsListRef = useRef<FlatList>(null);
   const [activeTab, setActiveTab] = useState<Tab>("products");
   const [wishlist, setWishlist] = useState<any[]>([]);
   const [followedBrands, setFollowedBrands] = useState<FollowedBrand[]>([]);
@@ -52,6 +49,17 @@ const WishlistTab = () => {
   const { width } = useWindowDimensions();
   const columnCount = width > 600 ? 3 : 2;
   const itemWidth = (width - 48) / columnCount;
+  const { register, unregister } = useScrollToTop();
+  const productsRef = useRef<FlatList>(null);
+  const brandsRef = useRef<FlatList>(null);
+
+  useEffect(() => {
+    register("wishlist", () => {
+      if (activeTab === "products") productsRef.current?.scrollToOffset({ offset: 0, animated: true });
+      else brandsRef.current?.scrollToOffset({ offset: 0, animated: true });
+    });
+    return () => unregister("wishlist");
+  }, [activeTab]);
 
   const fetchWishlist = useCallback(async () => {
     if (!token) {
@@ -97,17 +105,6 @@ const WishlistTab = () => {
     fetchWishlist();
     fetchFollowedBrands();
   }, [fetchWishlist, fetchFollowedBrands]);
-
-  useEffect(() => {
-    register("wishlist", () => {
-      if (activeTab === "products") {
-        productsListRef.current?.scrollToOffset({ offset: 0, animated: true });
-      } else {
-        brandsListRef.current?.scrollToOffset({ offset: 0, animated: true });
-      }
-    });
-    return () => unregister("wishlist");
-  }, [activeTab]);
 
   useFocusEffect(
     useCallback(() => {
@@ -351,7 +348,7 @@ const WishlistTab = () => {
             </View>
           ) : (
             <FlatList
-              ref={productsListRef}
+              ref={productsRef}
               data={wishlist}
               renderItem={renderProductItem}
               keyExtractor={(item) => item.id.toString()}
@@ -396,7 +393,7 @@ const WishlistTab = () => {
             </View>
           ) : (
             <FlatList
-              ref={brandsListRef}
+              ref={brandsRef}
               data={followedBrands}
               renderItem={renderBrandItem}
               keyExtractor={(item) => item.id.toString()}

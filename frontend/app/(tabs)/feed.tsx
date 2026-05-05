@@ -224,13 +224,22 @@ export default function FeedScreen() {
   const colors = useThemeColors();
   const tabBarHeight = useBottomTabBarHeight();
   const { reportScroll } = useHeaderVisibility();
-  const { register, unregister } = useScrollToTop();
-  const forYouRef = useRef<FlatList>(null);
-  const followingRef = useRef<ScrollView>(null);
   const { token, user } = useAuth();
   const { isConnected } = useNetwork();
 
+  const { register, unregister } = useScrollToTop();
+  const forYouRef = useRef<FlatList>(null);
+  const followingRef = useRef<ScrollView>(null);
+
   const [activeTab, setActiveTab] = useState<ActiveTab>("forYou");
+
+  useEffect(() => {
+    register("feed", () => {
+      if (activeTab === "forYou") forYouRef.current?.scrollToOffset({ offset: 0, animated: true });
+      else followingRef.current?.scrollTo({ y: 0, animated: true });
+    });
+    return () => unregister("feed");
+  }, [activeTab]);
   const [posts, setPosts] = useState<PostData[]>([]);
   const [suggestedProducts, setSuggestedProducts] = useState<SuggestedProduct[]>([]);
   const [loading, setLoading] = useState(true);
@@ -255,17 +264,6 @@ export default function FeedScreen() {
       );
     }
   }, [posts]);
-
-  useEffect(() => {
-    register("feed", () => {
-      if (activeTab === "forYou") {
-        forYouRef.current?.scrollToOffset({ offset: 0, animated: true });
-      } else {
-        followingRef.current?.scrollTo({ y: 0, animated: true });
-      }
-    });
-    return () => unregister("feed");
-  }, [activeTab]);
 
   const fetchSuggestedProducts = useCallback(async () => {
     try {

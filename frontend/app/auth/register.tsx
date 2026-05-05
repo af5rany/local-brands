@@ -51,7 +51,7 @@ const RegisterScreen = () => {
   const { handleGoogle, handleFacebook, googleLoading, facebookLoading } =
     useSocialAuth((token) => {
       login(token);
-      router.replace("/(tabs)");
+      router.dismissAll();
     });
 
   const validateForm = () => {
@@ -126,8 +126,8 @@ const RegisterScreen = () => {
 
       if (isGuest) {
         // Cart is preserved — same user id, just converted
-        await login(data.token);
-        router.replace("/(tabs)");
+        login(data.token);
+        router.dismissAll();
       } else {
         Alert.alert(
           "Success",

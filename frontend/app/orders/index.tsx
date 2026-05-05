@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Image,
+  RefreshControl,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
@@ -27,6 +28,7 @@ const OrdersScreen = () => {
   const { isConnected } = useNetwork();
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   const fetchOrders = useCallback(async () => {
     if (!token) return;
@@ -44,6 +46,12 @@ const OrdersScreen = () => {
       setLoading(false);
     }
   }, [token]);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await fetchOrders();
+    setRefreshing(false);
+  }, [fetchOrders]);
 
   useEffect(() => {
     fetchOrders();
@@ -220,6 +228,9 @@ const OrdersScreen = () => {
               <Text style={styles.pageTitle}>MY ORDERS</Text>
               <View style={styles.titleAccent} />
             </View>
+          }
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
           }
         />
       )}

@@ -80,8 +80,6 @@ export const useImageSearch = (): ImageSearchResult => {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ["images"],
       quality: 0.8,
-      allowsEditing: true,
-      aspect: [1, 1],
     });
     if (result.canceled || !result.assets?.[0]) return null;
     return searchByImage(result.assets[0].uri);
@@ -95,8 +93,6 @@ export const useImageSearch = (): ImageSearchResult => {
     }
     const result = await ImagePicker.launchCameraAsync({
       quality: 0.8,
-      allowsEditing: true,
-      aspect: [1, 1],
     });
     if (result.canceled || !result.assets?.[0]) return null;
     return searchByImage(result.assets[0].uri);

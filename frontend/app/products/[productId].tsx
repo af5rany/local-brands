@@ -49,7 +49,7 @@ const ProductDetailScreen = () => {
   const { token, user, isGuest } = useAuth();
   const { refresh: refreshCart } = useCart();
   const { showToast } = useToast();
-  const { incrementProductListVersion } = useBrand();
+  const { incrementProductListVersion, productVersions } = useBrand();
   const userRole = user?.role || user?.userRole;
   const insets = useSafeAreaInsets();
   const colors = useThemeColors();
@@ -175,7 +175,7 @@ const ProductDetailScreen = () => {
     setSelectedColor(null);
     setSelectedSize(null);
     setSelectedImage(0);
-  }, [productId, token]);
+  }, [productId, token, productVersions[Number(productId)]]);
 
   // ── Actions ──────────────────────────────────
   const toggleWishlist = async () => {

@@ -35,7 +35,7 @@ const LoginScreen = () => {
   const { handleGoogle, handleFacebook, googleLoading, facebookLoading } =
     useSocialAuth((token) => {
       login(token);
-      router.replace("/(tabs)");
+      router.dismissAll();
     });
 
   const handleLogin = async () => {
@@ -57,8 +57,8 @@ const LoginScreen = () => {
         throw new Error(err?.message || "Invalid credentials");
       }
       const { token } = await res.json();
-      await login(token);
-      router.replace("/(tabs)");
+      login(token);
+      router.dismissAll();
     } catch (err: any) {
       Alert.alert("Login Error", err.message || "Something went wrong");
     } finally {
@@ -80,7 +80,7 @@ const LoginScreen = () => {
       }
       const { token } = await res.json();
       await login(token);
-      router.replace("/(tabs)");
+      router.dismissAll();
       setTimeout(() => {
         Alert.alert(
           "Welcome Guest!",

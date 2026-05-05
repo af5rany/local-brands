@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo, useCallback } from "react";
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   Image,
   Alert,
+  RefreshControl,
 } from "react-native";
 import * as Print from "expo-print";
 import * as Sharing from "expo-sharing";
@@ -56,39 +57,47 @@ const OrderDetailScreen = () => {
   const [order, setOrder] = useState<any>(null);
   const [history, setHistory] = useState<StatusHistoryItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [trackingData, setTrackingData] = useState<any>(null);
   const [trackingLoading, setTrackingLoading] = useState(false);
   const [showTracking, setShowTracking] = useState(false);
 
-  useEffect(() => {
-    const fetchOrder = async () => {
-      if (!token || !orderId) return;
-      try {
-        const [orderRes, historyRes] = await Promise.all([
-          fetch(`${getApiUrl()}/orders/${orderId}`, {
-            headers: { Authorization: `Bearer ${token}` },
-          }),
-          fetch(`${getApiUrl()}/orders/${orderId}/history`, {
-            headers: { Authorization: `Bearer ${token}` },
-          }),
-        ]);
+  const fetchOrder = useCallback(async () => {
+    if (!token || !orderId) return;
+    try {
+      const [orderRes, historyRes] = await Promise.all([
+        fetch(`${getApiUrl()}/orders/${orderId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+        fetch(`${getApiUrl()}/orders/${orderId}/history`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+      ]);
 
-        if (orderRes.ok) {
-          const orderData = await orderRes.json();
-          setOrder(orderData);
-        }
-        if (historyRes.ok) {
-          const historyData = await historyRes.json();
-          setHistory(historyData);
-        }
-      } catch (error) {
-        console.error("Error fetching order details:", error);
-      } finally {
-        setLoading(false);
+      if (orderRes.ok) {
+        const orderData = await orderRes.json();
+        setOrder(orderData);
       }
-    };
-    fetchOrder();
+      if (historyRes.ok) {
+        const historyData = await historyRes.json();
+        setHistory(historyData);
+      }
+    } catch (error) {
+      console.error("Error fetching order details:", error);
+    } finally {
+      setLoading(false);
+    }
   }, [token, orderId]);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await fetchOrder();
+    setRefreshing(false);
+  }, [fetchOrder]);
+
+  useEffect(() => {
+    fetchOrder();
+  }, [fetchOrder]);
 
   const isCancelled = (status: string) =>
     status?.toUpperCase() === "CANCELLED";
@@ -273,6 +282,9 @@ const OrderDetailScreen = () => {
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
       >
         {/* ── Order header ── */}
         <View style={styles.orderHeaderBlock}>
