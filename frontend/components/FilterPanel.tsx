@@ -7,11 +7,11 @@ import {
   TouchableOpacity,
   ScrollView,
   Pressable,
-  SafeAreaView,
   TextInput,
   Dimensions,
   LayoutChangeEvent,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import Animated, {
   useSharedValue,
