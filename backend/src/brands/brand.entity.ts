@@ -37,6 +37,9 @@ export class Brand {
   logo: string;
 
   @Column({ nullable: true })
+  coverPhoto: string;
+
+  @Column({ nullable: true })
   location: string;
 
   @Column({ unique: true, nullable: true })

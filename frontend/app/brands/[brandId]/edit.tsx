@@ -39,6 +39,7 @@ const EditBrandScreen = () => {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [logoUrl, setLogoUrl] = useState("");
+  const [coverPhotoUrl, setCoverPhotoUrl] = useState("");
   const [location, setLocation] = useState("");
   const [status, setStatus] = useState<BrandStatus>(BrandStatus.DRAFT);
   const [brandMembers, setBrandMembers] = useState<BrandUser[]>([]);
@@ -73,6 +74,7 @@ const EditBrandScreen = () => {
       setName(data.name);
       setDescription(data.description || "");
       setLogoUrl(data.logo || "");
+      setCoverPhotoUrl(data.coverPhoto || "");
       setLocation(data.location || "");
       setStatus(data.status || BrandStatus.DRAFT);
       setBrandMembers(data.brandUsers || []);
@@ -170,36 +172,34 @@ const EditBrandScreen = () => {
     ]);
   };
 
-  const handleImagePick = async () => {
+  const pickImage = async (
+    aspect: [number, number],
+    onSuccess: (url: string) => void,
+  ) => {
     try {
       const permissionResult =
         await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!permissionResult.granted) {
-        Alert.alert(
-          "Permission Required",
-          "Permission to access photo library is required!",
-        );
+        Alert.alert("Permission Required", "Permission to access photo library is required!");
         return;
       }
-
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ["images"],
         allowsEditing: true,
-        aspect: [1, 1],
+        aspect,
         quality: 1,
       });
-
-      if (!result.canceled && result.assets && result.assets.length > 0) {
-        const uri = result.assets[0].uri;
-        const cloudUrl = await uploadImage(uri);
-        if (cloudUrl) {
-          setLogoUrl(cloudUrl);
-        }
+      if (!result.canceled && result.assets?.length > 0) {
+        const cloudUrl = await uploadImage(result.assets[0].uri);
+        if (cloudUrl) onSuccess(cloudUrl);
       }
     } catch (error) {
       console.error("Error picking image:", error);
     }
   };
+
+  const handleImagePick = () => pickImage([1, 1], setLogoUrl);
+  const handleCoverPhotoPick = () => pickImage([16, 9], setCoverPhotoUrl);
 
   const handleUpdateBrand = async () => {
     Keyboard.dismiss();
@@ -216,6 +216,7 @@ const EditBrandScreen = () => {
         name: name.trim(),
         description: description.trim(),
         logo: logoUrl,
+        coverPhoto: coverPhotoUrl || null,
         location: location.trim(),
         status,
       };
@@ -348,6 +349,34 @@ const EditBrandScreen = () => {
                   style={[styles.logoPlaceholderText, { color: secondary }]}
                 >
                   Tap to upload
+                </Text>
+              </View>
+            )}
+          </TouchableOpacity>
+        </View>
+
+        {/* Cover Photo */}
+        <View style={styles.section}>
+          <Text style={[styles.label, { color: secondary }]}>COVER PHOTO</Text>
+          <TouchableOpacity
+            style={[
+              styles.coverUpload,
+              { borderColor: coverPhotoUrl ? text : border, backgroundColor: inputBg },
+            ]}
+            onPress={handleCoverPhotoPick}
+          >
+            {coverPhotoUrl ? (
+              <View style={styles.logoPreviewWrap}>
+                <Image source={{ uri: coverPhotoUrl }} style={styles.logoPreview} />
+                <View style={[styles.logoOverlay, { backgroundColor: colors.text }]}>
+                  <Ionicons name="camera-outline" size={14} color={colors.background} />
+                </View>
+              </View>
+            ) : (
+              <View style={styles.logoPlaceholder}>
+                <Ionicons name="image-outline" size={28} color={secondary} />
+                <Text style={[styles.logoPlaceholderText, { color: secondary }]}>
+                  Tap to upload cover photo
                 </Text>
               </View>
             )}
@@ -781,6 +810,17 @@ const styles = StyleSheet.create({
     height: 110,
     paddingTop: 14,
     paddingBottom: 14,
+  },
+
+  // Cover Photo
+  coverUpload: {
+    height: 100,
+    borderWidth: 1,
+    borderStyle: "dashed",
+    borderRadius: 0,
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
   },
 
   // Logo

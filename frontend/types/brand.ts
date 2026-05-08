@@ -9,6 +9,7 @@ export interface Brand {
   description?: string;
   status: BrandStatus;
   logo?: string;
+  coverPhoto?: string;
   location?: string;
   brandUsers: BrandUser[];
   createdAt: string;

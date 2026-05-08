@@ -10,6 +10,8 @@ import {
   ScrollView,
   RefreshControl,
   FlatList,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
 } from "react-native";
 import { useFocusEffect, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -191,16 +193,18 @@ function useMasonryColumns(posts: PostData[], imageHeights: Record<number, numbe
   return { leftCol, rightCol };
 }
 
-// ── Tab Switcher ──
+// ── Tab Switcher — Following first, For You second ──
+const TAB_ORDER: ActiveTab[] = ["following", "forYou"];
+const TAB_LABELS: Record<ActiveTab, string> = { following: "Following", forYou: "For You" };
+
 const TabSwitcher: React.FC<{
   activeTab: ActiveTab;
   onChange: (tab: ActiveTab) => void;
   colors: any;
 }> = ({ activeTab, onChange, colors }) => (
   <View style={[styles.tabBar, { backgroundColor: colors.background, borderBottomColor: colors.borderLight }]}>
-    {(["forYou", "following"] as ActiveTab[]).map((tab) => {
+    {TAB_ORDER.map((tab) => {
       const isActive = activeTab === tab;
-      const label = tab === "forYou" ? "For You" : "Following";
       return (
         <TouchableOpacity
           key={tab}
@@ -209,7 +213,7 @@ const TabSwitcher: React.FC<{
           activeOpacity={0.7}
         >
           <Text style={[styles.tabLabel, { color: isActive ? colors.text : colors.textTertiary }, isActive && styles.tabLabelActive]}>
-            {label}
+            {TAB_LABELS[tab]}
           </Text>
           {isActive && <View style={[styles.tabUnderline, { backgroundColor: colors.text }]} />}
         </TouchableOpacity>
@@ -230,8 +234,15 @@ export default function FeedScreen() {
   const { register, unregister } = useScrollToTop();
   const forYouRef = useRef<FlatList>(null);
   const followingRef = useRef<ScrollView>(null);
+  const pagerRef = useRef<ScrollView>(null);
 
-  const [activeTab, setActiveTab] = useState<ActiveTab>("forYou");
+  const [activeTab, setActiveTab] = useState<ActiveTab>("following");
+
+  const handleTabChange = useCallback((tab: ActiveTab) => {
+    setActiveTab(tab);
+    const index = TAB_ORDER.indexOf(tab);
+    pagerRef.current?.scrollTo({ x: index * SCREEN_WIDTH, animated: true });
+  }, []);
 
   useEffect(() => {
     register("feed", () => {
@@ -373,91 +384,109 @@ export default function FeedScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <TabSwitcher activeTab={activeTab} onChange={setActiveTab} colors={colors} />
+      <TabSwitcher activeTab={activeTab} onChange={handleTabChange} colors={colors} />
 
       {loading ? (
         <View>{[0, 1, 2].map((i) => <FeedPostSkeleton key={i} />)}</View>
-      ) : activeTab === "forYou" ? (
-        /* ── FOR YOU: product grid ── */
-        <FlatList
-          ref={forYouRef}
-          data={suggestedProducts}
-          numColumns={2}
-          keyExtractor={(item) => `p-${item.id}`}
-          contentContainerStyle={[styles.productGrid, { paddingBottom: tabBarHeight }]}
-          columnWrapperStyle={styles.productRow}
-          showsVerticalScrollIndicator={false}
-          onScroll={handleScroll}
-          scrollEventThrottle={200}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}
-          renderItem={({ item }) => (
-            <ProductCard
-              product={item}
-              colors={colors}
-              onPress={(id) => router.push(`/products/${id}` as any)}
-            />
-          )}
-          ListEmptyComponent={
-            <View style={styles.empty}>
-              <Ionicons name="grid-outline" size={48} color={colors.textTertiary} />
-              <Text style={[styles.emptyTitle, { color: colors.text }]}>NOTHING HERE YET</Text>
-            </View>
-          }
-        />
       ) : (
-        /* ── FOLLOWING: posts masonry ── */
+        /* ── Horizontal pager: Following (0) | For You (1) ── */
         <ScrollView
-          ref={followingRef}
-          showsVerticalScrollIndicator={false}
-          onScroll={handleScroll}
-          scrollEventThrottle={200}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}
-          contentContainerStyle={[styles.scrollContent, { paddingBottom: tabBarHeight }]}
+          ref={pagerRef}
+          horizontal
+          pagingEnabled
+          showsHorizontalScrollIndicator={false}
+          scrollEventThrottle={16}
+          onMomentumScrollEnd={(e: NativeSyntheticEvent<NativeScrollEvent>) => {
+            const page = Math.round(e.nativeEvent.contentOffset.x / SCREEN_WIDTH);
+            setActiveTab(TAB_ORDER[page] ?? "following");
+          }}
+          style={{ flex: 1 }}
         >
-          {posts.length > 0 ? (
-            <>
-              <View style={styles.masonryRow}>
-                <View style={[styles.column, styles.columnLeft]}>
-                  {leftCol.map(({ post, height }) => (
-                    <PinCard key={post.id} post={post} imageHeight={height} colors={colors}
-                      onPress={(id) => router.push(`/feed/${id}` as any)}
-                      onLike={handleLike}
-                      onBrandPress={(id) => router.push(`/brands/${id}` as any)}
-                    />
-                  ))}
+          {/* Page 0 — Following */}
+          <View style={{ width: SCREEN_WIDTH, flex: 1 }}>
+            <ScrollView
+              ref={followingRef}
+              showsVerticalScrollIndicator={false}
+              onScroll={handleScroll}
+              scrollEventThrottle={200}
+              refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}
+              contentContainerStyle={[styles.scrollContent, { paddingBottom: tabBarHeight }]}
+            >
+              {posts.length > 0 ? (
+                <>
+                  <View style={styles.masonryRow}>
+                    <View style={[styles.column, styles.columnLeft]}>
+                      {leftCol.map(({ post, height }) => (
+                        <PinCard key={post.id} post={post} imageHeight={height} colors={colors}
+                          onPress={(id) => router.push(`/feed/${id}` as any)}
+                          onLike={handleLike}
+                          onBrandPress={(id) => router.push(`/brands/${id}` as any)}
+                        />
+                      ))}
+                    </View>
+                    <View style={styles.column}>
+                      {rightCol.map(({ post, height }) => (
+                        <PinCard key={post.id} post={post} imageHeight={height} colors={colors}
+                          onPress={(id) => router.push(`/feed/${id}` as any)}
+                          onLike={handleLike}
+                          onBrandPress={(id) => router.push(`/brands/${id}` as any)}
+                        />
+                      ))}
+                    </View>
+                  </View>
+                  {hasMore && (
+                    <ActivityIndicator style={{ paddingVertical: 20 }} color={colors.textTertiary} />
+                  )}
+                </>
+              ) : (
+                <View style={styles.empty}>
+                  <Ionicons name="images-outline" size={48} color={colors.textTertiary} />
+                  <Text style={[styles.emptyTitle, { color: colors.text }]}>FEED IS EMPTY</Text>
+                  <Text style={[styles.emptySubtitle, { color: colors.textTertiary }]}>
+                    Follow brands you love to see their posts here.
+                  </Text>
+                  <TouchableOpacity
+                    style={[styles.exploreCta, { borderColor: colors.text }]}
+                    onPress={() => router.push("/(tabs)/brands" as any)}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[styles.exploreCtaText, { color: colors.text }]}>
+                      EXPLORE BRANDS →
+                    </Text>
+                  </TouchableOpacity>
                 </View>
-                <View style={styles.column}>
-                  {rightCol.map(({ post, height }) => (
-                    <PinCard key={post.id} post={post} imageHeight={height} colors={colors}
-                      onPress={(id) => router.push(`/feed/${id}` as any)}
-                      onLike={handleLike}
-                      onBrandPress={(id) => router.push(`/brands/${id}` as any)}
-                    />
-                  ))}
-                </View>
-              </View>
-              {hasMore && (
-                <ActivityIndicator style={{ paddingVertical: 20 }} color={colors.textTertiary} />
               )}
-            </>
-          ) : (
-            <View style={styles.empty}>
-              <Ionicons name="images-outline" size={48} color={colors.textTertiary} />
-              <Text style={[styles.emptyTitle, { color: colors.text }]}>FEED IS EMPTY</Text>
-              <Text style={[styles.emptySubtitle, { color: colors.textTertiary }]}>
-                Follow brands you love to see their posts here.
-              </Text>
-              <TouchableOpacity
-                style={[styles.exploreCta, { borderColor: colors.text }]}
-                onPress={() => router.push("/(tabs)/brands" as any)}
-                activeOpacity={0.7}
-              >
-                <Text style={[styles.exploreCtaText, { color: colors.text }]}>
-                  EXPLORE BRANDS →
-                </Text>
-              </TouchableOpacity>
-            </View>
-          )}
+            </ScrollView>
+          </View>
+
+          {/* Page 1 — For You */}
+          <View style={{ width: SCREEN_WIDTH, flex: 1 }}>
+            <FlatList
+              ref={forYouRef}
+              data={suggestedProducts}
+              numColumns={2}
+              keyExtractor={(item) => `p-${item.id}`}
+              contentContainerStyle={[styles.productGrid, { paddingBottom: tabBarHeight }]}
+              columnWrapperStyle={styles.productRow}
+              showsVerticalScrollIndicator={false}
+              onScroll={handleScroll}
+              scrollEventThrottle={200}
+              refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}
+              renderItem={({ item }) => (
+                <ProductCard
+                  product={item}
+                  colors={colors}
+                  onPress={(id) => router.push(`/products/${id}` as any)}
+                />
+              )}
+              ListEmptyComponent={
+                <View style={styles.empty}>
+                  <Ionicons name="grid-outline" size={48} color={colors.textTertiary} />
+                  <Text style={[styles.emptyTitle, { color: colors.text }]}>NOTHING HERE YET</Text>
+                </View>
+              }
+            />
+          </View>
         </ScrollView>
       )}
 

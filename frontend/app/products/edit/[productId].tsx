@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useMemo } from "react";
 import {
   View,
   Text,
@@ -18,7 +18,7 @@ import * as ImagePicker from "expo-image-picker";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import getApiUrl from "@/helpers/getApiUrl";
 import { Dropdown } from "react-native-element-dropdown";
-import { useThemeColor } from "@/hooks/useThemeColor";
+import { useThemeColors } from "@/hooks/useThemeColor";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/context/AuthContext";
 import { useBrand } from "@/context/BrandContext";
@@ -27,6 +27,7 @@ import { useCloudinaryUpload } from "@/hooks/useCloudinaryUpload";
 import { ImageUploadProgress } from "@/components/ImageUploadProgress";
 import { ProductStatus } from "@/types/enums";
 import { COLOR_PALETTE, getSizesForProductType } from "@/constants/SizeChart";
+import type { ThemeColors } from "@/constants/Colors";
 
 const genderOptions = [
   { label: "Men", value: "men" },
@@ -72,24 +73,15 @@ const EditProductScreen = () => {
   const { invalidateProduct, incrementProductListVersion } = useBrand();
   const { productId } = useLocalSearchParams();
 
-  const backgroundColor = useThemeColor({}, "background");
-  const textColor = useThemeColor({}, "text");
-  const cardBackground = useThemeColor(
-    { light: "#ffffff", dark: "#1c1c1e" },
-    "background",
-  );
-  const borderColor = useThemeColor(
-    { light: "#e1e5e9", dark: "#38383a" },
-    "text",
-  );
-  const primaryColor = useThemeColor(
-    { light: "#007AFF", dark: "#0A84FF" },
-    "primary",
-  );
-  const placeholderColor = useThemeColor(
-    { light: "#8e8e93", dark: "#8e8e93" },
-    "text",
-  );
+  const colors = useThemeColors();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+
+  const backgroundColor = colors.background;
+  const textColor = colors.text;
+  const cardBackground = colors.surface;
+  const borderColor = colors.border;
+  const primaryColor = colors.primary;
+  const placeholderColor = colors.textSecondary;
 
   // State
   const [loading, setLoading] = useState(true);
@@ -404,7 +396,18 @@ const EditProductScreen = () => {
           </View>
         </TouchableOpacity>
         <Text style={[styles.navTitle, { color: textColor }]}>Edit Product</Text>
-        <View style={{ width: 40 }} />
+        <TouchableOpacity
+          onPress={handleUpdateProduct}
+          disabled={submitting}
+          activeOpacity={0.8}
+          style={[styles.saveBtn, { backgroundColor: colors.text, opacity: submitting ? 0.5 : 1 }]}
+        >
+          {submitting ? (
+            <ActivityIndicator size="small" color={colors.background} />
+          ) : (
+            <Text style={[styles.saveBtnText, { color: colors.background }]}>SAVE</Text>
+          )}
+        </TouchableOpacity>
       </View>
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -752,28 +755,13 @@ const EditProductScreen = () => {
             </View>
           </View>
 
-          <TouchableOpacity
-            style={[
-              styles.createButton,
-              submitting && styles.createButtonDisabled,
-              { backgroundColor: primaryColor },
-            ]}
-            onPress={handleUpdateProduct}
-            disabled={submitting}
-          >
-            {submitting ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text style={styles.createButtonText}>Save Product Changes</Text>
-            )}
-          </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
   container: { flex: 1 },
   center: { flex: 1, justifyContent: "center", alignItems: "center" },
   navHeader: {
@@ -792,25 +780,37 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  navTitle: { fontSize: 16, fontWeight: "700", // letterSpacing: 0.2 
-},
+  navTitle: { fontSize: 16, fontWeight: "700" },
+  saveBtn: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    justifyContent: "center",
+    alignItems: "center",
+    minWidth: 60,
+    height: 36,
+  },
+  saveBtnText: { fontSize: 12, fontWeight: "800" },
   scrollContainer: { padding: 20, paddingBottom: 60 },
-  header: { fontSize: 24, fontWeight: "bold", marginBottom: 20 },
+  header: { fontSize: 24, fontWeight: "bold", marginBottom: 20, color: colors.text },
   card: {
     borderRadius: 0,
     padding: 20,
     marginBottom: 20,
+    backgroundColor: colors.surface,
   },
-  sectionTitle: { fontSize: 18, fontWeight: "600", marginBottom: 15 },
+  sectionTitle: { fontSize: 18, fontWeight: "600", marginBottom: 15, color: colors.text },
   inputContainer: { marginBottom: 15 },
-  label: { fontSize: 14, fontWeight: "500", marginBottom: 8 },
-  required: { color: "#ff3b30" },
+  label: { fontSize: 14, fontWeight: "500", marginBottom: 8, color: colors.text },
+  required: { color: colors.danger },
   input: {
     height: 50,
     borderWidth: 1,
     borderRadius: 0,
     paddingHorizontal: 15,
     fontSize: 16,
+    borderColor: colors.border,
+    color: colors.text,
+    backgroundColor: colors.surfaceRaised,
   },
   textArea: { height: 100, textAlignVertical: "top" },
   rowContainer: { flexDirection: "row", gap: 10 },
@@ -820,6 +820,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 0,
     paddingHorizontal: 15,
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceRaised,
   },
   colorPaletteContainer: {
     flexDirection: "row",
@@ -834,12 +836,12 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     borderWidth: 1,
-    borderColor: "#ccc",
+    borderColor: colors.border,
   },
-  selectedColor: { borderWidth: 3, borderColor: "#000" },
+  selectedColor: { borderWidth: 3, borderColor: colors.text },
   imageGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
   imageContainer: { position: "relative" },
-  imagePreview: { width: 70, height: 70, borderRadius: 0 },
+  imagePreview: { width: 70, height: 70, borderRadius: 0, backgroundColor: colors.surfaceRaised },
   removeImageButton: {
     position: "absolute",
     top: -5,

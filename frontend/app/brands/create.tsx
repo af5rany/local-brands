@@ -39,6 +39,7 @@ const CreateBrandScreen = () => {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [logoUrl, setLogoUrl] = useState("");
+  const [coverPhotoUrl, setCoverPhotoUrl] = useState("");
   const [owner, setOwner] = useState(user?.id ? String(user.id) : "");
   const [location, setLocation] = useState("");
   const [users, setUsers] = useState<{ label: string; value: string; role: string }[]>([]);
@@ -77,7 +78,10 @@ const CreateBrandScreen = () => {
     fetchUsers();
   }, []);
 
-  const handleImagePick = async () => {
+  const pickImage = async (
+    aspect: [number, number],
+    onSuccess: (url: string) => void,
+  ) => {
     try {
       const permissionResult =
         await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -88,25 +92,23 @@ const CreateBrandScreen = () => {
         );
         return;
       }
-
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ["images"],
         allowsEditing: true,
-        aspect: [1, 1],
+        aspect,
         quality: 1,
       });
-
       if (!result.canceled && result.assets && result.assets.length > 0) {
-        const uri = result.assets[0].uri;
-        const cloudUrl = await uploadImage(uri);
-        if (cloudUrl) {
-          setLogoUrl(cloudUrl);
-        }
+        const cloudUrl = await uploadImage(result.assets[0].uri);
+        if (cloudUrl) onSuccess(cloudUrl);
       }
     } catch (error) {
       console.error("Error picking image:", error);
     }
   };
+
+  const handleImagePick = () => pickImage([1, 1], setLogoUrl);
+  const handleCoverPhotoPick = () => pickImage([16, 9], setCoverPhotoUrl);
 
   const handleCreateBrand = async () => {
     Keyboard.dismiss();
@@ -135,6 +137,7 @@ const CreateBrandScreen = () => {
         name: name.trim(),
         description: description.trim(),
         logo: logoUrl,
+        coverPhoto: coverPhotoUrl || null,
         ownerId: Number(owner),
         location: location.trim(),
       };
@@ -259,6 +262,34 @@ const CreateBrandScreen = () => {
                 <Ionicons name="image-outline" size={28} color={colors.textSecondary} />
                 <Text style={[styles.logoPlaceholderText, { color: colors.textSecondary }]}>
                   Tap to upload
+                </Text>
+              </View>
+            )}
+          </TouchableOpacity>
+        </View>
+
+        {/* Cover Photo */}
+        <View style={styles.section}>
+          <Text style={[styles.label, { color: colors.textSecondary }]}>COVER PHOTO</Text>
+          <TouchableOpacity
+            style={[
+              styles.coverUpload,
+              { borderColor: coverPhotoUrl ? colors.text : colors.border, backgroundColor: colors.surfaceRaised },
+            ]}
+            onPress={handleCoverPhotoPick}
+          >
+            {coverPhotoUrl ? (
+              <View style={styles.logoPreviewWrap}>
+                <Image source={{ uri: coverPhotoUrl }} style={styles.logoPreview} />
+                <View style={[styles.logoOverlay, { backgroundColor: colors.text }]}>
+                  <Ionicons name="camera-outline" size={14} color={colors.textInverse} />
+                </View>
+              </View>
+            ) : (
+              <View style={styles.logoPlaceholder}>
+                <Ionicons name="image-outline" size={28} color={colors.textSecondary} />
+                <Text style={[styles.logoPlaceholderText, { color: colors.textSecondary }]}>
+                  Tap to upload cover photo
                 </Text>
               </View>
             )}
@@ -570,6 +601,17 @@ const styles = StyleSheet.create({
     height: 110,
     paddingTop: 14,
     paddingBottom: 14,
+  },
+
+  // Cover Photo
+  coverUpload: {
+    height: 100,
+    borderWidth: 1,
+    borderStyle: "dashed",
+    borderRadius: 0,
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
   },
 
   // Logo

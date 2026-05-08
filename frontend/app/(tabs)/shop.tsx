@@ -14,6 +14,7 @@ import {
   Alert,
   ActionSheetIOS,
   Platform,
+  Dimensions,
 } from "react-native";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -69,7 +70,9 @@ const MonolithProductCard = React.memo(
       : item.mainImage
         ? [item.mainImage]
         : [];
-    const imageUri = images[0] ?? null;
+
+    const [activeIndex, setActiveIndex] = useState(0);
+    const [imgWidth, setImgWidth] = useState(0);
 
     const hasDiscount = item.salePrice != null && item.salePrice < item.price;
     const isSoldOut = (item as any).stock === 0 && !((item as any).productVariants?.some((v: any) => v.stock > 0));
@@ -87,15 +90,46 @@ const MonolithProductCard = React.memo(
         activeOpacity={0.9}
       >
         {/* Image */}
-        <View style={cardStyles.imageWrap}>
-          {imageUri ? (
-            <Image
-              source={{ uri: imageUri }}
-              style={cardStyles.image}
-              resizeMode="cover"
+        <View
+          style={cardStyles.imageWrap}
+          onLayout={(e) => setImgWidth(e.nativeEvent.layout.width)}
+        >
+          {images.length > 1 && imgWidth > 0 ? (
+            <FlatList
+              data={images}
+              horizontal
+              pagingEnabled
+              showsHorizontalScrollIndicator={false}
+              keyExtractor={(_, i) => i.toString()}
+              getItemLayout={(_, i) => ({ length: imgWidth, offset: imgWidth * i, index: i })}
+              onMomentumScrollEnd={(e) => {
+                const idx = Math.round(e.nativeEvent.contentOffset.x / imgWidth);
+                setActiveIndex(idx);
+              }}
+              renderItem={({ item: uri }) => (
+                <Image
+                  source={{ uri }}
+                  style={{ width: imgWidth, height: "100%" as any }}
+                  resizeMode="cover"
+                />
+              )}
             />
+          ) : images[0] ? (
+            <Image source={{ uri: images[0] }} style={cardStyles.image} resizeMode="cover" />
           ) : (
             <View style={cardStyles.imagePlaceholder} />
+          )}
+
+          {/* Image dots */}
+          {images.length > 1 && (
+            <View style={cardStyles.dotsRow}>
+              {images.map((_, i) => (
+                <View
+                  key={i}
+                  style={[cardStyles.dot, i === activeIndex && cardStyles.dotActive]}
+                />
+              ))}
+            </View>
           )}
 
           {/* SOLD OUT overlay */}
@@ -928,6 +962,25 @@ const createCardStyles = (colors: ThemeColors) => StyleSheet.create({
     color: colors.textInverse,
     letterSpacing: 2,
     textTransform: "uppercase",
+  },
+  dotsRow: {
+    position: "absolute",
+    bottom: 6,
+    left: 0,
+    right: 0,
+    flexDirection: "row",
+    justifyContent: "center",
+    gap: 4,
+  },
+  dot: {
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: "rgba(255,255,255,0.5)",
+  },
+  dotActive: {
+    backgroundColor: "#fff",
+    width: 8,
   },
   heartBtn: {
     position: "absolute",

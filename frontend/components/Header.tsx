@@ -213,81 +213,47 @@ const Header: React.FC<HeaderProps> = ({ notificationCount = 0, showBack = false
   };
 
   return (
-    <View
-      style={[
-        styles.headerWrapper,
-        {
-          backgroundColor: bgColor,
-        },
-      ]}
-    >
-      {/* Top Row: Logo + Actions */}
-      <View style={[styles.topRow, isTablet && styles.topRowTablet]}>
-        <View style={[styles.authActions, isTablet && styles.topRowTablet]}>
-          {/* LEFT — Menu or Back */}
-          <View style={styles.rightActions}>
-            {showBack ? (
-              <Pressable style={styles.iconBtn} onPress={() => router.back()}>
-                <Ionicons name="arrow-back" size={20} color={iconColor} />
-              </Pressable>
-            ) : (
-              <Pressable style={styles.iconBtn} onPress={openMenu}>
-                <Ionicons name="menu" size={20} color={iconColor} />
-              </Pressable>
-            )}
-            <Pressable
-              style={styles.iconBtn}
-              onPress={() => setSearchVisible(true)}
-            >
-              <Ionicons name="search" size={20} color={iconColor} />
+    <View style={[styles.headerWrapper, { backgroundColor: bgColor }]}>
+      {/* Top Row: Left | Center Logo | Right */}
+      <View style={[styles.topRow, { paddingHorizontal: isTablet ? 28 : 16 }]}>
+        {/* LEFT — Menu or Back + Search */}
+        <View style={styles.sideActions}>
+          {showBack ? (
+            <Pressable style={styles.iconBtn} onPress={() => router.back()}>
+              <Ionicons name="arrow-back" size={20} color={iconColor} />
             </Pressable>
-          </View>
-
-          {/* CENTER — Logo */}
-          <Pressable
-            onPress={() => router.push("/(tabs)")}
-            style={styles.logoContainer}
-          >
-            <Text style={[styles.logoText, { color: logoColor, fontFamily: undefined }]}>
-              MONOLITH
-            </Text>
+          ) : (
+            <Pressable style={styles.iconBtn} onPress={openMenu}>
+              <Ionicons name="menu" size={20} color={iconColor} />
+            </Pressable>
+          )}
+          <Pressable style={styles.iconBtn} onPress={() => setSearchVisible(true)}>
+            <Ionicons name="search" size={20} color={iconColor} />
           </Pressable>
+        </View>
 
-          {/* RIGHT — Profile + Cart */}
-          <View style={styles.rightActions}>
-            <Pressable
-              style={styles.iconBtn}
-              onPress={() => router.push("/(tabs)/profile" as any)}
-            >
-              <Ionicons name="person-outline" size={20} color={iconColor} />
-            </Pressable>
-            <Pressable
-              style={styles.iconBtn}
-              onPress={() => router.push("/cart" as any)}
-            >
-              <Ionicons name="bag-outline" size={22} color={iconColor} />
-              {cartItemCount > 0 && (
-                <View
-                  style={[
-                    styles.cartBadge,
-                    {
-                      backgroundColor: colors.danger,
-                      borderColor: colors.surface,
-                    },
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.cartBadgeText,
-                      { color: colors.textInverse },
-                    ]}
-                  >
-                    {cartItemCount > 99 ? "99+" : cartItemCount}
-                  </Text>
-                </View>
-              )}
-            </Pressable>
-          </View>
+        {/* CENTER — Logo */}
+        <Pressable onPress={() => router.push("/(tabs)")} style={styles.logoContainer}>
+          <Text style={[styles.logoText, { color: logoColor, fontFamily: undefined }]}>
+            MONOLITH
+          </Text>
+        </Pressable>
+
+        {/* RIGHT — Profile + Cart */}
+        <View style={styles.sideActions}>
+          <Pressable style={styles.iconBtn} onPress={() => router.push("/(tabs)/profile" as any)}>
+            <Ionicons name="person-outline" size={20} color={iconColor} />
+          </Pressable>
+          <Pressable style={styles.iconBtn} onPress={() => router.push("/cart" as any)}>
+            <Ionicons name="bag-outline" size={22} color={iconColor} />
+            {cartItemCount > 0 && (
+              <View style={[styles.cartBadge, { backgroundColor: colors.danger, borderColor: colors.surface }]}>
+                <Text style={[styles.cartBadgeText, { color: colors.textInverse }]}>
+                  {cartItemCount > 99 ? "99+" : cartItemCount}
+                </Text>
+              </View>
+            )}
+          </Pressable>
         </View>
       </View>
 
@@ -450,38 +416,22 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingTop: 14,
+    paddingTop: 10,
     paddingBottom: 6,
   },
-  topRowTablet: {
-    paddingHorizontal: 28,
-  },
   logoContainer: {
+    flex: 1,
     justifyContent: "center",
     alignItems: "center",
   },
   logoText: {
     fontSize: 15,
     fontWeight: "800",
-    // letterSpacing: 3,
   },
-  // logoImage: {
-  //   width: "100%",
-  //   height: "100%",
-  // },
-  authActions: {
+  sideActions: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    width: "100%",
-    paddingHorizontal: 20,
-    paddingTop: 14,
-    paddingBottom: 6,
-  },
-  rightActions: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
+    gap: 0,
   },
   iconBtn: {
     width: 40,
@@ -500,7 +450,6 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   loginText: {
     fontSize: 14,
     fontWeight: "700",
-    // letterSpacing: 0.3,
   },
 
   // Notification dot badge
