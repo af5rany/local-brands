@@ -51,9 +51,9 @@ Six bottom tabs (with label-less icons):
 |-----|------|------|
 | **Home** | `index.tsx` | Customer/guest product & brand discovery; role-based dashboards for admin/brand owner |
 | **Shop** | `shop.tsx` | Full product & brand browsing with search, filters, sort, and pagination |
-| **Feed** | `feed.tsx` | Social feed of posts from brands; brand owners see FAB to create posts |
+| **Feed** | `feed.tsx` | Two-tab pager: "Following" (default, left) + "For You" (right). Swipe left/right to switch tabs. Brand owners see FAB to create posts. |
 | **Wishlist** | `wishlist.tsx` | Saved products grid; shows sign-in prompt for guests |
-| **Brands** | `brands.tsx` | Brand discovery and listing |
+| **Brands** | `brands.tsx` | Brand discovery and listing with search, filters, sort, and infinite scroll |
 | **Profile** | `profile.tsx` | User profile overview with menu navigation; guest prompts for sign-in |
 
 ### 3. Authentication (`auth/`)
@@ -70,10 +70,10 @@ Six bottom tabs (with label-less icons):
 - `profile/addresses/[id].tsx` — Edit existing address.
 
 ### 5. Brands (`brands/`)
-- `brands/create.tsx` — Create new brand (admin only).
+- `brands/create.tsx` — Create new brand (admin only). Includes logo upload (1:1 aspect) and optional cover photo upload (16:9 aspect). Both use shared `pickImage(aspect, onSuccess)` helper for permission + picker + Cloudinary upload logic.
 - `brands/select.tsx` — Multi-brand owner context switcher.
 - `brands/[brandId]/index.tsx` — Brand detail with Products | Posts tab switcher. "Posts" tab shows a 2-column grid of brand feed posts; tap → `/feed/[postId]`.
-- `brands/[brandId]/edit.tsx` — Edit brand identity & location.
+- `brands/[brandId]/edit.tsx` — Edit brand identity & location. Includes logo + cover photo upload (same pattern as create).
 - `brands/[brandId]/products.tsx` — Brand's product listing.
 - `brands/[brandId]/dashboard.tsx` — Brand owner analytics dashboard (stats grid, quick actions, top products, recent orders, pending alerts, notify followers modal).
 - `brands/[brandId]/promo-codes/index.tsx` — List all promo codes for brand (status badge, toggle active, delete).
@@ -96,8 +96,8 @@ Six bottom tabs (with label-less icons):
 ### 6. Products (`products/`)
 - `products/index.tsx` — All products listing with advanced search, filters, pagination.
 - `products/[productId].tsx` — Product detail: image gallery, variant color picker, pricing, stock status, reviews, try-on modal, admin controls.
-- `products/create/[brandId].tsx` — Product creation with variants (color, images, stock), Cloudinary upload, status selection.
-- `products/edit/[productId].tsx` — Full product edit with variant management.
+- `products/create/[brandId].tsx` — Product creation with variants (color, images, stock), Cloudinary upload, status selection. Images displayed as a horizontal drag-and-drop list (react-native-draggable-flatlist): long-press to grab, drag to reorder; first image gets "MAIN" badge; "+" card adds more (up to 5).
+- `products/edit/[productId].tsx` — Full product edit with variant management. Save button rendered in the navigation header top-right (black bg / white text in light mode, inverted in dark mode); no bottom save button.
 
 ### 7. Shopping Cart (`cart/`)
 - `cart/index.tsx` — Cart with item listing, quantity adjustment, variant display, total calculation, checkout navigation.
@@ -193,7 +193,7 @@ Centralized via `useCloudinaryUpload` hook:
 
 | Component | Purpose |
 |-----------|---------|
-| **Header** | Logo, greeting, search bar (opens SearchModal), cart badge, hamburger menu |
+| **Header** | Logo, greeting, search bar (opens SearchModal), cart badge, hamburger menu. 3-column flex layout: left actions (menu/back + search) / centered logo (flex:1) / right actions (profile + cart). Scales correctly on all screen sizes. |
 | **GuestBanner** | Yellow banner shown in cart and checkout for guest sessions. Text: "Shopping as guest. Create account to save your order." + "Sign Up" CTA → `/auth/register`. Hidden for registered users. |
 | **Toast** | Success/Error/Info notifications — slide animation, auto-dismiss |
 | **Pagination** | Prev/next arrows, smart page numbers with ellipsis |
@@ -215,9 +215,9 @@ Centralized via `useCloudinaryUpload` hook:
 | Feature | Description |
 |---------|-------------|
 | **Authentication** | Login, register, forgot/reset password, JWT token management, guest session (browse + cart + checkout), convert-guest flow in register screen |
-| **Brand Management** | Full CRUD, multi-brand ownership, brand listing with search/sort/filter |
+| **Brand Management** | Full CRUD, multi-brand ownership, brand listing with search/sort/filter. Brand create/edit support logo (1:1) and cover photo (16:9) upload. |
 | **Product Management** | Full CRUD, variant system (size + per-size stock; color and images are product-level), status lifecycle, Cloudinary image upload |
-| **Product Discovery** | Home dashboard, filter chips, pagination, debounced search |
+| **Product Discovery** | Home dashboard, filter chips, pagination, debounced search. Shop grid cards with multiple images show swipeable horizontal pager (finger swipe between images) with dot position indicators. |
 | **Product Detail** | Image gallery, variant color picker, pricing with discount, stock status, reviews, TryOn modal |
 | **Shopping Cart** | Add/remove items, quantity updates (optimistic), remove (optimistic with confirm), variant-aware, total calculation. GuestBanner shown for guest sessions. |
 | **Wishlist** | Toggle add/remove (optimistic — instant remove from list, reverts on error), product card hearts, Brands sub-tab with followed brands list. Wishlist heart on product detail shows "Create account" alert for guests (no API call). |
@@ -235,7 +235,7 @@ Centralized via `useCloudinaryUpload` hook:
 | **User Management** | Admin user listing, role management, brand assignment |
 | **Image Upload** | Cloudinary pipeline with compression, progress tracking, multi-image per variant |
 | **Dark Mode** | Full theme support via `useThemeColor` hook |
-| **Feed** | Social feed with posts, like/comment/share, brand owner post creation, post detail with comment avatars |
+| **Feed** | Two-tab pager (Following default, For You second). Swipe left/right to switch tabs. Like/comment/share, brand owner post creation, post detail with comment avatars. |
 | **Brand Follow** | Follow/unfollow brands, feed filters to show only followed brands' posts |
 | **Header Side Menu** | Animated slide-in menu with navigation, cart badge, user actions |
 | **Search Modal** | Full-page search with trending products cache and debounced live search |
@@ -338,7 +338,7 @@ None — all previously incomplete features are now working.
   - Cart item remove: instant removal after confirm dialog, no refetch
   - Feed like toggle: instant filled/unfilled heart
 - **Pagination**: Server-side pagination on products, brands, orders, and feed posts.
-- **Infinite Scroll**: `useInfiniteScroll` hook for feed and other paginated lists.
+- **Infinite Scroll**: `useInfiniteScroll` hook for feed and other paginated lists. Brands tab uses `FlatList` `onEndReached` (threshold 0.3) — no manual "Load More" button.
 - **Search Caching**: SearchModal caches trending products to avoid re-fetching on modal reopen.
 - **Skeleton Loaders**: `Skeleton.tsx` provides reusable skeleton primitives (`Skeleton`, `ProductCardSkeleton`, `ProductGridSkeleton`, `OrderCardSkeleton`, `OrderListSkeleton`, `BrandCardSkeleton`, `FeedPostSkeleton`). Used on shop, orders, feed, wishlist, home, brand detail, and dashboard during initial load.
 - **Offline Handling**: `NetworkContext` provides `useNetwork()` hook with `isConnected` state. A global animated banner shows on disconnect/reconnect. All 10 data-fetching screens (shop, feed, brands, wishlist, home, cart, orders, brand detail, dashboard, brand orders, product detail) show `OfflinePlaceholder` (wifi icon + retry button) when offline with no cached data. Stale data displays normally with the global banner.

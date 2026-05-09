@@ -81,15 +81,13 @@ const MonolithProductCard = React.memo(
       `$${amount.toLocaleString("en-US", { minimumFractionDigits: 0 })}`;
 
     return (
-      <TouchableOpacity
+      <View
         style={[
           cardStyles.wrapper,
           index % 2 === 0 ? { paddingRight: 8 } : { paddingLeft: 8 },
         ]}
-        onPress={onPress}
-        activeOpacity={0.9}
       >
-        {/* Image */}
+        {/* Image — swipeable; tap-to-navigate via transparent overlay */}
         <View
           style={cardStyles.imageWrap}
           onLayout={(e) => setImgWidth(e.nativeEvent.layout.width)}
@@ -107,15 +105,19 @@ const MonolithProductCard = React.memo(
                 setActiveIndex(idx);
               }}
               renderItem={({ item: uri }) => (
-                <Image
-                  source={{ uri }}
-                  style={{ width: imgWidth, height: "100%" as any }}
-                  resizeMode="cover"
-                />
+                <Pressable onPress={onPress} style={{ width: imgWidth, height: "100%" as any }}>
+                  <Image
+                    source={{ uri }}
+                    style={{ width: imgWidth, height: "100%" as any }}
+                    resizeMode="cover"
+                  />
+                </Pressable>
               )}
             />
           ) : images[0] ? (
-            <Image source={{ uri: images[0] }} style={cardStyles.image} resizeMode="cover" />
+            <Pressable style={StyleSheet.absoluteFill} onPress={onPress}>
+              <Image source={{ uri: images[0] }} style={cardStyles.image} resizeMode="cover" />
+            </Pressable>
           ) : (
             <View style={cardStyles.imagePlaceholder} />
           )}
@@ -160,8 +162,8 @@ const MonolithProductCard = React.memo(
           </TouchableOpacity>
         </View>
 
-        {/* Meta */}
-        <View style={cardStyles.meta}>
+        {/* Meta — tap to navigate */}
+        <TouchableOpacity style={cardStyles.meta} onPress={onPress} activeOpacity={0.7}>
           <Text style={cardStyles.brandLabel} numberOfLines={1}>
             {(item.brand?.name || item.brandName || "MONOLITH").toUpperCase()}
           </Text>
@@ -178,8 +180,8 @@ const MonolithProductCard = React.memo(
               </Text>
             )}
           </View>
-        </View>
-      </TouchableOpacity>
+        </TouchableOpacity>
+      </View>
     );
   },
 );
@@ -1202,9 +1204,7 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     gap: 8,
     paddingHorizontal: 24,
     paddingTop: 12,
-    paddingBottom: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.surfaceContainer,
+    paddingBottom: 20,
   },
   filterBtn: {
     flexDirection: "row",

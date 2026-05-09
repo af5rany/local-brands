@@ -15,6 +15,10 @@ export class CreateBrandDto {
 
   @IsOptional()
   @IsString()
+  coverPhoto?: string;
+
+  @IsOptional()
+  @IsString()
   location?: string;
 
   @IsOptional()

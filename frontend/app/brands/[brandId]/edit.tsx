@@ -40,6 +40,8 @@ const EditBrandScreen = () => {
   const [description, setDescription] = useState("");
   const [logoUrl, setLogoUrl] = useState("");
   const [coverPhotoUrl, setCoverPhotoUrl] = useState("");
+  const [logoLocalUri, setLogoLocalUri] = useState("");
+  const [coverLocalUri, setCoverLocalUri] = useState("");
   const [location, setLocation] = useState("");
   const [status, setStatus] = useState<BrandStatus>(BrandStatus.DRAFT);
   const [brandMembers, setBrandMembers] = useState<BrandUser[]>([]);
@@ -175,6 +177,7 @@ const EditBrandScreen = () => {
   const pickImage = async (
     aspect: [number, number],
     onSuccess: (url: string) => void,
+    setLocalUri: (uri: string) => void,
   ) => {
     try {
       const permissionResult =
@@ -190,16 +193,21 @@ const EditBrandScreen = () => {
         quality: 1,
       });
       if (!result.canceled && result.assets?.length > 0) {
-        const cloudUrl = await uploadImage(result.assets[0].uri);
-        if (cloudUrl) onSuccess(cloudUrl);
+        const localUri = result.assets[0].uri;
+        setLocalUri(localUri);
+        const cloudUrl = await uploadImage(localUri);
+        if (cloudUrl) {
+          onSuccess(cloudUrl);
+          setLocalUri("");
+        }
       }
     } catch (error) {
       console.error("Error picking image:", error);
     }
   };
 
-  const handleImagePick = () => pickImage([1, 1], setLogoUrl);
-  const handleCoverPhotoPick = () => pickImage([16, 9], setCoverPhotoUrl);
+  const handleImagePick = () => pickImage([1, 1], setLogoUrl, setLogoLocalUri);
+  const handleCoverPhotoPick = () => pickImage([16, 9], setCoverPhotoUrl, setCoverLocalUri);
 
   const handleUpdateBrand = async () => {
     Keyboard.dismiss();
@@ -317,13 +325,9 @@ const EditBrandScreen = () => {
             ]}
             onPress={handleImagePick}
           >
-            {uploads[
-              Object.keys(uploads)
-                .reverse()
-                .find((k) => !logoUrl.includes(k)) || ""
-            ] ? (
+            {logoLocalUri && uploads[logoLocalUri] ? (
               <ImageUploadProgress
-                upload={uploads[Object.keys(uploads).reverse()[0]]}
+                upload={uploads[logoLocalUri]}
                 size={100}
               />
             ) : logoUrl ? (
@@ -365,7 +369,12 @@ const EditBrandScreen = () => {
             ]}
             onPress={handleCoverPhotoPick}
           >
-            {coverPhotoUrl ? (
+            {coverLocalUri && uploads[coverLocalUri] ? (
+              <ImageUploadProgress
+                upload={uploads[coverLocalUri]}
+                size={100}
+              />
+            ) : coverPhotoUrl ? (
               <View style={styles.logoPreviewWrap}>
                 <Image source={{ uri: coverPhotoUrl }} style={styles.logoPreview} />
                 <View style={[styles.logoOverlay, { backgroundColor: colors.text }]}>

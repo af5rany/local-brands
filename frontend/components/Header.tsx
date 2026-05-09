@@ -227,9 +227,11 @@ const Header: React.FC<HeaderProps> = ({ notificationCount = 0, showBack = false
               <Ionicons name="menu" size={20} color={iconColor} />
             </Pressable>
           )}
-          <Pressable style={styles.iconBtn} onPress={() => setSearchVisible(true)}>
-            <Ionicons name="search" size={20} color={iconColor} />
-          </Pressable>
+          {pathname !== "/shop" && (
+            <Pressable style={styles.iconBtn} onPress={() => setSearchVisible(true)}>
+              <Ionicons name="search" size={20} color={iconColor} />
+            </Pressable>
+          )}
         </View>
 
         {/* CENTER — Logo */}
@@ -247,7 +249,7 @@ const Header: React.FC<HeaderProps> = ({ notificationCount = 0, showBack = false
           <Pressable style={styles.iconBtn} onPress={() => router.push("/cart" as any)}>
             <Ionicons name="bag-outline" size={22} color={iconColor} />
             {cartItemCount > 0 && (
-              <View style={[styles.cartBadge, { backgroundColor: colors.danger, borderColor: colors.surface }]}>
+              <View style={[styles.cartBadge, { backgroundColor: colors.danger }]}>
                 <Text style={[styles.cartBadgeText, { color: colors.textInverse }]}>
                   {cartItemCount > 99 ? "99+" : cartItemCount}
                 </Text>
@@ -481,7 +483,6 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     borderRadius: 0,
     justifyContent: "center",
     alignItems: "center",
-    borderWidth: 1.5,
     paddingHorizontal: 3,
   },
   cartBadgeText: {

@@ -664,21 +664,13 @@ const BrandsScreen = () => {
     );
   };
 
-  // ── renderLoadMore ─────────────────────────────────
-  const renderLoadMore = () => {
-    if (!brandsData?.hasNextPage) return null;
+  // ── renderFooter ───────────────────────────────────
+  const renderFooter = () => {
+    if (!loadingMore) return null;
     return (
-      <TouchableOpacity
-        style={styles.loadMoreButton}
-        onPress={loadMore}
-        disabled={loadingMore}
-      >
-        {loadingMore ? (
-          <ActivityIndicator size="small" color={colors.text} />
-        ) : (
-          <Text style={styles.loadMoreText}>LOAD MORE</Text>
-        )}
-      </TouchableOpacity>
+      <View style={styles.footerLoader}>
+        <ActivityIndicator size="small" color={colors.text} />
+      </View>
     );
   };
 
@@ -757,12 +749,14 @@ const BrandsScreen = () => {
         ListFooterComponent={
           <>
             {renderPaginationInfo()}
-            {renderLoadMore()}
+            {renderFooter()}
             <View style={{ height: 100 }} />
           </>
         }
         contentContainerStyle={styles.listContainer}
         showsVerticalScrollIndicator={false}
+        onEndReached={loadMore}
+        onEndReachedThreshold={0.3}
         onScroll={(e) => reportScroll(e.nativeEvent.contentOffset.y)}
         scrollEventThrottle={16}
         refreshControl={
@@ -1044,20 +1038,10 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     letterSpacing: 2,
   },
 
-  // ── Load more ─────────────────────────────────────
-  loadMoreButton: {
+  // ── Footer loader ─────────────────────────────────
+  footerLoader: {
     alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 14,
-    marginHorizontal: 24,
-    borderWidth: 1,
-    borderColor: colors.primary,
-  },
-  loadMoreText: {
-    fontFamily: undefined,
-    fontSize: 11,
-    color: colors.text,
-    letterSpacing: 2,
+    paddingVertical: 16,
   },
 
   // ── Modal ─────────────────────────────────────────

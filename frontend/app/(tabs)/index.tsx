@@ -187,6 +187,58 @@ const Marquee: React.FC = () => {
   );
 };
 
+// ── Animated Headline ────────────────────────────────────────────────────────
+const AnimatedHeadline: React.FC<{
+  lines: string[];
+  charStyle: object;
+  wrapperStyle?: object;
+}> = ({ lines, charStyle, wrapperStyle }) => {
+  const flatChars = useMemo(
+    () => lines.flatMap((line, li) => line.split("").map((ch, ci) => ({ ch, key: `${li}-${ci}` }))),
+    []
+  );
+
+  const anims = useRef(
+    flatChars.map(() => ({ y: new Animated.Value(40), o: new Animated.Value(0) }))
+  ).current;
+
+  useFocusEffect(
+    useCallback(() => {
+      anims.forEach((a) => { a.y.setValue(40); a.o.setValue(0); });
+      Animated.stagger(
+        28,
+        anims.map((a) =>
+          Animated.parallel([
+            Animated.timing(a.y, { toValue: 0, duration: 520, easing: Easing.out(Easing.quad), useNativeDriver: true }),
+            Animated.timing(a.o, { toValue: 1, duration: 380, easing: Easing.out(Easing.quad), useNativeDriver: true }),
+          ])
+        )
+      ).start();
+    }, [])
+  );
+
+  let globalIdx = 0;
+  return (
+    <View style={wrapperStyle}>
+      {lines.map((line, li) => (
+        <View key={li} style={{ flexDirection: "row" }}>
+          {line.split("").map((ch, ci) => {
+            const idx = globalIdx++;
+            return (
+              <Animated.Text
+                key={`${li}-${ci}`}
+                style={[charStyle, { opacity: anims[idx].o, transform: [{ translateY: anims[idx].y }] }]}
+              >
+                {ch}
+              </Animated.Text>
+            );
+          })}
+        </View>
+      ))}
+    </View>
+  );
+};
+
 // ── Drop Bar ─────────────────────────────────────────────────────────────────
 const DropBar: React.FC = () => {
   const colors = useThemeColors();
@@ -449,9 +501,11 @@ const HomeScreen = () => {
           />
           <View style={styles.heroContent}>
             <Text style={styles.heroEyebrow}>AW '25 — THE PHILOSOPHY</Text>
-            <Text style={styles.heroHeadline}>
-              {"FORM\nFOLLOWS\nABSENCE"}
-            </Text>
+            <AnimatedHeadline
+              lines={["FORM", "FOLLOWS", "ABSENCE"]}
+              charStyle={styles.heroHeadlineChar}
+              wrapperStyle={styles.heroHeadlineWrapper}
+            />
             <TouchableOpacity
               style={styles.heroCta}
               onPress={() => router.push("/(tabs)/shop" as any)}
@@ -979,7 +1033,10 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     textTransform: "uppercase",
     marginBottom: 10,
   },
-  heroHeadline: {
+  heroHeadlineWrapper: {
+    marginBottom: 24,
+  },
+  heroHeadlineChar: {
     fontFamily: undefined,
     fontSize: 40,
     fontWeight: "800",
@@ -987,7 +1044,6 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     letterSpacing: -1.5,
     lineHeight: 37,
     textTransform: "uppercase",
-    marginBottom: 24,
   },
   heroCta: {
     borderWidth: 1,

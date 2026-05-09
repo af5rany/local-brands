@@ -76,7 +76,7 @@ A brand owner can assign team members with granular roles:
 - **Shop tab** — Full product & brand browsing with search, filters, sort, and pagination
 - **Feed tab** — Social feed of posts from followed brands (authenticated) or all brands (guest). Brand owners see a floating action button (FAB) to create new posts.
 - **Wishlist tab** — Saved products grid; shows sign-in prompt for guests
-- **Brands tab** — Brand discovery and listing with search and filters
+- **Brands tab** — Brand discovery and listing with search, filters, and infinite scroll
 - **Profile tab** — User profile overview; shows sign-in prompts for guests
 
 ### Header (shown on Home and Shop screens)
@@ -256,6 +256,8 @@ Dedicated shopping tab with the same product/brand browsing experience as the Ho
 - CustomerDashboard component (identical to Home customer view)
 - Full search, filter, and pagination controls
 
+**Product cards:** When a product has multiple images, the card displays a swipeable horizontal image carousel — swipe left/right with a finger to browse images without leaving the grid. Dot indicators at the bottom of each card show position in the image set.
+
 ---
 
 ### 4.1c Management Screen — `/manage/index`
@@ -349,7 +351,8 @@ Accessible to admins and brand owners via the speedometer icon in the Header or 
 #### 4.3b Create Brand — `/brands/create`
 **Elements:**
 - Back button in header
-- Logo upload section (dashed border, tappable, shows preview with upload progress)
+- Logo upload section (dashed border, tappable, shows preview with upload progress) — 1:1 aspect ratio
+- Cover photo upload section (dashed border, below logo) — 16:9 aspect ratio, optional banner image for the brand
 - Form card:
   - Brand name (required)
   - Description (required, multiline)
@@ -391,7 +394,8 @@ Accessible to admins and brand owners via the speedometer icon in the Header or 
 #### 4.3e Edit Brand — `/brands/[brandId]/edit`
 **Elements:**
 - Back button
-- Logo upload with current logo preview
+- Logo upload with current logo preview (1:1 aspect)
+- Cover photo upload with current cover preview (16:9 aspect, optional)
 - Form fields: brand name, description, location
 - Status selector: visual chips for Active, Suspended, Archived, Draft
 - **Save Changes** button
@@ -445,13 +449,14 @@ Accessible to admins and brand owners via the speedometer icon in the Header or 
   1. **Basic Info:** Product name, description, price, sale price
   2. **Classification:** Product type, subcategory, gender, season
   3. **Tags:** Text input + Add button, tag chips with remove button
-  4. **Variants** (repeatable): Color selector (preset palette + custom), stock input, image upload (multi-image, 1–5 per variant with Cloudinary upload and progress states)
+  4. **Images:** Horizontal drag-and-drop image list — long-press any image to grab it, drag left/right to reorder; first image gets "MAIN" badge (it becomes the primary product image); remove button (×) per image; "+" card at end to add more (up to 5 total with Cloudinary upload + progress states); hint text "Hold & drag to reorder · First image is main" shown above list
   5. **Status:** Draft or Published
   6. **Featured toggle**
 - **Create Product** button (black)
 
 #### 4.4d Edit Product — `/products/edit/[productId]`
 Similar to create product, pre-filled with existing product data. Can update all fields including adding/removing variants.
+- **Save button** is in the top-right of the navigation header (not at the bottom of the form). Styled black background / white text in light mode; white background / black text in dark mode. Shows a spinner while saving.
 
 ---
 
@@ -678,7 +683,12 @@ Similar to create product, pre-filled with existing product data. Can update all
 
 #### 4.8a Feed Tab — `/(tabs)/feed`
 **Layout:**
-- Scrollable list of feed posts
+- Two-tab switcher at top: **"Following"** (left, default) | **"For You"** (right)
+- Swipe left/right anywhere on the content area to switch between tabs (horizontal pager)
+- Tapping a tab label also switches pages with animation
+- **Following tab**: masonry-style scroll of posts from followed brands
+- **For You tab**: paginated feed of posts from all brands
+
 - Each post shows:
   - Brand logo and name (header)
   - Post images (swipeable carousel if multiple)
@@ -689,7 +699,7 @@ Similar to create product, pre-filled with existing product data. Can update all
 - **FAB**: Visible for brand owners only — opens `/feed/create`
 - Pull-to-refresh
 - Infinite scroll
-- **Authenticated users**: Feed shows only posts from followed brands
+- **Authenticated users**: Following tab shows posts from followed brands only; For You shows all
 - **Guest/unauthenticated**: Feed shows all posts
 
 #### 4.8b Create Post — `/feed/create`
@@ -947,7 +957,7 @@ Similar to create product, pre-filled with existing product data. Can update all
 |-----------|---------|----------|
 | **Toast** | Notification popups | Success / Error / Info types, auto-dismiss, slide animation |
 | **ImageUploadProgress** | Upload feedback | States: compressing (spinner), uploading (progress bar), success (checkmark), error (alert icon) |
-| **Header** | Top navigation | Logo, greeting, search (opens SearchModal), cart badge, hamburger menu |
+| **Header** | Top navigation | Logo, greeting, search (opens SearchModal), cart badge, hamburger menu. 3-column flex layout (left actions / centered logo / right actions) — scales correctly across all screen sizes including tablets |
 | **SearchModal** | Global search | Full-page modal, trending products cache, 2-column product grid, debounced live search |
 | **TryOnModal** | AI virtual try-on | Camera/gallery picker, Cloudinary upload, job polling, before/after result, save to library |
 | **OfflinePlaceholder** | No-connection state | Wifi icon, "NO INTERNET CONNECTION" message, "RETRY" button; shown on all data-fetching screens when offline with no cached data |
@@ -1184,9 +1194,9 @@ Profile tab → Edit Profile (name, phone, DOB, avatar)
 - [x] Discount calculation and display
 
 ### Brand Management
-- [x] Brand listing with search, filter, sort
-- [x] Brand creation (admin)
-- [x] Brand editing (owner/admin)
+- [x] Brand listing with search, filter, sort, and infinite scroll (auto-loads next page when scrolled 30% from bottom)
+- [x] Brand creation (admin) — includes logo (1:1) + optional cover photo (16:9) upload
+- [x] Brand editing (owner/admin) — includes logo + cover photo upload
 - [x] Brand deletion with confirmation (soft delete)
 - [x] Brand status management: Draft, Active, Suspended, Archived
 - [x] Multi-brand ownership (one user → many brands)
@@ -1328,6 +1338,7 @@ Profile tab → Edit Profile (name, phone, DOB, avatar)
 - [x] Haptic feedback on tab bar
 - [x] Debounced search (300ms)
 - [x] Time-based greeting in header
+- [x] Feed tab two-pane pager: "Following" (default, left) + "For You" (right) — swipe or tap to switch
 - [x] 6-tab bottom navigation (Home, Shop, Feed, Wishlist, Brands, Profile)
 - [x] Guest-friendly tabs with sign-in prompts
 - [x] Dedicated management screen (`/manage`)

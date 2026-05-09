@@ -9,7 +9,6 @@ import {
   Dimensions,
   ScrollView,
   RefreshControl,
-  FlatList,
   NativeScrollEvent,
   NativeSyntheticEvent,
 } from "react-native";
@@ -49,52 +48,7 @@ interface PostData {
   }[];
 }
 
-interface SuggestedProduct {
-  id: number;
-  name: string;
-  price: number;
-  images: string[];
-  brand?: { id: number; name: string; logo?: string };
-}
-
-// ── Product Card (For You grid) ──
-const ProductCard: React.FC<{
-  product: SuggestedProduct;
-  colors: any;
-  onPress: (id: number) => void;
-}> = ({ product, colors, onPress }) => {
-  const image = product.images?.[0];
-  return (
-    <TouchableOpacity
-      style={[styles.productCard, { backgroundColor: colors.surface }]}
-      onPress={() => onPress(product.id)}
-      activeOpacity={0.85}
-    >
-      {image ? (
-        <Image source={{ uri: image }} style={styles.productImage} resizeMode="cover" />
-      ) : (
-        <View style={[styles.productImage, { backgroundColor: colors.surfaceRaised, justifyContent: "center", alignItems: "center" }]}>
-          <Ionicons name="image-outline" size={28} color={colors.textTertiary} />
-        </View>
-      )}
-      <View style={styles.productInfo}>
-        {product.brand && (
-          <Text style={[styles.productBrand, { color: colors.textTertiary }]} numberOfLines={1}>
-            {product.brand.name}
-          </Text>
-        )}
-        <Text style={[styles.productName, { color: colors.text }]} numberOfLines={2}>
-          {product.name}
-        </Text>
-        <Text style={[styles.productPrice, { color: colors.text }]}>
-          ${Number(product.price).toFixed(2)}
-        </Text>
-      </View>
-    </TouchableOpacity>
-  );
-};
-
-// ── Pin Card (Following masonry) ──
+// ── Pin Card ──
 const PinCard: React.FC<{
   post: PostData;
   imageHeight: number;
@@ -114,7 +68,12 @@ const PinCard: React.FC<{
       onPress={() => onPress(post.id)}
       activeOpacity={0.85}
     >
-      <View style={[styles.pinImageWrap, { height: imageHeight, backgroundColor: colors.borderLight }]}>
+      <View
+        style={[
+          styles.pinImageWrap,
+          { height: imageHeight, backgroundColor: colors.borderLight },
+        ]}
+      >
         <Image
           source={{ uri: post.images[0] }}
           style={[styles.pinImage, { height: imageHeight }]}
@@ -123,11 +82,17 @@ const PinCard: React.FC<{
       </View>
       <View style={styles.pinInfo}>
         {post.caption ? (
-          <Text style={[styles.pinCaption, { color: colors.text }]} numberOfLines={2}>
+          <Text
+            style={[styles.pinCaption, { color: colors.text }]}
+            numberOfLines={2}
+          >
             {post.caption}
           </Text>
         ) : hasProduct ? (
-          <Text style={[styles.pinCaption, { color: colors.text }]} numberOfLines={2}>
+          <Text
+            style={[styles.pinCaption, { color: colors.text }]}
+            numberOfLines={2}
+          >
             {hasProduct.name}
           </Text>
         ) : null}
@@ -143,15 +108,28 @@ const PinCard: React.FC<{
             activeOpacity={0.7}
           >
             {post.brand.logo ? (
-              <Image source={{ uri: post.brand.logo }} style={styles.pinBrandAvatar} />
+              <Image
+                source={{ uri: post.brand.logo }}
+                style={styles.pinBrandAvatar}
+              />
             ) : (
-              <View style={[styles.pinBrandAvatar, { backgroundColor: colors.surfaceRaised }]}>
-                <Text style={[styles.pinBrandInitial, { color: colors.text }]}>
+              <View
+                style={[
+                  styles.pinBrandAvatar,
+                  { backgroundColor: colors.surfaceRaised },
+                ]}
+              >
+                <Text
+                  style={[styles.pinBrandInitial, { color: colors.text }]}
+                >
                   {post.brand.name?.charAt(0) || "B"}
                 </Text>
               </View>
             )}
-            <Text style={[styles.pinBrandName, { color: colors.textTertiary }]} numberOfLines={1}>
+            <Text
+              style={[styles.pinBrandName, { color: colors.textTertiary }]}
+              numberOfLines={1}
+            >
               {post.brand.name}
             </Text>
           </TouchableOpacity>
@@ -173,7 +151,10 @@ const PinCard: React.FC<{
 };
 
 // ── Masonry Layout ──
-function useMasonryColumns(posts: PostData[], imageHeights: Record<number, number>) {
+function buildMasonryColumns(
+  posts: PostData[],
+  imageHeights: Record<number, number>,
+) {
   const leftCol: { post: PostData; height: number }[] = [];
   const rightCol: { post: PostData; height: number }[] = [];
   let leftHeight = 0;
@@ -193,16 +174,69 @@ function useMasonryColumns(posts: PostData[], imageHeights: Record<number, numbe
   return { leftCol, rightCol };
 }
 
+// ── Masonry Grid ──
+const MasonryGrid: React.FC<{
+  posts: PostData[];
+  imageHeights: Record<number, number>;
+  colors: any;
+  onPostPress: (id: number) => void;
+  onLike: (id: number) => void;
+  onBrandPress: (id: number) => void;
+}> = ({ posts, imageHeights, colors, onPostPress, onLike, onBrandPress }) => {
+  const { leftCol, rightCol } = buildMasonryColumns(posts, imageHeights);
+  return (
+    <View style={styles.masonryRow}>
+      <View style={[styles.column, styles.columnLeft]}>
+        {leftCol.map(({ post, height }) => (
+          <PinCard
+            key={post.id}
+            post={post}
+            imageHeight={height}
+            colors={colors}
+            onPress={onPostPress}
+            onLike={onLike}
+            onBrandPress={onBrandPress}
+          />
+        ))}
+      </View>
+      <View style={styles.column}>
+        {rightCol.map(({ post, height }) => (
+          <PinCard
+            key={post.id}
+            post={post}
+            imageHeight={height}
+            colors={colors}
+            onPress={onPostPress}
+            onLike={onLike}
+            onBrandPress={onBrandPress}
+          />
+        ))}
+      </View>
+    </View>
+  );
+};
+
 // ── Tab Switcher — Following first, For You second ──
 const TAB_ORDER: ActiveTab[] = ["following", "forYou"];
-const TAB_LABELS: Record<ActiveTab, string> = { following: "Following", forYou: "For You" };
+const TAB_LABELS: Record<ActiveTab, string> = {
+  following: "Following",
+  forYou: "For You",
+};
 
 const TabSwitcher: React.FC<{
   activeTab: ActiveTab;
   onChange: (tab: ActiveTab) => void;
   colors: any;
 }> = ({ activeTab, onChange, colors }) => (
-  <View style={[styles.tabBar, { backgroundColor: colors.background, borderBottomColor: colors.borderLight }]}>
+  <View
+    style={[
+      styles.tabBar,
+      {
+        backgroundColor: colors.background,
+        borderBottomColor: colors.borderLight,
+      },
+    ]}
+  >
     {TAB_ORDER.map((tab) => {
       const isActive = activeTab === tab;
       return (
@@ -212,10 +246,20 @@ const TabSwitcher: React.FC<{
           onPress={() => onChange(tab)}
           activeOpacity={0.7}
         >
-          <Text style={[styles.tabLabel, { color: isActive ? colors.text : colors.textTertiary }, isActive && styles.tabLabelActive]}>
+          <Text
+            style={[
+              styles.tabLabel,
+              { color: isActive ? colors.text : colors.textTertiary },
+              isActive && styles.tabLabelActive,
+            ]}
+          >
             {TAB_LABELS[tab]}
           </Text>
-          {isActive && <View style={[styles.tabUnderline, { backgroundColor: colors.text }]} />}
+          {isActive && (
+            <View
+              style={[styles.tabUnderline, { backgroundColor: colors.text }]}
+            />
+          )}
         </TouchableOpacity>
       );
     })}
@@ -232,8 +276,8 @@ export default function FeedScreen() {
   const { isConnected } = useNetwork();
 
   const { register, unregister } = useScrollToTop();
-  const forYouRef = useRef<FlatList>(null);
   const followingRef = useRef<ScrollView>(null);
+  const forYouRef = useRef<ScrollView>(null);
   const pagerRef = useRef<ScrollView>(null);
 
   const [activeTab, setActiveTab] = useState<ActiveTab>("following");
@@ -246,22 +290,34 @@ export default function FeedScreen() {
 
   useEffect(() => {
     register("feed", () => {
-      if (activeTab === "forYou") forYouRef.current?.scrollToOffset({ offset: 0, animated: true });
+      if (activeTab === "forYou")
+        forYouRef.current?.scrollTo({ y: 0, animated: true });
       else followingRef.current?.scrollTo({ y: 0, animated: true });
     });
     return () => unregister("feed");
   }, [activeTab]);
+
+  // ── Following state ──
   const [posts, setPosts] = useState<PostData[]>([]);
-  const [suggestedProducts, setSuggestedProducts] = useState<SuggestedProduct[]>([]);
+  const [followingPage, setFollowingPage] = useState(1);
+  const [followingHasMore, setFollowingHasMore] = useState(true);
+  const followingLoadingMore = useRef(false);
+
+  // ── For You state ──
+  const [forYouPosts, setForYouPosts] = useState<PostData[]>([]);
+  const [forYouPage, setForYouPage] = useState(1);
+  const [forYouHasMore, setForYouHasMore] = useState(true);
+  const forYouLoadingMore = useRef(false);
+
+  // ── Shared ──
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [page, setPage] = useState(1);
-  const [hasMore, setHasMore] = useState(true);
-  const loadingMore = useRef(false);
   const [imageHeights, setImageHeights] = useState<Record<number, number>>({});
 
+  // Precompute image heights for all posts
   useEffect(() => {
-    for (const post of posts) {
+    const allPosts = [...posts, ...forYouPosts];
+    for (const post of allPosts) {
       if (imageHeights[post.id] || !post.images[0]) continue;
       Image.getSize(
         post.images[0],
@@ -274,23 +330,9 @@ export default function FeedScreen() {
         },
       );
     }
-  }, [posts]);
+  }, [posts, forYouPosts]);
 
-  const fetchSuggestedProducts = useCallback(async () => {
-    try {
-      const headers: any = {};
-      if (token) headers.Authorization = `Bearer ${token}`;
-      const endpoint = token ? "/products/for-you" : "/products/trending";
-      const res = await fetch(`${getApiUrl()}${endpoint}?limit=20`, { headers });
-      if (!res.ok) return;
-      const data = await res.json();
-      setSuggestedProducts(Array.isArray(data) ? data : data.data || []);
-    } catch (e) {
-      console.error("Suggested products error:", e);
-    }
-  }, [token]);
-
-  const fetchFeed = useCallback(
+  const fetchFollowingFeed = useCallback(
     async (pageNum = 1, isRefresh = false) => {
       try {
         if (isRefresh) setRefreshing(true);
@@ -300,22 +342,46 @@ export default function FeedScreen() {
           ? `${getApiUrl()}/feed?page=${pageNum}&limit=20&followedOnly=true`
           : `${getApiUrl()}/feed?page=${pageNum}&limit=20`;
         const res = await fetch(url, { headers });
-        if (!res.ok) throw new Error("Failed to fetch feed");
+        if (!res.ok) throw new Error("Failed to fetch following feed");
         const data = await res.json();
-        const newPosts = data.data || [];
-        if (pageNum === 1) {
-          setPosts(newPosts);
-        } else {
-          setPosts((prev) => [...prev, ...newPosts]);
-        }
-        setHasMore(pageNum < data.pagination.totalPages);
-        setPage(pageNum);
+        const newPosts: PostData[] = data.data || [];
+        if (pageNum === 1) setPosts(newPosts);
+        else setPosts((prev) => [...prev, ...newPosts]);
+        setFollowingHasMore(pageNum < (data.pagination?.totalPages ?? 1));
+        setFollowingPage(pageNum);
       } catch (e) {
-        console.error("Feed error:", e);
+        console.error("Following feed error:", e);
       } finally {
         setLoading(false);
         setRefreshing(false);
-        loadingMore.current = false;
+        followingLoadingMore.current = false;
+      }
+    },
+    [token],
+  );
+
+  const fetchForYouFeed = useCallback(
+    async (pageNum = 1, isRefresh = false) => {
+      try {
+        if (isRefresh) setRefreshing(true);
+        const headers: any = {};
+        if (token) headers.Authorization = `Bearer ${token}`;
+        const res = await fetch(
+          `${getApiUrl()}/feed/for-you?page=${pageNum}&limit=20`,
+          { headers },
+        );
+        if (!res.ok) throw new Error("Failed to fetch for-you feed");
+        const data = await res.json();
+        const newPosts: PostData[] = data.data || [];
+        if (pageNum === 1) setForYouPosts(newPosts);
+        else setForYouPosts((prev) => [...prev, ...newPosts]);
+        setForYouHasMore(pageNum < (data.pagination?.totalPages ?? 1));
+        setForYouPage(pageNum);
+      } catch (e) {
+        console.error("For You feed error:", e);
+      } finally {
+        setRefreshing(false);
+        forYouLoadingMore.current = false;
       }
     },
     [token],
@@ -323,29 +389,47 @@ export default function FeedScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      fetchFeed(1);
-      fetchSuggestedProducts();
-    }, [fetchFeed, fetchSuggestedProducts]),
+      fetchFollowingFeed(1);
+      fetchForYouFeed(1);
+    }, [fetchFollowingFeed, fetchForYouFeed]),
   );
 
   const handleRefresh = () => {
-    fetchFeed(1, true);
-    fetchSuggestedProducts();
+    fetchFollowingFeed(1, true);
+    fetchForYouFeed(1, true);
   };
 
   const handleLoadMore = () => {
-    if (!hasMore || loadingMore.current || activeTab !== "following") return;
-    loadingMore.current = true;
-    fetchFeed(page + 1);
+    if (activeTab === "following") {
+      if (!followingHasMore || followingLoadingMore.current) return;
+      followingLoadingMore.current = true;
+      fetchFollowingFeed(followingPage + 1);
+    } else {
+      if (!forYouHasMore || forYouLoadingMore.current) return;
+      forYouLoadingMore.current = true;
+      fetchForYouFeed(forYouPage + 1);
+    }
   };
 
-  const updatePostLike = (postId: number, isLiked: boolean, likeCount: number) => {
-    setPosts((prev) => prev.map((p) => (p.id === postId ? { ...p, isLiked, likeCount } : p)));
+  const updatePostLike = (
+    postId: number,
+    isLiked: boolean,
+    likeCount: number,
+  ) => {
+    const update = (prev: PostData[]) =>
+      prev.map((p) => (p.id === postId ? { ...p, isLiked, likeCount } : p));
+    setPosts(update);
+    setForYouPosts(update);
   };
 
   const handleLike = async (postId: number) => {
-    if (!token) { router.push("/auth/login"); return; }
-    const post = posts.find((p) => p.id === postId);
+    if (!token) {
+      router.push("/auth/login");
+      return;
+    }
+    const post =
+      posts.find((p) => p.id === postId) ||
+      forYouPosts.find((p) => p.id === postId);
     if (!post) return;
     const newLiked = !post.isLiked;
     const newCount = post.likeCount + (newLiked ? 1 : -1);
@@ -363,33 +447,44 @@ export default function FeedScreen() {
     }
   };
 
-  const handleScroll = (e: any) => {
+  const handleScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
     const { layoutMeasurement, contentOffset, contentSize } = e.nativeEvent;
     reportScroll(contentOffset.y);
-    if (contentSize.height - layoutMeasurement.height - contentOffset.y < 400) {
+    if (
+      contentSize.height - layoutMeasurement.height - contentOffset.y <
+      400
+    ) {
       handleLoadMore();
     }
   };
 
+  const postPress = (id: number) => router.push(`/feed/${id}` as any);
+  const brandPress = (id: number) => router.push(`/brands/${id}` as any);
   const isBrandOwner = user?.role === "brandOwner";
-  const { leftCol, rightCol } = useMasonryColumns(posts, imageHeights);
 
-  if (!isConnected && posts.length === 0 && suggestedProducts.length === 0) {
+  if (!isConnected && posts.length === 0 && forYouPosts.length === 0) {
     return (
       <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <OfflinePlaceholder onRetry={() => fetchFeed(1)} />
+        <OfflinePlaceholder onRetry={() => fetchFollowingFeed(1)} />
       </View>
     );
   }
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <TabSwitcher activeTab={activeTab} onChange={handleTabChange} colors={colors} />
+      <TabSwitcher
+        activeTab={activeTab}
+        onChange={handleTabChange}
+        colors={colors}
+      />
 
       {loading ? (
-        <View>{[0, 1, 2].map((i) => <FeedPostSkeleton key={i} />)}</View>
+        <View>
+          {[0, 1, 2].map((i) => (
+            <FeedPostSkeleton key={i} />
+          ))}
+        </View>
       ) : (
-        /* ── Horizontal pager: Following (0) | For You (1) ── */
         <ScrollView
           ref={pagerRef}
           horizontal
@@ -397,95 +492,153 @@ export default function FeedScreen() {
           showsHorizontalScrollIndicator={false}
           scrollEventThrottle={16}
           onMomentumScrollEnd={(e: NativeSyntheticEvent<NativeScrollEvent>) => {
-            const page = Math.round(e.nativeEvent.contentOffset.x / SCREEN_WIDTH);
-            setActiveTab(TAB_ORDER[page] ?? "following");
+            const idx = Math.round(
+              e.nativeEvent.contentOffset.x / SCREEN_WIDTH,
+            );
+            setActiveTab(TAB_ORDER[idx] ?? "following");
           }}
           style={{ flex: 1 }}
         >
-          {/* Page 0 — Following */}
+          {/* ── Page 0: Following ── */}
           <View style={{ width: SCREEN_WIDTH, flex: 1 }}>
             <ScrollView
               ref={followingRef}
               showsVerticalScrollIndicator={false}
               onScroll={handleScroll}
               scrollEventThrottle={200}
-              refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}
-              contentContainerStyle={[styles.scrollContent, { paddingBottom: tabBarHeight }]}
+              refreshControl={
+                <RefreshControl
+                  refreshing={refreshing}
+                  onRefresh={handleRefresh}
+                />
+              }
+              contentContainerStyle={[
+                styles.scrollContent,
+                { paddingBottom: tabBarHeight },
+              ]}
             >
               {posts.length > 0 ? (
                 <>
-                  <View style={styles.masonryRow}>
-                    <View style={[styles.column, styles.columnLeft]}>
-                      {leftCol.map(({ post, height }) => (
-                        <PinCard key={post.id} post={post} imageHeight={height} colors={colors}
-                          onPress={(id) => router.push(`/feed/${id}` as any)}
-                          onLike={handleLike}
-                          onBrandPress={(id) => router.push(`/brands/${id}` as any)}
-                        />
-                      ))}
-                    </View>
-                    <View style={styles.column}>
-                      {rightCol.map(({ post, height }) => (
-                        <PinCard key={post.id} post={post} imageHeight={height} colors={colors}
-                          onPress={(id) => router.push(`/feed/${id}` as any)}
-                          onLike={handleLike}
-                          onBrandPress={(id) => router.push(`/brands/${id}` as any)}
-                        />
-                      ))}
-                    </View>
-                  </View>
-                  {hasMore && (
-                    <ActivityIndicator style={{ paddingVertical: 20 }} color={colors.textTertiary} />
+                  <MasonryGrid
+                    posts={posts}
+                    imageHeights={imageHeights}
+                    colors={colors}
+                    onPostPress={postPress}
+                    onLike={handleLike}
+                    onBrandPress={brandPress}
+                  />
+                  {followingHasMore && (
+                    <ActivityIndicator
+                      style={{ paddingVertical: 20 }}
+                      color={colors.textTertiary}
+                    />
                   )}
                 </>
               ) : (
+                /* ── Following empty state ── */
                 <View style={styles.empty}>
-                  <Ionicons name="images-outline" size={48} color={colors.textTertiary} />
-                  <Text style={[styles.emptyTitle, { color: colors.text }]}>FEED IS EMPTY</Text>
-                  <Text style={[styles.emptySubtitle, { color: colors.textTertiary }]}>
+                  <Ionicons
+                    name="compass-outline"
+                    size={52}
+                    color={colors.textTertiary}
+                  />
+                  <Text style={[styles.emptyTitle, { color: colors.text }]}>
+                    NO POSTS YET
+                  </Text>
+                  <Text
+                    style={[
+                      styles.emptySubtitle,
+                      { color: colors.textTertiary },
+                    ]}
+                  >
                     Follow brands you love to see their posts here.
                   </Text>
-                  <TouchableOpacity
-                    style={[styles.exploreCta, { borderColor: colors.text }]}
-                    onPress={() => router.push("/(tabs)/brands" as any)}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={[styles.exploreCtaText, { color: colors.text }]}>
-                      EXPLORE BRANDS →
-                    </Text>
-                  </TouchableOpacity>
+                  <View style={styles.emptyActions}>
+                    <TouchableOpacity
+                      style={[
+                        styles.ctaPrimary,
+                        { backgroundColor: colors.text },
+                      ]}
+                      onPress={() => handleTabChange("forYou")}
+                      activeOpacity={0.7}
+                    >
+                      <Text
+                        style={[styles.ctaText, { color: colors.background }]}
+                      >
+                        FOR YOU →
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.ctaOutline, { borderColor: colors.text }]}
+                      onPress={() => router.push("/(tabs)/brands" as any)}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={[styles.ctaText, { color: colors.text }]}>
+                        EXPLORE BRANDS
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
               )}
             </ScrollView>
           </View>
 
-          {/* Page 1 — For You */}
+          {/* ── Page 1: For You ── */}
           <View style={{ width: SCREEN_WIDTH, flex: 1 }}>
-            <FlatList
+            <ScrollView
               ref={forYouRef}
-              data={suggestedProducts}
-              numColumns={2}
-              keyExtractor={(item) => `p-${item.id}`}
-              contentContainerStyle={[styles.productGrid, { paddingBottom: tabBarHeight }]}
-              columnWrapperStyle={styles.productRow}
               showsVerticalScrollIndicator={false}
               onScroll={handleScroll}
               scrollEventThrottle={200}
-              refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />}
-              renderItem={({ item }) => (
-                <ProductCard
-                  product={item}
-                  colors={colors}
-                  onPress={(id) => router.push(`/products/${id}` as any)}
+              refreshControl={
+                <RefreshControl
+                  refreshing={refreshing}
+                  onRefresh={handleRefresh}
                 />
-              )}
-              ListEmptyComponent={
-                <View style={styles.empty}>
-                  <Ionicons name="grid-outline" size={48} color={colors.textTertiary} />
-                  <Text style={[styles.emptyTitle, { color: colors.text }]}>NOTHING HERE YET</Text>
-                </View>
               }
-            />
+              contentContainerStyle={[
+                styles.scrollContent,
+                { paddingBottom: tabBarHeight },
+              ]}
+            >
+              {forYouPosts.length > 0 ? (
+                <>
+                  <MasonryGrid
+                    posts={forYouPosts}
+                    imageHeights={imageHeights}
+                    colors={colors}
+                    onPostPress={postPress}
+                    onLike={handleLike}
+                    onBrandPress={brandPress}
+                  />
+                  {forYouHasMore && (
+                    <ActivityIndicator
+                      style={{ paddingVertical: 20 }}
+                      color={colors.textTertiary}
+                    />
+                  )}
+                </>
+              ) : (
+                <View style={styles.empty}>
+                  <Ionicons
+                    name="images-outline"
+                    size={48}
+                    color={colors.textTertiary}
+                  />
+                  <Text style={[styles.emptyTitle, { color: colors.text }]}>
+                    NOTHING HERE YET
+                  </Text>
+                  <Text
+                    style={[
+                      styles.emptySubtitle,
+                      { color: colors.textTertiary },
+                    ]}
+                  >
+                    Check back soon — posts will appear here.
+                  </Text>
+                </View>
+              )}
+            </ScrollView>
           </View>
         </ScrollView>
       )}
@@ -522,9 +675,7 @@ const styles = StyleSheet.create({
     fontWeight: "500",
     letterSpacing: 0.1,
   },
-  tabLabelActive: {
-    fontWeight: "700",
-  },
+  tabLabelActive: { fontWeight: "700" },
   tabUnderline: {
     position: "absolute",
     bottom: 0,
@@ -534,45 +685,7 @@ const styles = StyleSheet.create({
     borderRadius: 1,
   },
 
-  // For You product grid
-  productGrid: {
-    padding: PADDING,
-  },
-  productRow: {
-    gap: COLUMN_GAP,
-    marginBottom: COLUMN_GAP,
-  },
-  productCard: {
-    flex: 1,
-    borderRadius: 10,
-    overflow: "hidden",
-  },
-  productImage: {
-    width: "100%",
-    aspectRatio: 3 / 4,
-  },
-  productInfo: {
-    padding: 10,
-    gap: 2,
-  },
-  productBrand: {
-    fontSize: 10,
-    fontWeight: "500",
-    letterSpacing: 0.5,
-    textTransform: "uppercase",
-  },
-  productName: {
-    fontSize: 13,
-    fontWeight: "600",
-    lineHeight: 17,
-  },
-  productPrice: {
-    fontSize: 13,
-    fontWeight: "800",
-    marginTop: 2,
-  },
-
-  // Masonry (Following)
+  // Scroll / masonry
   scrollContent: {
     paddingHorizontal: PADDING,
     paddingTop: PADDING,
@@ -633,13 +746,14 @@ const styles = StyleSheet.create({
   pinBrandInitial: { fontSize: 9, fontWeight: "800" },
   pinBrandName: { fontSize: 11, marginLeft: 4, flex: 1 },
 
-  // Empty
+  // Empty state
   empty: {
     justifyContent: "center",
     alignItems: "center",
     gap: 10,
     paddingHorizontal: 40,
     paddingTop: 80,
+    paddingBottom: 32,
   },
   emptyTitle: {
     fontSize: 22,
@@ -652,13 +766,21 @@ const styles = StyleSheet.create({
     textAlign: "center",
     letterSpacing: 0.5,
   },
-  exploreCta: {
+  emptyActions: {
+    flexDirection: "row",
+    gap: 10,
     marginTop: 12,
-    paddingHorizontal: 24,
+  },
+  ctaPrimary: {
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+  },
+  ctaOutline: {
+    paddingHorizontal: 20,
     paddingVertical: 12,
     borderWidth: 1,
   },
-  exploreCtaText: {
+  ctaText: {
     fontSize: 10,
     fontWeight: "700",
     letterSpacing: 1.5,

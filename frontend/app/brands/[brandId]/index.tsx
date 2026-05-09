@@ -397,8 +397,8 @@ const BrandDetailScreen = () => {
         <View style={[styles.heroCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
           {/* Cover Photo */}
           <View style={[styles.heroCover, { backgroundColor: colors.primary }]}>
-            {(brand as any).coverImage ? (
-              <Image source={{ uri: (brand as any).coverImage }} style={styles.heroCoverImage} resizeMode="cover" />
+            {brand.coverPhoto ? (
+              <Image source={{ uri: brand.coverPhoto }} style={styles.heroCoverImage} resizeMode="cover" />
             ) : null}
           </View>
 

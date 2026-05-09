@@ -42,7 +42,7 @@ The backend is a robust RESTful API built with **NestJS**, utilizing **TypeScrip
 
 ### 3. Brands & Governance (`BrandsModule`)
 - **Entities**:
-  - `Brand`: Core identity (name, logo, location, description, slug, status).
+  - `Brand`: Core identity (name, logo, coverPhoto, location, description, slug, status). `coverPhoto` is a nullable Cloudinary URL for the brand's banner/header image (16:9).
   - `BrandUser`: Junction table for RBAC within a brand (supports `OWNER`, `STAFF` roles with granular permissions).
 - **Content Lifecycle**: `DRAFT` → `PUBLISHED` → `ARCHIVED`.
 - **Soft Delete**: Uses `@DeleteDateColumn`.

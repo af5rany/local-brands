@@ -48,6 +48,18 @@ export class FeedController {
     return this.feedService.getFeed(query, userId);
   }
 
+  @Get('for-you')
+  @Public()
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Get personalized feed based on orders and wishlist' })
+  async getForYouFeed(
+    @Query('page') page = 1,
+    @Query('limit') limit = 20,
+    @Request() req,
+  ) {
+    return this.feedService.getForYouFeed(req.user?.id, +page, +limit);
+  }
+
   @Get('brand/:brandId')
   @Public()
   @UseGuards(JwtAuthGuard)

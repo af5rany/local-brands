@@ -12,6 +12,11 @@ import {
   Switch,
   Platform,
 } from "react-native";
+import DraggableFlatList, {
+  RenderItemParams,
+  ScaleDecorator,
+} from "react-native-draggable-flatlist";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter, useLocalSearchParams } from "expo-router";
@@ -244,14 +249,39 @@ const CreateProductScreen = () => {
     setProductImages((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const moveProductImage = (index: number, direction: "left" | "right") => {
-    setProductImages((prev) => {
-      const arr = [...prev];
-      const target = direction === "left" ? index - 1 : index + 1;
-      [arr[index], arr[target]] = [arr[target], arr[index]];
-      return arr;
-    });
-  };
+  const renderDraggableImage = useCallback(
+    ({ item: uri, getIndex, drag, isActive }: RenderItemParams<string>) => {
+      const imgIndex = getIndex() ?? 0;
+      return (
+        <ScaleDecorator activeScale={1.08}>
+          <TouchableOpacity
+            onLongPress={drag}
+            delayLongPress={200}
+            activeOpacity={1}
+            style={[styles.sortableImageItem, isActive && styles.sortableImageItemActive]}
+          >
+            {uploads[uri] ? (
+              <ImageUploadProgress upload={uploads[uri]} size={90} />
+            ) : (
+              <Image source={{ uri }} style={styles.sortableImage} />
+            )}
+            {imgIndex === 0 && (
+              <View style={styles.mainBadge}>
+                <Text style={styles.mainBadgeText}>MAIN</Text>
+              </View>
+            )}
+            <TouchableOpacity
+              style={styles.removeImageButton}
+              onPress={() => removeProductImage(imgIndex)}
+            >
+              <Ionicons name="close" size={14} color="#fff" />
+            </TouchableOpacity>
+          </TouchableOpacity>
+        </ScaleDecorator>
+      );
+    },
+    [uploads, removeProductImage, styles],
+  );
 
   const hasNonCloudinaryImage = productImages.some(
     (uri) => !uri.startsWith("https://res.cloudinary."),
@@ -597,67 +627,31 @@ const CreateProductScreen = () => {
             ) : null}
           </View>
 
-          {/* Product Images — sortable horizontal list */}
+          {/* Product Images — drag to reorder */}
           <View style={styles.inputContainer}>
             <Text style={styles.label}>
               Product Images <Text style={styles.required}>*</Text>
             </Text>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.sortableImageRow}
-            >
-              {productImages.map((uri, imgIndex) => (
-                <View key={imgIndex} style={styles.sortableImageItem}>
-                  {uploads[uri] ? (
-                    <ImageUploadProgress upload={uploads[uri]} size={90} />
-                  ) : (
-                    <Image source={{ uri }} style={styles.sortableImage} />
-                  )}
-                  {imgIndex === 0 && (
-                    <View style={styles.mainBadge}>
-                      <Text style={styles.mainBadgeText}>MAIN</Text>
-                    </View>
-                  )}
+            <Text style={styles.dragHint}>Hold & drag to reorder · First image is main</Text>
+            <GestureHandlerRootView>
+              <DraggableFlatList
+                horizontal
+                data={productImages}
+                keyExtractor={(uri, i) => `${uri}-${i}`}
+                onDragEnd={({ data }) => setProductImages(data)}
+                renderItem={renderDraggableImage}
+                contentContainerStyle={styles.sortableImageRow}
+                showsHorizontalScrollIndicator={false}
+                ListFooterComponent={
                   <TouchableOpacity
-                    style={styles.removeImageButton}
-                    onPress={() => removeProductImage(imgIndex)}
+                    style={styles.addImageBtn}
+                    onPress={handleProductImagePick}
                   >
-                    <Ionicons name="close" size={14} color="#fff" />
+                    <Ionicons name="add" size={32} color={colors.primary} />
                   </TouchableOpacity>
-                  <View style={styles.sortArrows}>
-                    <TouchableOpacity
-                      onPress={() => moveProductImage(imgIndex, "left")}
-                      disabled={imgIndex === 0}
-                      hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
-                    >
-                      <Ionicons
-                        name="chevron-back"
-                        size={18}
-                        color={imgIndex === 0 ? "transparent" : colors.text}
-                      />
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      onPress={() => moveProductImage(imgIndex, "right")}
-                      disabled={imgIndex === productImages.length - 1}
-                      hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
-                    >
-                      <Ionicons
-                        name="chevron-forward"
-                        size={18}
-                        color={imgIndex === productImages.length - 1 ? "transparent" : colors.text}
-                      />
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              ))}
-              <TouchableOpacity
-                style={styles.addImageBtn}
-                onPress={handleProductImagePick}
-              >
-                <Ionicons name="add" size={32} color={colors.primary} />
-              </TouchableOpacity>
-            </ScrollView>
+                }
+              />
+            </GestureHandlerRootView>
           </View>
         </View>
 
@@ -1036,8 +1030,10 @@ const createStyles = (colors: ThemeColors) =>
       justifyContent: "center",
     },
     selectedColor: { borderWidth: 2, borderColor: colors.text },
+    dragHint: { fontSize: 11, color: colors.textSecondary, marginBottom: 8 },
     sortableImageRow: { gap: 10, paddingVertical: 4 },
     sortableImageItem: { width: 90, position: "relative" },
+    sortableImageItemActive: { opacity: 0.9, shadowColor: "#000", shadowOpacity: 0.3, shadowRadius: 8, elevation: 8 },
     sortableImage: { width: 90, height: 90, backgroundColor: colors.surfaceRaised },
     mainBadge: {
       position: "absolute",
@@ -1058,13 +1054,6 @@ const createStyles = (colors: ThemeColors) =>
       backgroundColor: "rgba(0,0,0,0.6)",
       alignItems: "center",
       justifyContent: "center",
-    },
-    sortArrows: {
-      flexDirection: "row",
-      justifyContent: "space-between",
-      alignItems: "center",
-      paddingHorizontal: 2,
-      paddingTop: 4,
     },
     addImageBtn: {
       width: 90,

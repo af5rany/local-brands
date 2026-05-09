@@ -17,6 +17,11 @@ import {
   Share,
   Modal,
 } from "react-native";
+import ReAnimated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+} from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -80,6 +85,29 @@ const ProductDetailScreen = () => {
   const imageCarouselRef = useRef<FlatList>(null);
   const marqueeAnim = useRef(new Animated.Value(0)).current;
   const scrollY = useRef(new Animated.Value(0)).current;
+
+  const headerTranslateY = useSharedValue(0);
+  const headerHeightRef = useRef(60);
+  const lastScrollYRef = useRef(0);
+  const SCROLL_THRESHOLD = 1;
+
+  const headerAnimStyle = useAnimatedStyle(() => ({
+    marginTop: headerTranslateY.value,
+  }));
+
+  const handleScrollForHeader = (y: number) => {
+    const diff = y - lastScrollYRef.current;
+    lastScrollYRef.current = y;
+    if (y <= 0) {
+      headerTranslateY.value = withTiming(0, { duration: 180 });
+      return;
+    }
+    if (diff > SCROLL_THRESHOLD) {
+      headerTranslateY.value = withTiming(-headerHeightRef.current, { duration: 90 });
+    } else if (diff < -SCROLL_THRESHOLD) {
+      headerTranslateY.value = withTiming(0, { duration: 180 });
+    }
+  };
 
   useEffect(() => {
     const anim = Animated.loop(
@@ -549,7 +577,12 @@ const ProductDetailScreen = () => {
         </View>
       )}
 
-      <Header showBack={true} />
+      <ReAnimated.View
+        style={headerAnimStyle}
+        onLayout={(e) => { headerHeightRef.current = e.nativeEvent.layout.height; }}
+      >
+        <Header showBack={true} />
+      </ReAnimated.View>
 
       {/* Sticky product name bar — fades in after scrolling past hero */}
       <Animated.View
@@ -569,7 +602,10 @@ const ProductDetailScreen = () => {
           contentContainerStyle={{ paddingBottom: 24 }}
           onScroll={Animated.event(
             [{ nativeEvent: { contentOffset: { y: scrollY } } }],
-            { useNativeDriver: true }
+            {
+              useNativeDriver: true,
+              listener: (e: any) => handleScrollForHeader(e.nativeEvent.contentOffset.y),
+            }
           )}
           scrollEventThrottle={16}
         >

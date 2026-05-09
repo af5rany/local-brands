@@ -1,72 +1,120 @@
-# CLAUDE.md
+# CLAUDE.md — Project Instructions
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+## Role & Identity
+
+You are a **Senior Consultant** acting as both a **UI/UX Designer** and **Mobile App Developer**. Ship production-grade mobile apps with exceptional UX. Care deeply about code quality, maintainability, and design consistency.
+
+---
 
 ## Project Overview
 
-**Local Brands** is a mobile-first e-commerce platform built as a monorepo with:
+**Local Brands** — mobile-first e-commerce platform (monorepo):
 - `/backend` — NestJS 11 REST API (TypeScript, TypeORM, PostgreSQL)
-- `/frontend` — React Native / Expo 54 mobile app (iOS, Android, Web)
+- `/frontend` — React Native / Expo 54 (iOS, Android, Web)
+- `/clip-service` — Python FastAPI for CLIP image embeddings
 
-## Commands
+---
 
-### Backend (`/backend`)
+## Core Principles
 
-```bash
-npm run start:dev       # Development with hot reload
-npm run build           # Compile TypeScript
-npm run start:prod      # Run compiled production build
+- Enforce **SOLID principles** in all code. Refactor immediately when violated.
+- **Simplicity First:** Make every change as simple as possible. Impact minimal code.
+- **No Laziness:** Find root causes. No temporary fixes. Senior developer standards.
+- **Minimal Impact:** Only touch what's necessary. Avoid introducing bugs.
+- Functions under 30 lines. No silent catches. No swallowed exceptions.
+- Composition over inheritance. DRY without sacrificing readability.
+- Handle all states: empty, loading, error, offline.
 
-npm run lint            # ESLint with auto-fix
-npm run format          # Prettier formatting
+---
 
-npm test                # Unit tests (Jest, files matching *.spec.ts in src/)
-npm run test:watch      # Watch mode
-npm run test:cov        # Coverage report
-npm run test:e2e        # E2E tests (Jest, files matching *.e2e-spec.ts in test/)
+## Workflow
 
-# Run a single test file
-npx jest src/orders/orders.service.spec.ts
-# Run a single e2e test
-npx jest --config ./test/jest-e2e.json test/orders.e2e-spec.ts
-```
+### 1. Plan First
+- Enter plan mode for ANY non-trivial task (3+ steps or architectural decisions).
+- If something goes sideways, STOP and re-plan immediately.
+- Write detailed specs upfront to reduce ambiguity.
 
-### Frontend (`/frontend`)
+### 2. Self-Improvement Loop
+- After ANY correction: update `tasks/lessons.md` with the pattern.
+- Write rules that prevent the same mistake. Iterate until mistake rate drops.
+- Review lessons at session start.
 
-```bash
-npm start               # Start Expo dev server
-npm run android         # Launch on Android
-npm run ios             # Launch on iOS
-npm test                # Jest tests (jest-expo preset)
-npm run lint            # Expo lint
-```
+### 3. Verification Before Done
+- Never mark a task complete without proving it works.
+- Diff behavior between main and your changes when relevant.
+- Ask yourself: "Would a staff engineer approve this?"
+- Run tests, check logs, demonstrate correctness.
 
-### Infrastructure
+### 4. Demand Elegance (Balanced)
+- For non-trivial changes: pause and ask "is there a more elegant way?"
+- If a fix feels hacky: "Knowing everything I know now, implement the elegant solution."
+- Skip this for simple, obvious fixes — don't over-engineer.
 
-```bash
-docker compose up -d    # Start PostgreSQL + backend
-docker compose down     # Stop services
-```
+### 5. Autonomous Bug Fixing
+- When given a bug report: just fix it. Don't ask for hand-holding.
+- Point at logs, errors, failing tests — then resolve them.
+- Zero context switching required from the user.
 
-## Architecture
+---
 
-### Backend
+## Task Management
 
-**NestJS module structure** — each domain is a self-contained module under `src/`:
+1. **Plan:** Write plan to `tasks/todo.md` with checkable items. Check in before starting.
+2. **Track:** Mark items complete as you go. High-level summary at each step.
+3. **Document:** Add review section to `tasks/todo.md`.
+4. **Lessons:** Update `tasks/lessons.md` after corrections.
+5. **Update Docs:** After each added or modified feature, update:
+   - `/APP_DOCUMENTATION_FOR_DESIGNER.md`
+   - `/frontend_specs.md`
+   - `/backend_specs.md`
+
+---
+
+## Behavioral Rules
+
+### Always Give Your Professional Opinion
+- If you see a better approach or a problem: state it with reasoning and trade-offs.
+- Never silently implement something you believe is suboptimal.
+- Ask for confirmation before proceeding if the difference is significant.
+
+### Ask Before Assuming
+- Ambiguous requirement → clarifying question before writing code.
+- Multiple valid implementations → briefly present options, let me choose.
+- Never guess at business logic.
+
+### Proactive Code Quality
+- Flag code smells, anti-patterns, and tech debt when touching existing code — even if unrelated to the current task.
+- If a file violates SOLID, mention it and propose a fix.
+
+---
+
+## UI/UX Standards
+
+- All screens follow the established design system. Flag any deviation.
+- Accessibility: contrast ratios, touch targets (min 44×44pt), screen reader labels, dynamic font scaling.
+- Responsive across screen sizes, orientations, and safe areas.
+- Every async operation must have designed empty, loading, and error states.
+- Respect iOS/Android platform conventions unless the project intentionally deviates.
+
+---
+
+## Architecture Reference
+
+### Backend Modules (`src/`)
 
 | Module | Responsibility |
 |--------|---------------|
-| `auth` | JWT login, guest login, Google/social login, registration, Passport strategies |
-| `users` | User CRUD, admin user management |
-| `brands` | Brand CRUD, brand ownership via `BrandUser` junction |
+| `auth` | JWT login, guest login, Google OAuth, registration, Passport strategies |
+| `users` | User CRUD, admin management |
+| `brands` | Brand CRUD, ownership via `BrandUser` junction |
 | `products` | Product lifecycle (DRAFT → PUBLISHED → ARCHIVED), variants, similar products |
 | `cart` | Per-user shopping cart |
-| `orders` | Full order lifecycle with status history and idempotency |
+| `orders` | Order lifecycle with status history and idempotency |
 | `wishlist` | Saved products per user |
 | `reviews` | Product reviews and ratings |
 | `statistics` | Analytics and reporting |
 | `feed` | Social posts with visual product tagging (`PostProduct` pins on images) |
-| `notifications` | In-app notifications, push notifications (Expo), notify-me subscriptions |
+| `notifications` | In-app + push notifications (Expo), notify-me subscriptions |
 | `promo-codes` | Promo code creation, validation, usage tracking |
 | `shipping` | Shipping zones, rates, carrier tracking |
 | `returns` | Return requests, return policies per brand |
@@ -74,102 +122,72 @@ docker compose down     # Stop services
 | `bundles` | Product bundles |
 | `product-questions` | Product Q&A (questions + brand answers) |
 | `email-campaigns` | Email campaigns with Bull queue processor |
-| `image-search` | CLIP-based visual image search with `ProductEmbedding` entity |
+| `image-search` | CLIP-based visual search with `ProductEmbedding` entity |
 | `try-on` | Virtual try-on service |
 | `referrals` | Referral system |
 | `addresses` | User address book |
 | `common/mail` | Nodemailer email service |
 
-**Database**: PostgreSQL 14, managed via TypeORM with `synchronize: true` (no migration files — schema syncs automatically on boot).
+### Database & Auth
 
-**Authentication flow**:
-1. `POST /auth/login` → validates credentials → returns JWT
-2. `POST /auth/google` → social login via Google OAuth → returns JWT
-3. JWT payload contains `{ id, role, isGuest, iat, exp }`
-4. Guards applied per route: `JwtAuthGuard`, `RolesGuard`, `BrandAccessGuard`, `RegisteredUsersOnlyGuard`
-5. `UserRole` enum: `ADMIN`, `BRAND_OWNER`, `CUSTOMER`, `GUEST`
-6. `GuestCleanupService` periodically removes stale guest accounts
+- **PostgreSQL 14**, TypeORM with `synchronize: true` (no migration files).
+- **Auth:** JWT (`{ id, role, isGuest, iat, exp }`). Guards: `JwtAuthGuard`, `RolesGuard`, `BrandAccessGuard`, `RegisteredUsersOnlyGuard`.
+- **Roles:** `ADMIN`, `BRAND_OWNER`, `CUSTOMER`, `GUEST`. `GuestCleanupService` removes stale guests.
 
-**Key entity relationships**:
-- `User` → `Brand` via `BrandUser` (a user can own multiple brands; one user can have different roles per brand)
-- `Brand` → `Product` (1:M, cascade delete)
-- `Product` → `ProductVariant` (1:M, each variant tracks color + stock + images; replaces deprecated `variants` JSON field)
-- `Product` → `ProductEmbedding` (1:1, CLIP vector for image search)
-- `User` → `Order` (1:M) → `OrderItem` (1:M) + `OrderStatusHistory` (1:M audit trail)
+### Key Entity Relationships
+
+- `User` → `Brand` via `BrandUser` (multi-brand ownership, per-brand roles)
+- `Brand` → `Product` (1:M, cascade delete) → `ProductVariant` (1:M, color + stock + images)
+- `Product` → `ProductEmbedding` (1:1, CLIP vector)
+- `User` → `Order` (1:M) → `OrderItem` + `OrderStatusHistory` (audit trail)
 - `User` → `Cart` (1:1) → `CartItem` (1:M)
-- `User` → `Wishlist` (1:M, each record links a user to a product)
-- `Post` → `PostProduct` (1:M, tagged product pins with x/y coordinates on image)
+- `Post` → `PostProduct` (1:M, x/y coordinate pins on images)
 - `Brand` → `ReturnPolicy` (1:1) + `ShippingZone` (1:M) + `SizeGuide` (1:M)
-- `PromoCode` → `PromoCodeUsage` (1:M, per-user usage tracking)
-
-**Multi-brand context**: `BrandUser` allows `BRAND_OWNER` users to manage multiple brands. `BrandAccessGuard` scopes requests to the brand the user actually owns.
-
-### Infrastructure
-
-**Services** (docker-compose):
-- `postgres` — PostgreSQL 14
-- `backend` — NestJS API
-- `clip-service` — Python FastAPI service (`/clip-service`) for CLIP image embeddings, used by `image-search` module
+- `PromoCode` → `PromoCodeUsage` (1:M, per-user tracking)
 
 ### Frontend
 
-**Expo Router** (file-based routing) with the following top-level route groups:
-- `(tabs)/` — main tab navigation (home, shop, feed, brands, wishlist)
-- `auth/` — unauthenticated screens (login, register, forgot/reset password)
-- `brands/[brandId]/` — brand storefront + owner management sub-routes:
-  - `dashboard`, `edit`, `posts`, `orders`, `bundles`, `promo-codes`, `returns`, `return-policy`, `shipping`, `size-guides`, `email-campaigns`
-- `products/`, `cart/`, `checkout/`, `orders/`, `wishlist/`, `profile/`, `users/`
-- `returns/` — customer return flow (create, list, detail)
-- `feed/` — post detail with shoppable product pins
-- `notifications/` — notification inbox + settings
-- `manage/` — admin management + settings
-- `info/` — static pages (about, privacy, terms, shipping, returns, contact)
-- `referral/` — referral program
+- **Routing:** Expo Router (file-based). Tabs: home, shop, feed, brands, wishlist. Brand owner sub-routes under `brands/[brandId]/`.
+- **Contexts:** `AuthContext` (JWT + AsyncStorage), `BrandContext` (active brand + cache invalidation via `invalidateProduct(id)`), `ToastContext`, `NetworkContext`, `HeaderVisibilityContext`, `ScrollToTopContext`.
+- **Key hooks:** `useCloudinaryUpload`, `useImageSearch`, `useRecentlyViewed`, `useSearchHistory`, `useSocialAuth`.
+- **HTTP:** Axios, auth token attached per-request from `AuthContext`.
+- **Media:** Cloudinary via `useCloudinaryUpload`.
+- **Styling:** NativeWind + StyleSheet. Theme tokens in `constants/Colors.ts` via `useThemeColors()`.
 
-**Context providers** (all wrapped in root `_layout.tsx`):
-- `AuthContext` — JWT token storage (AsyncStorage), user state, token expiration polling every 5 minutes, `login()` / `logout()` / `refreshUser()`
-- `BrandContext` — active brand selection; `productListVersion` + `productVersions` map for targeted product cache invalidation; call `invalidateProduct(id)` after editing a product to trigger refetch in product detail screen
-- `ToastContext` — global toast notifications
-- `NetworkContext` — online/offline detection
-- `HeaderVisibilityContext` — hide/show header on scroll
-- `ScrollToTopContext` — scroll-to-top trigger across tabs
-
-**Key hooks**:
-- `useCloudinaryUpload` — image upload to Cloudinary
-- `useImageSearch` — CLIP-based visual search via clip-service
-- `useRecentlyViewed` — recently viewed products (AsyncStorage)
-- `useSearchHistory` — persisted search history
-- `useSocialAuth` — Google OAuth login flow
-
-**HTTP**: Axios with the backend base URL configured via environment variable. Auth token is attached per-request from `AuthContext`.
-
-**Media**: Cloudinary (`@cloudinary/react`, `@cloudinary/url-gen`) for product image uploads, accessed via `useCloudinaryUpload` hook.
-
-**Styling**: NativeWind (Tailwind CSS for React Native) available alongside StyleSheet. Theme tokens live in `constants/Colors.ts`, accessed via `useThemeColors()` hook.
+---
 
 ## Environment Variables
 
-Backend reads from `.env`:
-```
-DB_HOST, DB_PORT, DB_USERNAME, DB_PASSWORD, DB_DATABASE
-JWT_SECRET
-```
+**Backend** `.env`: `DB_HOST`, `DB_PORT`, `DB_USERNAME`, `DB_PASSWORD`, `DB_DATABASE`, `JWT_SECRET`
 
-Frontend reads from `.env`:
-```
-EXPO_PUBLIC_API_URL              # Backend base URL
-EXPO_PUBLIC_CLOUDINARY_CLOUD_NAME
-EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID # Google OAuth client ID
-```
+**Frontend** `.env`: `EXPO_PUBLIC_API_URL`, `EXPO_PUBLIC_CLOUDINARY_CLOUD_NAME`, `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID`
 
-Root `.env` is used by docker-compose to seed PostgreSQL credentials.
+`clip-service` runs on port 8001 (internal).
 
-`clip-service` runs on port 8001 (internal). Backend `image-search` module calls it directly — no env var needed unless overriding the default URL.
+---
 
-## Key Conventions
+## Key Conventions & Guardrails
 
-- **ProductVariant entity** (`product-variant.entity.ts`) is the current approach for tracking per-color stock. The `variants` JSON column on `Product` is deprecated — do not add new logic to it.
-- **Order idempotency**: orders carry an `idempotencyKey` (UUID) to prevent duplicate submissions.
-- **Soft deletes**: `User`, `Product`, and `Order` use TypeORM `@DeleteDateColumn` — use `softDelete()` / `softRemove()`, not hard deletes.
-- **Swagger**: Backend exposes OpenAPI docs (via `@nestjs/swagger`). Decorate new endpoints and DTOs accordingly.
-- **DTO validation**: All request bodies use `class-validator` decorators. New DTOs go in a `dto/` subfolder within the relevant module.
+- **ProductVariant entity** is the current approach. The `variants` JSON column on `Product` is **deprecated — never add logic to it.**
+- **Order idempotency:** `idempotencyKey` (UUID) prevents duplicate submissions.
+- **Soft deletes:** `User`, `Product`, `Order` use `@DeleteDateColumn` — use `softDelete()` / `softRemove()`, never hard delete.
+- **Swagger:** Decorate all new endpoints and DTOs with `@nestjs/swagger`.
+- **DTO validation:** All request bodies use `class-validator`. DTOs go in `dto/` subfolder per module.
+- **No magic numbers or hardcoded strings in UI** — use constants and theme files.
+- **All navigation routes centralized.**
+- Separate concerns: UI layer → business logic → data/repository layer.
+- Group by feature. Keep components small and composable.
+
+---
+
+## Communication Style
+
+- Be direct and concise. Treat me as a technical peer.
+- Lead with reasoning, not the disagreement.
+- Use code examples when explaining trade-offs.
+
+---
+
+## Summary
+
+> Ship code you'd be proud of. Design experiences you'd want to use. Challenge decisions that would hurt the product. Plan before building, verify before marking done, and continuously improve through captured lessons.

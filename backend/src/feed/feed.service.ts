@@ -385,6 +385,107 @@ export class FeedService {
     });
   }
 
+  async getForYouFeed(
+    userId: number | undefined,
+    page = 1,
+    limit = 20,
+  ): Promise<{ data: Post[]; pagination: any }> {
+    let personalizedBrandIds: number[] = [];
+    let followedBrandIds: number[] = [];
+
+    if (userId) {
+      const [personalizedRows, followedRows]: [
+        { brandId: number }[],
+        { brandId: number }[],
+      ] = await Promise.all([
+        this.postRepo.manager.query(
+          `WITH target AS (SELECT $1::int AS id)
+           SELECT p."brandId"
+           FROM order_item oi
+           JOIN "order" o ON oi."orderId" = o.id
+           JOIN product p ON oi."productId" = p.id
+           WHERE o."userId" = (SELECT id FROM target)
+           UNION
+           SELECT p."brandId"
+           FROM wishlist w
+           JOIN product p ON w."productId" = p.id
+           WHERE w."userId" = (SELECT id FROM target)`,
+          [userId],
+        ),
+        this.postRepo.manager.query(
+          `SELECT "brandId" FROM brand_follow WHERE "userId" = $1`,
+          [userId],
+        ),
+      ]);
+
+      personalizedBrandIds = personalizedRows
+        .map((r) => r.brandId)
+        .filter(Boolean);
+      followedBrandIds = followedRows.map((r) => r.brandId).filter(Boolean);
+    }
+
+    const qb = this.postRepo
+      .createQueryBuilder('post')
+      .leftJoinAndSelect('post.brand', 'brand')
+      .leftJoinAndSelect('post.author', 'author')
+      .leftJoinAndSelect('post.postProducts', 'postProducts')
+      .leftJoinAndSelect('postProducts.product', 'product')
+      .where('post.status = :status', { status: PostStatus.ACTIVE });
+
+    // Priority:
+    //   0 — personalized brand not followed (best discovery)
+    //   1 — personalized brand already followed
+    //   2 — unknown brand not followed (neutral discovery)
+    //   3 — followed brand (already visible in Following tab)
+    if (personalizedBrandIds.length > 0 || followedBrandIds.length > 0) {
+      const pArr =
+        personalizedBrandIds.length > 0
+          ? `ARRAY[${personalizedBrandIds.join(',')}]::int[]`
+          : 'ARRAY[]::int[]';
+      const fArr =
+        followedBrandIds.length > 0
+          ? `ARRAY[${followedBrandIds.join(',')}]::int[]`
+          : 'ARRAY[]::int[]';
+
+      qb.orderBy(
+        `CASE
+           WHEN post."brandId" = ANY(${pArr}) AND NOT (post."brandId" = ANY(${fArr})) THEN 0
+           WHEN post."brandId" = ANY(${pArr}) AND post."brandId" = ANY(${fArr}) THEN 1
+           WHEN NOT (post."brandId" = ANY(${fArr})) THEN 2
+           ELSE 3
+         END`,
+        'ASC',
+      ).addOrderBy('post.createdAt', 'DESC');
+    } else {
+      qb.orderBy('post.createdAt', 'DESC');
+    }
+
+    qb.skip((page - 1) * limit).take(limit);
+
+    const [data, total] = await qb.getManyAndCount();
+
+    if (userId && data.length) {
+      const postIds = data.map((p) => p.id);
+      const likes = await this.likeRepo.find({
+        where: { userId, postId: In(postIds) },
+      });
+      const likedSet = new Set(likes.map((l) => l.postId));
+      data.forEach((p: any) => {
+        p.isLiked = likedSet.has(p.id);
+      });
+    }
+
+    return {
+      data,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  }
+
   // ── Helpers ──
 
   private async assertBrandOwnership(
