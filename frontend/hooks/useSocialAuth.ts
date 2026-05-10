@@ -22,12 +22,16 @@ const facebookDiscovery = {
 const googleClientId =
   Platform.OS === "ios"
     ? (process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID as string)
-    : (process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID as string);
+    : Platform.OS === "android"
+      ? (process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID as string)
+      : (process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID as string);
 
 const redirectUri = AuthSession.makeRedirectUri(
   Platform.OS === "ios"
     ? { native: `${process.env.EXPO_PUBLIC_GOOGLE_IOS_REVERSE_SCHEME}:/` }
-    : {},
+    : Platform.OS === "android"
+      ? { native: "com.fakharanii.localbrands:/" }
+      : {},
 );
 
 export function useSocialAuth(onSuccess: (token: string) => void) {

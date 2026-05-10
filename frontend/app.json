@@ -38,6 +38,14 @@
       "googleServicesFile": "./google-services.json",
       "permissions": [
         "android.permission.CAMERA"
+      ],
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [{ "scheme": "com.fakharanii.localbrands" }],
+          "category": ["BROWSABLE", "DEFAULT"]
+        }
       ]
     },
     "web": {
