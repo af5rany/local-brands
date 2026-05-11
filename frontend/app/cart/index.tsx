@@ -198,7 +198,7 @@ const CartScreen = () => {
     ].filter(Boolean);
 
     return (
-      <View style={[styles.cartItem, index > 0 && styles.cartItemGap]}>
+      <View key={item.id} style={[styles.cartItem, index > 0 && styles.cartItemGap]}>
         <View style={styles.cartItemRow}>
           <Image
             source={{ uri: image || "" }}

@@ -19,6 +19,7 @@ import {
   ProductStatus,
 } from 'src/common/enums/product.enum';
 import { UserRole } from 'src/common/enums/user.enum';
+import { BrandStatus } from 'src/common/enums/brand.enum';
 import { PublicProductDto } from './dto/public-product.dto';
 import { BrandsService } from '../brands/brands.service';
 import { NotificationsService } from '../notifications/notifications.service';
@@ -136,14 +137,22 @@ export class ProductsService {
           brandIds.length > 0 &&
           brandIds.some((id) => currentUser.brandIds?.includes(Number(id)))));
 
-    if (!canSeeAll) {
-      // If not admin/owner, only show PUBLISHED products
+    const isDashboardRequest =
+      Array.isArray(brandIds) &&
+      brandIds.length > 0 &&
+      canSeeAll;
+
+    if (isDashboardRequest) {
+      // Admin or owner viewing a specific brand's dashboard — no brand status filter
+      if (status) qb.andWhere('product.status = :status', { status });
+    } else {
+      // Public shop: only published products from active brands
       qb.andWhere('product.status = :publishedStatus', {
         publishedStatus: ProductStatus.PUBLISHED,
       });
-    } else if (status) {
-      // If admin/owner and a specific status is requested, apply it
-      qb.andWhere('product.status = :status', { status });
+      qb.andWhere('brand.status = :activeBrandStatus', {
+        activeBrandStatus: BrandStatus.ACTIVE,
+      });
     }
 
     if (isAvailable !== undefined) {

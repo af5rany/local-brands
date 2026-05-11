@@ -42,6 +42,7 @@ const BrandsScreen = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [refreshing, setRefreshing] = useState<boolean>(false);
   const [loadingMore, setLoadingMore] = useState<boolean>(false);
+  const loadingPageRef = React.useRef<number | null>(null);
   const [error, setError] = useState<string>("");
 
   // Search and Filter States
@@ -135,6 +136,7 @@ const BrandsScreen = () => {
         setLoading(false);
         setLoadingMore(false);
         setRefreshing(false);
+        loadingPageRef.current = null;
       }
     },
     [buildApiUrl, token],
@@ -263,9 +265,11 @@ const BrandsScreen = () => {
 
   // Load more data
   const loadMore = () => {
-    if (brandsData && brandsData.hasNextPage && !loadingMore) {
-      fetchBrands(brandsData.page + 1, true);
-    }
+    if (!brandsData || !brandsData.hasNextPage || loadingMore) return;
+    const nextPage = brandsData.page + 1;
+    if (loadingPageRef.current === nextPage) return;
+    loadingPageRef.current = nextPage;
+    fetchBrands(nextPage, true);
   };
 
   const getStatusLabel = (status: string | undefined) => {

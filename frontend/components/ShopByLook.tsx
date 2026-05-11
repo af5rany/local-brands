@@ -6,6 +6,7 @@ import {
   Pressable,
   Animated,
   Easing,
+  Dimensions,
 } from "react-native";
 import * as Haptics from "expo-haptics";
 import { useRouter } from "expo-router";
@@ -44,6 +45,7 @@ const Figure: React.FC<FigureProps> = ({
   const ringScale = useRef(new Animated.Value(0.3)).current;
   const ringOpacity = useRef(new Animated.Value(0)).current;
   const pressScale = useRef(new Animated.Value(1)).current;
+  const pressOverlay = useRef(new Animated.Value(0)).current;
   const hasAnimated = useRef(false);
 
   useEffect(() => {
@@ -107,17 +109,17 @@ const Figure: React.FC<FigureProps> = ({
 
   const onPressIn = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    Animated.spring(pressScale, {
-      toValue: 0.96,
-      useNativeDriver: true,
-    }).start();
+    Animated.parallel([
+      Animated.spring(pressScale, { toValue: 0.96, useNativeDriver: true }),
+      Animated.timing(pressOverlay, { toValue: 0.35, duration: 80, useNativeDriver: true }),
+    ]).start();
   };
 
   const onPressOut = () => {
-    Animated.spring(pressScale, {
-      toValue: 1,
-      useNativeDriver: true,
-    }).start();
+    Animated.parallel([
+      Animated.spring(pressScale, { toValue: 1, useNativeDriver: true }),
+      Animated.timing(pressOverlay, { toValue: 0, duration: 200, useNativeDriver: true }),
+    ]).start();
   };
 
   return (
@@ -127,7 +129,11 @@ const Figure: React.FC<FigureProps> = ({
       onPressIn={onPressIn}
       onPressOut={onPressOut}
     >
-      <Animated.View style={{ transform: [{ scale: pressScale }] }}>
+      <Animated.View
+        shouldRasterizeIOS
+        renderToHardwareTextureAndroid
+        style={{ transform: [{ scale: pressScale }], opacity: pressOverlay.interpolate({ inputRange: [0, 0.35], outputRange: [1, 0.55] }) }}
+      >
         <Text style={styles.figureLabel}>{label}</Text>
 
         <Animated.View style={{ transform: [{ translateX: slideX }] }}>
@@ -197,7 +203,6 @@ const ShopByLook: React.FC<ShopByLookProps> = ({ scrollY }) => {
   const breathHim = useRef(new Animated.Value(1)).current;
   const [triggered, setTriggered] = useState(false);
   const containerY = useRef<number | null>(null);
-  const wrapRef = useRef<View>(null);
 
   useEffect(() => {
     const makeBreath = (val: Animated.Value) =>
@@ -227,11 +232,11 @@ const ShopByLook: React.FC<ShopByLookProps> = ({ scrollY }) => {
       setTriggered(true);
       return;
     }
+    const screenH = Dimensions.get("window").height;
     const id = scrollY.addListener(({ value }) => {
       if (triggered) return;
       if (containerY.current === null) return;
-      const windowHeight = 700;
-      if (value + windowHeight > containerY.current) {
+      if (value + screenH > containerY.current) {
         setTriggered(true);
         scrollY.removeListener(id);
       }
@@ -239,15 +244,12 @@ const ShopByLook: React.FC<ShopByLookProps> = ({ scrollY }) => {
     return () => scrollY.removeListener(id);
   }, [triggered]);
 
-  const onLayout = () => {
-    wrapRef.current?.measureInWindow((_x, y) => {
-      containerY.current = y;
-    });
+  const onLayout = (e: any) => {
+    containerY.current = e.nativeEvent.layout.y;
   };
 
   return (
     <View
-      ref={wrapRef}
       onLayout={onLayout}
       style={styles.shopByLook}
     >

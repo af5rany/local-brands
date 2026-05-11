@@ -27,6 +27,7 @@ import { useCloudinaryUpload } from "@/hooks/useCloudinaryUpload";
 import { ImageUploadProgress } from "@/components/ImageUploadProgress";
 import { useThemeColors } from "@/hooks/useThemeColor";
 import { useThemePreference } from "@/context/ThemeContext";
+import { useBrand } from "@/context/BrandContext";
 
 const EditBrandScreen = () => {
   const { token, user } = useAuth();
@@ -34,6 +35,7 @@ const EditBrandScreen = () => {
   const { brandId } = useLocalSearchParams();
   const colors = useThemeColors();
   const { scheme } = useThemePreference();
+  const { incrementBrandVersion } = useBrand();
   const isDark = scheme === "dark";
 
   const [name, setName] = useState("");
@@ -239,8 +241,9 @@ const EditBrandScreen = () => {
       });
 
       if (response.ok) {
+        incrementBrandVersion();
         Alert.alert("Success", "Brand updated successfully!", [
-          { text: "OK", onPress: () => router.replace(`/brands/${brandId}`) },
+          { text: "OK", onPress: () => router.back() },
         ]);
       } else {
         const data = await response.json();
@@ -303,7 +306,7 @@ const EditBrandScreen = () => {
         {/* Header */}
         <View style={styles.headerContainer}>
           <TouchableOpacity
-            onPress={() => router.replace(`/brands/${brandId}`)}
+            onPress={() => router.back()}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
             <Ionicons name="arrow-back" size={22} color={text} />

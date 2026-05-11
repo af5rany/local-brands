@@ -115,7 +115,9 @@
       "Bash(cat docker-compose.yml)",
       "Bash(cat docker-compose.yaml)",
       "Bash(docker run *)",
-      "Bash(claude config *)"
+      "Bash(claude config *)",
+      "Read(//Users/f5rany/.android/**)",
+      "Bash(keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android -keypass android)"
     ]
   }
 }

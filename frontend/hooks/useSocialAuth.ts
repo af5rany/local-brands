@@ -19,19 +19,18 @@ const facebookDiscovery = {
 
 // iOS dev build uses the reverse client ID scheme (registered in app.json CFBundleURLTypes)
 // Android/Web falls back to the web client approach
+// expo-auth-session uses browser-based OAuth — requires Web client ID on Android/Web.
+// Android client ID only works with native @react-native-google-signin SDK.
+// iOS uses its own client ID with the native reverse scheme redirect.
 const googleClientId =
   Platform.OS === "ios"
     ? (process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID as string)
-    : Platform.OS === "android"
-      ? (process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID as string)
-      : (process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID as string);
+    : (process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID as string);
 
 const redirectUri = AuthSession.makeRedirectUri(
   Platform.OS === "ios"
     ? { native: `${process.env.EXPO_PUBLIC_GOOGLE_IOS_REVERSE_SCHEME}:/` }
-    : Platform.OS === "android"
-      ? { native: "com.fakharanii.localbrands:/" }
-      : {},
+    : {},
 );
 
 export function useSocialAuth(onSuccess: (token: string) => void) {

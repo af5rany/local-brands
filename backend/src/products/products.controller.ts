@@ -34,7 +34,6 @@ export class ProductsController {
   constructor(private productsService: ProductsService) {}
 
   @Public()
-  @Header('Cache-Control', 'public, max-age=600') // Cache for 10 minutes
   @Get()
   async findAll(
     @Query() query: GetProductsDto,
@@ -93,7 +92,6 @@ export class ProductsController {
   }
 
   @Public()
-  @Header('Cache-Control', 'public, max-age=3600') // Cache for 1 hour
   @Get(':id')
   findOne(@Param('id', ParseIntPipe) id: number): Promise<PublicProductDto> {
     return this.productsService.findOne(id, true);

@@ -9,6 +9,8 @@ interface BrandContextType {
   incrementProductListVersion: () => void;
   productVersions: Record<number, number>;
   invalidateProduct: (productId: number) => void;
+  brandVersion: number;
+  incrementBrandVersion: () => void;
 }
 
 const BrandContext = createContext<BrandContextType | undefined>(undefined);
@@ -21,6 +23,8 @@ export const BrandProvider = ({ children }: { children: ReactNode }) => {
   const [productVersions, setProductVersions] = useState<Record<number, number>>({});
   const invalidateProduct = (productId: number) =>
     setProductVersions((prev) => ({ ...prev, [productId]: (prev[productId] ?? 0) + 1 }));
+  const [brandVersion, setBrandVersion] = useState(0);
+  const incrementBrandVersion = () => setBrandVersion((v) => v + 1);
 
   return (
     <BrandContext.Provider
@@ -33,6 +37,8 @@ export const BrandProvider = ({ children }: { children: ReactNode }) => {
         incrementProductListVersion,
         productVersions,
         invalidateProduct,
+        brandVersion,
+        incrementBrandVersion,
       }}
     >
       {children}

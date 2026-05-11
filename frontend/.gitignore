@@ -4,7 +4,7 @@
 node_modules/
 
 .env
-
+ios
 # Expo
 .expo/
 dist/

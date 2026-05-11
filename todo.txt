@@ -1,10 +1,13 @@
-
 i have too much issues with alignments in different phone screens and different OS , is it has to do with SafeAreaView? if yes change all occurances of SafeAreaView that are depricated, if it will make problem
 add sign in as guest button as it is not there
-'/Users/f5rany/Documenests/Work/local-brands/frontend/app/products/[productId].tsx' why here when scrolling down the header is not getting hide, it is sticky at the top, and show that the product is soldout in product details screen
-When you tap on the search bar, the app dimensions change and it shifts way up.
+When you tap on the search bar in the header, the app dimensions change and it shifts way up.
 
-
+done '/Users/f5rany/Documenests/Work/local-brands/frontend/app/products/[productId].tsx' why here when scrolling down the header is not getting hide, it is sticky at the top, and show that the product is soldout in product details screen
+done make the 2 characters in the home screen to move to their position when the scroll reach them
+done after saving a brand change navigate back with the fresh data, dont add a new stack 
+done make sure to make shop always get fresh data, at least to refetch on refresh the screen
+done - images after being edited, the product card in shop still showing the old images /Users/f5rany/Documents/Work/local-brands/frontend/app/(tabs)/shop.tsx
+done products of brands with status draft, are appearing in the shop, which doesnt makes sense, is this what top brands doing ?
 done - makr the default light mode /Users/f5rany/Documents/Work/local-brands/frontend/app/profile/settings.tsx
 done - revert the logic of ScrollToTop again from all pag
 done - pull up for refresh
@@ -31,8 +34,8 @@ fix the AI
 
 
 add an indicator showing if there is no internet(is this best practice)
-3. Abandoned cart nudges — You track carts server-side, but there's no mechanism to remind users who added items and left. A scheduled job that checks for carts older than 24 hours and sends a push notification ("You left something behind") is a high-ROI feature that most e-commerce apps treat as essential. It hooks into your existing push notification and BullMQ infrastructure.
 done 6. Onboarding walkthrough — First-time users land on the home screen with no guidance. A 3-4 screen swipeable intro (what the app is, how to browse, how to follow brands, how to shop) shown once on first launch and stored in AsyncStorage would smooth the first experience, especially for a marketplace concept that isn't instantly obvious.
+3. Abandoned cart nudges — You track carts server-side, but there's no mechanism to remind users who added items and left. A scheduled job that checks for carts older than 24 hours and sends a push notification ("You left something behind") is a high-ROI feature that most e-commerce apps treat as essential. It hooks into your existing push notification and BullMQ infrastructure.
 7. Accessibility basics — There's zero mention of accessibility labels, screen reader support, or WCAG consideration anywhere in the specs. At minimum, adding accessibilityLabel and accessibilityRole to all interactive elements and ensuring adequate contrast ratios would make the app usable for a much wider audience — and is increasingly required for app store compliance.
 
 
@@ -207,3 +210,40 @@ make the unisex appear for both men and women  ← DONE (April 26, 2026)
   - Deferred: preview mode (cheap FLUX before HD FASHN)
   - Deferred: store results to S3/Supabase (fal.ai CDN URLs expire in 72h)
 - [ ] Email verification
+
+
+                                                                                              
+⏺ Caching removed                                                                             
+                                                                                            
+  1. Backend — products.controller.ts                                                         
+                                                                                              
+  GET /products (shop listing)                                                                
+  @Header('Cache-Control', 'public, max-age=600') // 10 minutes
+                                                                                              
+  GET /products/:id (product detail page)
+  @Header('Cache-Control', 'public, max-age=3600') // 1 hour                                  
+                                                            
+  Both were above their respective @Get() decorators, between @Public() and @Get(...).        
+                                                                                              
+  ---                                                                                       
+  2. Frontend — shop.tsx fetch call                                                           
+                                                                                              
+  Inside fetchProducts callback:                                                            
+  cache: 'no-store',                                                                          
+  Added to the fetch() options object for GET /products.
+                                                                                              
+  ---                                                                                         
+  3. Frontend — MonolithProductCard Image components                                          
+                                                                                              
+  Added key={uri} to both Image instances to force RN to remount when URI changes (bypasses RN
+   internal image cache):                                                                     
+           
+  - Multi-image FlatList renderItem → <Image key={uri} source={{ uri }} .../>                 
+  - Single image fallback → <Image key={images[0]} source={{ uri: images[0] }} .../>
+                                                                                              
+  ---      
+  Not removed (still cached)                                                                  
+                            
+  - GET /products/trending — max-age=300 (5 min) — safe, rarely changes                     
+  - GET /products/bestsellers — max-age=300 (5 min) — safe                                    
+  - GET /products/:id/similar — max-age=600 (10 min) — safe

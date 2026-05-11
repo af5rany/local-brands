@@ -44,7 +44,7 @@ const BrandDetailScreen = () => {
   const { brandId, refresh } = useLocalSearchParams();
   const { token, user } = useAuth();
   const { showToast } = useToast();
-  const { productListVersion } = useBrand();
+  const { productListVersion, brandVersion } = useBrand();
   const colors = useThemeColors();
   const { isConnected } = useNetwork();
   const userRole = user?.role || user?.userRole;
@@ -197,6 +197,16 @@ const BrandDetailScreen = () => {
   useEffect(() => {
     if (brandId) fetchBrandDetails();
   }, [brandId, fetchBrandDetails]);
+
+  const isBrandFirstRender = React.useRef(true);
+  useEffect(() => {
+    if (isBrandFirstRender.current) {
+      isBrandFirstRender.current = false;
+      return;
+    }
+    if (brandId) fetchBrandDetails();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [brandVersion]);
 
   useEffect(() => {
     if (brandId) {

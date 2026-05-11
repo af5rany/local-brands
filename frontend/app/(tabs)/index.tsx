@@ -267,6 +267,7 @@ const HomeScreen = () => {
   const { reportScroll } = useHeaderVisibility();
   const { register, unregister } = useScrollToTop();
   const scrollViewRef = useRef<ScrollView>(null);
+  const scrollY = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     register("index", () => scrollViewRef.current?.scrollTo({ y: 0, animated: true }));
@@ -471,7 +472,10 @@ const HomeScreen = () => {
         contentContainerStyle={{ paddingBottom: tabBarHeight }}
         showsVerticalScrollIndicator={false}
         scrollEventThrottle={16}
-        onScroll={(e) => reportScroll(e.nativeEvent.contentOffset.y)}
+        onScroll={Animated.event(
+          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+          { useNativeDriver: false, listener: (e: any) => reportScroll(e.nativeEvent.contentOffset.y) }
+        )}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -516,7 +520,7 @@ const HomeScreen = () => {
         </View>
 
         {/* ── 2. Shop By Look ── */}
-        <ShopByLook />
+        <ShopByLook scrollY={scrollY} />
 
         {/* ── 3. Marquee ── */}
         <Marquee />

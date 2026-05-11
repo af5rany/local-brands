@@ -54,7 +54,23 @@ export function useInfiniteScroll<T>({ fetchFn, initialPage = 1 }: UseInfiniteSc
     loadingRef.current = false;
   }, []);
 
+  // Fetch page 1 silently and replace items without clearing the list first (no skeleton flash).
+  const silentRevalidate = useCallback(async () => {
+    if (loadingRef.current) return;
+    loadingRef.current = true;
+    try {
+      const result = await fetchFn(1);
+      setItems(result.items);
+      setTotalPages(result.totalPages);
+      setPage(2);
+    } catch (error) {
+      console.error('Infinite scroll revalidate error:', error);
+    } finally {
+      loadingRef.current = false;
+    }
+  }, [fetchFn]);
+
   const hasMore = page <= totalPages;
 
-  return { items, loading, refreshing, hasMore, loadMore, refresh, reset };
+  return { items, loading, refreshing, hasMore, loadMore, refresh, reset, silentRevalidate };
 }

@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect } from "react";
 import getApiUrl from "@/helpers/getApiUrl";
 import { Brand } from "@/types/brand";
 import { Product } from "@/types/product";
-import { BrandStatus, ProductStatus } from "@/types/enums";
+import { ProductStatus } from "@/types/enums";
 import { ProductFilters } from "@/components/ProductFilterModal";
 
 interface PaginatedResponse {
@@ -86,20 +86,6 @@ export const useBrandDetails = (
       if (!response.ok) throw new Error("Failed to fetch brand details");
       const data = await response.json();
       setBrand(data);
-
-      const statusMap: Record<string, ProductStatus> = {
-        [BrandStatus.ACTIVE]: ProductStatus.PUBLISHED,
-        [BrandStatus.DRAFT]: ProductStatus.DRAFT,
-        [BrandStatus.ARCHIVED]: ProductStatus.ARCHIVED,
-      };
-      const mappedStatus = statusMap[data.status];
-      const isOwner =
-        user?.role === "admin" ||
-        user?.userRole === "admin" ||
-        (user?.id && data?.owner?.id && user.id === data.owner.id);
-      if (mappedStatus && isOwner) {
-        setFilters((prev) => ({ ...prev, status: mappedStatus }));
-      }
     } catch (err: any) {
       setError(err.message);
     } finally {

@@ -424,45 +424,86 @@ export class FeedService {
       followedBrandIds = followedRows.map((r) => r.brandId).filter(Boolean);
     }
 
-    const qb = this.postRepo
+    // TypeORM can't handle raw CASE expressions in orderBy when skip/take + joins coexist
+    // (createOrderByCombinedWithSelectExpression splits on "." and fails alias resolution).
+    // Fix: raw SQL for paginated IDs → entity hydration query without skip/take.
+    const offset = (page - 1) * limit;
+    const em = this.postRepo.manager;
+
+    let orderedIds: number[];
+    let total: number;
+
+    const hasPriority =
+      personalizedBrandIds.length > 0 || followedBrandIds.length > 0;
+
+    if (hasPriority) {
+      const [countRows, idRows] = await Promise.all([
+        em.query<{ count: string }[]>(
+          `SELECT COUNT(*) AS count FROM post WHERE status = $1 AND "deletedAt" IS NULL`,
+          [PostStatus.ACTIVE],
+        ),
+        em.query<{ id: number }[]>(
+          `SELECT id FROM post
+           WHERE status = $1 AND "deletedAt" IS NULL
+           ORDER BY
+             CASE
+               WHEN "brandId" = ANY($2::int[]) AND NOT ("brandId" = ANY($3::int[])) THEN 0
+               WHEN "brandId" = ANY($2::int[]) AND "brandId" = ANY($3::int[]) THEN 1
+               WHEN NOT ("brandId" = ANY($3::int[])) THEN 2
+               ELSE 3
+             END,
+             "createdAt" DESC
+           LIMIT $4 OFFSET $5`,
+          [
+            PostStatus.ACTIVE,
+            personalizedBrandIds,
+            followedBrandIds,
+            limit,
+            offset,
+          ],
+        ),
+      ]);
+      total = parseInt(countRows[0]?.count ?? '0', 10);
+      orderedIds = idRows.map((r) => r.id);
+    } else {
+      const [countRows, idRows] = await Promise.all([
+        em.query<{ count: string }[]>(
+          `SELECT COUNT(*) AS count FROM post WHERE status = $1 AND "deletedAt" IS NULL`,
+          [PostStatus.ACTIVE],
+        ),
+        em.query<{ id: number }[]>(
+          `SELECT id FROM post
+           WHERE status = $1 AND "deletedAt" IS NULL
+           ORDER BY "createdAt" DESC
+           LIMIT $2 OFFSET $3`,
+          [PostStatus.ACTIVE, limit, offset],
+        ),
+      ]);
+      total = parseInt(countRows[0]?.count ?? '0', 10);
+      orderedIds = idRows.map((r) => r.id);
+    }
+
+    if (orderedIds.length === 0) {
+      return {
+        data: [],
+        pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
+      };
+    }
+
+    // No skip/take here — avoids TypeORM's problematic alias resolution
+    const entities = await this.postRepo
       .createQueryBuilder('post')
       .leftJoinAndSelect('post.brand', 'brand')
       .leftJoinAndSelect('post.author', 'author')
       .leftJoinAndSelect('post.postProducts', 'postProducts')
       .leftJoinAndSelect('postProducts.product', 'product')
-      .where('post.status = :status', { status: PostStatus.ACTIVE });
+      .where('post.id IN (:...ids)', { ids: orderedIds })
+      .getMany();
 
-    // Priority:
-    //   0 — personalized brand not followed (best discovery)
-    //   1 — personalized brand already followed
-    //   2 — unknown brand not followed (neutral discovery)
-    //   3 — followed brand (already visible in Following tab)
-    if (personalizedBrandIds.length > 0 || followedBrandIds.length > 0) {
-      const pArr =
-        personalizedBrandIds.length > 0
-          ? `ARRAY[${personalizedBrandIds.join(',')}]::int[]`
-          : 'ARRAY[]::int[]';
-      const fArr =
-        followedBrandIds.length > 0
-          ? `ARRAY[${followedBrandIds.join(',')}]::int[]`
-          : 'ARRAY[]::int[]';
-
-      qb.orderBy(
-        `CASE
-           WHEN post."brandId" = ANY(${pArr}) AND NOT (post."brandId" = ANY(${fArr})) THEN 0
-           WHEN post."brandId" = ANY(${pArr}) AND post."brandId" = ANY(${fArr}) THEN 1
-           WHEN NOT (post."brandId" = ANY(${fArr})) THEN 2
-           ELSE 3
-         END`,
-        'ASC',
-      ).addOrderBy('post.createdAt', 'DESC');
-    } else {
-      qb.orderBy('post.createdAt', 'DESC');
-    }
-
-    qb.skip((page - 1) * limit).take(limit);
-
-    const [data, total] = await qb.getManyAndCount();
+    const idToPost = new Map(entities.map((p) => [p.id, p]));
+    const data = orderedIds
+      .map((id) => idToPost.get(id))
+      .filter((p): p is Post => !!p);
 
     if (userId && data.length) {
       const postIds = data.map((p) => p.id);

@@ -107,6 +107,7 @@ const MonolithProductCard = React.memo(
               renderItem={({ item: uri }) => (
                 <Pressable onPress={onPress} style={{ width: imgWidth, height: "100%" as any }}>
                   <Image
+                    key={uri}
                     source={{ uri }}
                     style={{ width: imgWidth, height: "100%" as any }}
                     resizeMode="cover"
@@ -116,7 +117,7 @@ const MonolithProductCard = React.memo(
             />
           ) : images[0] ? (
             <Pressable style={StyleSheet.absoluteFill} onPress={onPress}>
-              <Image source={{ uri: images[0] }} style={cardStyles.image} resizeMode="cover" />
+              <Image key={images[0]} source={{ uri: images[0] }} style={cardStyles.image} resizeMode="cover" />
             </Pressable>
           ) : (
             <View style={cardStyles.imagePlaceholder} />
@@ -320,6 +321,7 @@ const ShopScreen = () => {
         `${getApiUrl()}/products?${params.toString()}`,
         {
           headers: { ...(token && { Authorization: `Bearer ${token}` }) },
+          cache: 'no-store',
         },
       );
       if (!res.ok) throw new Error("Failed to fetch products");

@@ -620,7 +620,7 @@ export class BrandsService {
     const activePromoResult = await this.dataSource.query(
       `SELECT COUNT(*) AS count FROM promo_code
        WHERE "brandId" = $1
-         AND is_active = true
+         AND "isActive" = true
          AND deleted_at IS NULL
          AND (expiry_date IS NULL OR expiry_date > NOW())
          AND (max_uses IS NULL OR uses_count < max_uses)`,
