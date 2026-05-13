@@ -16,7 +16,12 @@
       "distribution": "internal",
       "channel": "preview",
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://local-brands-production-0df0.up.railway.app"
+        "EXPO_PUBLIC_API_URL": "https://local-brands-production-0df0.up.railway.app",
+        "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "3176566169-a05r5prfmjqfg9dj3ususlj7bu8qichl.apps.googleusercontent.com",
+        "EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID": "3176566169-2hod2vokk278ra01ejlls4chh93pah46.apps.googleusercontent.com",
+        "EXPO_PUBLIC_GOOGLE_IOS_REVERSE_SCHEME": "com.googleusercontent.apps.3176566169-2hod2vokk278ra01ejlls4chh93pah46",
+        "EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID": "3176566169-rqvvg3rjuirbl63plaq7upsg1jrsmh0o.apps.googleusercontent.com",
+        "EXPO_PUBLIC_FACEBOOK_APP_ID": "2413827082417241"
       },
       "android": {
         "buildType": "apk"
@@ -26,7 +31,12 @@
       "autoIncrement": true,
       "channel": "production",
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://local-brands-production-0df0.up.railway.app"
+        "EXPO_PUBLIC_API_URL": "https://local-brands-production-0df0.up.railway.app",
+        "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "3176566169-a05r5prfmjqfg9dj3ususlj7bu8qichl.apps.googleusercontent.com",
+        "EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID": "3176566169-2hod2vokk278ra01ejlls4chh93pah46.apps.googleusercontent.com",
+        "EXPO_PUBLIC_GOOGLE_IOS_REVERSE_SCHEME": "com.googleusercontent.apps.3176566169-2hod2vokk278ra01ejlls4chh93pah46",
+        "EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID": "3176566169-rqvvg3rjuirbl63plaq7upsg1jrsmh0o.apps.googleusercontent.com",
+        "EXPO_PUBLIC_FACEBOOK_APP_ID": "2413827082417241"
       },
       "ios": {
         "distribution": "store",

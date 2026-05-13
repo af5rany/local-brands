@@ -78,20 +78,34 @@ export function useSocialAuth(onSuccess: (token: string) => void) {
 
   const handleGoogle = async () => {
     setGoogleLoading(true);
+    console.log("[GoogleAuth] GOOGLE_IOS_CLIENT_ID:", process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID);
+    console.log("[GoogleAuth] GOOGLE_WEB_CLIENT_ID:", process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID);
+    console.log("[GoogleAuth] IOS_REVERSE_SCHEME:", process.env.EXPO_PUBLIC_GOOGLE_IOS_REVERSE_SCHEME);
+    console.log("[GoogleAuth] REDIRECT URI:", redirectUri);
+    console.log("[GoogleAuth] AUTH CLIENT ID:", googleClientId);
+    console.log("[GoogleAuth] EXCHANGE CLIENT ID:", googleClientId);
+    console.log("[GoogleAuth] CODE VERIFIER EXISTS:", !!googleRequest?.codeVerifier);
     try {
       const result = await googlePromptAsync();
       if (result.type === "success") {
-        const tokenResponse = await AuthSession.exchangeCodeAsync(
-          {
-            clientId: googleClientId,
-            redirectUri,
-            code: result.params.code,
-            extraParams: googleRequest?.codeVerifier
-              ? { code_verifier: googleRequest.codeVerifier }
-              : undefined,
-          },
-          googleDiscovery,
-        );
+        let tokenResponse;
+        try {
+          tokenResponse = await AuthSession.exchangeCodeAsync(
+            {
+              clientId: googleClientId,
+              redirectUri,
+              code: result.params.code,
+              extraParams: googleRequest?.codeVerifier
+                ? { code_verifier: googleRequest.codeVerifier }
+                : undefined,
+            },
+            googleDiscovery,
+          );
+        } catch (exchangeError) {
+          console.log("[GoogleAuth] EXCHANGE ERROR RAW:", exchangeError);
+          console.log("[GoogleAuth] EXCHANGE ERROR JSON:", JSON.stringify(exchangeError, null, 2));
+          throw exchangeError;
+        }
         const jwt = await sendToBackend("google", tokenResponse.accessToken);
         onSuccess(jwt);
       }
