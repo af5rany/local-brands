@@ -17,21 +17,22 @@ const facebookDiscovery = {
   tokenEndpoint: "https://graph.facebook.com/v18.0/oauth/access_token",
 };
 
-// iOS dev build uses the reverse client ID scheme (registered in app.json CFBundleURLTypes)
-// Android/Web falls back to the web client approach
-// expo-auth-session uses browser-based OAuth — requires Web client ID on Android/Web.
-// Android client ID only works with native @react-native-google-signin SDK.
-// iOS uses its own client ID with the native reverse scheme redirect.
 const googleClientId =
   Platform.OS === "ios"
     ? (process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID as string)
     : (process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID as string);
 
-const redirectUri = AuthSession.makeRedirectUri(
+// Google: uses iOS reverse-scheme redirect on iOS, default on Android/Web
+const googleRedirectUri = AuthSession.makeRedirectUri(
   Platform.OS === "ios"
     ? { native: `${process.env.EXPO_PUBLIC_GOOGLE_IOS_REVERSE_SCHEME}:/` }
     : {},
 );
+
+// Facebook: uses Expo auth proxy (HTTPS) — required because Facebook
+// strict mode + Enforce HTTPS rejects custom native schemes
+const facebookRedirectUri = "https://auth.expo.io/@fakharanii/local-brands";
+
 
 export function useSocialAuth(onSuccess: (token: string) => void) {
   const [googleLoading, setGoogleLoading] = useState(false);
@@ -40,7 +41,7 @@ export function useSocialAuth(onSuccess: (token: string) => void) {
   const [googleRequest, , googlePromptAsync] = AuthSession.useAuthRequest(
     {
       clientId: googleClientId,
-      redirectUri,
+      redirectUri: googleRedirectUri,
       scopes: ["openid", "profile", "email"],
       responseType: AuthSession.ResponseType.Code,
       usePKCE: true,
@@ -51,7 +52,7 @@ export function useSocialAuth(onSuccess: (token: string) => void) {
   const [fbRequest, , fbPromptAsync] = AuthSession.useAuthRequest(
     {
       clientId: process.env.EXPO_PUBLIC_FACEBOOK_APP_ID as string,
-      redirectUri,
+      redirectUri: facebookRedirectUri,
       scopes: ["public_profile", "email"],
       responseType: AuthSession.ResponseType.Code,
       usePKCE: true,
@@ -78,12 +79,8 @@ export function useSocialAuth(onSuccess: (token: string) => void) {
 
   const handleGoogle = async () => {
     setGoogleLoading(true);
-    console.log("[GoogleAuth] GOOGLE_IOS_CLIENT_ID:", process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID);
-    console.log("[GoogleAuth] GOOGLE_WEB_CLIENT_ID:", process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID);
-    console.log("[GoogleAuth] IOS_REVERSE_SCHEME:", process.env.EXPO_PUBLIC_GOOGLE_IOS_REVERSE_SCHEME);
-    console.log("[GoogleAuth] REDIRECT URI:", redirectUri);
+    console.log("[GoogleAuth] REDIRECT URI:", googleRedirectUri);
     console.log("[GoogleAuth] AUTH CLIENT ID:", googleClientId);
-    console.log("[GoogleAuth] EXCHANGE CLIENT ID:", googleClientId);
     console.log("[GoogleAuth] CODE VERIFIER EXISTS:", !!googleRequest?.codeVerifier);
     try {
       const result = await googlePromptAsync();
@@ -93,7 +90,7 @@ export function useSocialAuth(onSuccess: (token: string) => void) {
           tokenResponse = await AuthSession.exchangeCodeAsync(
             {
               clientId: googleClientId,
-              redirectUri,
+              redirectUri: googleRedirectUri,
               code: result.params.code,
               extraParams: googleRequest?.codeVerifier
                 ? { code_verifier: googleRequest.codeVerifier }
@@ -102,7 +99,6 @@ export function useSocialAuth(onSuccess: (token: string) => void) {
             googleDiscovery,
           );
         } catch (exchangeError) {
-          console.log("[GoogleAuth] EXCHANGE ERROR RAW:", exchangeError);
           console.log("[GoogleAuth] EXCHANGE ERROR JSON:", JSON.stringify(exchangeError, null, 2));
           throw exchangeError;
         }
@@ -118,20 +114,30 @@ export function useSocialAuth(onSuccess: (token: string) => void) {
 
   const handleFacebook = async () => {
     setFacebookLoading(true);
+    console.log("[FacebookAuth] APP_ID:", process.env.EXPO_PUBLIC_FACEBOOK_APP_ID);
+    console.log("[FacebookAuth] REDIRECT URI:", facebookRedirectUri);
+    console.log("[FacebookAuth] CODE VERIFIER EXISTS:", !!fbRequest?.codeVerifier);
     try {
       const result = await fbPromptAsync();
+      console.log("[FacebookAuth] PROMPT RESULT:", JSON.stringify(result, null, 2));
       if (result.type === "success") {
-        const tokenResponse = await AuthSession.exchangeCodeAsync(
-          {
-            clientId: process.env.EXPO_PUBLIC_FACEBOOK_APP_ID as string,
-            redirectUri,
-            code: result.params.code,
-            extraParams: fbRequest?.codeVerifier
-              ? { code_verifier: fbRequest.codeVerifier }
-              : undefined,
-          },
-          facebookDiscovery,
-        );
+        let tokenResponse;
+        try {
+          tokenResponse = await AuthSession.exchangeCodeAsync(
+            {
+              clientId: process.env.EXPO_PUBLIC_FACEBOOK_APP_ID as string,
+              redirectUri: facebookRedirectUri,
+              code: result.params.code,
+              extraParams: fbRequest?.codeVerifier
+                ? { code_verifier: fbRequest.codeVerifier }
+                : undefined,
+            },
+            facebookDiscovery,
+          );
+        } catch (exchangeError) {
+          console.log("[FacebookAuth] EXCHANGE ERROR JSON:", JSON.stringify(exchangeError, null, 2));
+          throw exchangeError;
+        }
         const jwt = await sendToBackend("facebook", tokenResponse.accessToken);
         onSuccess(jwt);
       }
