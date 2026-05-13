@@ -13,8 +13,10 @@ import {
   Image,
   ActivityIndicator,
   Keyboard,
+  useColorScheme,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import * as AppleAuthentication from "expo-apple-authentication";
 import { useAuth } from "@/context/AuthContext";
 import getApiUrl from "@/helpers/getApiUrl";
 import { useRouter } from "expo-router";
@@ -32,7 +34,9 @@ const LoginScreen = () => {
   const [guestLoading, setGuestLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
-  const { handleGoogle, handleFacebook, googleLoading, facebookLoading } =
+  const colorScheme = useColorScheme();
+
+  const { handleGoogle, handleFacebook, handleApple, googleLoading, facebookLoading, appleLoading } =
     useSocialAuth((token) => {
       login(token);
       router.dismissAll();
@@ -95,7 +99,7 @@ const LoginScreen = () => {
     }
   };
 
-  const isAnyLoading = loading || guestLoading || googleLoading || facebookLoading;
+  const isAnyLoading = loading || guestLoading || googleLoading || facebookLoading || appleLoading;
 
   return (
     <SafeAreaView
@@ -350,6 +354,29 @@ const LoginScreen = () => {
             )}
           </Pressable>
 
+          {/* Apple Sign-In — iOS only, required by App Store Guideline 4.8 */}
+          {Platform.OS === "ios" && (
+            <View style={styles.appleButtonWrapper} pointerEvents={appleLoading ? "none" : "auto"}>
+              <AppleAuthentication.AppleAuthenticationButton
+                buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
+                buttonStyle={
+                  colorScheme === "dark"
+                    ? AppleAuthentication.AppleAuthenticationButtonStyle.WHITE
+                    : AppleAuthentication.AppleAuthenticationButtonStyle.BLACK
+                }
+                cornerRadius={0}
+                style={[styles.appleButton, appleLoading && { opacity: 0.6 }]}
+                onPress={handleApple}
+              />
+              {appleLoading && (
+                <ActivityIndicator
+                  color={colorScheme === "dark" ? "#000" : "#fff"}
+                  style={styles.appleSpinner}
+                />
+              )}
+            </View>
+          )}
+
           {/* Footer */}
           <View style={styles.footer}>
             <Text style={[styles.footerText, { color: colors.textTertiary }]}>
@@ -461,6 +488,24 @@ const styles = StyleSheet.create({
     left: 16,
   },
   socialButtonText: { fontSize: 15, fontWeight: "600" },
+  appleButtonWrapper: {
+    position: "relative",
+    width: "100%",
+  },
+  appleButton: {
+    width: "100%",
+    height: 50,
+    marginBottom: 12,
+  },
+  appleSpinner: {
+    position: "absolute",
+    top: 0,
+    bottom: 0,
+    left: 0,
+    right: 0,
+    justifyContent: "center",
+    alignItems: "center",
+  },
 
   // ── Footer ────────────────────────────────
   footer: {

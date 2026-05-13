@@ -84,7 +84,7 @@ export class AuthController {
   @Post('social')
   @UsePipes(new ValidationPipe({ whitelist: true }))
   async socialLogin(@Body() dto: SocialLoginDto) {
-    return this.authService.socialLogin(dto.provider, dto.token);
+    return this.authService.socialLogin(dto);
   }
 
   @Post('forgot-password')

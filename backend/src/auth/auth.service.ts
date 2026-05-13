@@ -12,13 +12,22 @@ import { Repository } from 'typeorm';
 import { User } from '../users/user.entity';
 import { CreateUserDto } from './dto/create-user.dto';
 import { SocialAuth, SocialProvider } from './social-auth.entity';
+import { SocialLoginDto } from './dto/social-login.dto';
 import * as bcrypt from 'bcrypt';
+import * as jwt from 'jsonwebtoken';
+import jwksRsa = require('jwks-rsa');
 import { JwtService } from '@nestjs/jwt';
 import { UsersService } from 'src/users/users.service';
 import { UserRole, UserStatus } from 'src/common/enums/user.enum';
 import { v4 as uuidv4 } from 'uuid';
 import { MailService } from 'src/common/mail/mail.service';
 import { JwtPayload } from './jwt-payload.interface';
+
+const appleJwksClient = jwksRsa({
+  jwksUri: 'https://appleid.apple.com/auth/keys',
+  cache: true,
+  cacheMaxAge: 10 * 60 * 1000,
+});
 
 @Injectable()
 export class AuthService {
@@ -231,21 +240,22 @@ export class AuthService {
     return { message: 'Password has been reset successfully' };
   }
 
-  async socialLogin(
-    provider: 'google' | 'facebook',
-    token: string,
-  ): Promise<{ token: string }> {
+  async socialLogin(dto: SocialLoginDto): Promise<{ token: string }> {
+    const { provider } = dto;
+
     let providerProfile: {
       id: string;
       email: string;
       name: string;
       avatar?: string;
+      isEmailVerified: boolean;
     };
 
     if (provider === 'google') {
+      if (!dto.token) throw new UnauthorizedException('Google token is required');
       const res = await fetch(
         'https://www.googleapis.com/oauth2/v3/userinfo',
-        { headers: { Authorization: `Bearer ${token}` } },
+        { headers: { Authorization: `Bearer ${dto.token}` } },
       );
       if (!res.ok) throw new UnauthorizedException('Invalid Google token');
       const data: any = await res.json();
@@ -256,10 +266,13 @@ export class AuthService {
         email: data.email,
         name: data.name,
         avatar: data.picture,
+        isEmailVerified: true,
       };
-    } else {
+
+    } else if (provider === 'facebook') {
+      if (!dto.token) throw new UnauthorizedException('Facebook token is required');
       const res = await fetch(
-        `https://graph.facebook.com/me?fields=id,name,email,picture&access_token=${token}`,
+        `https://graph.facebook.com/me?fields=id,name,email,picture&access_token=${dto.token}`,
       );
       if (!res.ok) throw new UnauthorizedException('Invalid Facebook token');
       const data: any = await res.json();
@@ -272,10 +285,59 @@ export class AuthService {
         email: data.email,
         name: data.name,
         avatar: data.picture?.data?.url,
+        isEmailVerified: true,
+      };
+
+    } else {
+      // Apple
+      if (!dto.identityToken)
+        throw new UnauthorizedException('Apple identityToken is required');
+
+      const decoded = jwt.decode(dto.identityToken, { complete: true });
+      if (!decoded || typeof decoded === 'string' || !decoded.header?.kid) {
+        throw new UnauthorizedException('Invalid Apple identity token structure');
+      }
+
+      let applePayload: any;
+      try {
+        const signingKey = await appleJwksClient.getSigningKey(decoded.header.kid);
+        const publicKey = signingKey.getPublicKey();
+        applePayload = jwt.verify(dto.identityToken, publicKey, {
+          algorithms: ['RS256'],
+          issuer: 'https://appleid.apple.com',
+          audience: 'com.fakharanii.localbrands',
+        });
+      } catch {
+        throw new UnauthorizedException('Apple identity token verification failed');
+      }
+
+      const sub: string = applePayload.sub;
+      // Email present in JWT on first sign-in; may be absent on repeat logins
+      const email: string | null = applePayload.email ?? dto.email ?? null;
+
+      // Build name from fullName only on first sign-in when Apple provides it
+      let name = 'Apple User';
+      if (dto.fullName?.givenName || dto.fullName?.familyName) {
+        name = [dto.fullName.givenName, dto.fullName.familyName]
+          .filter(Boolean)
+          .join(' ');
+      } else if (email) {
+        name = email.split('@')[0];
+      }
+
+      // Relay/hidden emails (privaterelay.appleid.com) are valid — don't strip them
+      const resolvedEmail = email ?? `apple_${sub}@privaterelay.local`;
+
+      providerProfile = {
+        id: sub,
+        email: resolvedEmail,
+        name,
+        avatar: undefined,
+        isEmailVerified: !!email,
       };
     }
 
-    // Check if this social account is already linked
+    // Lookup existing linked social account
     const existing = await this.socialAuthRepository.findOne({
       where: {
         provider: provider as SocialProvider,
@@ -288,8 +350,14 @@ export class AuthService {
 
     if (existing) {
       user = existing.user;
+      // Persist name/email from Apple first-login if missing on the existing record
+      if (provider === 'apple') {
+        const updates: Partial<User> = {};
+        if (!user.name || user.name === 'Apple User') updates.name = providerProfile.name;
+        if (!user.email && providerProfile.email) updates.email = providerProfile.email;
+        if (Object.keys(updates).length) await this.usersService.update(user.id, updates);
+      }
     } else {
-      // Find user by email or create a new one
       user = await this.usersService.findByEmail(providerProfile.email);
       if (!user) {
         user = await this.usersService.create({
@@ -299,10 +367,9 @@ export class AuthService {
           role: UserRole.CUSTOMER,
           status: UserStatus.APPROVED,
           isGuest: false,
-          isEmailVerified: true,
+          isEmailVerified: providerProfile.isEmailVerified,
         });
       }
-      // Link the social account
       const socialAuth = this.socialAuthRepository.create({
         provider: provider as SocialProvider,
         providerId: providerProfile.id,
@@ -316,12 +383,12 @@ export class AuthService {
       await this.socialAuthRepository.save(socialAuth);
     }
 
-    const payload: JwtPayload = {
+    const jwtPayload: JwtPayload = {
       id: user!.id,
       role: user!.role,
       isGuest: false,
     };
-    const jwt = await this.jwtService.signAsync(payload);
-    return { token: jwt };
+    const token = await this.jwtService.signAsync(jwtPayload);
+    return { token };
   }
 }

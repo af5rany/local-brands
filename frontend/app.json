@@ -17,6 +17,7 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.fakharanii.localbrands",
       "googleServicesFile": "./GoogleService-Info.plist",
+      "usesAppleSignIn": true,
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "NSCameraUsageDescription": "Used for virtual try-on feature",
@@ -84,6 +85,7 @@
       "expo-web-browser",
       "expo-font",
       "@react-native-community/datetimepicker",
+      "expo-apple-authentication",
       [
         "react-native-fbsdk-next",
         {
@@ -94,6 +96,12 @@
           "advertiserIDCollectionEnabled": false,
           "autoLogAppEventsEnabled": false,
           "isAutoInitEnabled": true
+        }
+      ],
+      [
+        "@react-native-google-signin/google-signin",
+        {
+          "iosUrlScheme": "com.googleusercontent.apps.3176566169-2hod2vokk278ra01ejlls4chh93pah46"
         }
       ]
     ],
