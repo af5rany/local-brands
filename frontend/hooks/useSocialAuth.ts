@@ -3,6 +3,7 @@ import { Platform } from "react-native";
 import * as AuthSession from "expo-auth-session";
 import * as WebBrowser from "expo-web-browser";
 import { Alert } from "react-native";
+import { LoginManager, AccessToken } from "react-native-fbsdk-next";
 import getApiUrl from "@/helpers/getApiUrl";
 
 WebBrowser.maybeCompleteAuthSession();
@@ -10,11 +11,6 @@ WebBrowser.maybeCompleteAuthSession();
 const googleDiscovery = {
   authorizationEndpoint: "https://accounts.google.com/o/oauth2/v2/auth",
   tokenEndpoint: "https://oauth2.googleapis.com/token",
-};
-
-const facebookDiscovery = {
-  authorizationEndpoint: "https://www.facebook.com/v18.0/dialog/oauth",
-  tokenEndpoint: "https://graph.facebook.com/v18.0/oauth/access_token",
 };
 
 const googleClientId =
@@ -29,11 +25,6 @@ const googleRedirectUri = AuthSession.makeRedirectUri(
     : {},
 );
 
-// Facebook: uses Expo auth proxy (HTTPS) — required because Facebook
-// strict mode + Enforce HTTPS rejects custom native schemes
-const facebookRedirectUri = "https://auth.expo.io/@fakharanii/local-brands";
-
-
 export function useSocialAuth(onSuccess: (token: string) => void) {
   const [googleLoading, setGoogleLoading] = useState(false);
   const [facebookLoading, setFacebookLoading] = useState(false);
@@ -47,17 +38,6 @@ export function useSocialAuth(onSuccess: (token: string) => void) {
       usePKCE: true,
     },
     googleDiscovery,
-  );
-
-  const [fbRequest, , fbPromptAsync] = AuthSession.useAuthRequest(
-    {
-      clientId: process.env.EXPO_PUBLIC_FACEBOOK_APP_ID as string,
-      redirectUri: facebookRedirectUri,
-      scopes: ["public_profile", "email"],
-      responseType: AuthSession.ResponseType.Code,
-      usePKCE: true,
-    },
-    facebookDiscovery,
   );
 
   const sendToBackend = async (
@@ -115,37 +95,22 @@ export function useSocialAuth(onSuccess: (token: string) => void) {
   const handleFacebook = async () => {
     setFacebookLoading(true);
     console.log("[FacebookAuth] APP_ID:", process.env.EXPO_PUBLIC_FACEBOOK_APP_ID);
-    console.log("[FacebookAuth] REDIRECT URI:", facebookRedirectUri);
-    console.log("[FacebookAuth] CODE VERIFIER EXISTS:", !!fbRequest?.codeVerifier);
     try {
-      const result = await fbPromptAsync();
-      console.log("[FacebookAuth] PROMPT RESULT:", JSON.stringify(result, null, 2));
-      if (result.type === "success") {
-        let tokenResponse;
-        try {
-          tokenResponse = await AuthSession.exchangeCodeAsync(
-            {
-              clientId: process.env.EXPO_PUBLIC_FACEBOOK_APP_ID as string,
-              redirectUri: facebookRedirectUri,
-              code: result.params.code,
-              extraParams: fbRequest?.codeVerifier
-                ? { code_verifier: fbRequest.codeVerifier }
-                : undefined,
-            },
-            facebookDiscovery,
-          );
-        } catch (exchangeError) {
-          console.log("[FacebookAuth] EXCHANGE ERROR JSON:", JSON.stringify(exchangeError, null, 2));
-          throw exchangeError;
-        }
-        const jwt = await sendToBackend("facebook", tokenResponse.accessToken);
-        onSuccess(jwt);
+      const result = await LoginManager.logInWithPermissions(["public_profile", "email"]);
+      console.log("[FacebookAuth] LOGIN RESULT:", JSON.stringify(result, null, 2));
+      if (result.isCancelled) {
+        return;
       }
+      const data = await AccessToken.getCurrentAccessToken();
+      if (!data || !data.accessToken) {
+        throw new Error("Failed to get Facebook access token");
+      }
+      console.log("[FacebookAuth] HAS ACCESS TOKEN:", !!data.accessToken);
+      console.log("[FacebookAuth] USER ID:", data.userID);
+      const jwt = await sendToBackend("facebook", data.accessToken);
+      onSuccess(jwt);
     } catch (err: any) {
-      Alert.alert(
-        "Facebook Sign-In Error",
-        err.message || "Something went wrong",
-      );
+      Alert.alert("Facebook Sign-In Error", err.message || "Something went wrong");
     } finally {
       setFacebookLoading(false);
     }

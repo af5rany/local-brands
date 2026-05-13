@@ -21,7 +21,8 @@
         "EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID": "3176566169-2hod2vokk278ra01ejlls4chh93pah46.apps.googleusercontent.com",
         "EXPO_PUBLIC_GOOGLE_IOS_REVERSE_SCHEME": "com.googleusercontent.apps.3176566169-2hod2vokk278ra01ejlls4chh93pah46",
         "EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID": "3176566169-rqvvg3rjuirbl63plaq7upsg1jrsmh0o.apps.googleusercontent.com",
-        "EXPO_PUBLIC_FACEBOOK_APP_ID": "2413827082417241"
+        "EXPO_PUBLIC_FACEBOOK_APP_ID": "2413827082417241",
+        "EXPO_PUBLIC_FACEBOOK_CLIENT_TOKEN": "188666345b35ca8ebf1ad213dc4f8f25"
       },
       "android": {
         "buildType": "apk"
@@ -42,7 +43,8 @@
         "EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID": "3176566169-2hod2vokk278ra01ejlls4chh93pah46.apps.googleusercontent.com",
         "EXPO_PUBLIC_GOOGLE_IOS_REVERSE_SCHEME": "com.googleusercontent.apps.3176566169-2hod2vokk278ra01ejlls4chh93pah46",
         "EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID": "3176566169-rqvvg3rjuirbl63plaq7upsg1jrsmh0o.apps.googleusercontent.com",
-        "EXPO_PUBLIC_FACEBOOK_APP_ID": "2413827082417241"
+        "EXPO_PUBLIC_FACEBOOK_APP_ID": "2413827082417241",
+        "EXPO_PUBLIC_FACEBOOK_CLIENT_TOKEN": "188666345b35ca8ebf1ad213dc4f8f25"
       },
       "ios": {
         "distribution": "store",

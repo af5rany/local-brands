@@ -23,10 +23,20 @@
         "CFBundleURLTypes": [
           {
             "CFBundleURLSchemes": [
-              "com.googleusercontent.apps.3176566169-2hod2vokk278ra01ejlls4chh93pah46"
+              "com.googleusercontent.apps.3176566169-2hod2vokk278ra01ejlls4chh93pah46",
+              "fb2413827082417241"
             ]
           }
-        ]
+        ],
+        "LSApplicationQueriesSchemes": [
+          "fbapi",
+          "fb-messenger-share-api",
+          "fbauth2",
+          "fbshareextension"
+        ],
+        "FacebookAppID": "2413827082417241",
+        "FacebookClientToken": "188666345b35ca8ebf1ad213dc4f8f25",
+        "FacebookDisplayName": "Local Brands"
       }
     },
     "android": {
@@ -43,8 +53,15 @@
         {
           "action": "VIEW",
           "autoVerify": true,
-          "data": [{ "scheme": "com.fakharanii.localbrands" }],
-          "category": ["BROWSABLE", "DEFAULT"]
+          "data": [
+            {
+              "scheme": "com.fakharanii.localbrands"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
         }
       ]
     },
@@ -66,7 +83,19 @@
       ],
       "expo-web-browser",
       "expo-font",
-      "@react-native-community/datetimepicker"
+      "@react-native-community/datetimepicker",
+      [
+        "react-native-fbsdk-next",
+        {
+          "appID": "2413827082417241",
+          "clientToken": "188666345b35ca8ebf1ad213dc4f8f25",
+          "displayName": "Local Brands",
+          "scheme": "fb2413827082417241",
+          "advertiserIDCollectionEnabled": false,
+          "autoLogAppEventsEnabled": false,
+          "isAutoInitEnabled": true
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true
