@@ -1,19 +1,25 @@
 import { useState } from "react";
 import { Alert, Platform } from "react-native";
-import {
-  GoogleSignin,
-  statusCodes,
-} from "@react-native-google-signin/google-signin";
-import { LoginManager, AccessToken } from "react-native-fbsdk-next";
 import * as AppleAuthentication from "expo-apple-authentication";
 import getApiUrl from "@/helpers/getApiUrl";
 
-GoogleSignin.configure({
-  webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
-  iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
-  scopes: ["profile", "email"],
-  offlineAccess: false,
-});
+const DEV_BUILD_ALERT = "Social sign-in requires a development build. Run: npx expo run:ios";
+
+function loadGoogleSignin() {
+  try {
+    return require("@react-native-google-signin/google-signin");
+  } catch {
+    return null;
+  }
+}
+
+function loadFacebookSDK() {
+  try {
+    return require("react-native-fbsdk-next");
+  } catch {
+    return null;
+  }
+}
 
 type SocialPayload =
   | { token: string }
@@ -48,12 +54,25 @@ export function useSocialAuth(onSuccess: (token: string) => void) {
   };
 
   const handleGoogle = async () => {
+    const googleSDK = loadGoogleSignin();
+    if (!googleSDK) {
+      Alert.alert("Not Available", DEV_BUILD_ALERT);
+      return;
+    }
+    const { GoogleSignin, statusCodes } = googleSDK;
+
     setGoogleLoading(true);
     try {
+      GoogleSignin.configure({
+        webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
+        iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
+        scopes: ["profile", "email"],
+        offlineAccess: false,
+      });
+
       if (Platform.OS === "android") {
         try {
           await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
-          console.log("[GoogleAuth] HAS PLAY SERVICES: true");
         } catch {
           Alert.alert("Google Sign-In Error", "Google Play Services is required");
           return;
@@ -84,8 +103,14 @@ export function useSocialAuth(onSuccess: (token: string) => void) {
   };
 
   const handleFacebook = async () => {
+    const fbSDK = loadFacebookSDK();
+    if (!fbSDK) {
+      Alert.alert("Not Available", DEV_BUILD_ALERT);
+      return;
+    }
+    const { LoginManager, AccessToken } = fbSDK;
+
     setFacebookLoading(true);
-    console.log("[FacebookAuth] APP_ID:", process.env.EXPO_PUBLIC_FACEBOOK_APP_ID);
     try {
       const result = await LoginManager.logInWithPermissions(["public_profile", "email"]);
       console.log("[FacebookAuth] LOGIN RESULT:", JSON.stringify(result, null, 2));
@@ -96,8 +121,6 @@ export function useSocialAuth(onSuccess: (token: string) => void) {
       if (!data || !data.accessToken) {
         throw new Error("Failed to get Facebook access token");
       }
-      console.log("[FacebookAuth] HAS ACCESS TOKEN:", !!data.accessToken);
-      console.log("[FacebookAuth] USER ID:", data.userID);
       const jwt = await sendToBackend("facebook", { token: data.accessToken });
       onSuccess(jwt);
     } catch (err: any) {
@@ -116,7 +139,6 @@ export function useSocialAuth(onSuccess: (token: string) => void) {
     setAppleLoading(true);
     try {
       const available = await AppleAuthentication.isAvailableAsync();
-      console.log("[AppleAuth] AVAILABLE:", available);
       if (!available) {
         Alert.alert("Apple Sign-In Error", "Apple Sign-In is not available on this device");
         return;
@@ -128,14 +150,6 @@ export function useSocialAuth(onSuccess: (token: string) => void) {
           AppleAuthentication.AppleAuthenticationScope.EMAIL,
         ],
       });
-
-      console.log("[AppleAuth] SIGN IN RESULT:", JSON.stringify({
-        user: credential.user,
-        email: credential.email,
-        fullName: credential.fullName,
-        hasIdentityToken: !!credential.identityToken,
-        hasAuthCode: !!credential.authorizationCode,
-      }, null, 2));
 
       if (!credential.identityToken) {
         throw new Error("Apple Sign-In did not return an identity token");
@@ -149,10 +163,9 @@ export function useSocialAuth(onSuccess: (token: string) => void) {
         email: credential.email,
       });
 
-      console.log("[AppleAuth] BACKEND RESPONSE: received JWT");
       onSuccess(jwt);
     } catch (err: any) {
-      if (err.code === 'ERR_REQUEST_CANCELED') {
+      if (err.code === "ERR_REQUEST_CANCELED") {
         return;
       }
       Alert.alert("Apple Sign-In Error", err.message || "Something went wrong");
