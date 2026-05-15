@@ -216,8 +216,8 @@ const MasonryGrid: React.FC<{
   );
 };
 
-// ── Tab Switcher — For You first, Following second ──
-const TAB_ORDER: ActiveTab[] = ["forYou", "following"];
+// ── Tab Switcher — Following first, For You second ──
+const TAB_ORDER: ActiveTab[] = ["following", "forYou"];
 const TAB_LABELS: Record<ActiveTab, string> = {
   following: "Following",
   forYou: "For You",
@@ -272,7 +272,8 @@ export default function FeedScreen() {
   const colors = useThemeColors();
   const tabBarHeight = useBottomTabBarHeight();
   const { reportScroll } = useHeaderVisibility();
-  const { token, user } = useAuth();
+  const { token, user, isGuest } = useAuth();
+  const isAuthenticated = !!token && !isGuest;
   const { isConnected } = useNetwork();
 
   const { register, unregister } = useScrollToTop();
@@ -280,7 +281,7 @@ export default function FeedScreen() {
   const forYouRef = useRef<ScrollView>(null);
   const pagerRef = useRef<ScrollView>(null);
 
-  const [activeTab, setActiveTab] = useState<ActiveTab>("forYou");
+  const [activeTab, setActiveTab] = useState<ActiveTab>("following");
 
   const handleTabChange = useCallback((tab: ActiveTab) => {
     setActiveTab(tab);
@@ -389,9 +390,14 @@ export default function FeedScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      fetchFollowingFeed(1);
+      if (isAuthenticated) {
+        fetchFollowingFeed(1);
+      } else {
+        setPosts([]);
+        setLoading(false);
+      }
       fetchForYouFeed(1);
-    }, [fetchFollowingFeed, fetchForYouFeed]),
+    }, [fetchFollowingFeed, fetchForYouFeed, isAuthenticated]),
   );
 
   const handleRefresh = () => {
@@ -499,7 +505,108 @@ export default function FeedScreen() {
           }}
           style={{ flex: 1 }}
         >
-          {/* ── Page 0: For You ── */}
+          {/* ── Page 0: Following ── */}
+          <View style={{ width: SCREEN_WIDTH, flex: 1 }}>
+            <ScrollView
+              ref={followingRef}
+              showsVerticalScrollIndicator={false}
+              onScroll={handleScroll}
+              scrollEventThrottle={200}
+              refreshControl={
+                <RefreshControl
+                  refreshing={refreshing}
+                  onRefresh={handleRefresh}
+                />
+              }
+              contentContainerStyle={[
+                styles.scrollContent,
+                { paddingBottom: tabBarHeight },
+              ]}
+            >
+              {!isAuthenticated ? (
+                /* ── Not signed in / guest ── */
+                <View style={styles.empty}>
+                  <Ionicons name="person-outline" size={52} color={colors.textTertiary} />
+                  <Text style={[styles.emptyTitle, { color: colors.text }]}>
+                    SIGN IN TO FOLLOW
+                  </Text>
+                  <Text style={[styles.emptySubtitle, { color: colors.textTertiary }]}>
+                    Create an account to follow brands and see their latest posts here.
+                  </Text>
+                  <View style={styles.emptyActions}>
+                    <TouchableOpacity
+                      style={[styles.ctaPrimary, { backgroundColor: colors.text }]}
+                      onPress={() => router.push("/auth/login" as any)}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={[styles.ctaText, { color: colors.background }]}>
+                        SIGN IN →
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.ctaOutline, { borderColor: colors.text }]}
+                      onPress={() => router.push("/auth/register" as any)}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={[styles.ctaText, { color: colors.text }]}>
+                        CREATE ACCOUNT
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ) : posts.length > 0 ? (
+                <>
+                  <MasonryGrid
+                    posts={posts}
+                    imageHeights={imageHeights}
+                    colors={colors}
+                    onPostPress={postPress}
+                    onLike={handleLike}
+                    onBrandPress={brandPress}
+                  />
+                  {followingHasMore && (
+                    <ActivityIndicator
+                      style={{ paddingVertical: 20 }}
+                      color={colors.textTertiary}
+                    />
+                  )}
+                </>
+              ) : (
+                /* ── Signed in but no followed brands ── */
+                <View style={styles.empty}>
+                  <Ionicons name="compass-outline" size={52} color={colors.textTertiary} />
+                  <Text style={[styles.emptyTitle, { color: colors.text }]}>
+                    NO POSTS YET
+                  </Text>
+                  <Text style={[styles.emptySubtitle, { color: colors.textTertiary }]}>
+                    Follow brands you love to see their posts here.
+                  </Text>
+                  <View style={styles.emptyActions}>
+                    <TouchableOpacity
+                      style={[styles.ctaPrimary, { backgroundColor: colors.text }]}
+                      onPress={() => handleTabChange("forYou")}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={[styles.ctaText, { color: colors.background }]}>
+                        FOR YOU →
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.ctaOutline, { borderColor: colors.text }]}
+                      onPress={() => router.push("/(tabs)/brands" as any)}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={[styles.ctaText, { color: colors.text }]}>
+                        EXPLORE BRANDS
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              )}
+            </ScrollView>
+          </View>
+
+          {/* ── Page 1: For You ── */}
           <View style={{ width: SCREEN_WIDTH, flex: 1 }}>
             <ScrollView
               ref={forYouRef}
@@ -552,90 +659,6 @@ export default function FeedScreen() {
                   >
                     Check back soon — posts will appear here.
                   </Text>
-                </View>
-              )}
-            </ScrollView>
-          </View>
-
-          {/* ── Page 1: Following ── */}
-          <View style={{ width: SCREEN_WIDTH, flex: 1 }}>
-            <ScrollView
-              ref={followingRef}
-              showsVerticalScrollIndicator={false}
-              onScroll={handleScroll}
-              scrollEventThrottle={200}
-              refreshControl={
-                <RefreshControl
-                  refreshing={refreshing}
-                  onRefresh={handleRefresh}
-                />
-              }
-              contentContainerStyle={[
-                styles.scrollContent,
-                { paddingBottom: tabBarHeight },
-              ]}
-            >
-              {posts.length > 0 ? (
-                <>
-                  <MasonryGrid
-                    posts={posts}
-                    imageHeights={imageHeights}
-                    colors={colors}
-                    onPostPress={postPress}
-                    onLike={handleLike}
-                    onBrandPress={brandPress}
-                  />
-                  {followingHasMore && (
-                    <ActivityIndicator
-                      style={{ paddingVertical: 20 }}
-                      color={colors.textTertiary}
-                    />
-                  )}
-                </>
-              ) : (
-                /* ── Following empty state ── */
-                <View style={styles.empty}>
-                  <Ionicons
-                    name="compass-outline"
-                    size={52}
-                    color={colors.textTertiary}
-                  />
-                  <Text style={[styles.emptyTitle, { color: colors.text }]}>
-                    NO POSTS YET
-                  </Text>
-                  <Text
-                    style={[
-                      styles.emptySubtitle,
-                      { color: colors.textTertiary },
-                    ]}
-                  >
-                    Follow brands you love to see their posts here.
-                  </Text>
-                  <View style={styles.emptyActions}>
-                    <TouchableOpacity
-                      style={[
-                        styles.ctaPrimary,
-                        { backgroundColor: colors.text },
-                      ]}
-                      onPress={() => handleTabChange("forYou")}
-                      activeOpacity={0.7}
-                    >
-                      <Text
-                        style={[styles.ctaText, { color: colors.background }]}
-                      >
-                        FOR YOU →
-                      </Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={[styles.ctaOutline, { borderColor: colors.text }]}
-                      onPress={() => router.push("/(tabs)/brands" as any)}
-                      activeOpacity={0.7}
-                    >
-                      <Text style={[styles.ctaText, { color: colors.text }]}>
-                        EXPLORE BRANDS
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
                 </View>
               )}
             </ScrollView>

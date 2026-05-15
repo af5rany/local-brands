@@ -22,6 +22,7 @@ import { useThemeColors } from "@/hooks/useThemeColor";
 import { Ionicons } from "@expo/vector-icons";
 import { BrandStatus } from "@/types/enums";
 import { useAuth } from "@/context/AuthContext";
+import { useGuestGuard } from "@/hooks/useGuestGuard";
 import { useToast } from "@/context/ToastContext";
 import { useBrand } from "@/context/BrandContext";
 import { useBrandDetails, sortOptions, SortOption } from "@/hooks/useBrandDetails";
@@ -43,6 +44,7 @@ const BrandDetailScreen = () => {
   const router = useRouter();
   const { brandId, refresh } = useLocalSearchParams();
   const { token, user } = useAuth();
+  const { requireAuth } = useGuestGuard();
   const { showToast } = useToast();
   const { productListVersion, brandVersion } = useBrand();
   const colors = useThemeColors();
@@ -76,13 +78,15 @@ const BrandDetailScreen = () => {
     setBrand,
   } = useBrandDetails(brandId, token, user);
 
-  const isOwnerOrAdmin =
-    userRole === "admin" ||
+  const isAdmin = userRole === "admin";
+  const isBrandOwner =
     (user?.id &&
       brand?.brandUsers?.some(
         (bu: any) => bu.user?.id === user.id && bu.role === "owner"
       )) ||
     (user?.id && brand?.owner?.id && user.id === brand.owner.id);
+  const isOwnerOrAdmin = isAdmin || isBrandOwner;
+  const canFollow = !isBrandOwner;
 
   const [showFilters, setShowFilters] = useState(false);
   const [changingStatus, setChangingStatus] = useState(false);
@@ -108,6 +112,7 @@ const BrandDetailScreen = () => {
 
   const toggleWishlist = useCallback(async (productId: number) => {
     if (!token) { router.push("/auth/login"); return; }
+    if (requireAuth()) return;
     const wasIn = wishlistRef.current.includes(productId);
     const next = wasIn ? wishlistRef.current.filter((id) => id !== productId) : [...wishlistRef.current, productId];
     wishlistRef.current = next;
@@ -491,8 +496,8 @@ const BrandDetailScreen = () => {
             </View>
           )}
 
-          {/* Follow Button (customers only) */}
-          {!isOwnerOrAdmin && (
+          {/* Follow Button (customers + admins) */}
+          {canFollow && (
             <TouchableOpacity
               style={[
                 styles.followBtn,

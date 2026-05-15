@@ -19,6 +19,7 @@ import {
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/context/AuthContext";
+import { useGuestGuard } from "@/hooks/useGuestGuard";
 import { useToast } from "@/context/ToastContext";
 import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
 import { useImageSearch } from "@/hooks/useImageSearch";
@@ -195,6 +196,7 @@ const ShopScreen = () => {
     gender?: string;
   }>();
   const { token, loading } = useAuth();
+  const { requireAuth } = useGuestGuard();
   const { showToast } = useToast();
   const colors = useThemeColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
@@ -428,6 +430,7 @@ const ShopScreen = () => {
   const toggleWishlist = useCallback(
     async (productId: number) => {
       if (!token) return;
+      if (requireAuth()) return;
       const wasInWishlist = wishlistRef.current.includes(productId);
       const next = wasInWishlist
         ? wishlistRef.current.filter((id) => id !== productId)

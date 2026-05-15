@@ -89,24 +89,13 @@ const ManageScreen = () => {
     >
       {/* Header */}
       <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
-        <TouchableOpacity
-          onPress={handleBackToShopping}
-          style={styles.backBtn}
-        >
+        <TouchableOpacity onPress={handleBackToShopping} style={styles.backBtn}>
           <Ionicons name="chevron-back" size={24} color={colors.text} />
         </TouchableOpacity>
-        <View style={styles.headerCenter}>
-          <Ionicons name="speedometer" size={18} color={colors.primary} />
-          <Text style={[styles.headerTitle, { color: colors.text }]}>
-            Management
-          </Text>
-        </View>
-        <TouchableOpacity
-          onPress={handleBackToShopping}
-          style={[styles.closeBtn, { backgroundColor: colors.surfaceRaised }]}
-        >
-          <Ionicons name="close" size={18} color={colors.textSecondary} />
-        </TouchableOpacity>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>
+          MANAGEMENT
+        </Text>
+        <View style={styles.headerSpacer} />
       </View>
 
       <ScrollView
@@ -153,30 +142,23 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
     paddingHorizontal: 16,
     paddingVertical: 14,
     borderBottomWidth: 1,
   },
   backBtn: {
     padding: 4,
-  },
-  headerCenter: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
+    width: 36,
   },
   headerTitle: {
-    fontSize: 17,
+    flex: 1,
+    textAlign: "center",
+    fontSize: 14,
     fontWeight: "700",
-    // letterSpacing: -0.2,
+    letterSpacing: 1.5,
   },
-  closeBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 0,
-    justifyContent: "center",
-    alignItems: "center",
+  headerSpacer: {
+    width: 36,
   },
   scrollContent: {
     flexGrow: 1,

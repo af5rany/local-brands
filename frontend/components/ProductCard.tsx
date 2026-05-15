@@ -10,6 +10,7 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useAuth } from "@/context/AuthContext";
+import { useGuestGuard } from "@/hooks/useGuestGuard";
 import { Ionicons } from "@expo/vector-icons";
 import { Product } from "@/types/product";
 import { useThemeColors } from "@/hooks/useThemeColor";
@@ -32,6 +33,7 @@ const ProductCard: React.FC<ProductCardProps> = React.memo(({
 }) => {
   const router = useRouter();
   const { token } = useAuth();
+  const { requireAuth } = useGuestGuard();
   const colors = useThemeColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
 
@@ -102,6 +104,7 @@ const ProductCard: React.FC<ProductCardProps> = React.memo(({
                 onPress={(e) => {
                   e.stopPropagation();
                   if (!token) { router.push("/auth/login"); return; }
+                  if (requireAuth()) return;
                   onToggleWishlist?.(product.id);
                 }}
               >
@@ -125,6 +128,7 @@ const ProductCard: React.FC<ProductCardProps> = React.memo(({
                 <Ionicons name="create-outline" size={16} color={colors.text} />
               </TouchableOpacity>
             )}
+
           </View>
 
           {/* Info */}

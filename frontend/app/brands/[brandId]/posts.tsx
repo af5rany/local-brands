@@ -14,6 +14,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/context/AuthContext";
+import { useGuestGuard } from "@/hooks/useGuestGuard";
 import { useThemeColors } from "@/hooks/useThemeColor";
 import getApiUrl from "@/helpers/getApiUrl";
 
@@ -153,6 +154,7 @@ export default function BrandPostsScreen() {
   const { brandId } = useLocalSearchParams();
   const colors = useThemeColors();
   const { token } = useAuth();
+  const { requireAuth } = useGuestGuard();
 
   const [posts, setPosts] = useState<PostData[]>([]);
   const [brandName, setBrandName] = useState("");
@@ -229,10 +231,8 @@ export default function BrandPostsScreen() {
   };
 
   const handleLike = async (postId: number) => {
-    if (!token) {
-      router.push("/auth/login" as any);
-      return;
-    }
+    if (!token) { router.push("/auth/login" as any); return; }
+    if (requireAuth()) return;
     try {
       const res = await fetch(`${getApiUrl()}/feed/posts/${postId}/like`, {
         method: "POST",

@@ -22,6 +22,7 @@ import {
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/context/AuthContext";
+import { useGuestGuard } from "@/hooks/useGuestGuard";
 import getApiUrl from "@/helpers/getApiUrl";
 import { useThemeColors } from "@/hooks/useThemeColor";
 import Header from "@/components/Header";
@@ -43,7 +44,8 @@ export default function PostDetailScreen() {
   const { postId } = useLocalSearchParams<{ postId: string }>();
   const router = useRouter();
   const colors = useThemeColors();
-  const { token, user } = useAuth();
+  const { token, user, isGuest } = useAuth();
+  const { requireAuth } = useGuestGuard();
   const insets = useSafeAreaInsets();
 
   const [post, setPost] = useState<any>(null);
@@ -132,10 +134,8 @@ export default function PostDetailScreen() {
   );
 
   const handleLike = async () => {
-    if (!token) {
-      router.push("/auth/login");
-      return;
-    }
+    if (!token) { router.push("/auth/login"); return; }
+    if (requireAuth()) return;
     try {
       const res = await fetch(`${getApiUrl()}/feed/posts/${postId}/like`, {
         method: "POST",
@@ -168,10 +168,8 @@ export default function PostDetailScreen() {
 
   const handleSubmitComment = async () => {
     if (!commentText.trim() || submitting) return;
-    if (!token) {
-      router.push("/auth/login");
-      return;
-    }
+    if (!token) { router.push("/auth/login"); return; }
+    if (requireAuth()) return;
     setSubmitting(true);
     try {
       const res = await fetch(`${getApiUrl()}/feed/posts/${postId}/comments`, {
@@ -725,13 +723,14 @@ export default function PostDetailScreen() {
               borderColor: colors.border,
             },
           ]}
-          placeholder={token ? "Write a comment..." : "Log in to comment"}
+          placeholder={!token ? "Log in to comment" : isGuest ? "Create an account to comment" : "Write a comment..."}
           placeholderTextColor={colors.textTertiary}
           value={commentText}
           onChangeText={setCommentText}
-          editable={!!token}
+          editable={!!token && !isGuest}
           onFocus={() => {
-            if (!token) router.push("/auth/login");
+            if (!token) { router.push("/auth/login"); return; }
+            requireAuth();
           }}
           multiline
           maxLength={1000}

@@ -38,7 +38,7 @@ const GAP = 8;
 // Replace these URIs with your own local require() or remote URLs
 const IMAGES = {
   heroLarge:
-    "https://plus.unsplash.com/premium_photo-1764196701475-77e80516b77f?w=900&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxjb2xsZWN0aW9uLXBhZ2V8MnwtXzFucWE3bkRJOHx8ZW58MHx8fHx8",
+    "/compas.png",
   heroSmall:
     "https://images.unsplash.com/photo-1618247072881-40689e1318b5?q=80&w=774&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
   mid1: "https://images.unsplash.com/photo-1605710988787-a2920d747d16?q=80&w=1740&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
@@ -136,12 +136,12 @@ export default function LookbookHero() {
   return (
     <ScrollView style={styles.root} showsVerticalScrollIndicator={false}>
       {/* ── Collection label ── */}
-      <Text style={styles.collectionLabel}>AW '25 COLLECTION</Text>
+      <Text style={styles.collectionLabel}>AW '26 COLLECTION</Text>
 
       {/* ── Row 1: large portrait + small square — headline overlaid inside ── */}
       <View style={styles.row}>
         <Image
-          source={{ uri: IMAGES.heroLarge }}
+          source={require("@/assets/images/compas.png")}
           style={[styles.heroLarge]}
           resizeMode="cover"
         />

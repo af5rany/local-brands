@@ -195,11 +195,13 @@ const ProfileTab = () => {
               </View>
             )}
           </View>
-          <Text style={styles.headerEyebrow}>{roleDisplay}</Text>
           <Text style={styles.headerName}>
             {(user?.name || "USER").toUpperCase()}
           </Text>
           <Text style={styles.headerEmail}>{user?.email || ""}</Text>
+          <View style={styles.roleBadge}>
+            <Text style={styles.roleBadgeText}>{roleDisplay}</Text>
+          </View>
         </View>
 
         {/* ── Quick Stats ── */}
@@ -208,17 +210,22 @@ const ProfileTab = () => {
             { label: "ORDERS", value: "—" },
             { label: "SAVED", value: "—" },
             { label: "REVIEWS", value: "—" },
-          ].map((s) => (
-            <View key={s.label} style={styles.statCol}>
-              <Text style={styles.statNum}>{s.value}</Text>
+          ].map((s, i, arr) => (
+            <View
+              key={s.label}
+              style={[
+                styles.statCol,
+                i < arr.length - 1 && { borderRightWidth: 1, borderRightColor: colors.border },
+              ]}
+            >
               <Text style={styles.statLabel}>{s.label}</Text>
+              <Text style={styles.statIndicator}>{s.value}</Text>
             </View>
           ))}
         </View>
 
         {/* ── Menu ── */}
         <View style={styles.menuSection}>
-          <Text style={styles.sectionEyebrow}>ACCOUNT</Text>
           <View style={styles.menuList}>
             {menuItems.map((item, index) => (
               <TouchableOpacity
@@ -230,9 +237,6 @@ const ProfileTab = () => {
                 onPress={item.onPress}
                 activeOpacity={0.7}
               >
-                <View style={styles.iconBox}>
-                  <Ionicons name={item.icon} size={18} color={colors.text} />
-                </View>
                 <View style={styles.menuTextWrap}>
                   <Text style={styles.menuLabel}>{item.label}</Text>
                   {"subtitle" in item && item.subtitle ? (
@@ -287,47 +291,49 @@ const createStyles = (colors: ThemeColors) =>
     // ── Guest ──────────────────────────────────────────────────────────────────
     guestWrap: {
       flex: 1,
-      paddingHorizontal: 32,
-      paddingTop: 100,
+      paddingHorizontal: 28,
+      paddingTop: 56,
       paddingBottom: 60,
       alignItems: "center",
     },
     guestAvatar: {
-      width: 80,
-      height: 80,
+      width: 160,
+      height: 160,
       backgroundColor: colors.surfaceRaised,
       alignItems: "center",
       justifyContent: "center",
       marginBottom: 28,
+      borderWidth: 1,
+      borderColor: colors.border,
     },
     guestEyebrow: {
       fontSize: 9,
       color: colors.textTertiary,
       letterSpacing: 2,
       textTransform: "uppercase",
-      marginBottom: 8,
+      marginBottom: 10,
     },
     guestTitle: {
-      fontSize: 28,
+      fontSize: 30,
       fontWeight: "800",
       color: colors.text,
       letterSpacing: -0.5,
       textTransform: "uppercase",
-      marginBottom: 12,
+      marginBottom: 14,
       textAlign: "center",
     },
     guestSubtitle: {
-      fontSize: 13,
+      fontSize: 14,
       color: colors.textSecondary,
       textAlign: "center",
-      lineHeight: 20,
+      lineHeight: 22,
       marginBottom: 36,
+      paddingHorizontal: 8,
     },
     signInBtn: {
       backgroundColor: colors.primary,
-      paddingVertical: 16,
-      paddingHorizontal: 48,
-      marginBottom: 12,
+      paddingVertical: 18,
+      marginBottom: 10,
       width: "100%",
       alignItems: "center",
     },
@@ -340,9 +346,8 @@ const createStyles = (colors: ThemeColors) =>
     },
     registerBtn: {
       borderWidth: 1,
-      borderColor: colors.primary,
-      paddingVertical: 14,
-      paddingHorizontal: 40,
+      borderColor: colors.border,
+      paddingVertical: 16,
       width: "100%",
       alignItems: "center",
     },
@@ -356,48 +361,60 @@ const createStyles = (colors: ThemeColors) =>
 
     // ── Header ─────────────────────────────────────────────────────────────────
     header: {
-      backgroundColor: colors.primary,
-      paddingTop: 64,
-      paddingBottom: 32,
+      backgroundColor: colors.background,
+      paddingTop: 48,
+      paddingBottom: 28,
       paddingHorizontal: 24,
       alignItems: "center",
       gap: 6,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
     },
     avatarWrap: {
-      marginBottom: 12,
+      marginBottom: 16,
+      borderWidth: 1,
+      borderColor: colors.border,
     },
     avatar: {
-      width: 80,
-      height: 80,
-      backgroundColor: colors.primaryMuted,
+      width: 110,
+      height: 110,
     },
     initialsAvatar: {
-      width: 80,
-      height: 80,
-      backgroundColor: colors.primaryMuted,
+      width: 110,
+      height: 110,
+      backgroundColor: colors.surfaceRaised,
       alignItems: "center",
       justifyContent: "center",
     },
     initialsText: {
-      fontSize: 28,
+      fontSize: 32,
       fontWeight: "800",
-      color: colors.primaryForeground,
-    },
-    headerEyebrow: {
-      fontSize: 9,
-      color: "rgba(255,255,255,0.5)",
-      letterSpacing: 2,
-      textTransform: "uppercase",
+      color: colors.text,
     },
     headerName: {
-      fontSize: 22,
+      fontSize: 20,
       fontWeight: "800",
-      color: colors.primaryForeground,
+      color: colors.text,
       letterSpacing: -0.5,
+      textTransform: "uppercase",
     },
     headerEmail: {
       fontSize: 12,
-      color: "rgba(255,255,255,0.55)",
+      color: colors.textSecondary,
+      marginBottom: 4,
+    },
+    roleBadge: {
+      backgroundColor: colors.text,
+      paddingHorizontal: 16,
+      paddingVertical: 6,
+      marginTop: 4,
+    },
+    roleBadgeText: {
+      fontSize: 10,
+      fontWeight: "700",
+      color: colors.background,
+      letterSpacing: 1.5,
+      textTransform: "uppercase",
     },
 
     // ── Stats ──────────────────────────────────────────────────────────────────
@@ -410,57 +427,37 @@ const createStyles = (colors: ThemeColors) =>
       flex: 1,
       alignItems: "center",
       paddingVertical: 20,
-      borderRightWidth: 1,
-      borderRightColor: colors.border,
-    },
-    statNum: {
-      fontSize: 20,
-      fontWeight: "800",
-      color: colors.text,
-      letterSpacing: -0.5,
     },
     statLabel: {
-      fontSize: 8,
-      color: colors.textTertiary,
+      fontSize: 9,
+      fontWeight: "700",
+      color: colors.text,
       letterSpacing: 1.5,
       textTransform: "uppercase",
-      marginTop: 4,
+    },
+    statIndicator: {
+      fontSize: 14,
+      color: colors.textTertiary,
+      marginTop: 6,
     },
 
     // ── Menu ───────────────────────────────────────────────────────────────────
     menuSection: {
-      paddingTop: 32,
+      paddingTop: 8,
       paddingHorizontal: 20,
       paddingBottom: 8,
     },
-    sectionEyebrow: {
-      fontSize: 9,
-      color: colors.textTertiary,
-      letterSpacing: 2,
-      textTransform: "uppercase",
-      marginBottom: 12,
-    },
-    menuList: {
-      borderWidth: 1,
-      borderColor: colors.border,
-    },
+    menuList: {},
     menuItem: {
       flexDirection: "row",
       alignItems: "center",
-      paddingVertical: 16,
-      paddingHorizontal: 16,
+      paddingVertical: 18,
+      paddingHorizontal: 4,
       gap: 14,
     },
     menuItemBorder: {
       borderBottomWidth: 1,
       borderBottomColor: colors.border,
-    },
-    iconBox: {
-      width: 36,
-      height: 36,
-      backgroundColor: colors.surfaceRaised,
-      alignItems: "center",
-      justifyContent: "center",
     },
     menuTextWrap: {
       flex: 1,
@@ -470,7 +467,7 @@ const createStyles = (colors: ThemeColors) =>
       fontSize: 11,
       fontWeight: "700",
       color: colors.text,
-      letterSpacing: 1,
+      letterSpacing: 1.5,
       textTransform: "uppercase",
     },
     menuSub: {
@@ -483,7 +480,7 @@ const createStyles = (colors: ThemeColors) =>
       marginHorizontal: 20,
       marginTop: 16,
       borderWidth: 1,
-      borderColor: colors.primary,
+      borderColor: colors.border,
       paddingVertical: 20,
       paddingHorizontal: 20,
       flexDirection: "row",

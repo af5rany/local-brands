@@ -103,7 +103,7 @@ const BrandSelectionScreen = () => {
             <Image
               source={{ uri: item.logo }}
               style={styles.brandImage}
-              defaultSource={require("@/assets/images/placeholder-logo.png")}
+              defaultSource={require("@/assets/images/monolith.png")}
             />
           ) : (
             <View

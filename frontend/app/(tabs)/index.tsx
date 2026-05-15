@@ -37,7 +37,7 @@ import { useScrollToTop } from "@/context/ScrollToTopContext";
 
 // ── Static content ───────────────────────────────────────────────────────────
 const HERO_IMAGE =
-  "https://images.unsplash.com/photo-1509631179647-0177331693ae?q=80&w=900&auto=format&fit=crop";
+  "https://assets.cntraveller.in/photos/60ba23f2bfe773a828a46f7f/16:9/w_960,c_limit/monolith-utah-romania-netherlands1.jpg";
 
 const FALLBACK_SPOTLIGHTS = [
   {
@@ -45,7 +45,7 @@ const FALLBACK_SPOTLIGHTS = [
     name: "ATELIER\nNORTH 11",
     location: "LISBON · PORTUGAL",
     description: "A two-person studio working out of a converted warehouse in Lisbon. Cut-and-sew menswear assembled in runs of 30. Hand-finished, numbered, unrepeated.",
-    image: "https://images.unsplash.com/photo-1558171813-3c2c28e06cbf?q=80&w=800&auto=format&fit=crop",
+    image: "https://i.pinimg.com/736x/c8/da/e2/c8dae2186a790ed8f438ece352e3e834.jpg",
   },
   {
     id: "f-s2",
@@ -59,7 +59,7 @@ const FALLBACK_SPOTLIGHTS = [
     name: "ARCHIVE\nDEPT.",
     location: "BERLIN · GERMANY",
     description: "A Berlin-based collective focused on deadstock fabrics and archive reconstruction. Zero-waste by design, each piece carries provenance documentation.",
-    image: "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?q=80&w=800&auto=format&fit=crop",
+    image: "https://i.pinimg.com/736x/aa/2f/74/aa2f743ce0738af34cd23c5fa3d4171c.jpg?q=80&w=800&auto=format&fit=crop",
   },
 ];
 
@@ -71,7 +71,7 @@ const FALLBACK_PICKS = [
     name: "THE OVERSIZED COAT",
     quote: '"A coat that ages well. Lisbon studio, 47 hours each."',
     price: "$480",
-    image: "https://images.unsplash.com/photo-1548624313-0396b75de080?q=80&w=400&auto=format&fit=crop",
+    image: "https://i.pinimg.com/736x/a1/4e/a9/a14ea993742d1291f7ec263bebf6197a.jpg",
   },
   {
     id: undefined as number | undefined,
@@ -80,7 +80,7 @@ const FALLBACK_PICKS = [
     name: "WIDE-LEG TROUSER",
     quote: '"Best linen cut of the season. Sized down."',
     price: "$220",
-    image: "https://images.unsplash.com/photo-1594938298603-c8148c4b2c89?q=80&w=400&auto=format&fit=crop",
+    image: "https://i.pinimg.com/736x/4a/bb/54/4abb549a09daafc520aa7c0101a5db95.jpg",
   },
   {
     id: undefined as number | undefined,
@@ -102,7 +102,7 @@ const FALLBACK_FEED = [
     ago: "2H",
     likes: "1.2K",
     comments: "47",
-    image: "https://images.unsplash.com/photo-1558171813-3c2c28e06cbf?q=80&w=500&auto=format&fit=crop",
+    image: "https://i1-c.pinimg.com/736x/02/54/67/025467f10e70f5e1c373218f93fe772f.jpg",
   },
   {
     id: "2",
@@ -122,7 +122,7 @@ const FALLBACK_FEED = [
     ago: "1D",
     likes: "2.1K",
     comments: "61",
-    image: "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?q=80&w=500&auto=format&fit=crop",
+    image: "https://i.pinimg.com/736x/aa/2f/74/aa2f743ce0738af34cd23c5fa3d4171c.jpg?q=80&w=500&auto=format&fit=crop",
   },
 ];
 

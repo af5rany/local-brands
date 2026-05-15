@@ -90,7 +90,7 @@ const ResetPasswordScreen = () => {
         </SafeAreaView>
         <View style={styles.centeredContainer}>
           <Image
-            source={require("@/assets/images/local-sooq.png")}
+            source={require("@/assets/images/monolith.png")}
             style={styles.logo}
             resizeMode="contain"
           />
@@ -132,7 +132,7 @@ const ResetPasswordScreen = () => {
           </Pressable>
 
           <Image
-            source={require("@/assets/images/local-sooq.png")}
+            source={require("@/assets/images/monolith.png")}
             style={styles.logo}
             resizeMode="contain"
           />
