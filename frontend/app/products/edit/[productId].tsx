@@ -13,6 +13,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
+import DraggableFlatList, { RenderItemParams, ScaleDecorator } from "react-native-draggable-flatlist";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter, useLocalSearchParams } from "expo-router";
@@ -112,6 +113,7 @@ const EditProductScreen = () => {
   const [brandId, setBrandId] = useState<number | null>(null);
 
   const [autoDetectedType, setAutoDetectedType] = useState(false);
+  const [customSizeInput, setCustomSizeInput] = useState("");
 
   const { uploads, uploadImage, pickAndUpload, isUploading } = useCloudinaryUpload();
 
@@ -212,6 +214,26 @@ const EditProductScreen = () => {
     }
   }, [productType]);
 
+  const handleDescriptionChange = useCallback((text: string) => {
+    setDescription(text);
+    const lower = text.toLowerCase();
+    const GENDER_KW: Record<string, string[]> = {
+      men: ["men's", "mens", "for men", "male"],
+      women: ["women's", "womens", "for women", "female", "ladies"],
+      unisex: ["unisex", "gender neutral"],
+      kids: ["kids", "children", "boys", "girls", "youth"],
+    };
+    const MATERIAL_KW = ["cotton","polyester","wool","linen","silk","nylon","leather","suede","cashmere","denim","fleece","velvet","canvas","spandex"];
+    const SEASON_KW: Record<string,string[]> = {
+      Spring:["spring"], Summer:["summer"], Fall:["fall","autumn"], Winter:["winter"], "All Season":["all season","year-round"],
+    };
+    const CARE_KW = ["machine wash","hand wash","dry clean","tumble dry","air dry","lay flat"];
+    if (!gender) for (const [g,kws] of Object.entries(GENDER_KW)) { if (kws.some(kw=>lower.includes(kw))) { setGender(g); break; } }
+    if (!material) for (const mat of MATERIAL_KW) { if (new RegExp(`\\b${mat}\\b`,"i").test(lower)) { setMaterial(mat.charAt(0).toUpperCase()+mat.slice(1)); break; } }
+    if (!season) for (const [s,kws] of Object.entries(SEASON_KW)) { if (kws.some(kw=>lower.includes(kw))) { setSeason(s); break; } }
+    if (!careInstructions) { const found=CARE_KW.filter(kw=>lower.includes(kw)); if (found.length) setCareInstructions(found.map(c=>c.charAt(0).toUpperCase()+c.slice(1)).join(". ")); }
+  }, [gender, material, season, careInstructions]);
+
   const handleProductTypeChange = useCallback((value: string) => {
     setProductType(value);
     setAutoDetectedType(false);
@@ -293,6 +315,12 @@ const EditProductScreen = () => {
         body: JSON.stringify(productData),
       });
 
+      if (response.status === 401) {
+        Alert.alert("Session Expired", "Please log in again.", [
+          { text: "OK", onPress: () => router.replace("/auth/login") },
+        ]);
+        return;
+      }
       if (response.ok) {
         invalidateProduct(Number(productId));
         incrementProductListVersion();
@@ -339,36 +367,70 @@ const EditProductScreen = () => {
     );
   };
 
+  const renderDraggableImage = useCallback(
+    ({ item: uri, getIndex, drag, isActive }: RenderItemParams<string>) => {
+      const imgIndex = getIndex() ?? 0;
+      return (
+        <ScaleDecorator activeScale={1.08}>
+          <TouchableOpacity
+            onLongPress={drag}
+            delayLongPress={200}
+            activeOpacity={1}
+            style={[
+              { width: 90, height: 90, marginRight: 10, position: "relative" },
+              isActive && { opacity: 0.8 },
+            ]}
+          >
+            {uploads[uri] ? (
+              <ImageUploadProgress upload={uploads[uri]} size={90} />
+            ) : (
+              <Image source={{ uri }} style={{ width: 90, height: 90 }} resizeMode="cover" />
+            )}
+            {imgIndex === 0 && (
+              <View style={{ position: "absolute", bottom: 0, left: 0, right: 0, backgroundColor: "rgba(0,0,0,0.6)", padding: 2 }}>
+                <Text style={{ color: "#fff", fontSize: 9, textAlign: "center", fontWeight: "700" }}>MAIN</Text>
+              </View>
+            )}
+            <TouchableOpacity
+              style={{ position: "absolute", top: 4, right: 4, backgroundColor: "rgba(0,0,0,0.6)", borderRadius: 10, width: 20, height: 20, justifyContent: "center", alignItems: "center" }}
+              onPress={() => removeProductImage(imgIndex)}
+            >
+              <Ionicons name="close" size={12} color="#fff" />
+            </TouchableOpacity>
+          </TouchableOpacity>
+        </ScaleDecorator>
+      );
+    },
+    [uploads, removeProductImage],
+  );
+
   const handleProductImagePick = async () => {
+    if (productImages.length >= 5) {
+      Alert.alert("Limit reached", "Maximum 5 images per product.");
+      return;
+    }
     try {
       const permissionResult =
         await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!permissionResult.granted) {
-        Alert.alert(
-          "Permission Required",
-          "Permission to access camera roll is required!",
-        );
+        Alert.alert("Permission Required", "Allow access to camera roll.");
         return;
       }
-      let result = await ImagePicker.launchImageLibraryAsync({
+      const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ["images"],
-        allowsMultipleSelection: true,
-        selectionLimit: 5,
+        allowsEditing: true,
+        aspect: [3, 4],
         quality: 1,
       });
-      if (result.canceled || !result.assets) return;
+      if (result.canceled || !result.assets?.[0]) return;
 
-      const newLocalUris = result.assets.map((a) => a.uri);
-      setProductImages((prev) => [...prev, ...newLocalUris]);
+      const uri = result.assets[0].uri;
+      setProductImages((prev) => [...prev, uri]);
 
-      result.assets.forEach(async (asset) => {
-        const cloudUrl = await uploadImage(asset.uri);
-        if (cloudUrl) {
-          setProductImages((prev) =>
-            prev.map((u) => (u === asset.uri ? cloudUrl : u)),
-          );
-        }
-      });
+      const cloudUrl = await uploadImage(uri);
+      if (cloudUrl) {
+        setProductImages((prev) => prev.map((u) => (u === uri ? cloudUrl : u)));
+      }
     } catch (error) {
       console.error("Error picking images:", error);
     }
@@ -451,8 +513,8 @@ const EditProductScreen = () => {
                   { color: textColor, borderColor },
                 ]}
                 value={description}
-                onChangeText={setDescription}
-                placeholder="Enter description"
+                onChangeText={handleDescriptionChange}
+                placeholder="Enter description (auto-fills gender, material, season, care)"
                 placeholderTextColor={placeholderColor}
                 multiline
                 numberOfLines={4}
@@ -578,43 +640,29 @@ const EditProductScreen = () => {
               ) : null}
             </View>
 
-            {/* Product Images */}
+            {/* Product Images — drag to reorder */}
             <View style={styles.inputContainer}>
               <Text style={[styles.label, { color: textColor }]}>
                 Product Images <Text style={{ color: "#ff3b30" }}>*</Text>
               </Text>
-              <View style={styles.imageGrid}>
-                {productImages.map((uri, imgIndex) => (
-                  <View key={imgIndex} style={styles.imageContainer}>
-                    {uploads[uri] ? (
-                      <ImageUploadProgress upload={uploads[uri]} size={80} />
-                    ) : (
-                      <Image source={{ uri }} style={styles.imagePreview} />
-                    )}
-                    <TouchableOpacity
-                      style={styles.removeImageButton}
-                      onPress={() => removeProductImage(imgIndex)}
-                    >
-                      <Ionicons name="close" size={16} color="#ffffff" />
-                    </TouchableOpacity>
-                  </View>
-                ))}
-                <TouchableOpacity
-                  style={[
-                    styles.imagePreview,
-                    {
-                      justifyContent: "center",
-                      alignItems: "center",
-                      borderStyle: "dashed",
-                      borderWidth: 1.5,
-                      borderColor: primaryColor,
-                    },
-                  ]}
-                  onPress={handleProductImagePick}
-                >
-                  <Ionicons name="add" size={32} color={primaryColor} />
-                </TouchableOpacity>
-              </View>
+              <Text style={{ color: placeholderColor, fontSize: 12, marginBottom: 8 }}>Hold & drag to reorder · First image is main</Text>
+              <DraggableFlatList
+                horizontal
+                data={productImages}
+                keyExtractor={(uri, i) => `${uri}-${i}`}
+                onDragEnd={({ data }) => setProductImages(data)}
+                renderItem={renderDraggableImage}
+                contentContainerStyle={{ paddingVertical: 4 }}
+                showsHorizontalScrollIndicator={false}
+                ListFooterComponent={
+                  <TouchableOpacity
+                    style={{ width: 90, height: 90, justifyContent: "center", alignItems: "center", borderStyle: "dashed", borderWidth: 1.5, borderColor: primaryColor }}
+                    onPress={handleProductImagePick}
+                  >
+                    <Ionicons name="add" size={32} color={primaryColor} />
+                  </TouchableOpacity>
+                }
+              />
             </View>
           </View>
 
@@ -658,6 +706,40 @@ const EditProductScreen = () => {
                         </TouchableOpacity>
                       );
                     })}
+                    {/* Custom sizes already added */}
+                    {sizeVariants
+                      .filter((v) => !sizes.includes(v.size))
+                      .map((v) => (
+                        <TouchableOpacity
+                          key={v.size}
+                          onPress={() => toggleSizeVariant(v.size)}
+                          style={{ paddingHorizontal: 14, paddingVertical: 8, borderWidth: 1.5, borderColor: primaryColor, backgroundColor: primaryColor, borderRadius: 0 }}
+                        >
+                          <Text style={{ fontWeight: "600", fontSize: 14, color: "#fff" }}>{v.size}</Text>
+                        </TouchableOpacity>
+                      ))}
+                  </View>
+                  {/* Custom size input */}
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: 8 }}>
+                    <TextInput
+                      style={[styles.input, { flex: 1, marginBottom: 0, color: textColor, borderColor }]}
+                      placeholder="Custom size (e.g. 4XL)"
+                      placeholderTextColor={placeholderColor}
+                      value={customSizeInput}
+                      onChangeText={setCustomSizeInput}
+                    />
+                    <TouchableOpacity
+                      onPress={() => {
+                        const s = customSizeInput.trim().toUpperCase();
+                        if (s && !sizeVariants.some((v) => v.size === s)) {
+                          setSizeVariants((prev) => [...prev, { size: s, stock: 0 }]);
+                          setCustomSizeInput("");
+                        }
+                      }}
+                      style={{ paddingHorizontal: 14, paddingVertical: 8, borderWidth: 1.5, borderColor: primaryColor, backgroundColor: primaryColor }}
+                    >
+                      <Text style={{ fontWeight: "600", fontSize: 14, color: "#fff" }}>+ ADD</Text>
+                    </TouchableOpacity>
                   </View>
                 </View>
 

@@ -113,14 +113,12 @@ const BrandsScreen = () => {
         const data: PaginatedResult<Brand> = await response.json();
 
         if (append) {
-          setBrandsData((prev) =>
-            prev
-              ? {
-                ...data,
-                items: [...prev.items, ...data.items],
-              }
-              : data,
-          );
+          setBrandsData((prev) => {
+            if (!prev) return data;
+            const existingIds = new Set(prev.items.map((b) => b.id));
+            const newItems = data.items.filter((b) => !existingIds.has(b.id));
+            return { ...data, items: [...prev.items, ...newItems] };
+          });
         } else {
           setBrandsData(data);
         }
@@ -740,7 +738,7 @@ const BrandsScreen = () => {
       <FlatList
         ref={flatListRef}
         data={brandsData?.items || []}
-        keyExtractor={(item) => item.id.toString()}
+        keyExtractor={(item, index) => `${item.id}-${index}`}
         renderItem={renderBrand}
         ListHeaderComponent={
           <>

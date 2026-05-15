@@ -5,14 +5,14 @@ export const SIZE_CHART: Record<string, string[]> = {
   [ProductType.SHOES]: [
     "36", "37", "38", "39", "40", "41", "42", "43", "44", "45",
   ],
-  [ProductType.SHIRTS]: ["XS", "S", "M", "L", "XL", "XXL"],
-  [ProductType.HOODIES]: ["XS", "S", "M", "L", "XL", "XXL"],
-  [ProductType.JACKETS]: ["XS", "S", "M", "L", "XL", "XXL"],
+  [ProductType.SHIRTS]: ["XS", "S", "M", "L", "XL", "XXL", "3XL"],
+  [ProductType.HOODIES]: ["XS", "S", "M", "L", "XL", "XXL", "3XL"],
+  [ProductType.JACKETS]: ["XS", "S", "M", "L", "XL", "XXL", "3XL"],
   [ProductType.PANTS]: ["28", "30", "32", "34", "36", "38", "40"],
   [ProductType.HATS]: ["S", "M", "L"],
   [ProductType.BAGS]: [],
   [ProductType.ACCESSORIES]: [],
-  [ProductType.TSHIRTS]: ["XS", "S", "M", "L", "XL", "XXL"],
+  [ProductType.TSHIRTS]: ["XS", "S", "M", "L", "XL", "XXL", "3XL"],
 };
 
 // Color palette for variant color picker

@@ -86,10 +86,44 @@ const BrandDetailScreen = () => {
 
   const [showFilters, setShowFilters] = useState(false);
   const [changingStatus, setChangingStatus] = useState(false);
+  const [wishlistProductIds, setWishlistProductIds] = useState<number[]>([]);
+  const wishlistRef = React.useRef<number[]>([]);
   const [posts, setPosts] = useState<any[]>([]);
   const [postsTotal, setPostsTotal] = useState(0);
   const [postsLoading, setPostsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<"products" | "posts">("products");
+
+  const fetchWishlist = useCallback(async () => {
+    if (!token) { setWishlistProductIds([]); wishlistRef.current = []; return; }
+    try {
+      const r = await fetch(`${getApiUrl()}/wishlist`, { headers: { Authorization: `Bearer ${token}` } });
+      if (r.ok) {
+        const data = await r.json();
+        const ids = data.map((i: any) => i.product.id);
+        setWishlistProductIds(ids);
+        wishlistRef.current = ids;
+      }
+    } catch {}
+  }, [token]);
+
+  const toggleWishlist = useCallback(async (productId: number) => {
+    if (!token) { router.push("/auth/login"); return; }
+    const wasIn = wishlistRef.current.includes(productId);
+    const next = wasIn ? wishlistRef.current.filter((id) => id !== productId) : [...wishlistRef.current, productId];
+    wishlistRef.current = next;
+    setWishlistProductIds(next);
+    try {
+      const r = await fetch(`${getApiUrl()}/wishlist/toggle/${productId}`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      });
+      if (!r.ok) throw new Error();
+    } catch {
+      const reverted = wasIn ? [...wishlistRef.current, productId] : wishlistRef.current.filter((id) => id !== productId);
+      wishlistRef.current = reverted;
+      setWishlistProductIds(reverted);
+    }
+  }, [token]);
 
   const fetchPosts = useCallback(async () => {
     if (!brandId) return;
@@ -211,8 +245,9 @@ const BrandDetailScreen = () => {
   useEffect(() => {
     if (brandId) {
       fetchFollowState();
+      fetchWishlist();
     }
-  }, [brandId, token, fetchFollowState]);
+  }, [brandId, token, fetchFollowState, fetchWishlist]);
 
   useEffect(() => {
     if (brandId && brand?.name) {
@@ -863,7 +898,12 @@ const BrandDetailScreen = () => {
                       onEdit={(id) => router.push(`/products/edit/${id}`)}
                     />
                   ) : (
-                    <ProductCard product={item} mode="view" />
+                    <ProductCard
+                      product={item}
+                      mode="view"
+                      isWishlisted={wishlistProductIds.includes(item.id)}
+                      onToggleWishlist={toggleWishlist}
+                    />
                   )}
                 </View>
               )}

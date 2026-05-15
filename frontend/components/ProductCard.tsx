@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   Pressable,
   Image,
+  FlatList,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useAuth } from "@/context/AuthContext";
@@ -36,19 +37,53 @@ const ProductCard: React.FC<ProductCardProps> = React.memo(({
 
   const hasDiscount = product.salePrice && product.salePrice < product.price;
   const displayPrice = hasDiscount ? product.salePrice! : product.price;
-  const mainImage = product.images?.[0] ?? product.mainImage ?? null;
+  const images = product.images?.filter(Boolean).length
+    ? product.images!.filter(Boolean)
+    : product.mainImage
+      ? [product.mainImage]
+      : [];
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [imgWidth, setImgWidth] = useState(0);
 
   return (
     <Pressable
       onPress={() => router.push(`/products/${product.id}`)}
       style={styles.card}
     >
-      {({ pressed }) => (
+      {() => (
         <>
           {/* Image */}
-          <View style={[styles.imageWrap, { backgroundColor: colors.surfaceContainer }]}>
-            {mainImage ? (
-              <Image source={{ uri: mainImage }} style={styles.image} resizeMode="cover" />
+          <View
+            style={[styles.imageWrap, { backgroundColor: colors.surfaceContainer }]}
+            onLayout={(e) => setImgWidth(e.nativeEvent.layout.width)}
+          >
+            {images.length > 1 && imgWidth > 0 ? (
+              <>
+                <FlatList
+                  data={images}
+                  horizontal
+                  pagingEnabled
+                  showsHorizontalScrollIndicator={false}
+                  keyExtractor={(_, i) => i.toString()}
+                  getItemLayout={(_, i) => ({ length: imgWidth, offset: imgWidth * i, index: i })}
+                  onMomentumScrollEnd={(e) => {
+                    const idx = Math.round(e.nativeEvent.contentOffset.x / imgWidth);
+                    setActiveIndex(idx);
+                  }}
+                  renderItem={({ item: uri }) => (
+                    <Pressable onPress={() => router.push(`/products/${product.id}`)} style={{ width: imgWidth, height: "100%" as any }}>
+                      <Image source={{ uri }} style={{ width: imgWidth, height: "100%" as any }} resizeMode="cover" />
+                    </Pressable>
+                  )}
+                />
+                <View style={styles.dotsRow}>
+                  {images.map((_, i) => (
+                    <View key={i} style={[styles.dot, i === activeIndex && styles.dotActive]} />
+                  ))}
+                </View>
+              </>
+            ) : images[0] ? (
+              <Image source={{ uri: images[0] }} style={styles.image} resizeMode="cover" />
             ) : (
               <View style={styles.image} />
             )}
@@ -60,10 +95,10 @@ const ProductCard: React.FC<ProductCardProps> = React.memo(({
               </View>
             )}
 
-            {/* Wishlist heart — shown on press or when wishlisted */}
+            {/* Wishlist heart */}
             {mode === "view" && (
               <TouchableOpacity
-                style={[styles.heartBtn, { backgroundColor: colors.surface, opacity: pressed || isWishlisted ? 1 : 0 }]}
+                style={styles.heartBtn}
                 onPress={(e) => {
                   e.stopPropagation();
                   if (!token) { router.push("/auth/login"); return; }
@@ -73,7 +108,7 @@ const ProductCard: React.FC<ProductCardProps> = React.memo(({
                 <Ionicons
                   name={isWishlisted ? "heart" : "heart-outline"}
                   size={16}
-                  color={colors.wishlistHeart}
+                  color={isWishlisted ? colors.accentRed : "#000000"}
                 />
               </TouchableOpacity>
             )}
@@ -144,6 +179,25 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     fontSize: 9,
     color: colors.textInverse,
     // // letterSpacing: 1,
+  },
+  dotsRow: {
+    position: "absolute",
+    bottom: 36,
+    left: 0,
+    right: 0,
+    flexDirection: "row",
+    justifyContent: "center",
+    gap: 4,
+  },
+  dot: {
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
+    backgroundColor: "rgba(255,255,255,0.5)",
+  },
+  dotActive: {
+    backgroundColor: "#ffffff",
+    width: 7,
   },
   heartBtn: {
     position: "absolute",

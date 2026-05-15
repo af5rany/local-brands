@@ -356,7 +356,7 @@ export default function PostDetailScreen() {
 
             {/* Images with double-tap to like + pinch-to-zoom */}
             <GestureDetector gesture={composedGesture}>
-              <Animated.View>
+              <Animated.View style={{ overflow: "hidden" }}>
                 {post.images.length === 1 ? (
                   <View style={styles.imageContainer}>
                     <Animated.Image
@@ -793,6 +793,7 @@ const styles = StyleSheet.create({
   // Image
   imageContainer: {
     position: "relative",
+    overflow: "hidden",
   },
   pinPopup: {
     position: "absolute",

@@ -16,7 +16,6 @@ import DraggableFlatList, {
   RenderItemParams,
   ScaleDecorator,
 } from "react-native-draggable-flatlist";
-import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter, useLocalSearchParams } from "expo-router";
@@ -74,6 +73,62 @@ function detectProductType(name: string): string | null {
   return null;
 }
 
+const GENDER_KEYWORDS: Record<string, string[]> = {
+  men: ["men's", "mens", "for men", "male", "man's", "man "],
+  women: ["women's", "womens", "for women", "female", "woman's", "ladies", "lady"],
+  unisex: ["unisex", "gender neutral", "for all"],
+  kids: ["kids", "children", "boys", "girls", "youth", "toddler", "infant"],
+};
+
+const MATERIAL_KEYWORDS = [
+  "cotton", "polyester", "wool", "linen", "silk", "nylon", "leather",
+  "suede", "cashmere", "denim", "fleece", "velvet", "canvas", "spandex",
+  "elastane", "viscose", "rayon", "acrylic", "modal", "lyocell",
+];
+
+const SEASON_KEYWORDS: Record<string, string[]> = {
+  Spring: ["spring", "spring/summer", "ss"],
+  Summer: ["summer", "warm weather", "beach"],
+  Fall: ["fall", "autumn", "aw"],
+  Winter: ["winter", "cold weather", "fw"],
+  "All Season": ["all season", "year-round", "yearround", "all-season", "all weather"],
+};
+
+const CARE_KEYWORDS = [
+  "machine wash", "hand wash", "dry clean", "tumble dry", "do not bleach",
+  "iron", "do not iron", "air dry", "lay flat", "cold wash", "warm wash",
+];
+
+function extractDetailsFromText(text: string): {
+  gender?: string;
+  material?: string;
+  season?: string;
+  careInstructions?: string;
+} {
+  const lower = text.toLowerCase();
+  const result: ReturnType<typeof extractDetailsFromText> = {};
+
+  for (const [g, kws] of Object.entries(GENDER_KEYWORDS)) {
+    if (kws.some((kw) => lower.includes(kw))) { result.gender = g; break; }
+  }
+
+  for (const mat of MATERIAL_KEYWORDS) {
+    const regex = new RegExp(`\\b${mat}\\b`, "i");
+    if (regex.test(lower)) { result.material = mat.charAt(0).toUpperCase() + mat.slice(1); break; }
+  }
+
+  for (const [season, kws] of Object.entries(SEASON_KEYWORDS)) {
+    if (kws.some((kw) => lower.includes(kw))) { result.season = season; break; }
+  }
+
+  const careLines = CARE_KEYWORDS.filter((kw) => lower.includes(kw));
+  if (careLines.length > 0) {
+    result.careInstructions = careLines.map((c) => c.charAt(0).toUpperCase() + c.slice(1)).join(". ");
+  }
+
+  return result;
+}
+
 const CreateProductScreen = () => {
   const router = useRouter();
   const { token } = useAuth();
@@ -116,7 +171,7 @@ const CreateProductScreen = () => {
   const [height, setHeight] = useState("");
 
   // Status
-  const [status, setStatus] = useState<ProductStatus | null>(null);
+  const [status, setStatus] = useState<ProductStatus>(ProductStatus.PUBLISHED);
   const [isFeatured, setIsFeatured] = useState(false);
 
   // Color (product-level)
@@ -133,6 +188,7 @@ const CreateProductScreen = () => {
 
   const [loading, setLoading] = useState(false);
   const [autoDetectedType, setAutoDetectedType] = useState(false);
+  const [customSizeInput, setCustomSizeInput] = useState("");
 
   const { uploads, uploadImage } = useCloudinaryUpload();
 
@@ -147,6 +203,16 @@ const CreateProductScreen = () => {
       setSizeVariants([]);
     }
   }, []);
+
+  // Auto-extract details from description (only fills empty fields)
+  const handleDescriptionChange = useCallback((text: string) => {
+    setDescription(text);
+    const extracted = extractDetailsFromText(text);
+    if (extracted.gender && !gender) setGender(extracted.gender);
+    if (extracted.material && !material) setMaterial(extracted.material);
+    if (extracted.season && !season) setSeason(extracted.season as any);
+    if (extracted.careInstructions && !careInstructions) setCareInstructions(extracted.careInstructions);
+  }, [gender, material, season, careInstructions]);
 
   // Reset auto-detected flag when user manually changes type
   const handleProductTypeChange = useCallback((value: string) => {
@@ -214,32 +280,32 @@ const CreateProductScreen = () => {
   };
 
   const handleProductImagePick = async () => {
+    if (productImages.length >= 5) {
+      Alert.alert("Limit reached", "Maximum 5 images per product.");
+      return;
+    }
     try {
       const permissionResult =
         await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!permissionResult.granted) {
-        alert("Permission to access camera roll is required!");
+        Alert.alert("Permission required", "Allow access to camera roll.");
         return;
       }
-      let result = await ImagePicker.launchImageLibraryAsync({
+      const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ["images"],
-        allowsMultipleSelection: true,
-        selectionLimit: 5,
+        allowsEditing: true,
+        aspect: [3, 4],
         quality: 1,
       });
-      if (result.canceled || !result.assets) return;
+      if (result.canceled || !result.assets?.[0]) return;
 
-      const newLocalUris = result.assets.map((a) => a.uri);
-      setProductImages((prev) => [...prev, ...newLocalUris]);
+      const uri = result.assets[0].uri;
+      setProductImages((prev) => [...prev, uri]);
 
-      result.assets.forEach(async (asset) => {
-        const cloudUrl = await uploadImage(asset.uri);
-        if (cloudUrl) {
-          setProductImages((prev) =>
-            prev.map((u) => (u === asset.uri ? cloudUrl : u)),
-          );
-        }
-      });
+      const cloudUrl = await uploadImage(uri);
+      if (cloudUrl) {
+        setProductImages((prev) => prev.map((u) => (u === uri ? cloudUrl : u)));
+      }
     } catch (error) {
       console.error("Error picking images:", error);
     }
@@ -293,7 +359,7 @@ const CreateProductScreen = () => {
       return;
     }
 
-    if (!productName || !productPrice || !productType || !gender || !status) {
+    if (!productName || !productPrice || !productType || !gender) {
       Alert.alert("Validation Error", "Please fill in all required fields.");
       return;
     }
@@ -365,6 +431,13 @@ const CreateProductScreen = () => {
         body: JSON.stringify(productData),
       });
 
+      if (response.status === 401) {
+        Alert.alert("Session Expired", "Please log in again.", [
+          { text: "OK", onPress: () => router.replace("/auth/login") },
+        ]);
+        return;
+      }
+
       const responseData = await response.json();
 
       if (response.status === 201) {
@@ -430,10 +503,10 @@ const CreateProductScreen = () => {
             <Text style={styles.label}>Description</Text>
             <TextInput
               style={[styles.input, styles.textArea]}
-              placeholder="Detailed product description"
+              placeholder="Detailed product description (auto-fills gender, material, season, care)"
               placeholderTextColor={colors.textSecondary}
               value={description}
-              onChangeText={setDescription}
+              onChangeText={handleDescriptionChange}
               multiline
               numberOfLines={5}
             />
@@ -633,25 +706,23 @@ const CreateProductScreen = () => {
               Product Images <Text style={styles.required}>*</Text>
             </Text>
             <Text style={styles.dragHint}>Hold & drag to reorder · First image is main</Text>
-            <GestureHandlerRootView>
-              <DraggableFlatList
-                horizontal
-                data={productImages}
-                keyExtractor={(uri, i) => `${uri}-${i}`}
-                onDragEnd={({ data }) => setProductImages(data)}
-                renderItem={renderDraggableImage}
-                contentContainerStyle={styles.sortableImageRow}
-                showsHorizontalScrollIndicator={false}
-                ListFooterComponent={
-                  <TouchableOpacity
-                    style={styles.addImageBtn}
-                    onPress={handleProductImagePick}
-                  >
-                    <Ionicons name="add" size={32} color={colors.primary} />
-                  </TouchableOpacity>
-                }
-              />
-            </GestureHandlerRootView>
+            <DraggableFlatList
+              horizontal
+              data={productImages}
+              keyExtractor={(uri, i) => `${uri}-${i}`}
+              onDragEnd={({ data }) => setProductImages(data)}
+              renderItem={renderDraggableImage}
+              contentContainerStyle={styles.sortableImageRow}
+              showsHorizontalScrollIndicator={false}
+              ListFooterComponent={
+                <TouchableOpacity
+                  style={styles.addImageBtn}
+                  onPress={handleProductImagePick}
+                >
+                  <Ionicons name="add" size={32} color={colors.primary} />
+                </TouchableOpacity>
+              }
+            />
           </View>
         </View>
 
@@ -693,6 +764,40 @@ const CreateProductScreen = () => {
                       </TouchableOpacity>
                     );
                   })}
+                  {/* Custom sizes already added */}
+                  {sizeVariants
+                    .filter((v) => !sizes.includes(v.size))
+                    .map((v) => (
+                      <TouchableOpacity
+                        key={v.size}
+                        onPress={() => toggleSizeVariant(v.size)}
+                        style={[styles.sizeChip, { borderColor: colors.primary, backgroundColor: colors.primary }]}
+                      >
+                        <Text style={[styles.sizeChipText, { color: "#fff" }]}>{v.size}</Text>
+                      </TouchableOpacity>
+                    ))}
+                </View>
+                {/* Custom size input */}
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: 8 }}>
+                  <TextInput
+                    style={[styles.input, { flex: 1, marginBottom: 0 }]}
+                    placeholder="Custom size (e.g. 4XL, 30/32)"
+                    placeholderTextColor={colors.textSecondary}
+                    value={customSizeInput}
+                    onChangeText={setCustomSizeInput}
+                  />
+                  <TouchableOpacity
+                    onPress={() => {
+                      const s = customSizeInput.trim().toUpperCase();
+                      if (s && !sizeVariants.some((v) => v.size === s)) {
+                        setSizeVariants((prev) => [...prev, { size: s, stock: 0 }]);
+                        setCustomSizeInput("");
+                      }
+                    }}
+                    style={[styles.sizeChip, { borderColor: colors.primary, backgroundColor: colors.primary, marginTop: 0 }]}
+                  >
+                    <Text style={[styles.sizeChipText, { color: "#fff" }]}>+ ADD</Text>
+                  </TouchableOpacity>
                 </View>
               </View>
 

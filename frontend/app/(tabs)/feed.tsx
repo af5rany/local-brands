@@ -216,8 +216,8 @@ const MasonryGrid: React.FC<{
   );
 };
 
-// ── Tab Switcher — Following first, For You second ──
-const TAB_ORDER: ActiveTab[] = ["following", "forYou"];
+// ── Tab Switcher — For You first, Following second ──
+const TAB_ORDER: ActiveTab[] = ["forYou", "following"];
 const TAB_LABELS: Record<ActiveTab, string> = {
   following: "Following",
   forYou: "For You",
@@ -280,7 +280,7 @@ export default function FeedScreen() {
   const forYouRef = useRef<ScrollView>(null);
   const pagerRef = useRef<ScrollView>(null);
 
-  const [activeTab, setActiveTab] = useState<ActiveTab>("following");
+  const [activeTab, setActiveTab] = useState<ActiveTab>("forYou");
 
   const handleTabChange = useCallback((tab: ActiveTab) => {
     setActiveTab(tab);
@@ -499,7 +499,65 @@ export default function FeedScreen() {
           }}
           style={{ flex: 1 }}
         >
-          {/* ── Page 0: Following ── */}
+          {/* ── Page 0: For You ── */}
+          <View style={{ width: SCREEN_WIDTH, flex: 1 }}>
+            <ScrollView
+              ref={forYouRef}
+              showsVerticalScrollIndicator={false}
+              onScroll={handleScroll}
+              scrollEventThrottle={200}
+              refreshControl={
+                <RefreshControl
+                  refreshing={refreshing}
+                  onRefresh={handleRefresh}
+                />
+              }
+              contentContainerStyle={[
+                styles.scrollContent,
+                { paddingBottom: tabBarHeight },
+              ]}
+            >
+              {forYouPosts.length > 0 ? (
+                <>
+                  <MasonryGrid
+                    posts={forYouPosts}
+                    imageHeights={imageHeights}
+                    colors={colors}
+                    onPostPress={postPress}
+                    onLike={handleLike}
+                    onBrandPress={brandPress}
+                  />
+                  {forYouHasMore && (
+                    <ActivityIndicator
+                      style={{ paddingVertical: 20 }}
+                      color={colors.textTertiary}
+                    />
+                  )}
+                </>
+              ) : (
+                <View style={styles.empty}>
+                  <Ionicons
+                    name="images-outline"
+                    size={48}
+                    color={colors.textTertiary}
+                  />
+                  <Text style={[styles.emptyTitle, { color: colors.text }]}>
+                    NOTHING HERE YET
+                  </Text>
+                  <Text
+                    style={[
+                      styles.emptySubtitle,
+                      { color: colors.textTertiary },
+                    ]}
+                  >
+                    Check back soon — posts will appear here.
+                  </Text>
+                </View>
+              )}
+            </ScrollView>
+          </View>
+
+          {/* ── Page 1: Following ── */}
           <View style={{ width: SCREEN_WIDTH, flex: 1 }}>
             <ScrollView
               ref={followingRef}
@@ -578,64 +636,6 @@ export default function FeedScreen() {
                       </Text>
                     </TouchableOpacity>
                   </View>
-                </View>
-              )}
-            </ScrollView>
-          </View>
-
-          {/* ── Page 1: For You ── */}
-          <View style={{ width: SCREEN_WIDTH, flex: 1 }}>
-            <ScrollView
-              ref={forYouRef}
-              showsVerticalScrollIndicator={false}
-              onScroll={handleScroll}
-              scrollEventThrottle={200}
-              refreshControl={
-                <RefreshControl
-                  refreshing={refreshing}
-                  onRefresh={handleRefresh}
-                />
-              }
-              contentContainerStyle={[
-                styles.scrollContent,
-                { paddingBottom: tabBarHeight },
-              ]}
-            >
-              {forYouPosts.length > 0 ? (
-                <>
-                  <MasonryGrid
-                    posts={forYouPosts}
-                    imageHeights={imageHeights}
-                    colors={colors}
-                    onPostPress={postPress}
-                    onLike={handleLike}
-                    onBrandPress={brandPress}
-                  />
-                  {forYouHasMore && (
-                    <ActivityIndicator
-                      style={{ paddingVertical: 20 }}
-                      color={colors.textTertiary}
-                    />
-                  )}
-                </>
-              ) : (
-                <View style={styles.empty}>
-                  <Ionicons
-                    name="images-outline"
-                    size={48}
-                    color={colors.textTertiary}
-                  />
-                  <Text style={[styles.emptyTitle, { color: colors.text }]}>
-                    NOTHING HERE YET
-                  </Text>
-                  <Text
-                    style={[
-                      styles.emptySubtitle,
-                      { color: colors.textTertiary },
-                    ]}
-                  >
-                    Check back soon — posts will appear here.
-                  </Text>
                 </View>
               )}
             </ScrollView>

@@ -171,10 +171,10 @@ const WishlistTab = () => {
       >
         <Image source={{ uri: image ? image: "" }} style={[styles.productImage, { backgroundColor: colors.surfaceRaised }]} />
         <TouchableOpacity
-          style={[styles.removeIcon, { backgroundColor: colors.surface }]}
+          style={styles.removeIcon}
           onPress={() => toggleWishlist(product.id)}
         >
-          <Ionicons name="heart" size={20} color={colors.text} />
+          <Ionicons name="heart" size={20} color="#000000" />
         </TouchableOpacity>
         <View style={styles.cardContent}>
           <Text

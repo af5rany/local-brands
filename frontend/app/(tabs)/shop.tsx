@@ -158,7 +158,7 @@ const MonolithProductCard = React.memo(
             <Ionicons
               name={isInWishlist ? "heart" : "heart-outline"}
               size={16}
-              color={isInWishlist ? colors.accentRed : colors.textInverse}
+              color={isInWishlist ? colors.accentRed : colors.text}
             />
           </TouchableOpacity>
         </View>

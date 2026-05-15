@@ -8,7 +8,7 @@ import {
   ActivityIndicator,
   FlatList,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFocusEffect, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/context/AuthContext";
@@ -21,6 +21,7 @@ const ShippingAddressesScreen = () => {
   const colors = useThemeColors();
   const { token, refreshUser } = useAuth();
 
+  const insets = useSafeAreaInsets();
   const [addresses, setAddresses] = useState<Address[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -99,7 +100,7 @@ const ShippingAddressesScreen = () => {
       {/* Header Row */}
       <View style={styles.cardHeader}>
         <View style={styles.nameRow}>
-          <Text style={[styles.fullName, { color: colors.text }]}>
+          <Text style={[styles.fullName, { color: colors.text }]} numberOfLines={1}>
             {item.fullName}
           </Text>
           {item.isDefault && (
@@ -258,6 +259,7 @@ const ShippingAddressesScreen = () => {
           {
             backgroundColor: colors.background,
             borderTopColor: colors.borderLight,
+            paddingBottom: Math.max(insets.bottom, 16),
           },
         ]}
       >
@@ -297,7 +299,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   title: { fontSize: 17, fontWeight: "700" },
-  listContent: { padding: 16, paddingBottom: 20 },
+  listContent: { padding: 16, paddingBottom: 100 },
   card: {
     borderRadius: 0,
     padding: 16,
@@ -316,7 +318,7 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: 8,
   },
-  fullName: { fontSize: 16, fontWeight: "700" },
+  fullName: { fontSize: 16, fontWeight: "700", flexShrink: 1 },
   defaultBadge: {
     paddingHorizontal: 8,
     paddingVertical: 3,
@@ -357,7 +359,8 @@ const styles = StyleSheet.create({
   },
   actionText: { fontSize: 13, fontWeight: "600" },
   footer: {
-    padding: 16,
+    paddingTop: 16,
+    paddingHorizontal: 16,
     borderTopWidth: 1,
   },
   addButton: {

@@ -9,8 +9,9 @@ import {
   Image,
   Alert,
   Dimensions,
+  Platform,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as ImagePicker from "expo-image-picker";
 import * as ImageManipulator from "expo-image-manipulator";
 import { File, Paths } from "expo-file-system";
@@ -42,6 +43,7 @@ export default function TryOnModal({
   const { token } = useAuth();
   const colors = useThemeColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
+  const insets = useSafeAreaInsets();
   const [stage, setStage] = useState<Stage>("pick");
   const [resultUrl, setResultUrl] = useState<string | null>(null);
   const [personUri, setPersonUri] = useState<string | null>(null);
@@ -240,9 +242,10 @@ export default function TryOnModal({
       visible={visible}
       animationType="slide"
       presentationStyle="fullScreen"
+      statusBarTranslucent={Platform.OS === "android"}
       onRequestClose={handleClose}
     >
-      <SafeAreaView style={styles.container}>
+      <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={handleClose} disabled={isLoading}>
@@ -365,18 +368,19 @@ export default function TryOnModal({
             </>
           )}
         </View>
-      </SafeAreaView>
+      </View>
 
       {/* FULLSCREEN OVERLAY */}
       <Modal
         visible={fullscreen}
         transparent
         animationType="fade"
+        statusBarTranslucent={Platform.OS === "android"}
         onRequestClose={() => setFullscreen(false)}
       >
         <View style={styles.fullscreenOverlay}>
           <TouchableOpacity
-            style={styles.fullscreenClose}
+            style={[styles.fullscreenClose, { top: insets.top + 12 }]}
             onPress={() => setFullscreen(false)}
           >
             <Ionicons name="close" size={28} color={colors.primaryForeground} />

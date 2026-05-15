@@ -1,3 +1,15 @@
+["forYou", "following"]
+fix alignments
+fix image sizes
+
+i want these changes 
+in settings screen change notifications toggel style
+in shop screen make the grid has borders between the products, and remove the rating from the product card
+in shop screen the products are automatically loading more by scrolling, not by choosing the page
+
+and i will provide the current style and combine between them by getting the best UI
+
+
 i have too much issues with alignments in different phone screens and different OS , is it has to do with SafeAreaView? if yes change all occurances of SafeAreaView that are depricated, if it will make problem
 add sign in as guest button as it is not there
 When you tap on the search bar in the header, the app dimensions change and it shifts way up.
