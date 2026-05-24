@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
   View,
@@ -10,22 +10,17 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  Image,
   Keyboard,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
 import getApiUrl from "@/helpers/getApiUrl";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { useThemeColors } from "@/hooks/useThemeColor";
-import type { ThemeColors } from "@/constants/Colors";
-import Header from "@/components/Header";
 
 type Status = "idle" | "loading" | "success" | "error";
 
 const ResetPasswordScreen = () => {
   const router = useRouter();
   const colors = useThemeColors();
-  const styles = useMemo(() => createStyles(colors), [colors]);
   const { token } = useLocalSearchParams<{ token: string }>();
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -39,22 +34,22 @@ const ResetPasswordScreen = () => {
 
     if (!token) {
       setStatus("error");
-      setErrorMessage("Invalid or missing reset token.");
+      setErrorMessage("INVALID OR MISSING RESET TOKEN.");
       return;
     }
     if (!newPassword || !confirmPassword) {
       setStatus("error");
-      setErrorMessage("Please fill in all fields.");
+      setErrorMessage("PLEASE FILL IN ALL FIELDS.");
       return;
     }
     if (newPassword !== confirmPassword) {
       setStatus("error");
-      setErrorMessage("Passwords do not match.");
+      setErrorMessage("PASSWORDS DO NOT MATCH.");
       return;
     }
     if (newPassword.length < 6) {
       setStatus("error");
-      setErrorMessage("Password must be at least 6 characters.");
+      setErrorMessage("PASSWORD MUST BE AT LEAST 6 CHARACTERS.");
       return;
     }
 
@@ -73,93 +68,89 @@ const ResetPasswordScreen = () => {
         setStatus("success");
       } else {
         setStatus("error");
-        setErrorMessage(data.message || "Failed to reset password.");
+        setErrorMessage((data.message || "Failed to reset password.").toUpperCase());
       }
     } catch {
       setStatus("error");
-      setErrorMessage("Something went wrong. Please try again.");
+      setErrorMessage("SOMETHING WENT WRONG. PLEASE TRY AGAIN.");
     }
   };
 
   // ── Success state ──────────────────────────────────────────────────────────
   if (status === "success") {
     return (
-      <View style={[styles.safeArea, { backgroundColor: colors.background }]}>
-        <SafeAreaView edges={["top"]} style={{ backgroundColor: colors.surface }}>
-          <Header />
-        </SafeAreaView>
-        <View style={styles.centeredContainer}>
-          <Image
-            source={require("@/assets/images/monolith.png")}
-            style={styles.logo}
-            resizeMode="contain"
-          />
-          <View style={[styles.iconCircle, { backgroundColor: colors.surfaceRaised }]}>
-            <Ionicons name="checkmark-circle" size={48} color={colors.text} />
+      <SafeAreaView
+        edges={["bottom"]}
+        style={[styles.safeArea, { backgroundColor: colors.background }]}
+      >
+        <View style={styles.successContainer}>
+          <View style={[styles.checkMark, { borderColor: colors.text }]}>
+            <Text style={[styles.checkMarkText, { color: colors.text }]}>✓</Text>
           </View>
-          <Text style={styles.title}>Password Reset!</Text>
-          <Text style={styles.subtitle}>
-            Your password has been updated. You can now log in with your new
-            password.
+          <Text style={[styles.wordmark, { color: colors.text }]}>PASSWORD RESET</Text>
+          <View style={[styles.wordmarkDivider, { backgroundColor: colors.text }]} />
+          <Text style={[styles.successSub, { color: colors.textSecondary }]}>
+            YOUR PASSWORD HAS BEEN UPDATED. YOU CAN NOW SIGN IN WITH YOUR NEW PASSWORD.
           </Text>
           <Pressable
-            style={styles.button}
+            style={[styles.button, { backgroundColor: colors.text }]}
             onPress={() => router.replace("/auth/login")}
           >
-            <Text style={styles.buttonText}>Continue to Login</Text>
+            <Text style={[styles.buttonText, { color: colors.background }]}>CONTINUE TO SIGN IN</Text>
           </Pressable>
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
   // ── Form state ─────────────────────────────────────────────────────────────
   return (
-    <View style={[styles.safeArea, { backgroundColor: colors.background }]}>
-      <SafeAreaView edges={["top"]} style={{ backgroundColor: colors.surface }}>
-        <Header />
-      </SafeAreaView>
+    <SafeAreaView
+      edges={["bottom"]}
+      style={[styles.safeArea, { backgroundColor: colors.background }]}
+    >
       <KeyboardAvoidingView
-        style={styles.flex}
+        style={styles.container}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
         <ScrollView
           contentContainerStyle={styles.scroll}
           keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
         >
-          <Pressable style={styles.backButton} onPress={() => router.back()}>
-            <Ionicons name="arrow-back" size={24} color={colors.text} />
+          {/* ── Back nav ── */}
+          <Pressable
+            onPress={() => router.back()}
+            style={styles.backRow}
+            disabled={status === "loading"}
+          >
+            <Text style={[styles.backText, { color: colors.textTertiary }]}>← BACK</Text>
           </Pressable>
 
-          <Image
-            source={require("@/assets/images/monolith.png")}
-            style={styles.logo}
-            resizeMode="contain"
-          />
-          <Text style={styles.title}>Reset Password</Text>
-          <Text style={styles.subtitle}>Enter your new password below.</Text>
+          {/* ── Wordmark ── */}
+          <View style={styles.wordmarkBlock}>
+            <Text style={[styles.wordmark, { color: colors.text }]}>LOCAL BRANDS</Text>
+            <View style={[styles.wordmarkDivider, { backgroundColor: colors.text }]} />
+            <Text style={[styles.wordmarkSub, { color: colors.textTertiary }]}>EST · MMXXVI</Text>
+          </View>
+
+          <Text style={[styles.sectionLabel, { color: colors.textTertiary }]}>NEW PASSWORD</Text>
 
           {/* Error banner */}
           {status === "error" && (
-            <View style={styles.errorBanner}>
-              <Ionicons name="alert-circle-outline" size={18} color={colors.danger} />
-              <Text style={styles.errorText}>{errorMessage}</Text>
+            <View style={[styles.errorBanner, { borderColor: colors.accentRed }]}>
+              <Text style={[styles.errorText, { color: colors.accentRed }]}>{errorMessage}</Text>
             </View>
           )}
 
           {/* New password */}
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>New Password</Text>
-            <View style={styles.inputWrapper}>
-              <Ionicons
-                name="lock-closed-outline"
-                size={20}
-                color={colors.textSecondary}
-                style={styles.inputIcon}
-              />
+          <View style={styles.fieldGroup}>
+            <Text style={[styles.fieldLabel, { color: colors.textTertiary }]}>NEW PASSWORD</Text>
+            <View style={[styles.underlineField, { borderBottomColor: colors.text }]}>
               <TextInput
-                style={styles.input}
+                style={[styles.input, { color: colors.text, flex: 1 }]}
                 placeholder="••••••••"
+                placeholderTextColor={colors.textTertiary}
                 secureTextEntry={!showNew}
                 value={newPassword}
                 onChangeText={(t) => {
@@ -167,31 +158,23 @@ const ResetPasswordScreen = () => {
                   if (status === "error") setStatus("idle");
                 }}
                 editable={status !== "loading"}
-                placeholderTextColor={colors.textTertiary}
               />
               <Pressable onPress={() => setShowNew((p) => !p)} style={styles.eyeBtn}>
-                <Ionicons
-                  name={showNew ? "eye-off-outline" : "eye-outline"}
-                  size={20}
-                  color={colors.textTertiary}
-                />
+                <Text style={[styles.showHide, { color: colors.textTertiary }]}>
+                  {showNew ? "HIDE" : "SHOW"}
+                </Text>
               </Pressable>
             </View>
           </View>
 
           {/* Confirm password */}
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Confirm Password</Text>
-            <View style={styles.inputWrapper}>
-              <Ionicons
-                name="lock-closed-outline"
-                size={20}
-                color={colors.textSecondary}
-                style={styles.inputIcon}
-              />
+          <View style={styles.fieldGroup}>
+            <Text style={[styles.fieldLabel, { color: colors.textTertiary }]}>CONFIRM PASSWORD</Text>
+            <View style={[styles.underlineField, { borderBottomColor: colors.text }]}>
               <TextInput
-                style={styles.input}
+                style={[styles.input, { color: colors.text, flex: 1 }]}
                 placeholder="••••••••"
+                placeholderTextColor={colors.textTertiary}
                 secureTextEntry={!showConfirm}
                 value={confirmPassword}
                 onChangeText={(t) => {
@@ -199,132 +182,123 @@ const ResetPasswordScreen = () => {
                   if (status === "error") setStatus("idle");
                 }}
                 editable={status !== "loading"}
-                placeholderTextColor={colors.textTertiary}
               />
-              <Pressable
-                onPress={() => setShowConfirm((p) => !p)}
-                style={styles.eyeBtn}
-              >
-                <Ionicons
-                  name={showConfirm ? "eye-off-outline" : "eye-outline"}
-                  size={20}
-                  color={colors.textTertiary}
-                />
+              <Pressable onPress={() => setShowConfirm((p) => !p)} style={styles.eyeBtn}>
+                <Text style={[styles.showHide, { color: colors.textTertiary }]}>
+                  {showConfirm ? "HIDE" : "SHOW"}
+                </Text>
               </Pressable>
             </View>
           </View>
 
           <Pressable
-            style={[styles.button, status === "loading" && styles.buttonDisabled]}
+            style={[styles.button, { backgroundColor: colors.text }, status === "loading" && { opacity: 0.7 }]}
             onPress={handleReset}
             disabled={status === "loading"}
           >
             {status === "loading" ? (
-              <ActivityIndicator color={colors.primaryForeground} />
+              <ActivityIndicator color={colors.background} />
             ) : (
-              <Text style={styles.buttonText}>Reset Password</Text>
+              <Text style={[styles.buttonText, { color: colors.background }]}>RESET PASSWORD</Text>
             )}
           </Pressable>
         </ScrollView>
       </KeyboardAvoidingView>
-    </View>
+    </SafeAreaView>
   );
 };
 
-const createStyles = (colors: ThemeColors) => StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: colors.background },
-  flex: { flex: 1 },
-
-  // Centered (success) layout
-  centeredContainer: {
-    flex: 1,
-    padding: 24,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  iconCircle: {
-    width: 88,
-    height: 88,
-    borderRadius: 0,
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 20,
-  },
-
-  // Form layout
+const styles = StyleSheet.create({
+  safeArea: { flex: 1 },
+  container: { flex: 1 },
   scroll: {
     flexGrow: 1,
-    padding: 24,
-    justifyContent: "center",
-    alignItems: "center",
+    paddingHorizontal: 28,
+    paddingTop: 56,
+    paddingBottom: 40,
   },
-  backButton: {
-    position: "absolute",
-    top: 20,
-    left: 20,
-    zIndex: 1,
-    padding: 8,
-  },
-  logo: { width: 140, height: 80, marginBottom: 24 },
-  title: {
-    fontSize: 24,
-    fontWeight: "700",
-    color: colors.text,
-    marginBottom: 8,
-    textAlign: "center",
-  },
-  subtitle: {
-    fontSize: 15,
-    color: colors.textSecondary,
+
+  backRow: { marginBottom: 32 },
+  backText: { fontSize: 9, fontWeight: "600", letterSpacing: 2, textTransform: "uppercase" },
+
+  wordmarkBlock: { alignItems: "center", marginBottom: 48 },
+  wordmark: { fontSize: 28, fontWeight: "900", letterSpacing: -1, lineHeight: 30 },
+  wordmarkDivider: { width: 28, height: 1, marginTop: 12, marginBottom: 14 },
+  wordmarkSub: { fontSize: 9, letterSpacing: 3, textTransform: "uppercase", fontWeight: "500" },
+
+  sectionLabel: {
+    fontSize: 9,
+    letterSpacing: 2,
+    textTransform: "uppercase",
+    fontWeight: "600",
     marginBottom: 28,
-    textAlign: "center",
-    lineHeight: 22,
   },
 
-  // Error banner
   errorBanner: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: colors.surfaceRaised,
     borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 0,
-    padding: 12,
-    marginBottom: 16,
+    borderLeftWidth: 3,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    marginBottom: 24,
     width: "100%",
-    gap: 8,
   },
-  errorText: { flex: 1, color: colors.danger, fontSize: 14 },
+  errorText: { fontSize: 9, fontWeight: "600", letterSpacing: 1.5, textTransform: "uppercase" },
 
-  // Inputs
-  inputContainer: { width: "100%", marginBottom: 16 },
-  label: { fontSize: 14, fontWeight: "500", color: colors.textSecondary, marginBottom: 8 },
-  inputWrapper: {
+  fieldGroup: { width: "100%", marginBottom: 24 },
+  fieldLabel: {
+    fontSize: 9,
+    fontWeight: "500",
+    letterSpacing: 2,
+    textTransform: "uppercase",
+    marginBottom: 8,
+  },
+  underlineField: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: colors.surfaceRaised,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 0,
-    paddingHorizontal: 12,
-    height: 48,
+    borderBottomWidth: 1,
+    paddingVertical: 8,
   },
-  inputIcon: { marginRight: 10 },
-  input: { flex: 1, fontSize: 16, color: colors.text, height: "100%" },
-  eyeBtn: { padding: 4 },
+  input: { fontSize: 14, fontWeight: "500", paddingVertical: 0 },
+  eyeBtn: { paddingLeft: 8 },
+  showHide: { fontSize: 9, fontWeight: "500", letterSpacing: 2, textTransform: "uppercase" },
 
-  // Button
   button: {
-    backgroundColor: colors.primary,
-    paddingVertical: 14,
-    borderRadius: 0,
-    marginTop: 8,
+    height: 52,
     width: "100%",
     alignItems: "center",
     justifyContent: "center",
+    marginTop: 8,
   },
-  buttonDisabled: { backgroundColor: colors.textTertiary },
-  buttonText: { color: colors.primaryForeground, fontSize: 16, fontWeight: "600" },
+  buttonText: { fontSize: 11, fontWeight: "600", letterSpacing: 2, textTransform: "uppercase" },
+
+  // ── Success ────────────────────────────────
+  successContainer: {
+    flex: 1,
+    paddingHorizontal: 28,
+    paddingTop: 100,
+    paddingBottom: 40,
+    alignItems: "center",
+  },
+  checkMark: {
+    width: 72,
+    height: 72,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 32,
+  },
+  checkMarkText: { fontSize: 32, fontWeight: "900" },
+  successSub: {
+    fontSize: 9,
+    letterSpacing: 1.5,
+    textTransform: "uppercase",
+    fontWeight: "500",
+    lineHeight: 16,
+    textAlign: "center",
+    marginTop: 16,
+    marginBottom: 40,
+    paddingHorizontal: 8,
+  },
 });
 
 export default ResetPasswordScreen;

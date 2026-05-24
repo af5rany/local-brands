@@ -421,17 +421,14 @@ const BrandsScreen = () => {
       <TouchableOpacity
         style={styles.brandContainer}
         onPress={() => router.push(`/brands/${item.id}`)}
-        activeOpacity={0.6}
+        activeOpacity={0.7}
       >
+        {/* Top row: logo + info + follow */}
         <View style={styles.brandRow}>
-          {/* Logo */}
+          {/* Square ink logo */}
           <View style={styles.logoContainer}>
             {item.logo ? (
-              <Image
-                style={styles.brandLogo}
-                source={{ uri: item.logo }}
-                defaultSource={require("@/assets/images/monolith.png")}
-              />
+              <Image style={styles.brandLogo} source={{ uri: item.logo }} />
             ) : (
               <View style={styles.logoPlaceholder}>
                 <Text style={styles.logoInitial}>
@@ -448,67 +445,36 @@ const BrandsScreen = () => {
                 {item.name?.toUpperCase()}
               </Text>
               {isAdmin && (
-                <View
-                  style={[
-                    styles.statusBadge,
-                    isActive ? styles.statusBadgeActive : styles.statusBadgeInactive,
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.statusText,
-                      isActive ? styles.statusTextActive : styles.statusTextInactive,
-                    ]}
-                  >
+                <View style={[styles.statusBadge, isActive ? styles.statusBadgeActive : styles.statusBadgeInactive]}>
+                  <Text style={[styles.statusText, isActive ? styles.statusTextActive : styles.statusTextInactive]}>
                     {getStatusLabel(item.status)}
                   </Text>
                 </View>
               )}
             </View>
-
             <Text style={styles.brandDescription} numberOfLines={1}>
-              {item.description || "No description"}
+              {item.description || (item.location ? item.location.toUpperCase() : "INDEPENDENT BRAND")}
             </Text>
-
-            {isAdmin && (
-              <View style={styles.metaRow}>
-                {item.location && (
-                  <View style={styles.metaItem}>
-                    <Ionicons name="location-outline" size={11} color={colors.textTertiary} />
-                    <Text style={styles.metaText}>{item.location}</Text>
-                  </View>
-                )}
-                <View style={styles.metaItem}>
-                  <Ionicons name="cube-outline" size={11} color={colors.textTertiary} />
-                  <Text style={styles.metaText}>
-                    {item?.products?.length || 0}
-                  </Text>
-                </View>
-                <View style={styles.metaItem}>
-                  <Text style={styles.metaText}>
-                    {new Date(item.createdAt).toLocaleDateString()}
-                  </Text>
-                </View>
-              </View>
-            )}
+            <Text style={styles.brandMeta}>
+              {item?.products?.length ? `${item.products.length} ITEMS` : ""}
+              {item.location ? (item?.products?.length ? ` · ${item.location.toUpperCase()}` : item.location.toUpperCase()) : ""}
+            </Text>
           </View>
 
-          {/* Follow button for customers, arrow for admin */}
+          {/* Follow pill or admin arrow */}
           {!isAdmin ? (
             <TouchableOpacity
-              style={styles.followButton}
+              style={[styles.followPill, isFollowed && styles.followPillActive]}
               onPress={() => toggleFollow(item.id)}
               disabled={togglingId === item.id}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
               {togglingId === item.id ? (
-                <ActivityIndicator size="small" color={colors.text} />
+                <ActivityIndicator size="small" color={isFollowed ? colors.background : colors.text} />
               ) : (
-                <Ionicons
-                  name={isFollowed ? "heart" : "heart-outline"}
-                  size={20}
-                  color={colors.text}
-                />
+                <Text style={[styles.followPillText, isFollowed && styles.followPillTextActive]}>
+                  {isFollowed ? "FOLLOWING" : "FOLLOW"}
+                </Text>
               )}
             </TouchableOpacity>
           ) : (
@@ -925,7 +891,7 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
 
   // ── Brand card ────────────────────────────────────
   brandContainer: {
-    paddingHorizontal: 24,
+    paddingHorizontal: 16,
     paddingVertical: 16,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
@@ -938,20 +904,21 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     marginRight: 14,
   },
   brandLogo: {
-    width: 48,
-    height: 48,
+    width: 56,
+    height: 56,
   },
   logoPlaceholder: {
-    width: 48,
-    height: 48,
-    backgroundColor: colors.surfaceRaised,
+    width: 56,
+    height: 56,
+    backgroundColor: colors.text,
     alignItems: "center",
     justifyContent: "center",
   },
   logoInitial: {
-    fontFamily: undefined,
-    fontSize: 20,
-    color: colors.text,
+    fontSize: 22,
+    fontWeight: "900",
+    color: colors.background,
+    letterSpacing: -1,
   },
   brandInfo: {
     flex: 1,
@@ -964,11 +931,10 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     marginBottom: 3,
   },
   brandName: {
-    fontFamily: undefined,
-    fontSize: 13,
-    fontWeight: "700",
+    fontSize: 16,
+    fontWeight: "800",
     color: colors.text,
-    letterSpacing: 1,
+    letterSpacing: -0.3,
     textTransform: "uppercase",
     flexShrink: 1,
   },
@@ -983,7 +949,6 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     backgroundColor: colors.surfaceRaised,
   },
   statusText: {
-    fontFamily: undefined,
     fontSize: 9,
     letterSpacing: 1,
   },
@@ -994,11 +959,19 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     color: colors.textSecondary,
   },
   brandDescription: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 13,
+    fontSize: 9,
+    color: colors.textTertiary,
+    letterSpacing: 1.5,
+    marginBottom: 3,
+    textTransform: "uppercase",
+  },
+  brandMeta: {
+    fontSize: 9,
+    fontWeight: "600",
     color: colors.textSecondary,
-    lineHeight: 18,
-    marginBottom: 6,
+    letterSpacing: 2,
+    textTransform: "uppercase",
+    marginTop: 2,
   },
   metaRow: {
     flexDirection: "row",
@@ -1011,14 +984,32 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     gap: 3,
   },
   metaText: {
-    fontFamily: undefined,
     fontSize: 9,
     color: colors.textTertiary,
     letterSpacing: 0.5,
   },
   arrowText: {
-    fontFamily: undefined,
     fontSize: 16,
+    color: colors.text,
+  },
+  followPill: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: colors.text,
+    backgroundColor: colors.background,
+  },
+  followPillActive: {
+    backgroundColor: colors.background,
+  },
+  followPillText: {
+    fontSize: 9,
+    fontWeight: "600",
+    color: colors.text,
+    letterSpacing: 2,
+    textTransform: "uppercase",
+  },
+  followPillTextActive: {
     color: colors.text,
   },
   followButton: {

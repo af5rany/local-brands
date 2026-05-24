@@ -195,12 +195,14 @@ const ProfileTab = () => {
               </View>
             )}
           </View>
-          <Text style={styles.headerName}>
-            {(user?.name || "USER").toUpperCase()}
-          </Text>
-          <Text style={styles.headerEmail}>{user?.email || ""}</Text>
-          <View style={styles.roleBadge}>
-            <Text style={styles.roleBadgeText}>{roleDisplay}</Text>
+          <View style={styles.headerMeta}>
+            <Text style={styles.headerName}>
+              {(user?.name || "USER").toUpperCase()}
+            </Text>
+            <Text style={styles.headerEmail}>{user?.email || ""}</Text>
+            <View style={styles.roleBadge}>
+              <Text style={styles.roleBadgeText}>{roleDisplay}</Text>
+            </View>
           </View>
         </View>
 
@@ -208,8 +210,8 @@ const ProfileTab = () => {
         <View style={styles.statsRow}>
           {[
             { label: "ORDERS", value: "—" },
-            { label: "SAVED", value: "—" },
-            { label: "REVIEWS", value: "—" },
+            { label: "WISHLIST", value: "—" },
+            { label: "BRANDS", value: "—" },
           ].map((s, i, arr) => (
             <View
               key={s.label}
@@ -218,8 +220,8 @@ const ProfileTab = () => {
                 i < arr.length - 1 && { borderRightWidth: 1, borderRightColor: colors.border },
               ]}
             >
-              <Text style={styles.statLabel}>{s.label}</Text>
               <Text style={styles.statIndicator}>{s.value}</Text>
+              <Text style={styles.statLabel}>{s.label}</Text>
             </View>
           ))}
         </View>
@@ -230,10 +232,7 @@ const ProfileTab = () => {
             {menuItems.map((item, index) => (
               <TouchableOpacity
                 key={item.label}
-                style={[
-                  styles.menuItem,
-                  index < menuItems.length - 1 && styles.menuItemBorder,
-                ]}
+                style={styles.menuItem}
                 onPress={item.onPress}
                 activeOpacity={0.7}
               >
@@ -243,7 +242,7 @@ const ProfileTab = () => {
                     <Text style={styles.menuSub}>{item.subtitle}</Text>
                   ) : null}
                 </View>
-                <Ionicons name="chevron-forward" size={14} color={colors.textTertiary} />
+                <Text style={{ fontSize: 14, color: colors.textTertiary }}>›</Text>
               </TouchableOpacity>
             ))}
           </View>
@@ -268,7 +267,6 @@ const ProfileTab = () => {
           onPress={handleLogout}
           activeOpacity={0.7}
         >
-          <Ionicons name="log-out-outline" size={16} color={colors.danger} />
           <Text style={styles.logoutText}>SIGN OUT</Text>
         </TouchableOpacity>
 
@@ -362,55 +360,58 @@ const createStyles = (colors: ThemeColors) =>
     // ── Header ─────────────────────────────────────────────────────────────────
     header: {
       backgroundColor: colors.background,
-      paddingTop: 48,
-      paddingBottom: 28,
-      paddingHorizontal: 24,
-      alignItems: "center",
-      gap: 6,
+      paddingTop: 28,
+      paddingBottom: 24,
+      paddingHorizontal: 18,
       borderBottomWidth: 1,
       borderBottomColor: colors.border,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 16,
     },
-    avatarWrap: {
-      marginBottom: 16,
-      borderWidth: 1,
-      borderColor: colors.border,
-    },
+    avatarWrap: {},
     avatar: {
-      width: 110,
-      height: 110,
+      width: 64,
+      height: 64,
     },
     initialsAvatar: {
-      width: 110,
-      height: 110,
-      backgroundColor: colors.surfaceRaised,
+      width: 64,
+      height: 64,
+      backgroundColor: colors.text,
       alignItems: "center",
       justifyContent: "center",
     },
     initialsText: {
-      fontSize: 32,
-      fontWeight: "800",
-      color: colors.text,
+      fontSize: 24,
+      fontWeight: "900",
+      color: colors.background,
+    },
+    headerMeta: {
+      flex: 1,
     },
     headerName: {
-      fontSize: 20,
+      fontSize: 22,
       fontWeight: "800",
       color: colors.text,
       letterSpacing: -0.5,
       textTransform: "uppercase",
     },
     headerEmail: {
-      fontSize: 12,
+      fontSize: 9,
       color: colors.textSecondary,
-      marginBottom: 4,
+      letterSpacing: 1.5,
+      marginTop: 3,
+      textTransform: "uppercase",
     },
     roleBadge: {
       backgroundColor: colors.text,
-      paddingHorizontal: 16,
-      paddingVertical: 6,
-      marginTop: 4,
+      paddingHorizontal: 10,
+      paddingVertical: 4,
+      marginTop: 6,
+      alignSelf: "flex-start",
     },
     roleBadgeText: {
-      fontSize: 10,
+      fontSize: 9,
       fontWeight: "700",
       color: colors.background,
       letterSpacing: 1.5,
@@ -420,69 +421,72 @@ const createStyles = (colors: ThemeColors) =>
     // ── Stats ──────────────────────────────────────────────────────────────────
     statsRow: {
       flexDirection: "row",
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
       borderBottomWidth: 1,
       borderBottomColor: colors.border,
     },
     statCol: {
       flex: 1,
       alignItems: "center",
-      paddingVertical: 20,
+      paddingVertical: 16,
     },
     statLabel: {
-      fontSize: 9,
-      fontWeight: "700",
-      color: colors.text,
-      letterSpacing: 1.5,
+      fontSize: 8,
+      fontWeight: "600",
+      color: colors.textTertiary,
+      letterSpacing: 2,
       textTransform: "uppercase",
+      marginTop: 4,
     },
     statIndicator: {
-      fontSize: 14,
-      color: colors.textTertiary,
-      marginTop: 6,
+      fontSize: 22,
+      fontWeight: "800",
+      color: colors.text,
+      letterSpacing: -0.5,
     },
 
     // ── Menu ───────────────────────────────────────────────────────────────────
     menuSection: {
-      paddingTop: 8,
-      paddingHorizontal: 20,
-      paddingBottom: 8,
+      paddingTop: 0,
+      paddingBottom: 0,
     },
     menuList: {},
     menuItem: {
       flexDirection: "row",
       alignItems: "center",
-      paddingVertical: 18,
-      paddingHorizontal: 4,
+      paddingVertical: 16,
+      paddingHorizontal: 18,
       gap: 14,
-    },
-    menuItemBorder: {
       borderBottomWidth: 1,
       borderBottomColor: colors.border,
     },
+    menuItemBorder: {},
     menuTextWrap: {
       flex: 1,
       gap: 2,
     },
     menuLabel: {
-      fontSize: 11,
-      fontWeight: "700",
+      fontSize: 12,
+      fontWeight: "600",
       color: colors.text,
-      letterSpacing: 1.5,
+      letterSpacing: 1,
       textTransform: "uppercase",
     },
     menuSub: {
       fontSize: 11,
       color: colors.textSecondary,
+      letterSpacing: 0.5,
     },
 
     // ── Orders row ─────────────────────────────────────────────────────────────
     ordersRow: {
-      marginHorizontal: 20,
+      marginHorizontal: 18,
       marginTop: 16,
       borderWidth: 1,
       borderColor: colors.border,
       paddingVertical: 20,
-      paddingHorizontal: 20,
+      paddingHorizontal: 18,
       flexDirection: "row",
       alignItems: "center",
       justifyContent: "space-between",
@@ -513,17 +517,17 @@ const createStyles = (colors: ThemeColors) =>
       flexDirection: "row",
       alignItems: "center",
       justifyContent: "center",
-      marginHorizontal: 20,
-      marginTop: 16,
+      marginHorizontal: 18,
+      marginTop: 20,
       paddingVertical: 16,
       borderWidth: 1,
-      borderColor: colors.danger,
+      borderColor: colors.border,
       gap: 8,
     },
     logoutText: {
       fontSize: 11,
-      fontWeight: "700",
-      color: colors.danger,
+      fontWeight: "600",
+      color: colors.text,
       letterSpacing: 1.5,
       textTransform: "uppercase",
     },

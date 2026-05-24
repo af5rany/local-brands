@@ -85,7 +85,10 @@ const MonolithProductCard = React.memo(
       <View
         style={[
           cardStyles.wrapper,
-          index % 2 === 0 ? { paddingRight: 8 } : { paddingLeft: 8 },
+          index % 2 === 0
+            ? { borderRightWidth: 1, borderRightColor: colors.border }
+            : {},
+          { borderBottomWidth: 1, borderBottomColor: colors.border },
         ]}
       >
         {/* Image — swipeable; tap-to-navigate via transparent overlay */}
@@ -183,6 +186,11 @@ const MonolithProductCard = React.memo(
             )}
           </View>
         </TouchableOpacity>
+
+        {/* ADD TO CART bar */}
+        <View style={cardStyles.addToCart}>
+          <Text style={cardStyles.addToCartText}>ADD TO CART</Text>
+        </View>
       </View>
     );
   },
@@ -924,7 +932,6 @@ const ShopScreen = () => {
 const createCardStyles = (colors: ThemeColors) => StyleSheet.create({
   wrapper: {
     flex: 1,
-    marginBottom: 48,
   },
   imageWrap: {
     width: "100%",
@@ -964,11 +971,11 @@ const createCardStyles = (colors: ThemeColors) => StyleSheet.create({
     paddingVertical: 4,
   },
   limitedBadgeText: {
-    fontFamily: undefined,
     fontSize: 8,
     color: colors.textInverse,
     letterSpacing: 2,
     textTransform: "uppercase",
+    fontWeight: "600",
   },
   dotsRow: {
     position: "absolute",
@@ -982,7 +989,6 @@ const createCardStyles = (colors: ThemeColors) => StyleSheet.create({
   dot: {
     width: 4,
     height: 4,
-    borderRadius: 2,
     backgroundColor: "rgba(255,255,255,0.5)",
   },
   dotActive: {
@@ -993,46 +999,62 @@ const createCardStyles = (colors: ThemeColors) => StyleSheet.create({
     position: "absolute",
     top: 8,
     right: 8,
-    width: 32,
-    height: 32,
+    width: 28,
+    height: 28,
+    backgroundColor: colors.background,
     justifyContent: "center",
     alignItems: "center",
   },
   meta: {
-    marginTop: 12,
-    gap: 4,
+    paddingHorizontal: 10,
+    paddingTop: 10,
+    paddingBottom: 0,
+    gap: 3,
   },
   brandLabel: {
-    fontFamily: undefined,
-    fontSize: 10,
-    color: colors.textSecondary,
+    fontSize: 9,
+    color: colors.textTertiary,
     letterSpacing: 2,
     textTransform: "uppercase",
+    fontWeight: "600",
   },
   productName: {
-    fontFamily: undefined,
     fontSize: 11,
     color: colors.text,
-    letterSpacing: 1,
+    letterSpacing: 0.5,
     textTransform: "uppercase",
-    lineHeight: 16,
+    lineHeight: 15,
+    fontWeight: "600",
   },
   priceRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: 6,
     marginTop: 2,
   },
   price: {
-    fontFamily: undefined,
-    fontSize: 12,
+    fontSize: 13,
+    fontWeight: "700",
     color: colors.text,
   },
   originalPrice: {
-    fontFamily: undefined,
-    fontSize: 11,
+    fontSize: 10,
     color: colors.textTertiary,
     textDecorationLine: "line-through",
+  },
+  addToCart: {
+    height: 30,
+    backgroundColor: colors.text,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 10,
+  },
+  addToCartText: {
+    fontSize: 9,
+    fontWeight: "600",
+    color: colors.textInverse,
+    letterSpacing: 2,
+    textTransform: "uppercase",
   },
 });
 
@@ -1271,8 +1293,8 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
 
   // ── Grid ──────────────────────────────────────────
   listContent: {
-    paddingHorizontal: 16,
-    paddingTop: 24,
+    paddingHorizontal: 0,
+    paddingTop: 0,
     paddingBottom: 40,
   },
 
