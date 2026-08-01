@@ -1079,11 +1079,6 @@ const createCardStyles = (colors: ThemeColors) => StyleSheet.create({
     position: "absolute",
     top: 8,
     right: 8,
-    width: 28,
-    height: 28,
-    backgroundColor: colors.background,
-    justifyContent: "center",
-    alignItems: "center",
   },
   meta: {
     paddingHorizontal: 10,

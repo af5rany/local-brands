@@ -8,7 +8,7 @@ import { ActivityIndicator, Platform, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { ToastProvider } from "@/context/ToastContext";
 import { NetworkProvider } from "@/context/NetworkContext";
-import { ThemeProvider } from "@/context/ThemeContext";
+import { ThemeProvider, useThemePreference } from "@/context/ThemeContext";
 import GlobalErrorBoundary from "@/components/GlobalErrorBoundary";
 import { useEffect, useRef, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -25,6 +25,11 @@ import * as SplashScreen from "expo-splash-screen";
 import * as Notifications from "expo-notifications";
 import * as Device from "expo-device";
 import getApiUrl from "@/helpers/getApiUrl";
+
+function AppStatusBar() {
+  const { scheme } = useThemePreference();
+  return <StatusBar style={scheme === "dark" ? "light" : "dark"} />;
+}
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -389,10 +394,10 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <StatusBar style="auto" />
       <SafeAreaProvider>
         <GlobalErrorBoundary>
           <ThemeProvider>
+            <AppStatusBar />
             <NetworkProvider>
               <ToastProvider>
                 <AuthProvider>
