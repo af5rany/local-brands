@@ -63,7 +63,7 @@ export const HeaderVisibilityProvider: React.FC<{ children: React.ReactNode }> =
     if (!isHidden.current && accDelta.current > HIDE_THRESHOLD) {
       isHidden.current = true;
       accDelta.current = 0;
-      headerTranslateY.value = withTiming(-headerHeightRef.current, { duration: 200 });
+      headerTranslateY.value = withTiming(-headerHeightRef.current, { duration: 320 });
     } else if (isHidden.current && accDelta.current < -SHOW_THRESHOLD) {
       isHidden.current = false;
       accDelta.current = 0;

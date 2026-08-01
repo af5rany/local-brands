@@ -129,7 +129,7 @@ const ProductDetailScreen = () => {
       upAccRef.current = 0;
       if (!isHeaderHiddenRef.current) {
         isHeaderHiddenRef.current = true;
-        headerTranslateY.value = withTiming(-headerHeightRef.current, { duration: 120 });
+        headerTranslateY.value = withTiming(-headerHeightRef.current, { duration: 320 });
       }
     } else if (diff < 0) {
       // Upward scroll — need SHOW_THRESHOLD to show (avoids accidental show)
