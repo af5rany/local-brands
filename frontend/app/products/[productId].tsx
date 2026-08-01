@@ -12,6 +12,7 @@ import {
   Alert,
   Animated,
   Platform,
+  StatusBar as RNStatusBar,
   NativeSyntheticEvent,
   NativeScrollEvent,
   Share,
@@ -57,6 +58,12 @@ const ProductDetailScreen = () => {
   const { incrementProductListVersion, productVersions } = useBrand();
   const userRole = user?.role || user?.userRole;
   const insets = useSafeAreaInsets();
+  const statusBarHeight =
+    insets.top > 0
+      ? insets.top
+      : Platform.OS === "android"
+        ? (RNStatusBar.currentHeight ?? 0)
+        : 0;
   const colors = useThemeColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const { addProduct: trackView } = useRecentlyViewed();
@@ -603,18 +610,29 @@ const ProductDetailScreen = () => {
         </View>
       )}
 
-      <View style={{ height: insets.top, backgroundColor: colors.background, zIndex: 200 }} />
       <ReAnimated.View
-        style={[{ overflow: "hidden", zIndex: 200 }, headerAnimStyle]}
+        style={[{ zIndex: 100 }, headerAnimStyle]}
         onLayout={(e) => { headerHeightRef.current = e.nativeEvent.layout.height; }}
       >
-        <Header showBack={true} />
+        <View style={{ backgroundColor: colors.background, paddingTop: statusBarHeight }}>
+          <Header showBack={true} />
+        </View>
       </ReAnimated.View>
+      {/* Absolute tint always covers status bar area */}
+      <View
+        style={{
+          position: "absolute",
+          top: 0, left: 0, right: 0,
+          height: statusBarHeight,
+          backgroundColor: colors.background,
+          zIndex: 200,
+        }}
+      />
 
       {/* Sticky product name bar — fades in after scrolling past hero */}
       <Animated.View
         pointerEvents="none"
-        style={[styles.stickyNameBar, { top: insets.top, opacity: stickyTitleOpacity, backgroundColor: colors.background, borderBottomColor: colors.borderLight }]}
+        style={[styles.stickyNameBar, { top: statusBarHeight, opacity: stickyTitleOpacity, backgroundColor: colors.background, borderBottomColor: colors.borderLight }]}
       >
         <Text style={[styles.stickyNameText, { color: colors.text }]} numberOfLines={1}>
           {product.name?.toUpperCase()}

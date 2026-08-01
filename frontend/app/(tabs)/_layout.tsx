@@ -1,7 +1,7 @@
 import { Tabs, usePathname } from "expo-router";
 import React, { useEffect } from "react";
-import { Platform, View } from "react-native";
-import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import { Platform, StatusBar as RNStatusBar, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, { useAnimatedStyle } from "react-native-reanimated";
 import { HapticTab } from "@/components/HapticTab";
 import Header from "@/components/Header";
@@ -24,6 +24,14 @@ export default function TabLayout() {
 function TabLayoutInner() {
   const colors = useThemeColors();
   const insets = useSafeAreaInsets();
+  // insets.top can be 0 on first render on Android — fall back to the
+  // synchronous RN value which is always correct from the start.
+  const statusBarHeight =
+    insets.top > 0
+      ? insets.top
+      : Platform.OS === "android"
+        ? (RNStatusBar.currentHeight ?? 0)
+        : 0;
   const tabBarHeight = TAB_BAR_CONTENT_HEIGHT + insets.bottom;
   const tintColor = colors.tabActive;
   const inactiveColor = colors.tabInactive;
@@ -42,16 +50,24 @@ function TabLayoutInner() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
-      {/* Permanent status-bar spacer — never slides away with the header */}
-      <View style={{ height: insets.top, backgroundColor: colors.surface }} />
-      <Animated.View style={[{ zIndex: 100, overflow: "hidden" }, headerAnimStyle]}>
+      <Animated.View style={[{ zIndex: 100 }, headerAnimStyle]}>
         <View
-          style={{ backgroundColor: colors.surface }}
+          style={{ backgroundColor: colors.surface, paddingTop: statusBarHeight }}
           onLayout={(e) => setHeaderHeight(e.nativeEvent.layout.height)}
         >
           <Header />
         </View>
       </Animated.View>
+      {/* Absolute tint always covers status bar area — survives header animation */}
+      <View
+        style={{
+          position: "absolute",
+          top: 0, left: 0, right: 0,
+          height: statusBarHeight,
+          backgroundColor: colors.surface,
+          zIndex: 200,
+        }}
+      />
       <Tabs
         screenOptions={{
           tabBarActiveTintColor: tintColor,
