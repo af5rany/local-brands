@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef, useEffect, useMemo } from "react";
+import React, { useState, useCallback, useRef, useEffect } from "react";
 import {
   View,
   Text,
@@ -9,7 +9,6 @@ import {
   Dimensions,
   ScrollView,
   RefreshControl,
-  FlatList,
   NativeScrollEvent,
   NativeSyntheticEvent,
 } from "react-native";
@@ -26,6 +25,11 @@ import { useHeaderVisibility } from "@/context/HeaderVisibilityContext";
 import { useScrollToTop } from "@/context/ScrollToTopContext";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
+const COLUMN_GAP = 8;
+const PADDING = 12;
+const NUM_COLUMNS = 2;
+const COLUMN_WIDTH =
+  (SCREEN_WIDTH - PADDING * 2 - COLUMN_GAP * (NUM_COLUMNS - 1)) / NUM_COLUMNS;
 
 type ActiveTab = "forYou" | "following";
 
@@ -44,219 +48,175 @@ interface PostData {
   }[];
 }
 
-function timeAgo(date: string): string {
-  const diff = Date.now() - new Date(date).getTime();
-  const d = Math.floor(diff / 86400000);
-  const h = Math.floor(diff / 3600000);
-  if (d > 0) return `${d}D`;
-  if (h > 0) return `${h}H`;
-  return "NOW";
-}
-
-// ── Stories Strip ──
-const StoriesStrip: React.FC<{
-  brands: { id: number; name: string; logo?: string }[];
-  colors: any;
-  onBrandPress: (id: number) => void;
-  onCreatePress: () => void;
-  showCreate: boolean;
-}> = ({ brands, colors, onBrandPress, onCreatePress, showCreate }) => (
-  <ScrollView
-    horizontal
-    showsHorizontalScrollIndicator={false}
-    style={{ borderBottomWidth: 1, borderBottomColor: colors.border }}
-    contentContainerStyle={{ padding: 14, gap: 12, flexDirection: "row" }}
-  >
-    {showCreate && (
-      <TouchableOpacity
-        onPress={onCreatePress}
-        activeOpacity={0.7}
-        style={{ alignItems: "center", gap: 6 }}
-      >
-        <View
-          style={{
-            width: 56,
-            height: 56,
-            borderWidth: 1,
-            borderStyle: "dashed",
-            borderColor: colors.text,
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          <Ionicons name="add" size={20} color={colors.text} />
-        </View>
-        <Text style={{ fontSize: 8, letterSpacing: 1.5, color: colors.textTertiary }}>YOU</Text>
-      </TouchableOpacity>
-    )}
-    {brands.map((b) => (
-      <TouchableOpacity
-        key={b.id}
-        onPress={() => onBrandPress(b.id)}
-        activeOpacity={0.7}
-        style={{ alignItems: "center", gap: 6 }}
-      >
-        <View style={{ width: 56, height: 56, padding: 2, borderWidth: 2, borderColor: colors.text }}>
-          {b.logo ? (
-            <Image source={{ uri: b.logo }} style={{ width: "100%", height: "100%" }} resizeMode="cover" />
-          ) : (
-            <View
-              style={{
-                flex: 1,
-                backgroundColor: colors.text,
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              <Text style={{ color: colors.background, fontSize: 18, fontWeight: "900" }}>
-                {b.name.charAt(0)}
-              </Text>
-            </View>
-          )}
-        </View>
-        <Text style={{ fontSize: 8, letterSpacing: 1.5, color: colors.text }} numberOfLines={1}>
-          {b.name.toUpperCase().substring(0, 6)}
-        </Text>
-      </TouchableOpacity>
-    ))}
-  </ScrollView>
-);
-
-// ── Post Card (Monolith design) ──
-const PostCard: React.FC<{
+// ── Pin Card ──
+const PinCard: React.FC<{
   post: PostData;
+  imageHeight: number;
   colors: any;
   onPress: (id: number) => void;
   onLike: (id: number) => void;
   onBrandPress: (id: number) => void;
-  onProductPress: (id: number) => void;
-}> = ({ post, colors, onPress, onLike, onBrandPress, onProductPress }) => {
-  const authorName =
-    [post.author?.firstName, post.author?.lastName].filter(Boolean).join(" ").toUpperCase() ||
-    post.brand.name.toUpperCase();
-  const hasProduct = post.postProducts?.[0]?.product ?? null;
+}> = ({ post, imageHeight, colors, onPress, onLike, onBrandPress }) => {
+  const hasProduct =
+    post.postProducts && post.postProducts.length > 0
+      ? post.postProducts[0].product
+      : null;
 
   return (
-    <View style={{ borderBottomWidth: 1, borderBottomColor: colors.border }}>
-      {/* Post header */}
-      <View style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 16, paddingVertical: 14 }}>
-        <TouchableOpacity onPress={() => onBrandPress(post.brand.id)} activeOpacity={0.7}>
-          {post.brand.logo ? (
-            <Image
-              source={{ uri: post.brand.logo }}
-              style={{ width: 36, height: 36, backgroundColor: colors.surfaceRaised }}
-            />
-          ) : (
-            <View style={{ width: 36, height: 36, backgroundColor: colors.text, alignItems: "center", justifyContent: "center" }}>
-              <Text style={{ color: colors.background, fontSize: 14, fontWeight: "900" }}>
-                {post.brand.name?.charAt(0) || "B"}
-              </Text>
-            </View>
-          )}
-        </TouchableOpacity>
-        <View style={{ flex: 1 }}>
-          <Text style={{ fontSize: 12, fontWeight: "700", color: colors.text, letterSpacing: 0.3 }}>
-            {authorName}
-          </Text>
-          <Text style={{ fontSize: 9, color: colors.textTertiary, letterSpacing: 1.5, marginTop: 1 }}>
-            {timeAgo(post.createdAt)} · POST
-          </Text>
-        </View>
-        <Ionicons name="ellipsis-horizontal" size={18} color={colors.textTertiary} />
+    <TouchableOpacity
+      style={[styles.pin, { backgroundColor: colors.background }]}
+      onPress={() => onPress(post.id)}
+      activeOpacity={0.85}
+    >
+      <View
+        style={[
+          styles.pinImageWrap,
+          { height: imageHeight, backgroundColor: colors.borderLight },
+        ]}
+      >
+        <Image
+          source={{ uri: post.images[0] }}
+          style={[styles.pinImage, { height: imageHeight }]}
+          resizeMode="cover"
+        />
       </View>
-
-      {/* Full-bleed image */}
-      <TouchableOpacity onPress={() => onPress(post.id)} activeOpacity={0.92}>
-        {post.images[0] ? (
-          <Image
-            source={{ uri: post.images[0] }}
-            style={{ width: SCREEN_WIDTH, height: SCREEN_WIDTH }}
-            resizeMode="cover"
-          />
-        ) : (
-          <View style={{ width: SCREEN_WIDTH, height: SCREEN_WIDTH * 0.8, backgroundColor: colors.surfaceRaised }} />
+      <View style={styles.pinInfo}>
+        {post.caption ? (
+          <Text
+            style={[styles.pinCaption, { color: colors.text }]}
+            numberOfLines={2}
+          >
+            {post.caption}
+          </Text>
+        ) : hasProduct ? (
+          <Text
+            style={[styles.pinCaption, { color: colors.text }]}
+            numberOfLines={2}
+          >
+            {hasProduct.name}
+          </Text>
+        ) : null}
+        {hasProduct && (
+          <Text style={[styles.pinPrice, { color: colors.text }]}>
+            ${Number(hasProduct.price).toFixed(2)}
+          </Text>
         )}
-      </TouchableOpacity>
-
-      {/* Action row */}
-      <View style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingVertical: 14 }}>
-        <View style={{ flexDirection: "row", gap: 18, flex: 1 }}>
+        <View style={styles.pinBottom}>
           <TouchableOpacity
-            style={{ flexDirection: "row", alignItems: "center", gap: 6 }}
-            onPress={() => onLike(post.id)}
+            style={styles.pinBrandRow}
+            onPress={() => onBrandPress(post.brand.id)}
             activeOpacity={0.7}
+          >
+            {post.brand.logo ? (
+              <Image
+                source={{ uri: post.brand.logo }}
+                style={styles.pinBrandAvatar}
+              />
+            ) : (
+              <View
+                style={[
+                  styles.pinBrandAvatar,
+                  { backgroundColor: colors.surfaceRaised },
+                ]}
+              >
+                <Text
+                  style={[styles.pinBrandInitial, { color: colors.text }]}
+                >
+                  {post.brand.name?.charAt(0) || "B"}
+                </Text>
+              </View>
+            )}
+            <Text
+              style={[styles.pinBrandName, { color: colors.textTertiary }]}
+              numberOfLines={1}
+            >
+              {post.brand.name}
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => onLike(post.id)}
+            activeOpacity={0.6}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
             <Ionicons
               name={post.isLiked ? "heart" : "heart-outline"}
-              size={20}
-              color={post.isLiked ? colors.accentRed : colors.text}
+              size={18}
+              color={post.isLiked ? colors.danger : colors.textTertiary}
             />
-            <Text style={{ fontSize: 10, fontWeight: "700", color: colors.text, letterSpacing: 1.5 }}>
-              {post.likeCount}
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={{ flexDirection: "row", alignItems: "center", gap: 6 }}
-            onPress={() => onPress(post.id)}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="chatbubble-outline" size={20} color={colors.text} />
-            <Text style={{ fontSize: 10, fontWeight: "700", color: colors.text, letterSpacing: 1.5 }}>
-              {post.commentCount}
-            </Text>
           </TouchableOpacity>
         </View>
-        <Ionicons name="bookmark-outline" size={20} color={colors.text} />
       </View>
+    </TouchableOpacity>
+  );
+};
 
-      {/* Caption */}
-      {post.caption ? (
-        <View style={{ paddingHorizontal: 16, paddingBottom: 12 }}>
-          <Text style={{ fontSize: 13, color: colors.textSecondary, lineHeight: 20 }}>
-            <Text style={{ fontWeight: "700", color: colors.text }}>
-              {authorName.toLowerCase().replace(/\s+/g, "")}{" "}
-            </Text>
-            {post.caption}
-          </Text>
-        </View>
-      ) : null}
+// ── Masonry Layout ──
+function buildMasonryColumns(
+  posts: PostData[],
+  imageHeights: Record<number, number>,
+) {
+  const leftCol: { post: PostData; height: number }[] = [];
+  const rightCol: { post: PostData; height: number }[] = [];
+  let leftHeight = 0;
+  let rightHeight = 0;
 
-      {/* Product tag */}
-      {hasProduct && (
-        <TouchableOpacity
-          style={{
-            flexDirection: "row",
-            alignItems: "center",
-            gap: 10,
-            marginHorizontal: 16,
-            marginBottom: 16,
-            padding: 10,
-            borderWidth: 1,
-            borderColor: colors.border,
-          }}
-          onPress={() => onProductPress(hasProduct.id)}
-          activeOpacity={0.7}
-        >
-          <View style={{ width: 32, height: 32, backgroundColor: colors.surfaceRaised }}>
-            {hasProduct.images?.[0] && (
-              <Image source={{ uri: hasProduct.images[0] }} style={{ width: 32, height: 32 }} resizeMode="cover" />
-            )}
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: 9, fontWeight: "700", color: colors.text, letterSpacing: 2 }}>
-              {post.brand.name.toUpperCase()} · {hasProduct.name.toUpperCase()}
-            </Text>
-            <Text style={{ fontSize: 9, color: colors.textTertiary, letterSpacing: 1.5, marginTop: 2 }}>
-              SHOP THE LOOK ›
-            </Text>
-          </View>
-        </TouchableOpacity>
-      )}
+  for (const post of posts) {
+    const imgH = imageHeights[post.id] || COLUMN_WIDTH;
+    const totalH = imgH + 70;
+    if (leftHeight <= rightHeight) {
+      leftCol.push({ post, height: imgH });
+      leftHeight += totalH + COLUMN_GAP;
+    } else {
+      rightCol.push({ post, height: imgH });
+      rightHeight += totalH + COLUMN_GAP;
+    }
+  }
+  return { leftCol, rightCol };
+}
+
+// ── Masonry Grid ──
+const MasonryGrid: React.FC<{
+  posts: PostData[];
+  imageHeights: Record<number, number>;
+  colors: any;
+  onPostPress: (id: number) => void;
+  onLike: (id: number) => void;
+  onBrandPress: (id: number) => void;
+}> = ({ posts, imageHeights, colors, onPostPress, onLike, onBrandPress }) => {
+  const { leftCol, rightCol } = buildMasonryColumns(posts, imageHeights);
+  return (
+    <View style={styles.masonryRow}>
+      <View style={[styles.column, styles.columnLeft]}>
+        {leftCol.map(({ post, height }) => (
+          <PinCard
+            key={post.id}
+            post={post}
+            imageHeight={height}
+            colors={colors}
+            onPress={onPostPress}
+            onLike={onLike}
+            onBrandPress={onBrandPress}
+          />
+        ))}
+      </View>
+      <View style={styles.column}>
+        {rightCol.map(({ post, height }) => (
+          <PinCard
+            key={post.id}
+            post={post}
+            imageHeight={height}
+            colors={colors}
+            onPress={onPostPress}
+            onLike={onLike}
+            onBrandPress={onBrandPress}
+          />
+        ))}
+      </View>
     </View>
   );
 };
 
-// ── Tab Switcher ──
+// ── Tab Switcher — Following first, For You second ──
 const TAB_ORDER: ActiveTab[] = ["following", "forYou"];
 const TAB_LABELS: Record<ActiveTab, string> = {
   following: "FOLLOWING",
@@ -268,36 +228,36 @@ const TabSwitcher: React.FC<{
   onChange: (tab: ActiveTab) => void;
   colors: any;
 }> = ({ activeTab, onChange, colors }) => (
-  <View style={{ flexDirection: "row", borderBottomWidth: 1, borderBottomColor: colors.border, backgroundColor: colors.background }}>
+  <View
+    style={[
+      styles.tabBar,
+      {
+        backgroundColor: colors.background,
+        borderBottomColor: colors.borderLight,
+      },
+    ]}
+  >
     {TAB_ORDER.map((tab) => {
       const isActive = activeTab === tab;
       return (
         <TouchableOpacity
           key={tab}
-          style={{ flex: 1, alignItems: "center", paddingVertical: 14 }}
+          style={styles.tabItem}
           onPress={() => onChange(tab)}
           activeOpacity={0.7}
         >
           <Text
-            style={{
-              fontSize: 10,
-              fontWeight: "600",
-              color: isActive ? colors.text : colors.textTertiary,
-              letterSpacing: 2,
-            }}
+            style={[
+              styles.tabLabel,
+              { color: isActive ? colors.text : colors.textTertiary },
+              isActive && styles.tabLabelActive,
+            ]}
           >
             {TAB_LABELS[tab]}
           </Text>
           {isActive && (
             <View
-              style={{
-                position: "absolute",
-                bottom: 0,
-                left: 16,
-                right: 16,
-                height: 2,
-                backgroundColor: colors.text,
-              }}
+              style={[styles.tabUnderline, { backgroundColor: colors.text }]}
             />
           )}
         </TouchableOpacity>
@@ -317,8 +277,8 @@ export default function FeedScreen() {
   const { isConnected } = useNetwork();
 
   const { register, unregister } = useScrollToTop();
-  const followingRef = useRef<FlatList>(null);
-  const forYouRef = useRef<FlatList>(null);
+  const followingRef = useRef<ScrollView>(null);
+  const forYouRef = useRef<ScrollView>(null);
   const pagerRef = useRef<ScrollView>(null);
 
   const [activeTab, setActiveTab] = useState<ActiveTab>("following");
@@ -331,8 +291,9 @@ export default function FeedScreen() {
 
   useEffect(() => {
     register("feed", () => {
-      if (activeTab === "forYou") forYouRef.current?.scrollToOffset({ offset: 0, animated: true });
-      else followingRef.current?.scrollToOffset({ offset: 0, animated: true });
+      if (activeTab === "forYou")
+        forYouRef.current?.scrollTo({ y: 0, animated: true });
+      else followingRef.current?.scrollTo({ y: 0, animated: true });
     });
     return () => unregister("feed");
   }, [activeTab]);
@@ -352,18 +313,24 @@ export default function FeedScreen() {
   // ── Shared ──
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [imageHeights, setImageHeights] = useState<Record<number, number>>({});
 
-  // Unique brands for stories strip
-  const storyBrands = useMemo(() => {
-    const all = [...posts, ...forYouPosts];
-    const seen = new Set<number>();
-    return all.reduce((acc, p) => {
-      if (!seen.has(p.brand.id)) {
-        seen.add(p.brand.id);
-        acc.push(p.brand);
-      }
-      return acc;
-    }, [] as PostData["brand"][]);
+  // Precompute image heights for all posts
+  useEffect(() => {
+    const allPosts = [...posts, ...forYouPosts];
+    for (const post of allPosts) {
+      if (imageHeights[post.id] || !post.images[0]) continue;
+      Image.getSize(
+        post.images[0],
+        (w, h) => {
+          const clamped = Math.max(120, Math.min(300, (h / w) * COLUMN_WIDTH));
+          setImageHeights((prev) => ({ ...prev, [post.id]: clamped }));
+        },
+        () => {
+          setImageHeights((prev) => ({ ...prev, [post.id]: COLUMN_WIDTH }));
+        },
+      );
+    }
   }, [posts, forYouPosts]);
 
   const fetchFollowingFeed = useCallback(
@@ -423,8 +390,12 @@ export default function FeedScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      if (isAuthenticated) fetchFollowingFeed(1);
-      else { setPosts([]); setLoading(false); }
+      if (isAuthenticated) {
+        fetchFollowingFeed(1);
+      } else {
+        setPosts([]);
+        setLoading(false);
+      }
       fetchForYouFeed(1);
     }, [fetchFollowingFeed, fetchForYouFeed, isAuthenticated]),
   );
@@ -434,7 +405,23 @@ export default function FeedScreen() {
     fetchForYouFeed(1, true);
   };
 
-  const updatePostLike = (postId: number, isLiked: boolean, likeCount: number) => {
+  const handleLoadMore = () => {
+    if (activeTab === "following") {
+      if (!followingHasMore || followingLoadingMore.current) return;
+      followingLoadingMore.current = true;
+      fetchFollowingFeed(followingPage + 1);
+    } else {
+      if (!forYouHasMore || forYouLoadingMore.current) return;
+      forYouLoadingMore.current = true;
+      fetchForYouFeed(forYouPage + 1);
+    }
+  };
+
+  const updatePostLike = (
+    postId: number,
+    isLiked: boolean,
+    likeCount: number,
+  ) => {
     const update = (prev: PostData[]) =>
       prev.map((p) => (p.id === postId ? { ...p, isLiked, likeCount } : p));
     setPosts(update);
@@ -442,8 +429,13 @@ export default function FeedScreen() {
   };
 
   const handleLike = async (postId: number) => {
-    if (!token) { router.push("/auth/login"); return; }
-    const post = posts.find((p) => p.id === postId) || forYouPosts.find((p) => p.id === postId);
+    if (!token) {
+      router.push("/auth/login");
+      return;
+    }
+    const post =
+      posts.find((p) => p.id === postId) ||
+      forYouPosts.find((p) => p.id === postId);
     if (!post) return;
     const newLiked = !post.isLiked;
     const newCount = post.likeCount + (newLiked ? 1 : -1);
@@ -461,90 +453,36 @@ export default function FeedScreen() {
     }
   };
 
+  const handleScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const { layoutMeasurement, contentOffset, contentSize } = e.nativeEvent;
+    reportScroll(contentOffset.y, contentSize.height, layoutMeasurement.height);
+    if (
+      contentSize.height - layoutMeasurement.height - contentOffset.y <
+      400
+    ) {
+      handleLoadMore();
+    }
+  };
+
   const postPress = (id: number) => router.push(`/feed/${id}` as any);
   const brandPress = (id: number) => router.push(`/brands/${id}` as any);
-  const productPress = (id: number) => router.push(`/products/${id}` as any);
   const isBrandOwner = user?.role === "brandOwner";
 
   if (!isConnected && posts.length === 0 && forYouPosts.length === 0) {
     return (
-      <View style={{ flex: 1, backgroundColor: colors.background }}>
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
         <OfflinePlaceholder onRetry={() => fetchFollowingFeed(1)} />
       </View>
     );
   }
 
-  const renderEmptyFollowing = () => {
-    if (!isAuthenticated) {
-      return (
-        <View style={styles.empty}>
-          <Text style={[styles.emptyTitle, { color: colors.text }]}>SIGN IN TO FOLLOW</Text>
-          <Text style={[styles.emptySubtitle, { color: colors.textTertiary }]}>
-            Create an account to follow brands and see their latest posts here.
-          </Text>
-          <View style={styles.emptyActions}>
-            <TouchableOpacity
-              style={[styles.ctaPrimary, { backgroundColor: colors.text }]}
-              onPress={() => router.push("/auth/login" as any)}
-              activeOpacity={0.7}
-            >
-              <Text style={[styles.ctaText, { color: colors.background }]}>SIGN IN →</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.ctaOutline, { borderColor: colors.text }]}
-              onPress={() => router.push("/auth/register" as any)}
-              activeOpacity={0.7}
-            >
-              <Text style={[styles.ctaText, { color: colors.text }]}>CREATE ACCOUNT</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      );
-    }
-    return (
-      <View style={styles.empty}>
-        <Text style={[styles.emptyTitle, { color: colors.text }]}>NO POSTS YET</Text>
-        <Text style={[styles.emptySubtitle, { color: colors.textTertiary }]}>
-          Follow brands you love to see their posts here.
-        </Text>
-        <TouchableOpacity
-          style={[styles.ctaPrimary, { backgroundColor: colors.text }]}
-          onPress={() => handleTabChange("forYou")}
-          activeOpacity={0.7}
-        >
-          <Text style={[styles.ctaText, { color: colors.background }]}>FOR YOU →</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  };
-
-  const renderPost = useCallback(
-    ({ item }: { item: PostData }) => (
-      <PostCard
-        post={item}
-        colors={colors}
-        onPress={postPress}
-        onLike={handleLike}
-        onBrandPress={brandPress}
-        onProductPress={productPress}
-      />
-    ),
-    [colors, posts, forYouPosts],
-  );
-
-  const storiesHeader = (
-    <StoriesStrip
-      brands={storyBrands.slice(0, 8)}
-      colors={colors}
-      onBrandPress={brandPress}
-      onCreatePress={() => router.push("/feed/create" as any)}
-      showCreate={isBrandOwner}
-    />
-  );
-
   return (
-    <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <TabSwitcher activeTab={activeTab} onChange={handleTabChange} colors={colors} />
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <TabSwitcher
+        activeTab={activeTab}
+        onChange={handleTabChange}
+        colors={colors}
+      />
 
       {loading ? (
         <View>
@@ -560,80 +498,170 @@ export default function FeedScreen() {
           showsHorizontalScrollIndicator={false}
           scrollEventThrottle={16}
           onMomentumScrollEnd={(e: NativeSyntheticEvent<NativeScrollEvent>) => {
-            const idx = Math.round(e.nativeEvent.contentOffset.x / SCREEN_WIDTH);
+            const idx = Math.round(
+              e.nativeEvent.contentOffset.x / SCREEN_WIDTH,
+            );
             setActiveTab(TAB_ORDER[idx] ?? "following");
           }}
           style={{ flex: 1 }}
         >
-          {/* Page 0: Following */}
+          {/* ── Page 0: Following ── */}
           <View style={{ width: SCREEN_WIDTH, flex: 1 }}>
-            <FlatList
+            <ScrollView
               ref={followingRef}
-              data={isAuthenticated ? posts : []}
-              keyExtractor={(item) => item.id.toString()}
-              renderItem={renderPost}
-              ListHeaderComponent={storiesHeader}
-              ListEmptyComponent={renderEmptyFollowing}
               showsVerticalScrollIndicator={false}
-              onScroll={(e: NativeSyntheticEvent<NativeScrollEvent>) => {
-                reportScroll(e.nativeEvent.contentOffset.y);
-              }}
-              scrollEventThrottle={16}
-              onEndReached={() => {
-                if (!followingHasMore || followingLoadingMore.current) return;
-                followingLoadingMore.current = true;
-                fetchFollowingFeed(followingPage + 1);
-              }}
-              onEndReachedThreshold={0.5}
+              onScroll={handleScroll}
+              scrollEventThrottle={200}
               refreshControl={
-                <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.text} />
+                <RefreshControl
+                  refreshing={refreshing}
+                  onRefresh={handleRefresh}
+                />
               }
-              contentContainerStyle={{ paddingBottom: tabBarHeight }}
-              ListFooterComponent={
-                followingHasMore && posts.length > 0 ? (
-                  <ActivityIndicator style={{ paddingVertical: 20 }} color={colors.textTertiary} />
-                ) : null
-              }
-            />
+              contentContainerStyle={[
+                styles.scrollContent,
+                { paddingBottom: tabBarHeight },
+              ]}
+            >
+              {!isAuthenticated ? (
+                /* ── Not signed in / guest ── */
+                <View style={styles.empty}>
+                  <Ionicons name="person-outline" size={52} color={colors.textTertiary} />
+                  <Text style={[styles.emptyTitle, { color: colors.text }]}>
+                    SIGN IN TO FOLLOW
+                  </Text>
+                  <Text style={[styles.emptySubtitle, { color: colors.textTertiary }]}>
+                    Create an account to follow brands and see their latest posts here.
+                  </Text>
+                  <View style={styles.emptyActions}>
+                    <TouchableOpacity
+                      style={[styles.ctaPrimary, { backgroundColor: colors.text }]}
+                      onPress={() => router.push("/auth/login" as any)}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={[styles.ctaText, { color: colors.background }]}>
+                        SIGN IN →
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.ctaOutline, { borderColor: colors.text }]}
+                      onPress={() => router.push("/auth/register" as any)}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={[styles.ctaText, { color: colors.text }]}>
+                        CREATE ACCOUNT
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ) : posts.length > 0 ? (
+                <>
+                  <MasonryGrid
+                    posts={posts}
+                    imageHeights={imageHeights}
+                    colors={colors}
+                    onPostPress={postPress}
+                    onLike={handleLike}
+                    onBrandPress={brandPress}
+                  />
+                  {followingHasMore && (
+                    <ActivityIndicator
+                      style={{ paddingVertical: 20 }}
+                      color={colors.textTertiary}
+                    />
+                  )}
+                </>
+              ) : (
+                /* ── Signed in but no followed brands ── */
+                <View style={styles.empty}>
+                  <Ionicons name="compass-outline" size={52} color={colors.textTertiary} />
+                  <Text style={[styles.emptyTitle, { color: colors.text }]}>
+                    NO POSTS YET
+                  </Text>
+                  <Text style={[styles.emptySubtitle, { color: colors.textTertiary }]}>
+                    Follow brands you love to see their posts here.
+                  </Text>
+                  <View style={styles.emptyActions}>
+                    <TouchableOpacity
+                      style={[styles.ctaPrimary, { backgroundColor: colors.text }]}
+                      onPress={() => handleTabChange("forYou")}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={[styles.ctaText, { color: colors.background }]}>
+                        FOR YOU →
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.ctaOutline, { borderColor: colors.text }]}
+                      onPress={() => router.push("/(tabs)/brands" as any)}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={[styles.ctaText, { color: colors.text }]}>
+                        EXPLORE BRANDS
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              )}
+            </ScrollView>
           </View>
 
-          {/* Page 1: For You */}
+          {/* ── Page 1: For You ── */}
           <View style={{ width: SCREEN_WIDTH, flex: 1 }}>
-            <FlatList
+            <ScrollView
               ref={forYouRef}
-              data={forYouPosts}
-              keyExtractor={(item) => item.id.toString()}
-              renderItem={renderPost}
-              ListHeaderComponent={storiesHeader}
-              ListEmptyComponent={
+              showsVerticalScrollIndicator={false}
+              onScroll={handleScroll}
+              scrollEventThrottle={200}
+              refreshControl={
+                <RefreshControl
+                  refreshing={refreshing}
+                  onRefresh={handleRefresh}
+                />
+              }
+              contentContainerStyle={[
+                styles.scrollContent,
+                { paddingBottom: tabBarHeight },
+              ]}
+            >
+              {forYouPosts.length > 0 ? (
+                <>
+                  <MasonryGrid
+                    posts={forYouPosts}
+                    imageHeights={imageHeights}
+                    colors={colors}
+                    onPostPress={postPress}
+                    onLike={handleLike}
+                    onBrandPress={brandPress}
+                  />
+                  {forYouHasMore && (
+                    <ActivityIndicator
+                      style={{ paddingVertical: 20 }}
+                      color={colors.textTertiary}
+                    />
+                  )}
+                </>
+              ) : (
                 <View style={styles.empty}>
-                  <Text style={[styles.emptyTitle, { color: colors.text }]}>NOTHING HERE YET</Text>
-                  <Text style={[styles.emptySubtitle, { color: colors.textTertiary }]}>
+                  <Ionicons
+                    name="images-outline"
+                    size={48}
+                    color={colors.textTertiary}
+                  />
+                  <Text style={[styles.emptyTitle, { color: colors.text }]}>
+                    NOTHING HERE YET
+                  </Text>
+                  <Text
+                    style={[
+                      styles.emptySubtitle,
+                      { color: colors.textTertiary },
+                    ]}
+                  >
                     Check back soon — posts will appear here.
                   </Text>
                 </View>
-              }
-              showsVerticalScrollIndicator={false}
-              onScroll={(e: NativeSyntheticEvent<NativeScrollEvent>) => {
-                reportScroll(e.nativeEvent.contentOffset.y);
-              }}
-              scrollEventThrottle={16}
-              onEndReached={() => {
-                if (!forYouHasMore || forYouLoadingMore.current) return;
-                forYouLoadingMore.current = true;
-                fetchForYouFeed(forYouPage + 1);
-              }}
-              onEndReachedThreshold={0.5}
-              refreshControl={
-                <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.text} />
-              }
-              contentContainerStyle={{ paddingBottom: tabBarHeight }}
-              ListFooterComponent={
-                forYouHasMore && forYouPosts.length > 0 ? (
-                  <ActivityIndicator style={{ paddingVertical: 20 }} color={colors.textTertiary} />
-                ) : null
-              }
-            />
+              )}
+            </ScrollView>
           </View>
         </ScrollView>
       )}
@@ -652,51 +680,145 @@ export default function FeedScreen() {
 }
 
 const styles = StyleSheet.create({
-  empty: {
-    padding: 40,
+  container: { flex: 1 },
+
+  // Tab switcher
+  tabBar: {
+    flexDirection: "row",
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  tabItem: {
+    flex: 1,
     alignItems: "center",
-    gap: 12,
+    paddingVertical: 14,
+    position: "relative",
+  },
+  tabLabel: {
+    fontSize: 15,
+    fontWeight: "500",
+    letterSpacing: 0.1,
+  },
+  tabLabelActive: { fontWeight: "700" },
+  tabUnderline: {
+    position: "absolute",
+    bottom: 0,
+    left: "25%",
+    right: "25%",
+    height: 2,
+    borderRadius: 1,
+  },
+
+  // Scroll / masonry
+  scrollContent: {
+    paddingHorizontal: PADDING,
+    paddingTop: PADDING,
+  },
+  masonryRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+  },
+  column: { width: COLUMN_WIDTH },
+  columnLeft: { marginRight: COLUMN_GAP },
+
+  // Pin card
+  pin: {
+    marginBottom: COLUMN_GAP,
+    overflow: "hidden",
+    borderRadius: 12,
+  },
+  pinImageWrap: {
+    width: COLUMN_WIDTH,
+    overflow: "hidden",
+    borderRadius: 12,
+  },
+  pinImage: { width: COLUMN_WIDTH },
+  pinInfo: {
+    paddingHorizontal: 6,
+    paddingVertical: 8,
+  },
+  pinCaption: {
+    fontSize: 12,
+    fontWeight: "600",
+    lineHeight: 16,
+  },
+  pinPrice: {
+    fontSize: 12,
+    fontWeight: "800",
+    marginTop: 3,
+  },
+  pinBottom: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginTop: 6,
+  },
+  pinBrandRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+    marginRight: 8,
+  },
+  pinBrandAvatar: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    justifyContent: "center",
+    alignItems: "center",
+    overflow: "hidden",
+  },
+  pinBrandInitial: { fontSize: 9, fontWeight: "800" },
+  pinBrandName: { fontSize: 11, marginLeft: 4, flex: 1 },
+
+  // Empty state
+  empty: {
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 10,
+    paddingHorizontal: 40,
+    paddingTop: 80,
+    paddingBottom: 32,
   },
   emptyTitle: {
-    fontSize: 16,
+    fontSize: 22,
     fontWeight: "800",
-    letterSpacing: 2,
+    letterSpacing: -0.5,
     textTransform: "uppercase",
   },
   emptySubtitle: {
-    fontSize: 13,
+    fontSize: 12,
     textAlign: "center",
-    lineHeight: 20,
-    marginTop: 4,
+    letterSpacing: 0.5,
   },
   emptyActions: {
-    width: "100%",
+    flexDirection: "row",
     gap: 10,
     marginTop: 12,
   },
   ctaPrimary: {
-    height: 52,
-    alignItems: "center",
-    justifyContent: "center",
+    paddingHorizontal: 20,
+    paddingVertical: 12,
   },
   ctaOutline: {
-    height: 52,
-    alignItems: "center",
-    justifyContent: "center",
+    paddingHorizontal: 20,
+    paddingVertical: 12,
     borderWidth: 1,
   },
   ctaText: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: "700",
-    letterSpacing: 2,
+    letterSpacing: 1.5,
+    textTransform: "uppercase",
   },
+
+  // FAB
   fab: {
     position: "absolute",
-    right: 20,
     bottom: 100,
+    right: 20,
     width: 52,
     height: 52,
-    alignItems: "center",
+    borderRadius: 0,
     justifyContent: "center",
+    alignItems: "center",
   },
 });
