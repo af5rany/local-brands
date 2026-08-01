@@ -14,6 +14,7 @@ import {
   Keyboard,
   Image,
   TouchableOpacity,
+  Linking,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
@@ -332,10 +333,20 @@ const RegisterScreen = () => {
             onToggle: () => setShowConfirm(!showConfirm),
           })}
 
-          {/* Brand Owner note */}
-          <Text style={[styles.noteText, { color: colors.textTertiary }]}>
-            WANT TO SELL? EMAIL admin@localbrands.com TO BECOME A BRAND OWNER.
-          </Text>
+          {/* Brand Owner CTA */}
+          <TouchableOpacity
+            style={[styles.brandOwnerRow, { borderColor: colors.border }]}
+            onPress={() => Linking.openURL("mailto:admin@localbrands.com")}
+            activeOpacity={0.7}
+            disabled={isAnyLoading}
+          >
+            <Ionicons name="storefront-outline" size={18} color={colors.text} />
+            <View style={styles.brandOwnerMeta}>
+              <Text style={[styles.brandOwnerTitle, { color: colors.text }]}>WANT TO SELL?</Text>
+              <Text style={[styles.brandOwnerSub, { color: colors.textTertiary }]}>BECOME A BRAND OWNER</Text>
+            </View>
+            <Text style={[styles.brandOwnerArrow, { color: colors.text }]}>→</Text>
+          </TouchableOpacity>
 
           {/* REGISTER button */}
           <Pressable
@@ -482,15 +493,20 @@ const styles = StyleSheet.create({
   showHide: { fontSize: 9, fontWeight: "500", letterSpacing: 2, textTransform: "uppercase" },
   errorText: { fontSize: 9, fontWeight: "500", letterSpacing: 1, marginTop: 6, textTransform: "uppercase" },
 
-  // ── Note ──────────────────────────────────
-  noteText: {
-    fontSize: 9,
-    fontWeight: "500",
-    letterSpacing: 1.5,
-    textTransform: "uppercase",
-    lineHeight: 16,
+  // ── Brand Owner CTA ───────────────────────
+  brandOwnerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+    borderWidth: 1,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
     marginBottom: 28,
   },
+  brandOwnerMeta: { flex: 1, gap: 3 },
+  brandOwnerTitle: { fontSize: 11, fontWeight: "700", letterSpacing: 1.5, textTransform: "uppercase" },
+  brandOwnerSub: { fontSize: 9, fontWeight: "500", letterSpacing: 1, textTransform: "uppercase" },
+  brandOwnerArrow: { fontSize: 14 },
 
   // ── Primary button ────────────────────────
   button: {
