@@ -142,7 +142,7 @@ const MonolithProductCard = React.memo(
 
           {/* SOLD OUT overlay */}
           {isSoldOut && (
-            <View style={cardStyles.soldOutOverlay}>
+            <View style={cardStyles.soldOutOverlay} pointerEvents="none">
               <Text style={cardStyles.soldOutText}>SOLD OUT</Text>
             </View>
           )}
@@ -1182,6 +1182,11 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     borderBottomColor: colors.text,
     backgroundColor: colors.background,
     zIndex: 100,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    elevation: 0,
   },
   searchRow: {
     flexDirection: "row",

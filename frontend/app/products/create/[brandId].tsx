@@ -1008,7 +1008,7 @@ const createStyles = (colors: ThemeColors) =>
     backCircle: {
       width: 40,
       height: 40,
-      borderRadius: 20,
+      borderRadius: 0,
       alignItems: "center",
       justifyContent: "center",
     },

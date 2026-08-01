@@ -89,23 +89,49 @@ const ProductDetailScreen = () => {
   const headerTranslateY = useSharedValue(0);
   const headerHeightRef = useRef(60);
   const lastScrollYRef = useRef(0);
-  const SCROLL_THRESHOLD = 1;
+  const upAccRef = useRef(0);
+  const isHeaderHiddenRef = useRef(false);
+  const SHOW_THRESHOLD = 20;
 
   const headerAnimStyle = useAnimatedStyle(() => ({
-    marginTop: headerTranslateY.value,
+    transform: [{ translateY: headerTranslateY.value }],
+    marginBottom: headerTranslateY.value,
   }));
 
-  const handleScrollForHeader = (y: number) => {
-    const diff = y - lastScrollYRef.current;
-    lastScrollYRef.current = y;
+  const handleScrollForHeader = (y: number, contentHeight?: number, layoutHeight?: number) => {
+    // At top — always show
     if (y <= 0) {
+      upAccRef.current = 0;
+      isHeaderHiddenRef.current = false;
       headerTranslateY.value = withTiming(0, { duration: 180 });
+      lastScrollYRef.current = y;
       return;
     }
-    if (diff > SCROLL_THRESHOLD) {
-      headerTranslateY.value = withTiming(-headerHeightRef.current, { duration: 90 });
-    } else if (diff < -SCROLL_THRESHOLD) {
+    // Near bottom — show header, stop toggling (prevents bounce glitch)
+    if (contentHeight && layoutHeight && y >= contentHeight - layoutHeight - 20) {
+      upAccRef.current = 0;
+      isHeaderHiddenRef.current = false;
       headerTranslateY.value = withTiming(0, { duration: 180 });
+      lastScrollYRef.current = y;
+      return;
+    }
+    const diff = y - lastScrollYRef.current;
+    lastScrollYRef.current = y;
+    if (diff > 0) {
+      // Any downward scroll → hide immediately
+      upAccRef.current = 0;
+      if (!isHeaderHiddenRef.current) {
+        isHeaderHiddenRef.current = true;
+        headerTranslateY.value = withTiming(-headerHeightRef.current, { duration: 120 });
+      }
+    } else if (diff < 0) {
+      // Upward scroll — need SHOW_THRESHOLD to show (avoids accidental show)
+      upAccRef.current += Math.abs(diff);
+      if (upAccRef.current >= SHOW_THRESHOLD && isHeaderHiddenRef.current) {
+        upAccRef.current = 0;
+        isHeaderHiddenRef.current = false;
+        headerTranslateY.value = withTiming(0, { duration: 180 });
+      }
     }
   };
 
@@ -497,7 +523,7 @@ const ProductDetailScreen = () => {
   };
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]} edges={["top"]}>
+    <View style={[styles.safeArea, { backgroundColor: colors.background }]}>
       {/* Try On Modal */}
       {showTryOn && displayImages.length > 0 && (
         <TryOnModal
@@ -577,8 +603,9 @@ const ProductDetailScreen = () => {
         </View>
       )}
 
+      <View style={{ height: insets.top, backgroundColor: colors.background, zIndex: 200 }} />
       <ReAnimated.View
-        style={headerAnimStyle}
+        style={[{ overflow: "hidden", zIndex: 200 }, headerAnimStyle]}
         onLayout={(e) => { headerHeightRef.current = e.nativeEvent.layout.height; }}
       >
         <Header showBack={true} />
@@ -587,7 +614,7 @@ const ProductDetailScreen = () => {
       {/* Sticky product name bar — fades in after scrolling past hero */}
       <Animated.View
         pointerEvents="none"
-        style={[styles.stickyNameBar, { opacity: stickyTitleOpacity, backgroundColor: colors.background, borderBottomColor: colors.borderLight }]}
+        style={[styles.stickyNameBar, { top: insets.top, opacity: stickyTitleOpacity, backgroundColor: colors.background, borderBottomColor: colors.borderLight }]}
       >
         <Text style={[styles.stickyNameText, { color: colors.text }]} numberOfLines={1}>
           {product.name?.toUpperCase()}
@@ -600,11 +627,16 @@ const ProductDetailScreen = () => {
           style={{ flex: 1 }}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingBottom: 24 }}
+          bounces={false}
+          overScrollMode="never"
           onScroll={Animated.event(
             [{ nativeEvent: { contentOffset: { y: scrollY } } }],
             {
               useNativeDriver: true,
-              listener: (e: any) => handleScrollForHeader(e.nativeEvent.contentOffset.y),
+              listener: (e: any) => {
+                const { contentOffset, contentSize, layoutMeasurement } = e.nativeEvent;
+                handleScrollForHeader(contentOffset.y, contentSize.height, layoutMeasurement.height);
+              },
             }
           )}
           scrollEventThrottle={16}
@@ -1220,7 +1252,7 @@ const ProductDetailScreen = () => {
           )}
         </View>
       </View>
-    </SafeAreaView>
+    </View>
   );
 };
 

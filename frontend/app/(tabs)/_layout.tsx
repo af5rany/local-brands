@@ -42,14 +42,15 @@ function TabLayoutInner() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
+      {/* Permanent status-bar spacer — never slides away with the header */}
+      <View style={{ height: insets.top, backgroundColor: colors.surface }} />
       <Animated.View style={[{ zIndex: 100, overflow: "hidden" }, headerAnimStyle]}>
-        <SafeAreaView
-          edges={["top"]}
+        <View
           style={{ backgroundColor: colors.surface }}
           onLayout={(e) => setHeaderHeight(e.nativeEvent.layout.height)}
         >
           <Header />
-        </SafeAreaView>
+        </View>
       </Animated.View>
       <Tabs
         screenOptions={{

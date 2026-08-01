@@ -1,5 +1,6 @@
 import "../global.css";
 import { Stack, useRouter, useSegments } from "expo-router";
+import { StatusBar } from "expo-status-bar";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
 import { BrandProvider } from "@/context/BrandContext";
 import { CartProvider } from "@/context/CartContext";
@@ -388,6 +389,7 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
+      <StatusBar style="auto" />
       <SafeAreaProvider>
         <GlobalErrorBoundary>
           <ThemeProvider>
