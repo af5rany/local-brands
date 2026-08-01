@@ -18,8 +18,16 @@ export interface TrackingResult {
 @Injectable()
 export class CarrierTrackingService {
   private readonly logger = new Logger(CarrierTrackingService.name);
+  private readonly carrierHandlers: Map<string, (trackingNumber: string) => Promise<TrackingResult>>;
 
-  constructor(private configService: ConfigService) {}
+  constructor(private configService: ConfigService) {
+    this.carrierHandlers = new Map([
+      ['FEDEX', (tn) => this.fetchFedEx(tn)],
+      ['UPS',   (tn) => this.fetchUPS(tn)],
+      ['USPS',  (tn) => this.fetchUSPS(tn)],
+      ['DHL',   (tn) => this.fetchDHL(tn)],
+    ]);
+  }
 
   async getTrackingStatus(
     carrier: string,
@@ -29,32 +37,16 @@ export class CarrierTrackingService {
       return { carrier, trackingNumber: '', status: 'No tracking number provided', events: [] };
     }
 
+    const handler = this.carrierHandlers.get(carrier?.toUpperCase());
+    if (!handler) {
+      return { carrier: carrier || 'OTHER', trackingNumber, status: 'Manual tracking — visit carrier website', events: [] };
+    }
+
     try {
-      switch (carrier?.toUpperCase()) {
-        case 'FEDEX':
-          return await this.fetchFedEx(trackingNumber);
-        case 'UPS':
-          return await this.fetchUPS(trackingNumber);
-        case 'USPS':
-          return await this.fetchUSPS(trackingNumber);
-        case 'DHL':
-          return await this.fetchDHL(trackingNumber);
-        default:
-          return {
-            carrier: carrier || 'OTHER',
-            trackingNumber,
-            status: 'Manual tracking — visit carrier website',
-            events: [],
-          };
-      }
-    } catch (err) {
+      return await handler(trackingNumber);
+    } catch (err: any) {
       this.logger.warn(`Carrier tracking failed for ${carrier}/${trackingNumber}: ${err.message}`);
-      return {
-        carrier,
-        trackingNumber,
-        status: 'Tracking unavailable',
-        events: [],
-      };
+      return { carrier, trackingNumber, status: 'Tracking unavailable', events: [] };
     }
   }
 

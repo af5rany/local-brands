@@ -28,6 +28,14 @@ interface AuthProviderProps {
   children: ReactNode;
 }
 
+const fetchUserById = async (userId: number, authToken: string): Promise<any> => {
+  const response = await fetch(`${getApiUrl()}/users/${userId}`, {
+    headers: { Authorization: `Bearer ${authToken}` },
+  });
+  if (!response.ok) throw new Error(`Failed to fetch user: ${response.status}`);
+  return response.json();
+};
+
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [token, setToken] = useState<string | null>(null);
   const [user, setUser] = useState<any>(null); // User data
@@ -82,30 +90,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
           setToken(savedToken);
 
-          // Decode userId from token
-          const decodedToken = jwtDecode<JwtPayload>(savedToken);
-          const userId = decodedToken.id;
-
-          // Fetch user data using userId
-          const response = await fetch(`${getApiUrl()}/users/${userId}`, {
-            headers: {
-              Authorization: `Bearer ${savedToken}`,
-            },
-          });
-
-          if (!response.ok) {
-            if (response.status === 401) {
-              // Token might be invalid on server side
+          const { id: userId } = jwtDecode<JwtPayload>(savedToken);
+          try {
+            const userData = await fetchUserById(userId, savedToken);
+            setUser(userData);
+          } catch (err: any) {
+            if (err.message?.includes('401')) {
               console.log("Token rejected by server");
               await clearExpiredToken();
               setLoading(false);
               return;
             }
-            throw new Error("Failed to fetch user data");
+            throw err;
           }
-
-          const userData = await response.json();
-          setUser(userData); // Set the fetched user data
         }
       } catch (error) {
         console.error("Failed to load token or user data", error);
@@ -149,23 +146,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setToken(newToken);
       await AsyncStorage.setItem("token", newToken);
 
-      // Decode userId from token
-      const decodedToken = jwtDecode<JwtPayload>(newToken);
-      const userId = decodedToken.id;
-
-      // Fetch user data using userId
-      const response = await fetch(`${getApiUrl()}/users/${userId}`, {
-        headers: {
-          Authorization: `Bearer ${newToken}`,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to fetch user data");
-      }
-
-      const userData = await response.json();
-      setUser(userData); // Set the fetched user data
+      const { id: userId } = jwtDecode<JwtPayload>(newToken);
+      const userData = await fetchUserById(userId, newToken);
+      setUser(userData);
     } catch (error) {
       console.error("Failed to login", error);
       throw error; // Re-throw so calling component can handle
@@ -174,21 +157,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const refreshUser = async () => {
     if (!token) return;
-
     try {
-      const decodedToken = jwtDecode<JwtPayload>(token);
-      const userId = decodedToken.id;
-
-      const response = await fetch(`${getApiUrl()}/users/${userId}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (response.ok) {
-        const userData = await response.json();
-        setUser(userData);
-      }
+      const { id: userId } = jwtDecode<JwtPayload>(token);
+      const userData = await fetchUserById(userId, token);
+      setUser(userData);
     } catch (error) {
       console.error("Failed to refresh user data", error);
     }
