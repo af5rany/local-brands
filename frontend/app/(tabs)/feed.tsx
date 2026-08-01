@@ -219,8 +219,8 @@ const MasonryGrid: React.FC<{
 // ── Tab Switcher — Following first, For You second ──
 const TAB_ORDER: ActiveTab[] = ["following", "forYou"];
 const TAB_LABELS: Record<ActiveTab, string> = {
-  following: "Following",
-  forYou: "For You",
+  following: "FOLLOWING",
+  forYou: "FOR YOU",
 };
 
 const TabSwitcher: React.FC<{
@@ -455,7 +455,7 @@ export default function FeedScreen() {
 
   const handleScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
     const { layoutMeasurement, contentOffset, contentSize } = e.nativeEvent;
-    reportScroll(contentOffset.y);
+    reportScroll(contentOffset.y, contentSize.height, layoutMeasurement.height);
     if (
       contentSize.height - layoutMeasurement.height - contentOffset.y <
       400
@@ -813,10 +813,10 @@ const styles = StyleSheet.create({
   // FAB
   fab: {
     position: "absolute",
-    bottom: 110,
+    bottom: 100,
     right: 20,
-    width: 56,
-    height: 56,
+    width: 52,
+    height: 52,
     borderRadius: 0,
     justifyContent: "center",
     alignItems: "center",

@@ -10,18 +10,16 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  Image,
   ActivityIndicator,
   Keyboard,
   useColorScheme,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
 import * as AppleAuthentication from "expo-apple-authentication";
+import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/context/AuthContext";
 import getApiUrl from "@/helpers/getApiUrl";
 import { useRouter } from "expo-router";
 import { useThemeColors } from "@/hooks/useThemeColor";
-import Header from "@/components/Header";
 import { useSocialAuth } from "@/hooks/useSocialAuth";
 
 const LoginScreen = () => {
@@ -106,9 +104,6 @@ const LoginScreen = () => {
       edges={["bottom"]}
       style={[styles.safeArea, { backgroundColor: colors.background }]}
     >
-      <SafeAreaView edges={["top"]} style={{ backgroundColor: colors.surface }}>
-        <Header />
-      </SafeAreaView>
       <KeyboardAvoidingView
         style={styles.container}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
@@ -116,42 +111,24 @@ const LoginScreen = () => {
         <ScrollView
           contentContainerStyle={styles.scroll}
           keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
         >
-          <Image
-            source={require("@/assets/images/monolith.png")}
-            style={styles.logo}
-            resizeMode="contain"
-          />
-          <Text style={[styles.title, { color: colors.text }]}>
-            Welcome Back
-          </Text>
-          <Text style={[styles.subtitle, { color: colors.textTertiary }]}>
-            Sign in to continue
-          </Text>
+          {/* ── Wordmark ── */}
+          <View style={styles.wordmarkBlock}>
+            <Text style={[styles.wordmark, { color: colors.text }]}>LOCAL BRANDS</Text>
+            <View style={[styles.wordmarkDivider, { backgroundColor: colors.text }]} />
+            <Text style={[styles.wordmarkSub, { color: colors.textTertiary }]}>EST · MMXXVI</Text>
+          </View>
 
-          {/* Email */}
+          <Text style={[styles.sectionLabel, { color: colors.textTertiary }]}>SIGN IN</Text>
+
+          {/* ── Email field (underline) ── */}
           <View style={styles.fieldGroup}>
-            <Text style={[styles.label, { color: colors.textSecondary }]}>
-              Email
-            </Text>
-            <View
-              style={[
-                styles.inputWrapper,
-                {
-                  backgroundColor: colors.surfaceRaised,
-                  borderColor: colors.border,
-                },
-              ]}
-            >
-              <Ionicons
-                name="mail-outline"
-                size={19}
-                color={colors.textTertiary}
-                style={styles.inputIcon}
-              />
+            <Text style={[styles.label, { color: colors.textTertiary }]}>EMAIL</Text>
+            <View style={[styles.underlineField, { borderBottomColor: colors.text }]}>
               <TextInput
                 style={[styles.input, { color: colors.text }]}
-                placeholder="you@example.com"
+                placeholder="hello@example.com"
                 placeholderTextColor={colors.textTertiary}
                 value={email}
                 onChangeText={setEmail}
@@ -162,28 +139,12 @@ const LoginScreen = () => {
             </View>
           </View>
 
-          {/* Password */}
+          {/* ── Password field (underline) ── */}
           <View style={styles.fieldGroup}>
-            <Text style={[styles.label, { color: colors.textSecondary }]}>
-              Password
-            </Text>
-            <View
-              style={[
-                styles.inputWrapper,
-                {
-                  backgroundColor: colors.surfaceRaised,
-                  borderColor: colors.border,
-                },
-              ]}
-            >
-              <Ionicons
-                name="lock-closed-outline"
-                size={19}
-                color={colors.textTertiary}
-                style={styles.inputIcon}
-              />
+            <Text style={[styles.label, { color: colors.textTertiary }]}>PASSWORD</Text>
+            <View style={[styles.underlineField, { borderBottomColor: colors.text }]}>
               <TextInput
-                style={[styles.input, { color: colors.text }]}
+                style={[styles.input, { color: colors.text, flex: 1 }]}
                 placeholder="••••••••"
                 placeholderTextColor={colors.textTertiary}
                 secureTextEntry={!showPassword}
@@ -191,170 +152,89 @@ const LoginScreen = () => {
                 onChangeText={setPassword}
                 editable={!isAnyLoading}
               />
-              <Pressable
-                onPress={() => setShowPassword(!showPassword)}
-                style={styles.eyeBtn}
-              >
-                <Ionicons
-                  name={showPassword ? "eye-off-outline" : "eye-outline"}
-                  size={20}
-                  color={colors.textTertiary}
-                />
+              <Pressable onPress={() => setShowPassword(!showPassword)} style={styles.eyeBtn}>
+                <Text style={[styles.showHide, { color: colors.textTertiary }]}>
+                  {showPassword ? "HIDE" : "SHOW"}
+                </Text>
               </Pressable>
             </View>
           </View>
 
-          {/* Forgot Password (inline) */}
+          {/* Forgot */}
           <Pressable
-            onPress={() =>
-              !isAnyLoading && router.push("/auth/forgot-password")
-            }
+            onPress={() => !isAnyLoading && router.push("/auth/forgot-password")}
             disabled={isAnyLoading}
             style={styles.forgotRow}
           >
-            <Text style={[styles.forgotText, { color: colors.primary }]}>
-              Forgot Password?
-            </Text>
+            <Text style={[styles.forgotText, { color: colors.text }]}>FORGOT PASSWORD ?</Text>
           </Pressable>
 
-          {/* Login Button */}
+          {/* SIGN IN button */}
           <Pressable
-            style={[
-              styles.button,
-              { backgroundColor: colors.primary },
-              loading && { opacity: 0.7 },
-            ]}
+            style={[styles.button, { backgroundColor: colors.text }, loading && { opacity: 0.7 }]}
             onPress={handleLogin}
             disabled={isAnyLoading}
           >
             {loading ? (
-              <ActivityIndicator color={colors.primaryForeground} />
+              <ActivityIndicator color={colors.background} />
             ) : (
-              <Text
-                style={[styles.buttonText, { color: colors.primaryForeground }]}
-              >
-                Sign In
-              </Text>
+              <Text style={[styles.buttonText, { color: colors.background }]}>SIGN IN</Text>
             )}
           </Pressable>
 
-          {/* Divider */}
-          <View style={styles.divider}>
-            <View
-              style={[styles.dividerLine, { backgroundColor: colors.border }]}
-            />
-            <Text style={[styles.dividerText, { color: colors.textTertiary }]}>
-              or
-            </Text>
-            <View
-              style={[styles.dividerLine, { backgroundColor: colors.border }]}
-            />
-          </View>
-
-          {/* Guest Login */}
+          {/* CONTINUE AS GUEST */}
           <Pressable
-            style={[
-              styles.guestButton,
-              { backgroundColor: colors.surface, borderColor: colors.border },
-              guestLoading && { opacity: 0.7 },
-            ]}
+            style={[styles.outlineButton, { borderColor: colors.border }, guestLoading && { opacity: 0.7 }]}
             onPress={handleGuestLogin}
             disabled={isAnyLoading}
           >
             {guestLoading ? (
-              <ActivityIndicator color={colors.primary} />
+              <ActivityIndicator color={colors.text} />
             ) : (
-              <>
-                <Ionicons
-                  name="person-outline"
-                  size={18}
-                  color={colors.textSecondary}
-                />
-                <Text
-                  style={[
-                    styles.guestButtonText,
-                    { color: colors.textSecondary },
-                  ]}
-                >
-                  Continue as Guest
-                </Text>
-              </>
+              <Text style={[styles.outlineButtonText, { color: colors.text }]}>CONTINUE AS GUEST</Text>
             )}
           </Pressable>
 
-          {/* Social Auth Divider */}
+          {/* ── OR divider ── */}
           <View style={styles.divider}>
-            <View
-              style={[styles.dividerLine, { backgroundColor: colors.border }]}
-            />
-            <Text style={[styles.dividerText, { color: colors.textTertiary }]}>
-              Or continue with
-            </Text>
-            <View
-              style={[styles.dividerLine, { backgroundColor: colors.border }]}
-            />
+            <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
+            <Text style={[styles.dividerText, { color: colors.textTertiary }]}>OR</Text>
+            <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
           </View>
 
-          {/* Social Auth Buttons */}
-          <Pressable
-            style={[
-              styles.socialButton,
-              {
-                backgroundColor: colors.surfaceRaised,
-                borderColor: colors.border,
-              },
-              googleLoading && { opacity: 0.7 },
-            ]}
-            onPress={handleGoogle}
-            disabled={isAnyLoading}
-          >
-            {googleLoading ? (
-              <ActivityIndicator color={colors.text} />
-            ) : (
-              <>
-                <Ionicons
-                  name="logo-google"
-                  size={20}
-                  color={colors.text}
-                  style={styles.socialIcon}
-                />
-                <Text style={[styles.socialButtonText, { color: colors.text }]}>
-                  Continue with Google
-                </Text>
-              </>
-            )}
-          </Pressable>
+          {/* ── Social buttons (side by side) ── */}
+          <View style={styles.socialRow}>
+            <Pressable
+              style={[styles.socialButton, { borderColor: colors.text }, googleLoading && { opacity: 0.7 }]}
+              onPress={handleGoogle}
+              disabled={isAnyLoading}
+            >
+              {googleLoading ? (
+                <ActivityIndicator color={colors.text} size="small" />
+              ) : (
+                <>
+                  <Ionicons name="logo-google" size={14} color="#DB4437" />
+                  <Text style={[styles.socialButtonText, { color: colors.text }]}>GOOGLE</Text>
+                </>
+              )}
+            </Pressable>
+            <Pressable
+              style={[styles.socialButton, { borderColor: colors.text }, facebookLoading && { opacity: 0.7 }]}
+              onPress={handleFacebook}
+              disabled={isAnyLoading}
+            >
+              {facebookLoading ? (
+                <ActivityIndicator color={colors.text} size="small" />
+              ) : (
+                <>
+                  <Ionicons name="logo-facebook" size={14} color="#1877F2" />
+                  <Text style={[styles.socialButtonText, { color: colors.text }]}>FACEBOOK</Text>
+                </>
+              )}
+            </Pressable>
+          </View>
 
-          <Pressable
-            style={[
-              styles.socialButton,
-              {
-                backgroundColor: colors.surfaceRaised,
-                borderColor: colors.border,
-              },
-              facebookLoading && { opacity: 0.7 },
-            ]}
-            onPress={handleFacebook}
-            disabled={isAnyLoading}
-          >
-            {facebookLoading ? (
-              <ActivityIndicator color={colors.text} />
-            ) : (
-              <>
-                <Ionicons
-                  name="logo-facebook"
-                  size={20}
-                  color={colors.text}
-                  style={styles.socialIcon}
-                />
-                <Text style={[styles.socialButtonText, { color: colors.text }]}>
-                  Continue with Facebook
-                </Text>
-              </>
-            )}
-          </Pressable>
-
-          {/* Apple Sign-In — iOS only, required by App Store Guideline 4.8 */}
+          {/* Apple Sign-In — iOS only */}
           {Platform.OS === "ios" && (
             <View style={styles.appleButtonWrapper} pointerEvents={appleLoading ? "none" : "auto"}>
               <AppleAuthentication.AppleAuthenticationButton
@@ -379,23 +259,11 @@ const LoginScreen = () => {
 
           {/* Footer */}
           <View style={styles.footer}>
-            <Text style={[styles.footerText, { color: colors.textTertiary }]}>
-              Don't have an account?
+            <Text style={[styles.footerText, { color: colors.textSecondary }]}>
+              NEW TO LOCAL BRANDS ?{"  "}
             </Text>
-            <Pressable
-              onPress={() => !isAnyLoading && router.push("/auth/register")}
-              disabled={isAnyLoading}
-            >
-              <Text
-                style={[
-                  styles.footerLink,
-                  { color: colors.primary },
-                  isAnyLoading && { color: colors.textTertiary },
-                ]}
-              >
-                {" "}
-                Sign Up
-              </Text>
+            <Pressable onPress={() => !isAnyLoading && router.push("/auth/register")} disabled={isAnyLoading}>
+              <Text style={[styles.footerLink, { color: colors.text }]}>REGISTER</Text>
             </Pressable>
           </View>
         </ScrollView>
@@ -406,103 +274,129 @@ const LoginScreen = () => {
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1 },
-  container: { flex: 1, justifyContent: "center" },
+  container: { flex: 1 },
   scroll: {
     flexGrow: 1,
-    padding: 24,
-    justifyContent: "center",
-    alignItems: "center",
+    paddingHorizontal: 28,
+    paddingTop: 70,
+    paddingBottom: 40,
   },
-  logo: { width: 120, height: 70, marginBottom: 28 },
-  title: {
-    fontSize: 26,
-    fontWeight: "800",
-    marginBottom: 6,
-    // letterSpacing: -0.3,
-  },
-  subtitle: { fontSize: 15, marginBottom: 36, fontWeight: "500" },
 
-  // ── Fields ────────────────────────────────
-  fieldGroup: { width: "100%", marginBottom: 18, gap: 7 },
-  label: { fontSize: 13, fontWeight: "600", // letterSpacing: 0.2 
+  // ── Wordmark ──────────────────────────────
+  wordmarkBlock: {
+    alignItems: "center",
+    marginBottom: 64,
   },
-  inputWrapper: {
+  wordmark: {
+    fontSize: 28,
+    fontWeight: "900",
+    letterSpacing: -1,
+    lineHeight: 30,
+  },
+  wordmarkDivider: {
+    width: 28,
+    height: 1,
+    marginTop: 12,
+    marginBottom: 14,
+  },
+  wordmarkSub: {
+    fontSize: 9,
+    letterSpacing: 3,
+    textTransform: "uppercase",
+    fontWeight: "500",
+  },
+  sectionLabel: {
+    fontSize: 9,
+    letterSpacing: 2,
+    textTransform: "uppercase",
+    fontWeight: "600",
+    marginBottom: 24,
+  },
+
+  // ── Fields (underline style) ──────────────
+  fieldGroup: { width: "100%", marginBottom: 24 },
+  label: {
+    fontSize: 9,
+    fontWeight: "500",
+    letterSpacing: 2,
+    textTransform: "uppercase",
+    marginBottom: 8,
+    display: "none",
+  },
+  underlineField: {
     flexDirection: "row",
     alignItems: "center",
-    borderWidth: 1,
-    borderRadius: 0,
-    paddingHorizontal: 14,
-    height: 50,
+    borderBottomWidth: 1,
+    paddingVertical: 8,
+    paddingHorizontal: 0,
   },
-  inputIcon: { marginRight: 10 },
-  input: { flex: 1, fontSize: 15, fontWeight: "500", height: "100%" },
-  eyeBtn: { padding: 4 },
+  input: { flex: 1, fontSize: 14, fontWeight: "500", paddingVertical: 0 },
+  eyeBtn: { paddingLeft: 8 },
+  showHide: {
+    fontSize: 9,
+    fontWeight: "500",
+    letterSpacing: 2,
+    textTransform: "uppercase",
+  },
 
   // ── Forgot ────────────────────────────────
-  forgotRow: { width: "100%", alignItems: "flex-end", marginBottom: 4 },
-  forgotText: { fontSize: 13, fontWeight: "600" },
+  forgotRow: { alignItems: "flex-end", marginBottom: 28, marginTop: -10 },
+  forgotText: { fontSize: 9, fontWeight: "600", letterSpacing: 2, textTransform: "uppercase" },
 
-  // ── Buttons ───────────────────────────────
+  // ── Primary button ────────────────────────
   button: {
-    paddingVertical: 15,
-    borderRadius: 0,
-    marginTop: 20,
+    height: 52,
     width: "100%",
     alignItems: "center",
     justifyContent: "center",
+    marginBottom: 12,
   },
-  buttonText: { fontSize: 16, fontWeight: "700" },
+  buttonText: { fontSize: 11, fontWeight: "600", letterSpacing: 2, textTransform: "uppercase" },
+
+  // ── Outline button ────────────────────────
+  outlineButton: {
+    height: 52,
+    width: "100%",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    marginBottom: 28,
+  },
+  outlineButtonText: { fontSize: 11, fontWeight: "600", letterSpacing: 2, textTransform: "uppercase" },
+
+  // ── OR divider ────────────────────────────
   divider: {
     flexDirection: "row",
     alignItems: "center",
     width: "100%",
-    marginVertical: 24,
+    marginBottom: 22,
   },
   dividerLine: { flex: 1, height: 1 },
-  dividerText: { marginHorizontal: 16, fontSize: 13, fontWeight: "500" },
-  guestButton: {
-    paddingVertical: 15,
-    borderRadius: 0,
-    borderWidth: 1,
-    width: "100%",
-    alignItems: "center",
-    justifyContent: "center",
-    flexDirection: "row",
-    gap: 8,
-  },
-  guestButtonText: { fontSize: 15, fontWeight: "600" },
+  dividerText: { marginHorizontal: 16, fontSize: 9, letterSpacing: 2.5, fontWeight: "500" },
 
-  // ── Social Auth ────────────────────────────
+  // ── Social buttons (side by side) ─────────
+  socialRow: {
+    flexDirection: "row",
+    gap: 10,
+    marginBottom: 12,
+  },
   socialButton: {
-    paddingVertical: 15,
-    borderRadius: 0,
+    flex: 1,
+    height: 44,
     borderWidth: 1,
-    width: "100%",
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    flexDirection: "row",
-    marginBottom: 12,
+    gap: 6,
   },
-  socialIcon: {
-    position: "absolute",
-    left: 16,
-  },
-  socialButtonText: { fontSize: 15, fontWeight: "600" },
-  appleButtonWrapper: {
-    position: "relative",
-    width: "100%",
-  },
-  appleButton: {
-    width: "100%",
-    height: 50,
-    marginBottom: 12,
-  },
+  socialButtonText: { fontSize: 10, fontWeight: "600", letterSpacing: 2 },
+
+  // ── Apple ─────────────────────────────────
+  appleButtonWrapper: { position: "relative", width: "100%", marginTop: 10 },
+  appleButton: { width: "100%", height: 50, marginBottom: 12 },
   appleSpinner: {
     position: "absolute",
-    top: 0,
-    bottom: 0,
-    left: 0,
-    right: 0,
+    top: 0, bottom: 0, left: 0, right: 0,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -513,10 +407,10 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     width: "100%",
-    marginTop: 28,
+    marginTop: 30,
   },
-  footerText: { fontSize: 14, fontWeight: "500" },
-  footerLink: { fontSize: 14, fontWeight: "700" },
+  footerText: { fontSize: 10, fontWeight: "500", letterSpacing: 1 },
+  footerLink: { fontSize: 10, fontWeight: "700", letterSpacing: 2, textTransform: "uppercase" },
 });
 
 export default LoginScreen;

@@ -19,8 +19,10 @@ import {
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/context/AuthContext";
+import { useCart } from "@/context/CartContext";
 import { useGuestGuard } from "@/hooks/useGuestGuard";
 import { useToast } from "@/context/ToastContext";
+import { formatPrice } from "@/utils/formatPrice";
 import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
 import { useImageSearch } from "@/hooks/useImageSearch";
 import FilterPanel, { PanelFilters } from "@/components/FilterPanel";
@@ -34,6 +36,7 @@ import { useNetwork } from "@/context/NetworkContext";
 import OfflinePlaceholder from "@/components/OfflinePlaceholder";
 import { useHeaderVisibility } from "@/context/HeaderVisibilityContext";
 import { useScrollToTop } from "@/context/ScrollToTopContext";
+import QuickAddSheet from "@/components/QuickAddSheet";
 
 const CATEGORIES = [
   "ALL",
@@ -56,13 +59,19 @@ const MonolithProductCard = React.memo(
     index,
     onPress,
     onWishlistPress,
+    onAddToCart,
+    onNotifyMe,
     isInWishlist,
+    isNotifySubscribed,
   }: {
     item: Product;
     index: number;
     onPress: () => void;
     onWishlistPress: () => void;
+    onAddToCart: () => void;
+    onNotifyMe: () => void;
     isInWishlist: boolean;
+    isNotifySubscribed: boolean;
   }) => {
     const colors = useThemeColors();
     const cardStyles = useMemo(() => createCardStyles(colors), [colors]);
@@ -76,18 +85,13 @@ const MonolithProductCard = React.memo(
     const [imgWidth, setImgWidth] = useState(0);
 
     const hasDiscount = item.salePrice != null && item.salePrice < item.price;
-    const isSoldOut = (item as any).stock === 0 && !((item as any).productVariants?.some((v: any) => v.stock > 0));
-
-    const formatPrice = (amount: number) =>
-      `$${amount.toLocaleString("en-US", { minimumFractionDigits: 0 })}`;
+    const variants: any[] = (item as any).variants || [];
+    const isSoldOut = variants.length > 0
+      ? variants.every((v: any) => !v.isAvailable || v.stock === 0)
+      : (item as any).stock === 0;
 
     return (
-      <View
-        style={[
-          cardStyles.wrapper,
-          index % 2 === 0 ? { paddingRight: 8 } : { paddingLeft: 8 },
-        ]}
-      >
+      <View style={cardStyles.wrapper}>
         {/* Image — swipeable; tap-to-navigate via transparent overlay */}
         <View
           style={cardStyles.imageWrap}
@@ -183,6 +187,27 @@ const MonolithProductCard = React.memo(
             )}
           </View>
         </TouchableOpacity>
+
+        {/* ADD TO CART bar */}
+        {!isSoldOut && (
+          <TouchableOpacity style={cardStyles.addToCart} onPress={onAddToCart} activeOpacity={0.8}>
+            <Text style={cardStyles.addToCartText}>ADD TO CART</Text>
+          </TouchableOpacity>
+        )}
+
+        {/* NOTIFY ME bar */}
+        {isSoldOut && (
+          <TouchableOpacity
+            style={[cardStyles.notifyBtn, isNotifySubscribed && cardStyles.notifyBtnSubscribed]}
+            onPress={onNotifyMe}
+            disabled={isNotifySubscribed}
+            activeOpacity={0.8}
+          >
+            <Text style={[cardStyles.notifyBtnText, isNotifySubscribed && cardStyles.notifyBtnTextSubscribed]}>
+              {isNotifySubscribed ? "SUBSCRIBED" : "NOTIFY ME"}
+            </Text>
+          </TouchableOpacity>
+        )}
       </View>
     );
   },
@@ -196,6 +221,7 @@ const ShopScreen = () => {
     gender?: string;
   }>();
   const { token, loading } = useAuth();
+  const { refresh: refreshCart } = useCart();
   const { requireAuth } = useGuestGuard();
   const { showToast } = useToast();
   const colors = useThemeColors();
@@ -229,6 +255,13 @@ const ShopScreen = () => {
   const wishlistRef = useRef<number[]>([]);
   const [featuredBrands, setFeaturedBrands] = useState<Brand[]>([]);
   const [totalCount, setTotalCount] = useState(0);
+  const [subscribedProductIds, setSubscribedProductIds] = useState<Set<number>>(new Set());
+
+  const [quickAddProduct, setQuickAddProduct] = useState<{
+    id: number; name: string; price: number; salePrice?: number | null;
+    mainImage?: string; variants: { id: number; size: string | null; stock: number; isAvailable: boolean }[];
+  } | null>(null);
+  const [quickAddVisible, setQuickAddVisible] = useState(false);
 
   // Filter state
   const [activeFilters, setActiveFilters] = useState({
@@ -545,6 +578,48 @@ const ShopScreen = () => {
     }));
   };
 
+  const handleNotifyMe = useCallback(async (item: Product) => {
+    if (!token) { router.push("/auth/login" as any); return; }
+    if (subscribedProductIds.has(item.id)) return;
+    try {
+      await fetch(`${getApiUrl()}/notifications/notify-me/${item.id}`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      });
+      setSubscribedProductIds((prev) => new Set([...prev, item.id]));
+      showToast("You'll be notified when back in stock", "success");
+    } catch {
+      showToast("Could not subscribe", "error");
+    }
+  }, [token, subscribedProductIds, showToast, router]);
+
+  const handleAddToCart = useCallback((item: Product) => {
+    if (!token) { router.push("/auth/login" as any); return; }
+    const variants: any[] = (item as any).variants || [];
+    if (variants.length > 0) {
+      setQuickAddProduct({
+        id: item.id,
+        name: item.name,
+        price: item.price,
+        salePrice: item.salePrice,
+        mainImage: item.mainImage,
+        variants,
+      });
+      setQuickAddVisible(true);
+      return;
+    }
+    fetch(`${getApiUrl()}/cart/add`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ productId: item.id, quantity: 1 }),
+    })
+      .then((res) => {
+        if (res.ok) { refreshCart(); showToast("Added to bag", "success"); }
+        else router.push(`/products/${item.id}` as any);
+      })
+      .catch(() => showToast("Could not add to bag", "error"));
+  }, [token, router, refreshCart, showToast]);
+
   // ── Render helpers ────────────────────────────────
   const renderProductCard = useCallback(
     ({ item, index }: { item: Product; index: number }) => (
@@ -556,10 +631,13 @@ const ShopScreen = () => {
           if (!token) router.push("/auth/login" as any);
           else toggleWishlist(item.id);
         }}
+        onAddToCart={() => handleAddToCart(item)}
+        onNotifyMe={() => handleNotifyMe(item)}
         isInWishlist={!!(token && wishlistProductIds.includes(item.id))}
+        isNotifySubscribed={subscribedProductIds.has(item.id)}
       />
     ),
-    [token, wishlistProductIds, toggleWishlist, router],
+    [token, wishlistProductIds, subscribedProductIds, toggleWishlist, handleAddToCart, handleNotifyMe, router],
   );
 
   const renderListHeader = () => (
@@ -871,7 +949,10 @@ const ShopScreen = () => {
         numColumns={2}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
-        onScroll={(e) => reportScroll(e.nativeEvent.contentOffset.y)}
+        onScroll={(e) => {
+          const { contentOffset, contentSize, layoutMeasurement } = e.nativeEvent;
+          reportScroll(contentOffset.y, contentSize.height, layoutMeasurement.height);
+        }}
         scrollEventThrottle={16}
         ListHeaderComponent={inImageSearchMode ? null : renderListHeader}
         ListFooterComponent={inImageSearchMode ? null : renderListFooter}
@@ -916,6 +997,13 @@ const ShopScreen = () => {
         }))}
         onApply={handlePanelApply}
       />
+
+      {/* ── Quick Add Sheet ───────────────────────── */}
+      <QuickAddSheet
+        visible={quickAddVisible}
+        onClose={() => { setQuickAddVisible(false); setQuickAddProduct(null); }}
+        product={quickAddProduct}
+      />
     </View>
   );
 };
@@ -924,7 +1012,6 @@ const ShopScreen = () => {
 const createCardStyles = (colors: ThemeColors) => StyleSheet.create({
   wrapper: {
     flex: 1,
-    marginBottom: 48,
   },
   imageWrap: {
     width: "100%",
@@ -964,11 +1051,11 @@ const createCardStyles = (colors: ThemeColors) => StyleSheet.create({
     paddingVertical: 4,
   },
   limitedBadgeText: {
-    fontFamily: undefined,
     fontSize: 8,
     color: colors.textInverse,
     letterSpacing: 2,
     textTransform: "uppercase",
+    fontWeight: "600",
   },
   dotsRow: {
     position: "absolute",
@@ -982,7 +1069,6 @@ const createCardStyles = (colors: ThemeColors) => StyleSheet.create({
   dot: {
     width: 4,
     height: 4,
-    borderRadius: 2,
     backgroundColor: "rgba(255,255,255,0.5)",
   },
   dotActive: {
@@ -993,46 +1079,87 @@ const createCardStyles = (colors: ThemeColors) => StyleSheet.create({
     position: "absolute",
     top: 8,
     right: 8,
-    width: 32,
-    height: 32,
+    width: 28,
+    height: 28,
+    backgroundColor: colors.background,
     justifyContent: "center",
     alignItems: "center",
   },
   meta: {
-    marginTop: 12,
-    gap: 4,
+    paddingHorizontal: 10,
+    paddingTop: 10,
+    paddingBottom: 0,
+    gap: 3,
   },
   brandLabel: {
-    fontFamily: undefined,
-    fontSize: 10,
-    color: colors.textSecondary,
+    fontSize: 9,
+    color: colors.textTertiary,
     letterSpacing: 2,
     textTransform: "uppercase",
+    fontWeight: "600",
   },
   productName: {
-    fontFamily: undefined,
     fontSize: 11,
     color: colors.text,
-    letterSpacing: 1,
+    letterSpacing: 0.5,
     textTransform: "uppercase",
-    lineHeight: 16,
+    lineHeight: 15,
+    fontWeight: "600",
   },
   priceRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: 6,
     marginTop: 2,
   },
   price: {
-    fontFamily: undefined,
-    fontSize: 12,
+    fontSize: 13,
+    fontWeight: "700",
     color: colors.text,
   },
   originalPrice: {
-    fontFamily: undefined,
-    fontSize: 11,
+    fontSize: 10,
     color: colors.textTertiary,
     textDecorationLine: "line-through",
+  },
+  addToCart: {
+    height: 30,
+    backgroundColor: "transparent",
+    borderWidth: 1,
+    borderColor: colors.text,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 10,
+  },
+  addToCartText: {
+    fontSize: 9,
+    fontWeight: "600",
+    color: colors.text,
+    letterSpacing: 2,
+    textTransform: "uppercase",
+  },
+  notifyBtn: {
+    height: 30,
+    backgroundColor: "transparent",
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 10,
+  },
+  notifyBtnSubscribed: {
+    borderColor: colors.border,
+  },
+  notifyBtnText: {
+    fontSize: 9,
+    fontWeight: "500",
+    color: colors.textTertiary,
+    letterSpacing: 2,
+    textTransform: "uppercase",
+  },
+  notifyBtnTextSubscribed: {
+    color: colors.textTertiary,
+    fontWeight: "400",
   },
 });
 
@@ -1271,8 +1398,8 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
 
   // ── Grid ──────────────────────────────────────────
   listContent: {
-    paddingHorizontal: 16,
-    paddingTop: 24,
+    paddingHorizontal: 0,
+    paddingTop: 0,
     paddingBottom: 40,
   },
 

@@ -225,24 +225,8 @@ export class OrdersService {
           ...itemData,
         });
         await manager.save(OrderItem, orderItem);
-
-        // Deduct stock — variant stock if variant, product stock otherwise
-        if (itemData.variantId) {
-          await manager.decrement(
-            ProductVariant,
-            { id: itemData.variantId },
-            'stock',
-            itemData.quantity!,
-          );
-        } else {
-          await manager.decrement(
-            Product,
-            { id: itemData.productId },
-            'stock',
-            itemData.quantity!,
-          );
-        }
       }
+      await this.deductStockItems(manager, orderItemsToCreate);
 
       // 7. Clear Cart (skip when checkout() handles multi-vendor grouping)
       if (!skipCartClear) {
@@ -256,14 +240,7 @@ export class OrdersService {
       }
 
       // 8. Record Status History
-      const history = manager.create(OrderStatusHistory, {
-        order: savedOrder,
-        oldStatus: undefined,
-        newStatus: OrderStatus.PENDING,
-        changedByUserId: userId,
-        notes: 'Order created via checkout',
-      });
-      await manager.save(OrderStatusHistory, history);
+      await this.recordStatusHistory(manager, savedOrder.id, undefined, OrderStatus.PENDING, userId, 'Order created via checkout');
 
       // Record promo code usage (non-blocking)
       if (appliedPromoCode) {
@@ -275,14 +252,7 @@ export class OrdersService {
       // Send order confirmation email (non-blocking)
       const user = await manager.findOne(User, { where: { id: userId } });
       if (user?.email) {
-        this.mailService
-          .sendOrderConfirmationEmail(
-            user.email,
-            savedOrder.orderNumber,
-            Number(savedOrder.totalAmount),
-            savedOrder.totalItems,
-          )
-          .catch(() => {}); // Fire-and-forget
+        this.fireOrderConfirmationEmail(user.email, savedOrder.orderNumber, Number(savedOrder.totalAmount), savedOrder.totalItems);
       }
 
       return savedOrder;
@@ -499,50 +469,14 @@ export class OrdersService {
       }
 
       if (updateOrderDto.status && updateOrderDto.status !== oldStatus) {
-        const history = manager.create(OrderStatusHistory, {
-          order: { id },
-          oldStatus,
-          newStatus: updateOrderDto.status,
-          changedByUserId: userId,
-          notes: `Status changed to ${updateOrderDto.status}`,
-        });
-        await manager.save(OrderStatusHistory, history);
+        await this.recordStatusHistory(manager, id, oldStatus, updateOrderDto.status, userId, `Status changed to ${updateOrderDto.status}`);
 
-        // Send status update email (non-blocking)
-        const user = await manager.findOne(User, {
-          where: { id: order.user.id },
-        });
+        // Send email + push notification (non-blocking)
+        const user = await manager.findOne(User, { where: { id: order.user.id } });
         if (user?.email) {
-          this.mailService
-            .sendOrderStatusUpdateEmail(
-              user.email,
-              order.orderNumber,
-              updateOrderDto.status,
-            )
-            .catch(() => {});
+          this.fireStatusUpdateEmail(user.email, order.orderNumber, updateOrderDto.status);
         }
-
-        // Send in-app notification for order status change
-        const statusMessages: Record<string, string> = {
-          CONFIRMED: 'Your order has been confirmed',
-          PROCESSING: 'Your order is being prepared',
-          SHIPPED: 'Your order is on its way',
-          DELIVERED: 'Your order has been delivered',
-          CANCELLED: 'Your order has been cancelled',
-          RETURNED: 'Your return has been processed',
-        };
-        const msg =
-          statusMessages[updateOrderDto.status] ||
-          `Order status updated to ${updateOrderDto.status}`;
-        this.notificationsService
-          .create(
-            order.user.id,
-            NotificationType.ORDER_UPDATE,
-            `Order ${order.orderNumber}`,
-            msg,
-            { orderId: order.id },
-          )
-          .catch(() => {});
+        this.fireStatusNotification(order.user.id, order.id, order.orderNumber, updateOrderDto.status);
       }
     });
 
@@ -606,38 +540,14 @@ export class OrdersService {
         where: { order: { id: order.id } },
       });
 
-      // Restore Stock
-      for (const item of items) {
-        if (item.variantId) {
-          await manager.increment(
-            ProductVariant,
-            { id: item.variantId },
-            'stock',
-            item.quantity,
-          );
-        } else {
-          await manager.increment(
-            Product,
-            { id: item.productId },
-            'stock',
-            item.quantity,
-          );
-        }
-      }
+      await this.restoreStockItems(manager, items);
 
       await manager.update(Order, id, {
         status: OrderStatus.CANCELLED,
         paymentStatus: PaymentStatus.REFUNDED,
       });
 
-      const history = manager.create(OrderStatusHistory, {
-        order: { id },
-        oldStatus: order.status,
-        newStatus: OrderStatus.CANCELLED,
-        changedByUserId: userId,
-        notes: 'Order cancelled by user',
-      });
-      await manager.save(OrderStatusHistory, history);
+      await this.recordStatusHistory(manager, id, order.status, OrderStatus.CANCELLED, userId, 'Order cancelled by user');
     });
 
     return this.findOne(id, userId, userRole);
@@ -708,6 +618,67 @@ export class OrdersService {
       cancelledOrders,
       totalRevenue: Number(totalRevenue?.total || 0),
     };
+  }
+
+  private async deductStockItems(manager: EntityManager, items: Partial<OrderItem>[]): Promise<void> {
+    for (const item of items) {
+      if (item.variantId) {
+        await manager.decrement(ProductVariant, { id: item.variantId }, 'stock', item.quantity!);
+      } else {
+        await manager.decrement(Product, { id: item.productId }, 'stock', item.quantity!);
+      }
+    }
+  }
+
+  private async restoreStockItems(manager: EntityManager, items: OrderItem[]): Promise<void> {
+    for (const item of items) {
+      if (item.variantId) {
+        await manager.increment(ProductVariant, { id: item.variantId }, 'stock', item.quantity);
+      } else {
+        await manager.increment(Product, { id: item.productId }, 'stock', item.quantity);
+      }
+    }
+  }
+
+  private async recordStatusHistory(
+    manager: EntityManager,
+    orderId: number,
+    oldStatus: OrderStatus | undefined,
+    newStatus: OrderStatus,
+    userId: number,
+    notes: string,
+  ): Promise<void> {
+    const history = manager.create(OrderStatusHistory, {
+      order: { id: orderId },
+      oldStatus,
+      newStatus,
+      changedByUserId: userId,
+      notes,
+    });
+    await manager.save(OrderStatusHistory, history);
+  }
+
+  private fireOrderConfirmationEmail(email: string, orderNumber: string, totalAmount: number, totalItems: number): void {
+    this.mailService.sendOrderConfirmationEmail(email, orderNumber, totalAmount, totalItems).catch(() => {});
+  }
+
+  private fireStatusUpdateEmail(email: string, orderNumber: string, status: OrderStatus): void {
+    this.mailService.sendOrderStatusUpdateEmail(email, orderNumber, status).catch(() => {});
+  }
+
+  private fireStatusNotification(userId: number, orderId: number, orderNumber: string, status: OrderStatus): void {
+    const statusMessages: Record<string, string> = {
+      CONFIRMED: 'Your order has been confirmed',
+      PROCESSING: 'Your order is being prepared',
+      SHIPPED: 'Your order is on its way',
+      DELIVERED: 'Your order has been delivered',
+      CANCELLED: 'Your order has been cancelled',
+      RETURNED: 'Your return has been processed',
+    };
+    const msg = statusMessages[status] || `Order status updated to ${status}`;
+    this.notificationsService
+      .create(userId, NotificationType.ORDER_UPDATE, `Order ${orderNumber}`, msg, { orderId })
+      .catch(() => {});
   }
 
   private generateOrderNumber(): string {

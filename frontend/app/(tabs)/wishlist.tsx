@@ -8,12 +8,14 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Alert,
-  useWindowDimensions,
 } from "react-native";
 import { useFocusEffect, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/context/AuthContext";
+import { useCart } from "@/context/CartContext";
+import { useToast } from "@/context/ToastContext";
 import getApiUrl from "@/helpers/getApiUrl";
+import { formatPrice } from "@/utils/formatPrice";
 import { useThemeColors } from "@/hooks/useThemeColor";
 import { ProductGridSkeleton } from "@/components/Skeleton";
 import { useNetwork } from "@/context/NetworkContext";
@@ -36,6 +38,8 @@ interface FollowedBrand {
 const WishlistTab = () => {
   const router = useRouter();
   const { token } = useAuth();
+  const { refresh: refreshCart } = useCart();
+  const { showToast } = useToast();
   const colors = useThemeColors();
   const { isConnected } = useNetwork();
   const { reportScroll } = useHeaderVisibility();
@@ -45,11 +49,10 @@ const WishlistTab = () => {
   const [loading, setLoading] = useState(true);
   const [brandsLoading, setBrandsLoading] = useState(true);
   const [unfollowingId, setUnfollowingId] = useState<number | null>(null);
+  const [subscribedIds, setSubscribedIds] = useState<Set<number>>(new Set());
+  const [addingToCartId, setAddingToCartId] = useState<number | null>(null);
 
-  const { width } = useWindowDimensions();
-  const columnCount = width > 600 ? 3 : 2;
-  const itemWidth = (width - 48) / columnCount;
-  const { register, unregister } = useScrollToTop();
+const { register, unregister } = useScrollToTop();
   const productsRef = useRef<FlatList>(null);
   const brandsRef = useRef<FlatList>(null);
 
@@ -155,89 +158,138 @@ const WishlistTab = () => {
     }
   };
 
+  const handleCartOrNotify = useCallback(async (product: any) => {
+    if (!token) { router.push("/auth/login" as any); return; }
+    const inStock = (product.stock ?? 0) > 0 || product.productVariants?.some((v: any) => v.stock > 0);
+
+    if (!inStock) {
+      if (subscribedIds.has(product.id)) return;
+      try {
+        const res = await fetch(`${getApiUrl()}/notifications/notify-me/${product.id}`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        });
+        if (res.ok) {
+          setSubscribedIds((prev) => new Set(prev).add(product.id));
+          showToast("You'll be notified when back in stock", "success");
+        }
+      } catch {
+        showToast("Could not subscribe", "error");
+      }
+      return;
+    }
+
+    const hasVariants = product.productVariants?.length > 0;
+    if (hasVariants) { router.push(`/products/${product.id}` as any); return; }
+
+    if (addingToCartId === product.id) return;
+    setAddingToCartId(product.id);
+    try {
+      const res = await fetch(`${getApiUrl()}/cart/add`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ productId: product.id, quantity: 1 }),
+      });
+      if (res.ok) { refreshCart(); showToast("Added to bag", "success"); }
+      else { router.push(`/products/${product.id}` as any); }
+    } catch {
+      showToast("Could not add to bag", "error");
+    } finally {
+      setAddingToCartId(null);
+    }
+  }, [token, router, subscribedIds, addingToCartId, refreshCart, showToast]);
+
   const renderProductItem = ({ item }: { item: any }) => {
     const product = item.product;
     if (!product) return null;
-    const image =
-      product.mainImage || product.images?.[0] || "";
+    const image = product.mainImage || product.images?.[0] || "";
+    const inStock = (product.stock ?? 0) > 0 || product.productVariants?.some((v: any) => v.stock > 0);
+    const isSubscribed = subscribedIds.has(product.id);
+    const isAddingThisItem = addingToCartId === product.id;
+
+    let btnLabel = inStock ? "ADD TO CART" : "NOTIFY ME";
+    if (isSubscribed) btnLabel = "SUBSCRIBED";
+    if (isAddingThisItem) btnLabel = "ADDING...";
 
     return (
-      <TouchableOpacity
-        style={[
-          styles.productCard,
-          { width: itemWidth, backgroundColor: colors.surface },
-        ]}
-        onPress={() => router.push(`/products/${product.id}`)}
-      >
-        <Image source={{ uri: image ? image: "" }} style={[styles.productImage, { backgroundColor: colors.surfaceRaised }]} />
+      <View style={[styles.productRow, { borderBottomColor: colors.border }]}>
         <TouchableOpacity
-          style={styles.removeIcon}
-          onPress={() => toggleWishlist(product.id)}
+          onPress={() => router.push(`/products/${product.id}`)}
+          activeOpacity={0.7}
         >
-          <Ionicons name="heart" size={20} color="#000000" />
+          <Image
+            source={{ uri: image || "" }}
+            style={[styles.productImage, { backgroundColor: colors.surfaceRaised }]}
+            resizeMode="cover"
+          />
         </TouchableOpacity>
-        <View style={styles.cardContent}>
-          <Text
-            style={[styles.brandName, { color: colors.textTertiary }]}
-            numberOfLines={1}
-          >
-            {product.brand?.name || "Brand"}
+        <View style={styles.productInfo}>
+          <Text style={[styles.brandLabel, { color: colors.textTertiary }]} numberOfLines={1}>
+            {(product.brand?.name || "BRAND").toUpperCase()}
           </Text>
-          <Text
-            style={[styles.productName, { color: colors.text }]}
-            numberOfLines={1}
-          >
-            {product.name}
+          <Text style={[styles.productName, { color: colors.text }]} numberOfLines={2}>
+            {product.name.toUpperCase()}
           </Text>
           <Text style={[styles.productPrice, { color: colors.text }]}>
-            ${Number(product.price).toFixed(2)}
+            {formatPrice(product.salePrice ?? product.price)}
           </Text>
+          <Text style={[styles.stockLabel, { color: inStock ? colors.text : colors.accentRed }]}>
+            {inStock ? "IN STOCK" : "OUT OF STOCK"}
+          </Text>
+          <TouchableOpacity
+            style={[styles.cartBtn, { backgroundColor: inStock ? colors.text : colors.background, borderColor: colors.text, opacity: isSubscribed || isAddingThisItem ? 0.5 : 1 }]}
+            onPress={() => handleCartOrNotify(product)}
+            disabled={isSubscribed || isAddingThisItem}
+            activeOpacity={0.8}
+          >
+            <Text style={[styles.cartBtnText, { color: inStock ? colors.background : colors.text }]}>
+              {btnLabel}
+            </Text>
+          </TouchableOpacity>
         </View>
-      </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.removeBtn}
+          onPress={() => toggleWishlist(product.id)}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          <Ionicons name="close" size={16} color={colors.textTertiary} />
+        </TouchableOpacity>
+      </View>
     );
   };
 
   const renderBrandItem = ({ item }: { item: FollowedBrand }) => (
     <TouchableOpacity
-      style={[styles.brandCard, { backgroundColor: colors.surface }]}
+      style={[styles.brandCard, { borderBottomColor: colors.border }]}
       onPress={() => router.push(`/brands/${item.id}` as any)}
+      activeOpacity={0.7}
     >
-      <View style={styles.brandCardLeft}>
-        {item.logo ? (
-          <Image source={{ uri: item.logo }} style={[styles.brandLogo, { backgroundColor: colors.surfaceRaised }]} />
-        ) : (
-          <View style={[styles.brandLogo, styles.brandLogoPlaceholder, { backgroundColor: colors.primary }]}>
-            <Text style={[styles.brandLogoLetter, { color: colors.textInverse }]}>
-              {item.name.charAt(0).toUpperCase()}
-            </Text>
-          </View>
-        )}
-        <View style={styles.brandCardInfo}>
-          <Text
-            style={[styles.brandCardName, { color: colors.text }]}
-            numberOfLines={1}
-          >
-            {item.name}
-          </Text>
-          <Text
-            style={[styles.brandCardMeta, { color: colors.textTertiary }]}
-          >
-            {item.productCount} {item.productCount === 1 ? "product" : "products"}
-            {item.location ? ` · ${item.location}` : ""}
+      {item.logo ? (
+        <Image source={{ uri: item.logo }} style={[styles.brandLogo, { backgroundColor: colors.surfaceRaised }]} />
+      ) : (
+        <View style={[styles.brandLogo, { backgroundColor: colors.text, alignItems: "center", justifyContent: "center" }]}>
+          <Text style={{ fontSize: 20, fontWeight: "900", color: colors.background }}>
+            {item.name.charAt(0).toUpperCase()}
           </Text>
         </View>
+      )}
+      <View style={styles.brandCardInfo}>
+        <Text style={[styles.brandCardName, { color: colors.text }]} numberOfLines={1}>
+          {item.name.toUpperCase()}
+        </Text>
+        <Text style={[styles.brandCardMeta, { color: colors.textTertiary }]}>
+          {item.productCount} ITEMS{item.location ? ` · ${item.location.toUpperCase()}` : ""}
+        </Text>
       </View>
       <TouchableOpacity
-        style={[styles.unfollowBtn, { borderColor: colors.textTertiary + "40" }]}
+        style={[styles.unfollowBtn, { borderColor: colors.text }]}
         onPress={() => unfollowBrand(item.id)}
         disabled={unfollowingId === item.id}
       >
         {unfollowingId === item.id ? (
           <ActivityIndicator size="small" color={colors.text} />
         ) : (
-          <Text style={[styles.unfollowText, { color: colors.text }]}>
-            FOLLOWING
-          </Text>
+          <Text style={[styles.unfollowText, { color: colors.text }]}>FOLLOWING</Text>
         )}
       </TouchableOpacity>
     </TouchableOpacity>
@@ -352,7 +404,6 @@ const WishlistTab = () => {
               data={wishlist}
               renderItem={renderProductItem}
               keyExtractor={(item) => item.id.toString()}
-              numColumns={columnCount}
               contentContainerStyle={styles.listContent}
               showsVerticalScrollIndicator={false}
               onScroll={(e) => reportScroll(e.nativeEvent.contentOffset.y)}
@@ -456,21 +507,72 @@ const styles = StyleSheet.create({
     letterSpacing: 1.5,
   },
   listContent: {
-    padding: 16,
-    gap: 16,
+    paddingBottom: 40,
   },
   brandsListContent: {
+    paddingBottom: 40,
+  },
+  // ── Product row (list view) ──────────────────────────────────
+  productRow: {
+    flexDirection: "row",
+    gap: 14,
     padding: 16,
+    borderBottomWidth: 1,
+  },
+  productImage: {
+    width: 92,
+    height: 110,
+  },
+  productInfo: {
+    flex: 1,
+    gap: 3,
+  },
+  brandLabel: {
+    fontSize: 9,
+    fontWeight: "600",
+    letterSpacing: 2,
+    textTransform: "uppercase",
+  },
+  productName: {
+    fontSize: 13,
+    fontWeight: "600",
+    textTransform: "uppercase",
+    letterSpacing: 0.3,
+    lineHeight: 18,
+  },
+  productPrice: {
+    fontSize: 14,
+    fontWeight: "700",
+    letterSpacing: 0,
+    marginTop: 2,
+  },
+  stockLabel: {
+    fontSize: 9,
+    fontWeight: "600",
+    letterSpacing: 2,
+    textTransform: "uppercase",
+    marginTop: 4,
+  },
+  cartBtn: {
+    height: 34,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 8,
+    borderWidth: 1,
+  },
+  cartBtnText: {
+    fontSize: 9,
+    fontWeight: "600",
+    letterSpacing: 2,
+    textTransform: "uppercase",
+  },
+  removeBtn: {
+    paddingTop: 2,
   },
   productCard: {
     overflow: "hidden",
     marginBottom: 16,
     marginHorizontal: 4,
-  },
-  productImage: {
-    width: "100%",
-    height: 180,
-    // backgroundColor set via inline style (colors.surfaceRaised)
   },
   removeIcon: {
     position: "absolute",
@@ -481,82 +583,44 @@ const styles = StyleSheet.create({
   cardContent: {
     padding: 12,
   },
-  brandName: {
-    fontSize: 10,
-    fontWeight: "600",
-    textTransform: "uppercase",
-    letterSpacing: 1,
-    marginBottom: 4,
-  },
-  productName: {
-    fontSize: 11,
-    fontWeight: "700",
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-    marginBottom: 4,
-    lineHeight: 16,
-  },
-  productPrice: {
-    fontSize: 13,
-    fontWeight: "700",
-    letterSpacing: 0.5,
-  },
   brandCard: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    padding: 16,
-    marginBottom: 8,
-    borderRadius: 0,
-  },
-  brandCardLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    flex: 1,
-    marginRight: 12,
+    gap: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
   },
   brandLogo: {
-    width: 48,
-    height: 48,
-    borderRadius: 0,
-    // backgroundColor set via inline style (colors.surfaceRaised)
-    marginRight: 14,
-  },
-  brandLogoPlaceholder: {
-    justifyContent: "center",
-    alignItems: "center",
-    // backgroundColor set via inline style (colors.primary)
-  },
-  brandLogoLetter: {
-    fontSize: 20,
-    fontWeight: "700",
-    // color set via inline style (colors.textInverse)
+    width: 56,
+    height: 56,
   },
   brandCardInfo: {
     flex: 1,
   },
   brandCardName: {
-    fontSize: 12,
-    fontWeight: "700",
+    fontSize: 16,
+    fontWeight: "800",
     textTransform: "uppercase",
-    letterSpacing: 1,
+    letterSpacing: -0.3,
     marginBottom: 3,
   },
   brandCardMeta: {
-    fontSize: 10,
-    letterSpacing: 0.5,
+    fontSize: 9,
+    letterSpacing: 2,
     textTransform: "uppercase",
+    fontWeight: "600",
   },
   unfollowBtn: {
     borderWidth: 1,
     paddingHorizontal: 14,
     paddingVertical: 8,
-    borderRadius: 0,
   },
   unfollowText: {
-    fontSize: 10,
-    fontWeight: "700",
-    letterSpacing: 1,
+    fontSize: 9,
+    fontWeight: "600",
+    letterSpacing: 2,
+    textTransform: "uppercase",
   },
   emptyTitle: {
     fontSize: 22,

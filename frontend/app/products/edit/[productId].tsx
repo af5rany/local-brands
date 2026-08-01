@@ -453,7 +453,7 @@ const EditProductScreen = () => {
       {/* Nav header */}
       <View style={[styles.navHeader, { borderBottomColor: borderColor }]}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} activeOpacity={0.7}>
-          <View style={[styles.backCircle, { backgroundColor: cardBackground }]}>
+          <View style={styles.backCircle}>
             <Ionicons name="chevron-back" size={22} color={textColor} />
           </View>
         </TouchableOpacity>

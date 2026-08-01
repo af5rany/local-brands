@@ -120,7 +120,8 @@
       "Bash(keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android -keypass android)",
       "Bash(keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android -keypass android)",
       "WebFetch(domain:docs.fal.ai)",
-      "WebSearch"
+      "WebSearch",
+      "*"
     ]
   }
 }

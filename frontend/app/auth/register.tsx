@@ -14,6 +14,7 @@ import {
   Keyboard,
   Image,
   TouchableOpacity,
+  Linking,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
@@ -23,7 +24,6 @@ import { useRouter } from "expo-router";
 import { useCloudinaryUpload } from "@/hooks/useCloudinaryUpload";
 import { ImageUploadProgress } from "@/components/ImageUploadProgress";
 import { useThemeColors } from "@/hooks/useThemeColor";
-import Header from "@/components/Header";
 import { useAuth } from "@/context/AuthContext";
 import { useSocialAuth } from "@/hooks/useSocialAuth";
 
@@ -125,7 +125,6 @@ const RegisterScreen = () => {
       if (!response.ok) throw new Error(data.message || "Registration failed");
 
       if (isGuest) {
-        // Cart is preserved — same user id, just converted
         login(data.token);
         router.dismissAll();
       } else {
@@ -136,18 +135,14 @@ const RegisterScreen = () => {
         );
       }
     } catch (error: any) {
-      Alert.alert(
-        "Registration Error",
-        error.message || "Something went wrong.",
-      );
+      Alert.alert("Registration Error", error.message || "Something went wrong.");
     } finally {
       setLoading(false);
     }
   };
 
-  const isUploading = Object.values(uploads).some(
-    (u) => u.status === "uploading",
-  );
+  const isUploading = Object.values(uploads).some((u) => u.status === "uploading");
+  const isAnyLoading = loading || isUploading || googleLoading || facebookLoading;
 
   const handleChange = (name: string, value: string) => {
     setFormData((prev) => ({ ...prev, [name]: value }));
@@ -179,11 +174,7 @@ const RegisterScreen = () => {
   const formatDate = (iso: string) => {
     if (!iso) return "";
     const d = new Date(iso);
-    return d.toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
+    return d.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
   };
 
   const renderField = (
@@ -197,68 +188,39 @@ const RegisterScreen = () => {
       showToggle?: boolean;
       toggleState?: boolean;
       onToggle?: () => void;
-      icon?: string;
+      autoCapitalize?: "none" | "sentences" | "words" | "characters";
     },
   ) => {
-    const {
-      required = true,
-      keyboardType,
-      secure,
-      showToggle,
-      toggleState,
-      onToggle,
-      icon,
-    } = options || {};
+    const { required = true, keyboardType, secure, showToggle, toggleState, onToggle, autoCapitalize } = options || {};
     const hasError = !!errors[key];
 
     return (
       <View style={styles.fieldGroup}>
-        <Text style={[styles.label, { color: colors.textSecondary }]}>
-          {label}
-          {required && <Text style={{ color: colors.danger }}> *</Text>}
+        <Text style={[styles.fieldLabel, { color: colors.textTertiary }]}>
+          {label.toUpperCase()}{required && <Text style={{ color: colors.accentRed }}> *</Text>}
         </Text>
-        <View
-          style={[
-            styles.inputWrapper,
-            {
-              backgroundColor: colors.surfaceRaised,
-              borderColor: hasError ? colors.danger : colors.border,
-            },
-          ]}
-        >
-          {icon && (
-            <Ionicons
-              name={icon as any}
-              size={18}
-              color={colors.textTertiary}
-              style={styles.inputIcon}
-            />
-          )}
+        <View style={[styles.underlineField, { borderBottomColor: hasError ? colors.accentRed : colors.text }]}>
           <TextInput
-            style={[styles.input, { color: colors.text }]}
+            style={[styles.input, { color: colors.text, flex: 1 }]}
             placeholder={placeholder}
             placeholderTextColor={colors.textTertiary}
             value={(formData as any)[key]}
             onChangeText={(text) => handleChange(key, text)}
-            editable={!loading}
+            editable={!isAnyLoading}
             keyboardType={keyboardType}
             secureTextEntry={secure && !toggleState}
-            autoCapitalize={key === "email" ? "none" : "sentences"}
+            autoCapitalize={autoCapitalize ?? (key === "email" || key === "username" ? "none" : "sentences")}
           />
           {showToggle && (
             <Pressable onPress={onToggle} style={styles.eyeBtn}>
-              <Ionicons
-                name={toggleState ? "eye-off-outline" : "eye-outline"}
-                size={20}
-                color={colors.textTertiary}
-              />
+              <Text style={[styles.showHide, { color: colors.textTertiary }]}>
+                {toggleState ? "HIDE" : "SHOW"}
+              </Text>
             </Pressable>
           )}
         </View>
         {hasError && (
-          <Text style={[styles.errorText, { color: colors.danger }]}>
-            {errors[key]}
-          </Text>
+          <Text style={[styles.errorText, { color: colors.accentRed }]}>{errors[key]}</Text>
         )}
       </View>
     );
@@ -269,327 +231,182 @@ const RegisterScreen = () => {
       edges={["bottom"]}
       style={[styles.safeArea, { backgroundColor: colors.background }]}
     >
-      <SafeAreaView edges={["top"]} style={{ backgroundColor: colors.surface }}>
-        <Header />
-      </SafeAreaView>
       <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
         style={styles.container}
       >
         <ScrollView
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={styles.scroll}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          {/* Header */}
-          <View style={styles.headerRow}>
-            <Pressable onPress={() => router.back()} style={styles.backBtn}>
-              <View
-                style={[
-                  styles.backCircle,
-                  { backgroundColor: colors.surfaceRaised },
-                ]}
-              >
-                <Ionicons name="chevron-back" size={22} color={colors.text} />
-              </View>
-            </Pressable>
+          {/* ── Back nav ── */}
+          <Pressable
+            onPress={() => router.back()}
+            style={styles.backRow}
+            disabled={isAnyLoading}
+          >
+            <Text style={[styles.backText, { color: colors.textTertiary }]}>← BACK</Text>
+          </Pressable>
+
+          {/* ── Wordmark ── */}
+          <View style={styles.wordmarkBlock}>
+            <Text style={[styles.wordmark, { color: colors.text }]}>LOCAL BRANDS</Text>
+            <View style={[styles.wordmarkDivider, { backgroundColor: colors.text }]} />
+            <Text style={[styles.wordmarkSub, { color: colors.textTertiary }]}>EST · MMXXVI</Text>
           </View>
 
-          <Text style={[styles.title, { color: colors.text }]}>
-            Create Account
-          </Text>
-          <Text style={[styles.subtitle, { color: colors.textTertiary }]}>
-            Fill in your details to get started
-          </Text>
+          <Text style={[styles.sectionLabel, { color: colors.textTertiary }]}>CREATE ACCOUNT</Text>
 
-          {/* Avatar */}
+          {/* ── Avatar ── */}
           <View style={styles.avatarSection}>
             <TouchableOpacity
-              style={[
-                styles.avatarBtn,
-                {
-                  backgroundColor: colors.surfaceRaised,
-                  borderColor: colors.border,
-                },
-              ]}
+              style={[styles.avatarBtn, { borderColor: colors.border }]}
               onPress={handleImagePick}
-              disabled={isUploading}
+              disabled={isAnyLoading}
               activeOpacity={0.7}
             >
-              {uploads[
-                Object.keys(uploads)
-                  .reverse()
-                  .find((k) => !avatar?.includes(k)) || ""
-              ] ? (
-                <ImageUploadProgress
-                  upload={uploads[Object.keys(uploads).reverse()[0]]}
-                  size={90}
-                />
+              {uploads[Object.keys(uploads).reverse().find((k) => !avatar?.includes(k)) || ""] ? (
+                <ImageUploadProgress upload={uploads[Object.keys(uploads).reverse()[0]]} size={90} />
               ) : avatar ? (
                 <Image source={{ uri: avatar }} style={styles.avatarImage} />
               ) : (
-                <View style={styles.avatarPlaceholder}>
-                  <Ionicons
-                    name="camera-outline"
-                    size={28}
-                    color={colors.textTertiary}
-                  />
-                  <Text
-                    style={[
-                      styles.avatarPlaceholderText,
-                      { color: colors.textTertiary },
-                    ]}
-                  >
-                    Add Photo
+                <View style={[styles.avatarPlaceholder, { backgroundColor: colors.surfaceRaised }]}>
+                  <Ionicons name="camera-outline" size={24} color={colors.textTertiary} />
+                  <Text style={[styles.avatarPlaceholderText, { color: colors.textTertiary }]}>
+                    ADD PHOTO
                   </Text>
                 </View>
               )}
             </TouchableOpacity>
             {avatar && (
-              <TouchableOpacity onPress={() => setAvatar(null)}>
-                <Text style={[styles.removeText, { color: colors.danger }]}>
-                  Remove
-                </Text>
-              </TouchableOpacity>
-            )}
-          </View>
-
-          {/* Form */}
-          <View
-            style={[
-              styles.formCard,
-              {
-                backgroundColor: colors.surface,
-                borderColor: colors.borderLight,
-              },
-            ]}
-          >
-            {renderField("Full Name", "name", "John Doe", {
-              icon: "person-outline",
-            })}
-            {renderField("Username", "username", "johndoe", {
-              icon: "at-outline",
-            })}
-
-            <View style={styles.row}>
-              <View style={{ flex: 1, marginRight: 10 }}>
-                {renderField("Phone", "phoneNumber", "+1 234...", {
-                  required: false,
-                  keyboardType: "phone-pad",
-                  icon: "call-outline",
-                })}
-              </View>
-            </View>
-
-            {/* Date of Birth */}
-            <View style={styles.fieldGroup}>
-              <Text style={[styles.label, { color: colors.textSecondary }]}>
-                Birthday
-              </Text>
-              <Pressable
-                style={[
-                  styles.inputWrapper,
-                  {
-                    backgroundColor: colors.surfaceRaised,
-                    borderColor: colors.border,
-                  },
-                ]}
-                onPress={() => setShowDatePicker(true)}
-              >
-                <Ionicons
-                  name="calendar-outline"
-                  size={18}
-                  color={colors.textTertiary}
-                  style={styles.inputIcon}
-                />
-                <Text
-                  style={[
-                    styles.dateText,
-                    {
-                      color: formData.dateOfBirth
-                        ? colors.text
-                        : colors.textTertiary,
-                    },
-                  ]}
-                >
-                  {formData.dateOfBirth
-                    ? formatDate(formData.dateOfBirth)
-                    : "Select date"}
-                </Text>
+              <Pressable onPress={() => setAvatar(null)}>
+                <Text style={[styles.removeText, { color: colors.accentRed }]}>REMOVE</Text>
               </Pressable>
-            </View>
-
-            {showDatePicker && (
-              <DateTimePicker
-                mode="date"
-                value={
-                  formData.dateOfBirth
-                    ? new Date(formData.dateOfBirth)
-                    : new Date()
-                }
-                maximumDate={new Date()}
-                onChange={(event, date) => {
-                  setShowDatePicker(false);
-                  if (date) handleChange("dateOfBirth", date.toISOString());
-                }}
-              />
             )}
-
-            {renderField("Email", "email", "you@example.com", {
-              keyboardType: "email-address",
-              icon: "mail-outline",
-            })}
-            {renderField("Password", "password", "••••••••", {
-              secure: true,
-              showToggle: true,
-              toggleState: showPassword,
-              onToggle: () => setShowPassword(!showPassword),
-              icon: "lock-closed-outline",
-            })}
-            {renderField("Confirm Password", "confirmPassword", "••••••••", {
-              secure: true,
-              showToggle: true,
-              toggleState: showConfirm,
-              onToggle: () => setShowConfirm(!showConfirm),
-              icon: "lock-closed-outline",
-            })}
           </View>
 
-          {/* Brand Owner Note */}
-          <View
-            style={[
-              styles.noteCard,
-              {
-                backgroundColor: colors.primarySoft,
-                borderColor: colors.primary,
-              },
-            ]}
-          >
-            <Ionicons
-              name="storefront-outline"
-              size={18}
-              color={colors.primary}
+          {/* ── Fields ── */}
+          {renderField("Full Name", "name", "John Doe")}
+          {renderField("Username", "username", "johndoe")}
+          {renderField("Phone", "phoneNumber", "+1 234 567 8900", {
+            required: false,
+            keyboardType: "phone-pad",
+          })}
+
+          {/* Date of Birth */}
+          <View style={styles.fieldGroup}>
+            <Text style={[styles.fieldLabel, { color: colors.textTertiary }]}>BIRTHDAY</Text>
+            <Pressable
+              style={[styles.underlineField, { borderBottomColor: colors.text }]}
+              onPress={() => setShowDatePicker(true)}
+            >
+              <Text style={[styles.input, { color: formData.dateOfBirth ? colors.text : colors.textTertiary, flex: 1 }]}>
+                {formData.dateOfBirth ? formatDate(formData.dateOfBirth) : "Select date"}
+              </Text>
+            </Pressable>
+          </View>
+
+          {showDatePicker && (
+            <DateTimePicker
+              mode="date"
+              value={formData.dateOfBirth ? new Date(formData.dateOfBirth) : new Date()}
+              maximumDate={new Date()}
+              onChange={(event, date) => {
+                setShowDatePicker(false);
+                if (date) handleChange("dateOfBirth", date.toISOString());
+              }}
             />
-            <Text style={[styles.noteText, { color: colors.primary }]}>
-              Want to sell products? Contact admin@localbrands.com to become a
-              Brand Owner.
-            </Text>
-          </View>
+          )}
 
-          {/* Submit */}
+          {renderField("Email", "email", "hello@example.com", { keyboardType: "email-address" })}
+          {renderField("Password", "password", "••••••••", {
+            secure: true,
+            showToggle: true,
+            toggleState: showPassword,
+            onToggle: () => setShowPassword(!showPassword),
+          })}
+          {renderField("Confirm Password", "confirmPassword", "••••••••", {
+            secure: true,
+            showToggle: true,
+            toggleState: showConfirm,
+            onToggle: () => setShowConfirm(!showConfirm),
+          })}
+
+          {/* Brand Owner CTA */}
+          <TouchableOpacity
+            style={[styles.brandOwnerRow, { borderColor: colors.border }]}
+            onPress={() => Linking.openURL("mailto:admin@localbrands.com")}
+            activeOpacity={0.7}
+            disabled={isAnyLoading}
+          >
+            <Ionicons name="storefront-outline" size={18} color={colors.text} />
+            <View style={styles.brandOwnerMeta}>
+              <Text style={[styles.brandOwnerTitle, { color: colors.text }]}>WANT TO SELL?</Text>
+              <Text style={[styles.brandOwnerSub, { color: colors.textTertiary }]}>BECOME A BRAND OWNER</Text>
+            </View>
+            <Text style={[styles.brandOwnerArrow, { color: colors.text }]}>→</Text>
+          </TouchableOpacity>
+
+          {/* REGISTER button */}
           <Pressable
-            style={[
-              styles.button,
-              { backgroundColor: colors.primary },
-              (loading || isUploading) && { opacity: 0.7 },
-            ]}
+            style={[styles.button, { backgroundColor: colors.text }, isAnyLoading && { opacity: 0.7 }]}
             onPress={handleRegister}
-            disabled={loading || isUploading}
+            disabled={isAnyLoading}
           >
             {loading ? (
-              <ActivityIndicator color={colors.primaryForeground} />
+              <ActivityIndicator color={colors.background} />
             ) : (
-              <Text
-                style={[styles.buttonText, { color: colors.primaryForeground }]}
-              >
-                Create Account
-              </Text>
+              <Text style={[styles.buttonText, { color: colors.background }]}>REGISTER</Text>
             )}
           </Pressable>
 
-          {/* Social Auth Divider */}
-          <View style={styles.socialDivider}>
-            <View
-              style={[
-                styles.socialDividerLine,
-                { backgroundColor: colors.border },
-              ]}
-            />
-            <Text
-              style={[styles.socialDividerText, { color: colors.textTertiary }]}
-            >
-              Or continue with
-            </Text>
-            <View
-              style={[
-                styles.socialDividerLine,
-                { backgroundColor: colors.border },
-              ]}
-            />
+          {/* ── OR divider ── */}
+          <View style={styles.divider}>
+            <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
+            <Text style={[styles.dividerText, { color: colors.textTertiary }]}>OR</Text>
+            <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
           </View>
 
-          {/* Social Auth Buttons */}
-          <Pressable
-            style={[
-              styles.socialButton,
-              {
-                backgroundColor: colors.surfaceRaised,
-                borderColor: colors.border,
-              },
-              googleLoading && { opacity: 0.7 },
-            ]}
-            onPress={handleGoogle}
-            disabled={loading || googleLoading || facebookLoading}
-          >
-            {googleLoading ? (
-              <ActivityIndicator color={colors.text} />
-            ) : (
-              <>
-                <Ionicons
-                  name="logo-google"
-                  size={20}
-                  color={colors.text}
-                  style={styles.socialIcon}
-                />
-                <Text style={[styles.socialButtonText, { color: colors.text }]}>
-                  Continue with Google
-                </Text>
-              </>
-            )}
-          </Pressable>
-
-          <Pressable
-            style={[
-              styles.socialButton,
-              {
-                backgroundColor: colors.surfaceRaised,
-                borderColor: colors.border,
-              },
-              facebookLoading && { opacity: 0.7 },
-            ]}
-            onPress={handleFacebook}
-            disabled={loading || googleLoading || facebookLoading}
-          >
-            {facebookLoading ? (
-              <ActivityIndicator color={colors.text} />
-            ) : (
-              <>
-                <Ionicons
-                  name="logo-facebook"
-                  size={20}
-                  color={colors.text}
-                  style={styles.socialIcon}
-                />
-                <Text style={[styles.socialButtonText, { color: colors.text }]}>
-                  Continue with Facebook
-                </Text>
-              </>
-            )}
-          </Pressable>
+          {/* ── Social buttons ── */}
+          <View style={styles.socialRow}>
+            <Pressable
+              style={[styles.socialButton, { borderColor: colors.text }, googleLoading && { opacity: 0.7 }]}
+              onPress={handleGoogle}
+              disabled={isAnyLoading}
+            >
+              {googleLoading ? (
+                <ActivityIndicator color={colors.text} size="small" />
+              ) : (
+                <>
+                  <Ionicons name="logo-google" size={14} color="#DB4437" />
+                  <Text style={[styles.socialButtonText, { color: colors.text }]}>GOOGLE</Text>
+                </>
+              )}
+            </Pressable>
+            <Pressable
+              style={[styles.socialButton, { borderColor: colors.text }, facebookLoading && { opacity: 0.7 }]}
+              onPress={handleFacebook}
+              disabled={isAnyLoading}
+            >
+              {facebookLoading ? (
+                <ActivityIndicator color={colors.text} size="small" />
+              ) : (
+                <>
+                  <Ionicons name="logo-facebook" size={14} color="#1877F2" />
+                  <Text style={[styles.socialButtonText, { color: colors.text }]}>FACEBOOK</Text>
+                </>
+              )}
+            </Pressable>
+          </View>
 
           {/* Footer */}
           <View style={styles.footer}>
-            <Text style={[styles.footerText, { color: colors.textTertiary }]}>
-              Already have an account?
+            <Text style={[styles.footerText, { color: colors.textSecondary }]}>
+              HAVE AN ACCOUNT ?{"  "}
             </Text>
-            <Pressable
-              onPress={() => router.push("/auth/login")}
-              disabled={loading}
-            >
-              <Text style={[styles.footerLink, { color: colors.primary }]}>
-                {" "}
-                Sign In
-              </Text>
+            <Pressable onPress={() => !isAnyLoading && router.push("/auth/login")} disabled={isAnyLoading}>
+              <Text style={[styles.footerLink, { color: colors.text }]}>SIGN IN</Text>
             </Pressable>
           </View>
         </ScrollView>
@@ -601,125 +418,143 @@ const RegisterScreen = () => {
 const styles = StyleSheet.create({
   safeArea: { flex: 1 },
   container: { flex: 1 },
-  scrollContent: { padding: 24, paddingTop: 12, paddingBottom: 40 },
+  scroll: {
+    flexGrow: 1,
+    paddingHorizontal: 28,
+    paddingTop: 56,
+    paddingBottom: 40,
+  },
 
-  // ── Header ────────────────────────────────
-  headerRow: { flexDirection: "row", marginBottom: 20 },
-  backBtn: { padding: 2 },
-  backCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: 0,
-    justifyContent: "center",
+  // ── Back ──────────────────────────────────
+  backRow: { marginBottom: 32 },
+  backText: { fontSize: 9, fontWeight: "600", letterSpacing: 2, textTransform: "uppercase" },
+
+  // ── Wordmark ──────────────────────────────
+  wordmarkBlock: {
     alignItems: "center",
+    marginBottom: 48,
   },
-  title: {
+  wordmark: {
     fontSize: 28,
-    fontWeight: "800",
-    marginBottom: 6,
-    // letterSpacing: -0.3,
+    fontWeight: "900",
+    letterSpacing: -1,
+    lineHeight: 30,
   },
-  subtitle: { fontSize: 15, fontWeight: "500", marginBottom: 24 },
+  wordmarkDivider: {
+    width: 28,
+    height: 1,
+    marginTop: 12,
+    marginBottom: 14,
+  },
+  wordmarkSub: {
+    fontSize: 9,
+    letterSpacing: 3,
+    textTransform: "uppercase",
+    fontWeight: "500",
+  },
+  sectionLabel: {
+    fontSize: 9,
+    letterSpacing: 2,
+    textTransform: "uppercase",
+    fontWeight: "600",
+    marginBottom: 28,
+  },
 
   // ── Avatar ────────────────────────────────
-  avatarSection: { alignItems: "center", marginBottom: 24, gap: 10 },
+  avatarSection: { alignItems: "center", marginBottom: 32, gap: 10 },
   avatarBtn: {
-    width: 96,
-    height: 96,
-    borderRadius: 0,
+    width: 88,
+    height: 88,
     borderWidth: 1,
-    justifyContent: "center",
-    alignItems: "center",
     overflow: "hidden",
   },
   avatarImage: { width: "100%", height: "100%" },
-  avatarPlaceholder: { alignItems: "center", gap: 4 },
-  avatarPlaceholderText: { fontSize: 11, fontWeight: "600" },
-  removeText: { fontSize: 13, fontWeight: "600" },
+  avatarPlaceholder: { flex: 1, width: "100%", alignItems: "center", justifyContent: "center", gap: 6 },
+  avatarPlaceholderText: { fontSize: 8, fontWeight: "600", letterSpacing: 2, textTransform: "uppercase" },
+  removeText: { fontSize: 9, fontWeight: "600", letterSpacing: 2, textTransform: "uppercase" },
 
-  // ── Form ──────────────────────────────────
-  formCard: {
-    borderRadius: 0,
-    padding: 20,
-    borderWidth: 1,
-    gap: 16,
-    marginBottom: 16,
-  },
-  fieldGroup: { gap: 6 },
-  label: { fontSize: 13, fontWeight: "600", // letterSpacing: 0.2
-   },
-  inputWrapper: {
-    flexDirection: "row",
-    alignItems: "center",
-    borderWidth: 1,
-    borderRadius: 0,
-    paddingHorizontal: 14,
-    height: 50,
-  },
-  inputIcon: { marginRight: 10 },
-  input: { flex: 1, fontSize: 15, fontWeight: "500", height: "100%" },
-  eyeBtn: { padding: 4 },
-  dateText: { fontSize: 15, fontWeight: "500", flex: 1, paddingVertical: 14 },
-  errorText: { fontSize: 12, fontWeight: "500", marginTop: 2 },
-  row: { flexDirection: "row" },
-
-  // ── Note ──────────────────────────────────
-  noteCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 14,
-    borderRadius: 0,
-    borderWidth: 1,
-    borderLeftWidth: 4,
-    gap: 10,
+  // ── Fields ────────────────────────────────
+  fieldGroup: { width: "100%", marginBottom: 24 },
+  fieldLabel: {
+    fontSize: 9,
+    fontWeight: "500",
+    letterSpacing: 2,
+    textTransform: "uppercase",
     marginBottom: 8,
   },
-  noteText: { fontSize: 13, fontWeight: "500", flex: 1, lineHeight: 19 },
-
-  // ── Button ────────────────────────────────
-  button: {
-    paddingVertical: 16,
-    borderRadius: 0,
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 20,
-  },
-  buttonText: { fontSize: 16, fontWeight: "700" },
-
-  // ── Social Auth ────────────────────────────
-  socialDivider: {
+  underlineField: {
     flexDirection: "row",
     alignItems: "center",
-    width: "100%",
-    marginVertical: 24,
+    borderBottomWidth: 1,
+    paddingVertical: 8,
   },
-  socialDividerLine: { flex: 1, height: 1 },
-  socialDividerText: { marginHorizontal: 16, fontSize: 13, fontWeight: "500" },
-  socialButton: {
-    paddingVertical: 15,
-    borderRadius: 0,
+  input: { fontSize: 14, fontWeight: "500", paddingVertical: 0 },
+  eyeBtn: { paddingLeft: 8 },
+  showHide: { fontSize: 9, fontWeight: "500", letterSpacing: 2, textTransform: "uppercase" },
+  errorText: { fontSize: 9, fontWeight: "500", letterSpacing: 1, marginTop: 6, textTransform: "uppercase" },
+
+  // ── Brand Owner CTA ───────────────────────
+  brandOwnerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
     borderWidth: 1,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    marginBottom: 28,
+  },
+  brandOwnerMeta: { flex: 1, gap: 3 },
+  brandOwnerTitle: { fontSize: 11, fontWeight: "700", letterSpacing: 1.5, textTransform: "uppercase" },
+  brandOwnerSub: { fontSize: 9, fontWeight: "500", letterSpacing: 1, textTransform: "uppercase" },
+  brandOwnerArrow: { fontSize: 14 },
+
+  // ── Primary button ────────────────────────
+  button: {
+    height: 52,
     width: "100%",
     alignItems: "center",
     justifyContent: "center",
+    marginBottom: 28,
+  },
+  buttonText: { fontSize: 11, fontWeight: "600", letterSpacing: 2, textTransform: "uppercase" },
+
+  // ── OR divider ────────────────────────────
+  divider: {
     flexDirection: "row",
+    alignItems: "center",
+    width: "100%",
+    marginBottom: 22,
+  },
+  dividerLine: { flex: 1, height: 1 },
+  dividerText: { marginHorizontal: 16, fontSize: 9, letterSpacing: 2.5, fontWeight: "500" },
+
+  // ── Social buttons ────────────────────────
+  socialRow: {
+    flexDirection: "row",
+    gap: 10,
     marginBottom: 12,
   },
-  socialIcon: {
-    position: "absolute",
-    left: 16,
+  socialButton: {
+    flex: 1,
+    height: 44,
+    borderWidth: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
   },
-  socialButtonText: { fontSize: 15, fontWeight: "600" },
+  socialButtonText: { fontSize: 10, fontWeight: "600", letterSpacing: 2 },
 
   // ── Footer ────────────────────────────────
   footer: {
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
-    marginTop: 24,
+    width: "100%",
+    marginTop: 30,
   },
-  footerText: { fontSize: 14, fontWeight: "500" },
-  footerLink: { fontSize: 14, fontWeight: "700" },
+  footerText: { fontSize: 10, fontWeight: "500", letterSpacing: 1 },
+  footerLink: { fontSize: 10, fontWeight: "700", letterSpacing: 2, textTransform: "uppercase" },
 });
 
 export default RegisterScreen;
