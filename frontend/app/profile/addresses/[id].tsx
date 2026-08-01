@@ -162,12 +162,7 @@ const EditAddressScreen = () => {
       {/* Header */}
       <View style={[styles.header, { borderBottomColor: colors.borderLight }]}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <View
-            style={[
-              styles.backCircle,
-              { backgroundColor: colors.surfaceRaised },
-            ]}
-          >
+          <View style={styles.backCircle}>
             <Ionicons name="chevron-back" size={22} color={colors.text} />
           </View>
         </TouchableOpacity>
