@@ -28,7 +28,13 @@ import getApiUrl from "@/helpers/getApiUrl";
 
 function AppStatusBar() {
   const { scheme } = useThemePreference();
-  return <StatusBar style={scheme === "dark" ? "light" : "dark"} />;
+  return (
+    <StatusBar
+      style={scheme === "dark" ? "light" : "dark"}
+      translucent
+      backgroundColor="transparent"
+    />
+  );
 }
 
 Notifications.setNotificationHandler({
@@ -394,7 +400,7 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <SafeAreaProvider>
+      <SafeAreaProvider statusBarTranslucent>
         <GlobalErrorBoundary>
           <ThemeProvider>
             <AppStatusBar />
