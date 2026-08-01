@@ -367,7 +367,10 @@ const RegisterScreen = () => {
               {googleLoading ? (
                 <ActivityIndicator color={colors.text} size="small" />
               ) : (
-                <Text style={[styles.socialButtonText, { color: colors.text }]}>G · GOOGLE</Text>
+                <>
+                  <Ionicons name="logo-google" size={14} color="#DB4437" />
+                  <Text style={[styles.socialButtonText, { color: colors.text }]}>GOOGLE</Text>
+                </>
               )}
             </Pressable>
             <Pressable
@@ -378,7 +381,10 @@ const RegisterScreen = () => {
               {facebookLoading ? (
                 <ActivityIndicator color={colors.text} size="small" />
               ) : (
-                <Text style={[styles.socialButtonText, { color: colors.text }]}>f · FACEBOOK</Text>
+                <>
+                  <Ionicons name="logo-facebook" size={14} color="#1877F2" />
+                  <Text style={[styles.socialButtonText, { color: colors.text }]}>FACEBOOK</Text>
+                </>
               )}
             </Pressable>
           </View>
@@ -516,8 +522,10 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 44,
     borderWidth: 1,
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
+    gap: 6,
   },
   socialButtonText: { fontSize: 10, fontWeight: "600", letterSpacing: 2 },
 
