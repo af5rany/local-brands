@@ -36,6 +36,7 @@ import { useNetwork } from "@/context/NetworkContext";
 import OfflinePlaceholder from "@/components/OfflinePlaceholder";
 import { useHeaderVisibility } from "@/context/HeaderVisibilityContext";
 import { useScrollToTop } from "@/context/ScrollToTopContext";
+import QuickAddSheet from "@/components/QuickAddSheet";
 
 const CATEGORIES = [
   "ALL",
@@ -59,14 +60,18 @@ const MonolithProductCard = React.memo(
     onPress,
     onWishlistPress,
     onAddToCart,
+    onNotifyMe,
     isInWishlist,
+    isNotifySubscribed,
   }: {
     item: Product;
     index: number;
     onPress: () => void;
     onWishlistPress: () => void;
     onAddToCart: () => void;
+    onNotifyMe: () => void;
     isInWishlist: boolean;
+    isNotifySubscribed: boolean;
   }) => {
     const colors = useThemeColors();
     const cardStyles = useMemo(() => createCardStyles(colors), [colors]);
@@ -80,18 +85,13 @@ const MonolithProductCard = React.memo(
     const [imgWidth, setImgWidth] = useState(0);
 
     const hasDiscount = item.salePrice != null && item.salePrice < item.price;
-    const isSoldOut = (item as any).stock === 0 && !((item as any).productVariants?.some((v: any) => v.stock > 0));
+    const variants: any[] = (item as any).variants || [];
+    const isSoldOut = variants.length > 0
+      ? variants.every((v: any) => !v.isAvailable || v.stock === 0)
+      : (item as any).stock === 0;
 
     return (
-      <View
-        style={[
-          cardStyles.wrapper,
-          index % 2 === 0
-            ? { borderRightWidth: 1, borderRightColor: colors.border }
-            : {},
-          { borderBottomWidth: 1, borderBottomColor: colors.border },
-        ]}
-      >
+      <View style={cardStyles.wrapper}>
         {/* Image — swipeable; tap-to-navigate via transparent overlay */}
         <View
           style={cardStyles.imageWrap}
@@ -194,6 +194,20 @@ const MonolithProductCard = React.memo(
             <Text style={cardStyles.addToCartText}>ADD TO CART</Text>
           </TouchableOpacity>
         )}
+
+        {/* NOTIFY ME bar */}
+        {isSoldOut && (
+          <TouchableOpacity
+            style={[cardStyles.notifyBtn, isNotifySubscribed && cardStyles.notifyBtnSubscribed]}
+            onPress={onNotifyMe}
+            disabled={isNotifySubscribed}
+            activeOpacity={0.8}
+          >
+            <Text style={[cardStyles.notifyBtnText, isNotifySubscribed && cardStyles.notifyBtnTextSubscribed]}>
+              {isNotifySubscribed ? "SUBSCRIBED" : "NOTIFY ME"}
+            </Text>
+          </TouchableOpacity>
+        )}
       </View>
     );
   },
@@ -241,6 +255,13 @@ const ShopScreen = () => {
   const wishlistRef = useRef<number[]>([]);
   const [featuredBrands, setFeaturedBrands] = useState<Brand[]>([]);
   const [totalCount, setTotalCount] = useState(0);
+  const [subscribedProductIds, setSubscribedProductIds] = useState<Set<number>>(new Set());
+
+  const [quickAddProduct, setQuickAddProduct] = useState<{
+    id: number; name: string; price: number; salePrice?: number | null;
+    mainImage?: string; variants: { id: number; size: string | null; stock: number; isAvailable: boolean }[];
+  } | null>(null);
+  const [quickAddVisible, setQuickAddVisible] = useState(false);
 
   // Filter state
   const [activeFilters, setActiveFilters] = useState({
@@ -557,28 +578,46 @@ const ShopScreen = () => {
     }));
   };
 
-  const handleAddToCart = useCallback(async (item: Product) => {
+  const handleNotifyMe = useCallback(async (item: Product) => {
     if (!token) { router.push("/auth/login" as any); return; }
-    const hasVariants = (item as any).productVariants?.length > 0;
-    if (hasVariants) {
-      router.push(`/products/${item.id}` as any);
-      return;
-    }
+    if (subscribedProductIds.has(item.id)) return;
     try {
-      const res = await fetch(`${getApiUrl()}/cart/add`, {
+      await fetch(`${getApiUrl()}/notifications/notify-me/${item.id}`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ productId: item.id, quantity: 1 }),
       });
-      if (res.ok) {
-        refreshCart();
-        showToast("Added to bag", "success");
-      } else {
-        router.push(`/products/${item.id}` as any);
-      }
+      setSubscribedProductIds((prev) => new Set([...prev, item.id]));
+      showToast("You'll be notified when back in stock", "success");
     } catch {
-      showToast("Could not add to bag", "error");
+      showToast("Could not subscribe", "error");
     }
+  }, [token, subscribedProductIds, showToast, router]);
+
+  const handleAddToCart = useCallback((item: Product) => {
+    if (!token) { router.push("/auth/login" as any); return; }
+    const variants: any[] = (item as any).variants || [];
+    if (variants.length > 0) {
+      setQuickAddProduct({
+        id: item.id,
+        name: item.name,
+        price: item.price,
+        salePrice: item.salePrice,
+        mainImage: item.mainImage,
+        variants,
+      });
+      setQuickAddVisible(true);
+      return;
+    }
+    fetch(`${getApiUrl()}/cart/add`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ productId: item.id, quantity: 1 }),
+    })
+      .then((res) => {
+        if (res.ok) { refreshCart(); showToast("Added to bag", "success"); }
+        else router.push(`/products/${item.id}` as any);
+      })
+      .catch(() => showToast("Could not add to bag", "error"));
   }, [token, router, refreshCart, showToast]);
 
   // ── Render helpers ────────────────────────────────
@@ -593,10 +632,12 @@ const ShopScreen = () => {
           else toggleWishlist(item.id);
         }}
         onAddToCart={() => handleAddToCart(item)}
+        onNotifyMe={() => handleNotifyMe(item)}
         isInWishlist={!!(token && wishlistProductIds.includes(item.id))}
+        isNotifySubscribed={subscribedProductIds.has(item.id)}
       />
     ),
-    [token, wishlistProductIds, toggleWishlist, handleAddToCart, router],
+    [token, wishlistProductIds, subscribedProductIds, toggleWishlist, handleAddToCart, handleNotifyMe, router],
   );
 
   const renderListHeader = () => (
@@ -956,6 +997,13 @@ const ShopScreen = () => {
         }))}
         onApply={handlePanelApply}
       />
+
+      {/* ── Quick Add Sheet ───────────────────────── */}
+      <QuickAddSheet
+        visible={quickAddVisible}
+        onClose={() => { setQuickAddVisible(false); setQuickAddProduct(null); }}
+        product={quickAddProduct}
+      />
     </View>
   );
 };
@@ -1076,7 +1124,9 @@ const createCardStyles = (colors: ThemeColors) => StyleSheet.create({
   },
   addToCart: {
     height: 30,
-    backgroundColor: colors.text,
+    backgroundColor: "transparent",
+    borderWidth: 1,
+    borderColor: colors.text,
     alignItems: "center",
     justifyContent: "center",
     marginTop: 10,
@@ -1084,9 +1134,32 @@ const createCardStyles = (colors: ThemeColors) => StyleSheet.create({
   addToCartText: {
     fontSize: 9,
     fontWeight: "600",
-    color: colors.textInverse,
+    color: colors.text,
     letterSpacing: 2,
     textTransform: "uppercase",
+  },
+  notifyBtn: {
+    height: 30,
+    backgroundColor: "transparent",
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 10,
+  },
+  notifyBtnSubscribed: {
+    borderColor: colors.border,
+  },
+  notifyBtnText: {
+    fontSize: 9,
+    fontWeight: "500",
+    color: colors.textTertiary,
+    letterSpacing: 2,
+    textTransform: "uppercase",
+  },
+  notifyBtnTextSubscribed: {
+    color: colors.textTertiary,
+    fontWeight: "400",
   },
 });
 
