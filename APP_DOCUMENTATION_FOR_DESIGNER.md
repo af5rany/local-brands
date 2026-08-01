@@ -258,6 +258,8 @@ Dedicated shopping tab with the same product/brand browsing experience as the Ho
 
 **Product cards:** When a product has multiple images, the card displays a swipeable horizontal image carousel — swipe left/right with a finger to browse images without leaving the grid. Dot indicators at the bottom of each card show position in the image set.
 
+**QuickAddSheet:** Variant products show an "ADD TO CART" button that opens `QuickAddSheet` (inline bottom sheet for size selection) instead of navigating away. Sold-out products show a "NOTIFY ME" button (transparent bg, gray border `colors.border`, gray text `colors.textTertiary`) — tapping posts `POST /notifications/notify-me/:id` and updates to "SUBSCRIBED". Wishlist heart: no background, no border, raw icon positioned absolutely (top:8, right:8). Sold-out overlay uses `pointerEvents="none"` so tap-to-navigate still works through it.
+
 ---
 
 ### 4.1c Management Screen — `/manage/index`
@@ -304,10 +306,10 @@ Accessible to admins and brand owners via the speedometer icon in the Header or 
 - "Forgot Password?" link text (right-aligned)
 - **Sign In** button (primary, full-width, black)
 - **Continue as Guest** button (secondary/outlined)
-- Social login: Google, Facebook (both styled B&W)
+- Social login: Google (`logo-google` Ionicon in `#DB4437`), Facebook (`logo-facebook` in `#1877F2`), Apple (iOS only — outline button with Apple logo), all with brand logos on left side of outline buttons
 - Footer: "Don't have an account? **Register**" link
 
-**Behaviors:** Separate loading states for normal login and guest login. Successful login stores JWT and navigates to home. Guest login creates a temporary account.
+**Behaviors:** Separate loading states for normal login and guest login. Successful login stores JWT and navigates to home. Guest login creates a temporary account. Apple Sign-In uses native iOS prompt (iOS only).
 
 #### 4.2b Register — `/auth/register`
 **Elements:**
@@ -323,9 +325,9 @@ Accessible to admins and brand owners via the speedometer icon in the Header or 
   - Confirm password (required) with show/hide toggle
   - Phone number (optional)
   - Date of birth (optional) — opens native date picker
-- Info note about brand owner accounts
+- Brand owner tappable CTA row (outlined): storefront icon + "WANT TO SELL?" heading + "BECOME A BRAND OWNER" subtext + right arrow → opens `mailto:admin@localbrands.com`
 - **Register** button (primary, full-width, black)
-- Social login: Google, Facebook (both styled B&W)
+- Social login: Google (`logo-google` Ionicon in `#DB4437`) + Facebook (`logo-facebook` Ionicon in `#1877F2`), outline buttons with brand logo on left
 - Footer: "Already have an account? **Sign In**" link
 
 **Behaviors:** Form validation with error messages per field. Avatar is uploaded to Cloudinary before form submission.
@@ -686,8 +688,8 @@ Similar to create product, pre-filled with existing product data. Can update all
 - Two-tab switcher at top: **"Following"** (left, default) | **"For You"** (right)
 - Swipe left/right anywhere on the content area to switch between tabs (horizontal pager)
 - Tapping a tab label also switches pages with animation
-- **Following tab**: masonry-style scroll of posts from followed brands
-- **For You tab**: paginated feed of posts from all brands
+- **Following tab**: Pinterest masonry layout (PinCard + `buildMasonryColumns`) — two-column variable-height grid of posts from followed brands
+- **For You tab**: same Pinterest masonry layout — two-column variable-height grid of posts from all brands
 
 - Each post shows:
   - Brand logo and name (header)
@@ -890,10 +892,12 @@ Similar to create product, pre-filled with existing product data. Can update all
 **Elements:**
 - Slides up from bottom (full-page sheet)
 - Search input (auto-focuses on open)
-- "RESULTS" / "PRODUCTS" section label
-- 2-column product grid:
+- When query is non-empty: fetches brands (`GET /brands?search=q&limit=5`) in parallel with products
+- "BRANDS" section label + brand results above product grid (compact rows: square logo or letter placeholder, brand name uppercase, location subtitle, chevron → navigates to `/brands/{id}` and closes modal)
+- "PRODUCTS" section label + 2-column product grid:
   - Product image, name (uppercase), price (and original price if on sale)
   - Tappable → product detail
+- When query is empty: trending products shown only (no brand results)
 - Caches trending products for instant display on reopen
 - Debounced search: 300ms after last keystroke
 - Close button (×)
@@ -958,7 +962,8 @@ Similar to create product, pre-filled with existing product data. Can update all
 | **Toast** | Notification popups | Success / Error / Info types, auto-dismiss, slide animation |
 | **ImageUploadProgress** | Upload feedback | States: compressing (spinner), uploading (progress bar), success (checkmark), error (alert icon) |
 | **Header** | Top navigation | Logo, greeting, search (opens SearchModal), cart badge, hamburger menu. 3-column flex layout (left actions / centered logo / right actions) — scales correctly across all screen sizes including tablets |
-| **SearchModal** | Global search | Full-page modal, trending products cache, 2-column product grid, debounced live search |
+| **SearchModal** | Global search | Full-page modal, trending products cache, brand results (compact rows with logo/name/location) above product grid when query non-empty, section labels "BRANDS" / "PRODUCTS", 2-column product grid, debounced live search |
+| **QuickAddSheet** | Inline size selection | Bottom sheet modal for variant products on shop grid — shows available sizes, add-to-cart action without navigating to product detail |
 | **TryOnModal** | AI virtual try-on | Camera/gallery picker, Cloudinary upload, job polling, before/after result, save to library |
 | **OfflinePlaceholder** | No-connection state | Wifi icon, "NO INTERNET CONNECTION" message, "RETRY" button; shown on all data-fetching screens when offline with no cached data |
 | **Skeleton** | Loading placeholders | Pulsing placeholder shapes for product grids, order lists, brand cards, feed posts, dashboard stats; used on shop, home, brand detail, dashboard |
@@ -1012,6 +1017,7 @@ The entire UI follows a **strict B&W minimalist aesthetic** — inspired by high
 - **Swipeable cards**: QuickActionCards reveal "Go" action on swipe right
 - **Toast notifications**: Slide-in/out with opacity fade
 - **Search modal**: Slides up from bottom, auto-focuses input
+- **Header hide/show animation**: Hide on scroll down — 320ms (slow, smooth). Show on scroll up — 200ms (snappy). Applied in `HeaderVisibilityContext.tsx` and `products/[productId].tsx`.
 
 ---
 
@@ -1180,7 +1186,8 @@ Profile tab → Edit Profile (name, phone, DOB, avatar)
 - [x] Password reset via email (forgot → reset flow)
 - [x] JWT-based authentication with auto-expiration check (every 5 min)
 - [x] Role-based access control (4 roles)
-- [x] Social login buttons (Google, Facebook — B&W styled)
+- [x] Social login buttons (Google red `#DB4437`, Facebook blue `#1877F2`, Apple — iOS only) — outline buttons with brand logos left-aligned
+- [x] Apple Sign-In (iOS only) — native Apple authentication prompt via `expo-apple-authentication`
 
 ### Product Catalog
 - [x] Product listing with pagination
@@ -1303,13 +1310,14 @@ Profile tab → Edit Profile (name, phone, DOB, avatar)
 - [x] Infinite scroll pagination on feed
 - [x] **Visual product pin tags on post images** — brand owners tap image to place product pin (x/y % coordinates stored), viewers tap pin dot to see product mini-card popup
 - [x] Brand posts on Brand Detail — Products | Posts tab switcher added, allowing users to toggle between brand products and brand feed posts
+- [x] Pinterest masonry layout (feed) — two-column variable-height grid via PinCard + `buildMasonryColumns`
 
 ### Brand Owner — Advanced Tools
 - [x] **Size Guides** — brand owners create/edit size tables (headers, rows, unit); customers see SIZE GUIDE modal on product detail if guide exists
 - [x] **Email Campaigns** — compose, schedule, send HTML/plain-text emails to all brand followers via BullMQ queue; status tracking (draft/scheduled/sending/sent/failed) with sent count
 - [x] **Product Bundles** — create discount bundles (% or fixed, min quantity, date range); automatically applied at checkout when qualifying products in cart
 - [x] **Social Sharing** — native share sheet on product detail (share button wired) and post detail (share icon in header)
-- [x] **Stock Alerts** — customers subscribe to out-of-stock products ("NOTIFY ME" button); automatically notified (in-app + push) when stock is restored
+- [x] **Stock Alerts** — customers subscribe to out-of-stock products ("NOTIFY ME" button on product detail AND on shop grid cards); automatically notified (in-app + push) when stock is restored; button shows "SUBSCRIBED" state after subscribing
 - [x] **Inventory Alerts** — brand owners automatically notified (in-app + push) when product stock drops below configured threshold
 - [x] **Order Tracking (Carrier API)** — TRACK SHIPMENT button on order detail calls live carrier APIs (FedEx, UPS, USPS, DHL); shows events timeline with timestamp, location, description
 - [x] **Multi-Vendor Checkout** — cart items from multiple brands create separate per-brand orders in one checkout action; each order is idempotency-protected; confirmation screen shows all order numbers and combined total
@@ -1325,6 +1333,10 @@ Profile tab → Edit Profile (name, phone, DOB, avatar)
 - [x] **[DONE]** Search by image — camera icon in SearchModal, `useImageSearch` hook, backend CLIP-based embedding — see §10.4
 
 ### UX Features
+- [x] **Edge-to-edge status bar** — `AppStatusBar` component (root `_layout.tsx`) reads the app theme (not system) via `useThemePreference()`, renders `<StatusBar style="dark|light" translucent backgroundColor="transparent" />`. `SafeAreaProvider statusBarTranslucent` prop ensures Android reports correct `insets.top`. Layout pattern: `paddingTop: statusBarHeight` (with `insets.top || RNStatusBar.currentHeight` fallback) on animated header container + `position: absolute, top:0, zIndex:200` tint overlay — immune to animation clipping on Android. Applied in `(tabs)/_layout.tsx` and `products/[productId].tsx`.
+- [x] **Brand search in header search modal** — typing in SearchModal fetches brands (`GET /brands?search=q&limit=5`) in parallel with products; brand results shown as compact rows above product grid with section labels "BRANDS" / "PRODUCTS". No brand results shown when query is empty.
+- [x] **Inline size selection (QuickAddSheet)** — variant products open a bottom sheet for size selection inline instead of navigating to the product detail screen. Available on shop grid cards.
+- [x] **Notify Me on sold-out cards (shop grid)** — NOTIFY ME button on sold-out product cards (`POST /notifications/notify-me/:id`); button changes to "SUBSCRIBED" after tapping; tracks subscribed state per card.
 - [x] Dark mode / Light mode support
 - [x] Responsive design (mobile + tablet)
 - [x] Pull-to-refresh on all list screens

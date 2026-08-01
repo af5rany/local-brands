@@ -370,7 +370,7 @@ Returns paginated `FeedPost` objects for the given brand (same shape as `GET /fe
 | `/auth/register` | POST | Public | User registration (sends welcome email) |
 | `/auth/guest-login` | POST | Public | Create guest session (30-min JWT, creates User row, rate-limited 10/min) |
 | `/auth/convert-guest/:id` | POST | Auth (guest) | Convert guest to registered customer — validates ownership, checks email uniqueness, preserves cart/orders |
-| `/brands` | GET | Public | Paginated brand listing |
+| `/brands` | GET | Public | Paginated brand listing. Supports `?search=` query param for brand name search (used by SearchModal to fetch matching brands in parallel with product results; `?limit=5` keeps brand rows compact). |
 | `/brands/admin` | GET | Admin | All brands (admin view) |
 | `/products` | GET | Public | Paginated product listing with filters |
 | `/products/filters` | GET | Public | Available filter options (categories, types) |

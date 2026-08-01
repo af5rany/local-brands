@@ -50,7 +50,7 @@ Six bottom tabs (with label-less icons):
 | Tab | File | Role |
 |-----|------|------|
 | **Home** | `index.tsx` | Customer/guest product & brand discovery; role-based dashboards for admin/brand owner |
-| **Shop** | `shop.tsx` | Full product & brand browsing with search, filters, sort, and pagination |
+| **Shop** | `shop.tsx` | Full product & brand browsing with search, filters, sort, and pagination. Variant products open `QuickAddSheet` (inline bottom sheet size selector) instead of navigating to detail. Sold-out cards show NOTIFY ME button (`POST /notifications/notify-me/:id`, tracks subscribed state per card, shows "SUBSCRIBED" after). Wishlist heart: no background, no border, raw icon positioned absolutely (top:8, right:8). Sold-out overlay uses `pointerEvents="none"`. |
 | **Feed** | `feed.tsx` | Two-tab pager: "Following" (default, left) + "For You" (right). Swipe left/right to switch tabs. Brand owners see FAB to create posts. |
 | **Wishlist** | `wishlist.tsx` | Saved products grid; shows sign-in prompt for guests |
 | **Brands** | `brands.tsx` | Brand discovery and listing with search, filters, sort, and infinite scroll |
@@ -187,13 +187,14 @@ Centralized via `useCloudinaryUpload` hook:
 | **FilterPanel** | Full-screen animated bottom sheet for filtering (sort, categories, brands, price range) |
 | **FilterChips** | Horizontal bar of active filters with clear (×) buttons |
 | **FilterModal** | Generic select modal: single-select or multi-select, optional search |
-| **SearchModal** | Full-screen search modal (slide-up animation), product grid with debounced search, caches trending products |
+| **SearchModal** | Full-screen search modal (slide-up animation), when query non-empty fetches brands (`GET /brands?search=q&limit=5`) in parallel with products — brand rows (logo, name uppercase, location, chevron) shown above product grid under "BRANDS" label; "PRODUCTS" label above grid. Trending products shown when query empty. Debounced search (300ms), trending cache. |
+| **QuickAddSheet** | Inline size selection bottom sheet for variant products on shop grid — shows available sizes, add-to-cart action without navigating to product detail |
 
 ### UI Components
 
 | Component | Purpose |
 |-----------|---------|
-| **Header** | Logo, greeting, search bar (opens SearchModal), cart badge, hamburger menu. 3-column flex layout: left actions (menu/back + search) / centered logo (flex:1) / right actions (profile + cart). Scales correctly on all screen sizes. |
+| **Header** | Logo, greeting, search bar (opens SearchModal), cart badge, hamburger menu. 3-column flex layout: left actions (menu/back + search) / centered logo (flex:1) / right actions (profile + cart). Scales correctly on all screen sizes. Edge-to-edge status bar: `AppStatusBar` (root `_layout.tsx`) reads app theme via `useThemePreference()`, renders `<StatusBar style="dark|light" translucent backgroundColor="transparent" />`. Layout uses `paddingTop: statusBarHeight` (`insets.top \|\| RNStatusBar.currentHeight` fallback) on animated header container + `position: absolute, top:0, zIndex:200` tint overlay (immune to animation clipping on Android). Applied in `(tabs)/_layout.tsx` and `products/[productId].tsx`. |
 | **GuestBanner** | Yellow banner shown in cart and checkout for guest sessions. Text: "Shopping as guest. Create account to save your order." + "Sign Up" CTA → `/auth/register`. Hidden for registered users. |
 | **Toast** | Success/Error/Info notifications — slide animation, auto-dismiss |
 | **Pagination** | Prev/next arrows, smart page numbers with ellipsis |
@@ -214,7 +215,7 @@ Centralized via `useCloudinaryUpload` hook:
 
 | Feature | Description |
 |---------|-------------|
-| **Authentication** | Login, register, forgot/reset password, JWT token management, guest session (browse + cart + checkout), convert-guest flow in register screen |
+| **Authentication** | Login, register, forgot/reset password, JWT token management, guest session (browse + cart + checkout), convert-guest flow in register screen. Social login: Google (`#DB4437`), Facebook (`#1877F2`), Apple Sign-In (iOS only via `expo-apple-authentication`) — outline buttons with brand logos left-aligned. |
 | **Brand Management** | Full CRUD, multi-brand ownership, brand listing with search/sort/filter. Brand create/edit support logo (1:1) and cover photo (16:9) upload. |
 | **Product Management** | Full CRUD, variant system (size + per-size stock; color and images are product-level), status lifecycle, Cloudinary image upload |
 | **Product Discovery** | Home dashboard, filter chips, pagination, debounced search. Shop grid cards with multiple images show swipeable horizontal pager (finger swipe between images) with dot position indicators. |
@@ -239,6 +240,8 @@ Centralized via `useCloudinaryUpload` hook:
 | **Brand Follow** | Follow/unfollow brands, feed filters to show only followed brands' posts |
 | **Header Side Menu** | Animated slide-in menu with navigation, cart badge, user actions |
 | **Search Modal** | Full-page search with trending products cache and debounced live search |
+| **Brand search in SearchModal** | Brands fetched in parallel with products when query is non-empty; compact rows (logo, name, location) shown above product grid under "BRANDS" section label; tapping navigates to `/brands/{id}` and closes modal |
+| **Edge-to-edge status bar** | `AppStatusBar` reads app theme (not system); translucent + transparent on Android; `paddingTop` + absolute overlay pattern in `(tabs)/_layout.tsx` and `products/[productId].tsx` |
 | **Notifications** | Notification list with unread indicators and mark-all-read |
 | **Notification Settings** | Per-preference toggles (push, email, order updates, promotions) saved to backend |
 | **Referral** | Referral program with share code, copy, and referral history |
@@ -260,7 +263,7 @@ Centralized via `useCloudinaryUpload` hook:
 | **Brand Notify Followers** | Compose modal in dashboard → sends title + message to all followers via backend (`POST /brands/:id/notifications/send`) |
 | **Social Sharing** | Native `Share.share()` wired on product detail share button + share icon in post detail header |
 | **Size Guide Modal** | Product detail fetches `/size-guides/product/:id?brandId=`; "SIZE GUIDE" pressable shows Modal with table (headers + rows) |
-| **Stock Alerts (subscribe)** | "NOTIFY ME" button on out-of-stock products → `POST /notifications/stock-subscribe`; users auto-notified when stock restored |
+| **Stock Alerts (subscribe)** | "NOTIFY ME" button on out-of-stock products (product detail AND shop grid cards) → `POST /notifications/notify-me/:id`; button shows "SUBSCRIBED" after tapping; tracks subscribed state per card; users auto-notified when stock restored |
 | **Admin System Analytics** | AdminDashboard shows revenue cards, GMV bar chart (last 6 months), top brands list, orders-by-status — no longer "Coming Soon" |
 | **Size Guide Management** | 3 brand owner screens under `/brands/[brandId]/size-guides/` — list, create, edit |
 | **Email Campaigns** | 3 brand owner screens under `/brands/[brandId]/email-campaigns/` — list (with status + sent count), compose/create, edit + stats |

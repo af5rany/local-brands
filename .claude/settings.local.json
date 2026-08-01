@@ -121,7 +121,12 @@
       "Bash(keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android -keypass android)",
       "WebFetch(domain:docs.fal.ai)",
       "WebSearch",
-      "*"
+      "*",
+      "Bash(git branch *)",
+      "Bash(git diff *)",
+      "Bash(git -C /Users/f5rany/Documents/Work/local-brands diff --name-only)",
+      "Bash(git -C /Users/f5rany/Documents/Work/local-brands status --short)",
+      "Bash(git *)"
     ]
   }
 }
