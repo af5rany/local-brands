@@ -34,22 +34,22 @@ const ResetPasswordScreen = () => {
 
     if (!token) {
       setStatus("error");
-      setErrorMessage("INVALID OR MISSING RESET TOKEN.");
+      setErrorMessage("Invalid or missing reset token.");
       return;
     }
     if (!newPassword || !confirmPassword) {
       setStatus("error");
-      setErrorMessage("PLEASE FILL IN ALL FIELDS.");
+      setErrorMessage("Please fill in all fields.");
       return;
     }
     if (newPassword !== confirmPassword) {
       setStatus("error");
-      setErrorMessage("PASSWORDS DO NOT MATCH.");
+      setErrorMessage("Passwords do not match.");
       return;
     }
     if (newPassword.length < 6) {
       setStatus("error");
-      setErrorMessage("PASSWORD MUST BE AT LEAST 6 CHARACTERS.");
+      setErrorMessage("Password must be at least 6 characters.");
       return;
     }
 
@@ -68,11 +68,11 @@ const ResetPasswordScreen = () => {
         setStatus("success");
       } else {
         setStatus("error");
-        setErrorMessage((data.message || "Failed to reset password.").toUpperCase());
+        setErrorMessage(data.message || "Failed to reset password.");
       }
     } catch {
       setStatus("error");
-      setErrorMessage("SOMETHING WENT WRONG. PLEASE TRY AGAIN.");
+      setErrorMessage("Something went wrong. Please try again.");
     }
   };
 

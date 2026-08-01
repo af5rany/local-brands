@@ -19,8 +19,10 @@ import {
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/context/AuthContext";
+import { useCart } from "@/context/CartContext";
 import { useGuestGuard } from "@/hooks/useGuestGuard";
 import { useToast } from "@/context/ToastContext";
+import { formatPrice } from "@/utils/formatPrice";
 import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
 import { useImageSearch } from "@/hooks/useImageSearch";
 import FilterPanel, { PanelFilters } from "@/components/FilterPanel";
@@ -56,12 +58,14 @@ const MonolithProductCard = React.memo(
     index,
     onPress,
     onWishlistPress,
+    onAddToCart,
     isInWishlist,
   }: {
     item: Product;
     index: number;
     onPress: () => void;
     onWishlistPress: () => void;
+    onAddToCart: () => void;
     isInWishlist: boolean;
   }) => {
     const colors = useThemeColors();
@@ -77,9 +81,6 @@ const MonolithProductCard = React.memo(
 
     const hasDiscount = item.salePrice != null && item.salePrice < item.price;
     const isSoldOut = (item as any).stock === 0 && !((item as any).productVariants?.some((v: any) => v.stock > 0));
-
-    const formatPrice = (amount: number) =>
-      `$${amount.toLocaleString("en-US", { minimumFractionDigits: 0 })}`;
 
     return (
       <View
@@ -188,9 +189,11 @@ const MonolithProductCard = React.memo(
         </TouchableOpacity>
 
         {/* ADD TO CART bar */}
-        <View style={cardStyles.addToCart}>
-          <Text style={cardStyles.addToCartText}>ADD TO CART</Text>
-        </View>
+        {!isSoldOut && (
+          <TouchableOpacity style={cardStyles.addToCart} onPress={onAddToCart} activeOpacity={0.8}>
+            <Text style={cardStyles.addToCartText}>ADD TO CART</Text>
+          </TouchableOpacity>
+        )}
       </View>
     );
   },
@@ -204,6 +207,7 @@ const ShopScreen = () => {
     gender?: string;
   }>();
   const { token, loading } = useAuth();
+  const { refresh: refreshCart } = useCart();
   const { requireAuth } = useGuestGuard();
   const { showToast } = useToast();
   const colors = useThemeColors();
@@ -553,6 +557,30 @@ const ShopScreen = () => {
     }));
   };
 
+  const handleAddToCart = useCallback(async (item: Product) => {
+    if (!token) { router.push("/auth/login" as any); return; }
+    const hasVariants = (item as any).productVariants?.length > 0;
+    if (hasVariants) {
+      router.push(`/products/${item.id}` as any);
+      return;
+    }
+    try {
+      const res = await fetch(`${getApiUrl()}/cart/add`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ productId: item.id, quantity: 1 }),
+      });
+      if (res.ok) {
+        refreshCart();
+        showToast("Added to bag", "success");
+      } else {
+        router.push(`/products/${item.id}` as any);
+      }
+    } catch {
+      showToast("Could not add to bag", "error");
+    }
+  }, [token, router, refreshCart, showToast]);
+
   // ── Render helpers ────────────────────────────────
   const renderProductCard = useCallback(
     ({ item, index }: { item: Product; index: number }) => (
@@ -564,10 +592,11 @@ const ShopScreen = () => {
           if (!token) router.push("/auth/login" as any);
           else toggleWishlist(item.id);
         }}
+        onAddToCart={() => handleAddToCart(item)}
         isInWishlist={!!(token && wishlistProductIds.includes(item.id))}
       />
     ),
-    [token, wishlistProductIds, toggleWishlist, router],
+    [token, wishlistProductIds, toggleWishlist, handleAddToCart, router],
   );
 
   const renderListHeader = () => (

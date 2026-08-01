@@ -8,12 +8,14 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Alert,
-
 } from "react-native";
 import { useFocusEffect, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/context/AuthContext";
+import { useCart } from "@/context/CartContext";
+import { useToast } from "@/context/ToastContext";
 import getApiUrl from "@/helpers/getApiUrl";
+import { formatPrice } from "@/utils/formatPrice";
 import { useThemeColors } from "@/hooks/useThemeColor";
 import { ProductGridSkeleton } from "@/components/Skeleton";
 import { useNetwork } from "@/context/NetworkContext";
@@ -36,6 +38,8 @@ interface FollowedBrand {
 const WishlistTab = () => {
   const router = useRouter();
   const { token } = useAuth();
+  const { refresh: refreshCart } = useCart();
+  const { showToast } = useToast();
   const colors = useThemeColors();
   const { isConnected } = useNetwork();
   const { reportScroll } = useHeaderVisibility();
@@ -45,6 +49,8 @@ const WishlistTab = () => {
   const [loading, setLoading] = useState(true);
   const [brandsLoading, setBrandsLoading] = useState(true);
   const [unfollowingId, setUnfollowingId] = useState<number | null>(null);
+  const [subscribedIds, setSubscribedIds] = useState<Set<number>>(new Set());
+  const [addingToCartId, setAddingToCartId] = useState<number | null>(null);
 
 const { register, unregister } = useScrollToTop();
   const productsRef = useRef<FlatList>(null);
@@ -152,12 +158,58 @@ const { register, unregister } = useScrollToTop();
     }
   };
 
+  const handleCartOrNotify = useCallback(async (product: any) => {
+    if (!token) { router.push("/auth/login" as any); return; }
+    const inStock = (product.stock ?? 0) > 0 || product.productVariants?.some((v: any) => v.stock > 0);
+
+    if (!inStock) {
+      if (subscribedIds.has(product.id)) return;
+      try {
+        const res = await fetch(`${getApiUrl()}/notifications/notify-me/${product.id}`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        });
+        if (res.ok) {
+          setSubscribedIds((prev) => new Set(prev).add(product.id));
+          showToast("You'll be notified when back in stock", "success");
+        }
+      } catch {
+        showToast("Could not subscribe", "error");
+      }
+      return;
+    }
+
+    const hasVariants = product.productVariants?.length > 0;
+    if (hasVariants) { router.push(`/products/${product.id}` as any); return; }
+
+    if (addingToCartId === product.id) return;
+    setAddingToCartId(product.id);
+    try {
+      const res = await fetch(`${getApiUrl()}/cart/add`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ productId: product.id, quantity: 1 }),
+      });
+      if (res.ok) { refreshCart(); showToast("Added to bag", "success"); }
+      else { router.push(`/products/${product.id}` as any); }
+    } catch {
+      showToast("Could not add to bag", "error");
+    } finally {
+      setAddingToCartId(null);
+    }
+  }, [token, router, subscribedIds, addingToCartId, refreshCart, showToast]);
+
   const renderProductItem = ({ item }: { item: any }) => {
     const product = item.product;
     if (!product) return null;
     const image = product.mainImage || product.images?.[0] || "";
-    const hasVariants = product.productVariants?.some((v: any) => v.stock > 0);
-    const inStock = (product.stock ?? 0) > 0 || hasVariants;
+    const inStock = (product.stock ?? 0) > 0 || product.productVariants?.some((v: any) => v.stock > 0);
+    const isSubscribed = subscribedIds.has(product.id);
+    const isAddingThisItem = addingToCartId === product.id;
+
+    let btnLabel = inStock ? "ADD TO CART" : "NOTIFY ME";
+    if (isSubscribed) btnLabel = "SUBSCRIBED";
+    if (isAddingThisItem) btnLabel = "ADDING...";
 
     return (
       <View style={[styles.productRow, { borderBottomColor: colors.border }]}>
@@ -179,18 +231,19 @@ const { register, unregister } = useScrollToTop();
             {product.name.toUpperCase()}
           </Text>
           <Text style={[styles.productPrice, { color: colors.text }]}>
-            ${Number(product.salePrice ?? product.price).toFixed(0)}
+            {formatPrice(product.salePrice ?? product.price)}
           </Text>
           <Text style={[styles.stockLabel, { color: inStock ? colors.text : colors.accentRed }]}>
             {inStock ? "IN STOCK" : "OUT OF STOCK"}
           </Text>
           <TouchableOpacity
-            style={[styles.cartBtn, { backgroundColor: inStock ? colors.text : colors.background, borderColor: colors.text }]}
-            onPress={() => router.push(`/products/${product.id}` as any)}
+            style={[styles.cartBtn, { backgroundColor: inStock ? colors.text : colors.background, borderColor: colors.text, opacity: isSubscribed || isAddingThisItem ? 0.5 : 1 }]}
+            onPress={() => handleCartOrNotify(product)}
+            disabled={isSubscribed || isAddingThisItem}
             activeOpacity={0.8}
           >
             <Text style={[styles.cartBtnText, { color: inStock ? colors.background : colors.text }]}>
-              {inStock ? "ADD TO CART" : "NOTIFY ME"}
+              {btnLabel}
             </Text>
           </TouchableOpacity>
         </View>
