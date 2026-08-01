@@ -879,7 +879,10 @@ const ShopScreen = () => {
         numColumns={2}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
-        onScroll={(e) => reportScroll(e.nativeEvent.contentOffset.y)}
+        onScroll={(e) => {
+          const { contentOffset, contentSize, layoutMeasurement } = e.nativeEvent;
+          reportScroll(contentOffset.y, contentSize.height, layoutMeasurement.height);
+        }}
         scrollEventThrottle={16}
         ListHeaderComponent={inImageSearchMode ? null : renderListHeader}
         ListFooterComponent={inImageSearchMode ? null : renderListFooter}

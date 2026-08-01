@@ -36,12 +36,13 @@ function TabLayoutInner() {
   }, [pathname]);
 
   const headerAnimStyle = useAnimatedStyle(() => ({
-    marginTop: headerTranslateY.value,
+    transform: [{ translateY: headerTranslateY.value }],
+    marginBottom: headerTranslateY.value,
   }));
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <Animated.View style={[{ zIndex: 100 }, headerAnimStyle]}>
+      <Animated.View style={[{ zIndex: 100, overflow: "hidden" }, headerAnimStyle]}>
         <SafeAreaView
           edges={["top"]}
           style={{ backgroundColor: colors.surface }}
