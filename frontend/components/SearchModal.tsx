@@ -23,6 +23,7 @@ import { useImageSearch } from "@/hooks/useImageSearch";
 import { useSearchHistory } from "@/hooks/useSearchHistory";
 import getApiUrl from "@/helpers/getApiUrl";
 import { Product } from "@/types/product";
+import { Brand } from "@/types/brand";
 
 interface SearchModalProps {
   visible: boolean;
@@ -38,6 +39,7 @@ export default function SearchModal({ visible, onClose }: SearchModalProps) {
 
   const [query, setQuery] = useState("");
   const [products, setProducts] = useState<Product[]>([]);
+  const [brands, setBrands] = useState<Brand[]>([]);
   const [loading, setLoading] = useState(false);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const cachedProducts = useRef<Product[]>([]);
@@ -62,6 +64,7 @@ export default function SearchModal({ visible, onClose }: SearchModalProps) {
     if (!visible) {
       setQuery("");
       setProducts([]);
+      setBrands([]);
       setSuggestions([]);
       clearImageSearch();
       return;
@@ -99,22 +102,29 @@ export default function SearchModal({ visible, onClose }: SearchModalProps) {
     async (text: string) => {
       if (!text.trim()) {
         setProducts(cachedProducts.current);
+        setBrands([]);
         setSuggestions([]);
         return;
       }
       setLoading(true);
       try {
-        const [productsRes, suggestionsRes] = await Promise.all([
+        const q = encodeURIComponent(text);
+        const [productsRes, brandsRes, suggestionsRes] = await Promise.all([
           fetch(
-            `${getApiUrl()}/products?limit=20&status=published&search=${encodeURIComponent(text)}`,
+            `${getApiUrl()}/products?limit=20&status=published&search=${q}`,
             { headers: { ...(token && { Authorization: `Bearer ${token}` }) } },
           ),
+          fetch(`${getApiUrl()}/brands?search=${q}&limit=5`),
           text.trim().length >= 2
-            ? fetch(`${getApiUrl()}/products/suggestions?q=${encodeURIComponent(text)}`)
+            ? fetch(`${getApiUrl()}/products/suggestions?q=${q}`)
             : Promise.resolve(null),
         ]);
-        const data = await productsRes.json();
-        setProducts(data.items || []);
+        const [productData, brandData] = await Promise.all([
+          productsRes.json(),
+          brandsRes.ok ? brandsRes.json() : { items: [] },
+        ]);
+        setProducts(productData.items || []);
+        setBrands(brandData.items || []);
         if (suggestionsRes?.ok) {
           const sData = await suggestionsRes.json();
           setSuggestions([
@@ -124,6 +134,7 @@ export default function SearchModal({ visible, onClose }: SearchModalProps) {
         }
       } catch {
         setProducts([]);
+        setBrands([]);
       } finally {
         setLoading(false);
       }
@@ -179,6 +190,38 @@ export default function SearchModal({ visible, onClose }: SearchModalProps) {
 
   const displayedProducts = inImageSearchMode ? imageResults : products;
   const isLoading = inImageSearchMode ? imageSearching : loading;
+
+  const renderBrand = (brand: Brand) => (
+    <Pressable
+      key={brand.id}
+      style={[styles.brandRow, { borderBottomColor: colors.borderLight }]}
+      onPress={() => {
+        router.push(`/brands/${brand.id}` as any);
+        onClose();
+      }}
+    >
+      {brand.logo ? (
+        <Image source={{ uri: brand.logo }} style={styles.brandLogo} resizeMode="cover" />
+      ) : (
+        <View style={[styles.brandLogo, { backgroundColor: colors.surfaceRaised, justifyContent: "center", alignItems: "center" }]}>
+          <Text style={[styles.brandInitial, { color: colors.text }]}>
+            {brand.name.charAt(0).toUpperCase()}
+          </Text>
+        </View>
+      )}
+      <View style={styles.brandMeta}>
+        <Text style={[styles.brandName, { color: colors.text }]} numberOfLines={1}>
+          {brand.name.toUpperCase()}
+        </Text>
+        {brand.location ? (
+          <Text style={[styles.brandLocation, { color: colors.textTertiary }]} numberOfLines={1}>
+            {brand.location}
+          </Text>
+        ) : null}
+      </View>
+      <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
+    </Pressable>
+  );
 
   const renderProduct = ({ item }: { item: Product }) => {
     const image = item.mainImage;
@@ -355,15 +398,25 @@ export default function SearchModal({ visible, onClose }: SearchModalProps) {
             keyboardShouldPersistTaps="handled"
             renderItem={renderProduct}
             ListHeaderComponent={
-              displayedProducts.length > 0 ? (
-                <Text style={[styles.sectionTitle, { color: colors.textTertiary }]}>
-                  {inImageSearchMode
-                    ? "SIMILAR PRODUCTS"
-                    : query.trim()
-                      ? "RESULTS"
-                      : "PRODUCTS"}
-                </Text>
-              ) : null
+              <>
+                {!inImageSearchMode && query.trim() && brands.length > 0 && (
+                  <View style={styles.brandsSection}>
+                    <Text style={[styles.sectionTitle, { color: colors.textTertiary }]}>BRANDS</Text>
+                    <View style={[styles.brandsContainer, { borderColor: colors.borderLight }]}>
+                      {brands.map(renderBrand)}
+                    </View>
+                  </View>
+                )}
+                {displayedProducts.length > 0 && (
+                  <Text style={[styles.sectionTitle, { color: colors.textTertiary, marginTop: brands.length > 0 && !inImageSearchMode ? 20 : 0 }]}>
+                    {inImageSearchMode
+                      ? "SIMILAR PRODUCTS"
+                      : query.trim()
+                        ? "PRODUCTS"
+                        : "PRODUCTS"}
+                  </Text>
+                )}
+              </>
             }
             ListEmptyComponent={
               !isLoading ? (
@@ -532,6 +585,42 @@ const styles = StyleSheet.create({
   historyChipText: {
     fontSize: 12,
     flex: 1,
+  },
+  brandsSection: {
+    marginBottom: 4,
+  },
+  brandsContainer: {
+    borderWidth: 0.5,
+    overflow: "hidden",
+  },
+  brandRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    gap: 14,
+    borderBottomWidth: 0.5,
+  },
+  brandLogo: {
+    width: 40,
+    height: 40,
+    borderRadius: 0,
+    overflow: "hidden",
+  },
+  brandInitial: {
+    fontSize: 18,
+    fontWeight: "700",
+  },
+  brandMeta: {
+    flex: 1,
+  },
+  brandName: {
+    fontSize: 13,
+    fontWeight: "700",
+  },
+  brandLocation: {
+    fontSize: 11,
+    marginTop: 2,
   },
   suggestionsContainer: {
     borderBottomWidth: 0.5,
