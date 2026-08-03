@@ -46,8 +46,6 @@ import OfflinePlaceholder from "@/components/OfflinePlaceholder";
 
 const { width: W } = Dimensions.get("window");
 
-const MARQUEE_TEXT =
-  "COMPLIMENTARY GIFT WRAPPING  ·  FREE RETURNS WITHIN 30 DAYS  ·  ARCHIVAL RELEASE #001  ·  ";
 
 const ProductDetailScreen = () => {
   const router = useRouter();
@@ -84,13 +82,11 @@ const ProductDetailScreen = () => {
   const [showTryOn, setShowTryOn] = useState(false);
   const [detailsExpanded, setDetailsExpanded] = useState(false);
   const [shippingExpanded, setShippingExpanded] = useState(false);
-  const [returnsExpanded, setReturnsExpanded] = useState(false);
   const [sizeGuide, setSizeGuide] = useState<any>(null);
   const [showSizeGuide, setShowSizeGuide] = useState(false);
   const [similarProducts, setSimilarProducts] = useState<Product[]>([]);
 
   const imageCarouselRef = useRef<FlatList>(null);
-  const marqueeAnim = useRef(new Animated.Value(0)).current;
   const scrollY = useRef(new Animated.Value(0)).current;
 
   const headerTranslateY = useSharedValue(0);
@@ -142,17 +138,6 @@ const ProductDetailScreen = () => {
     }
   };
 
-  useEffect(() => {
-    const anim = Animated.loop(
-      Animated.timing(marqueeAnim, {
-        toValue: -1,
-        duration: 18000,
-        useNativeDriver: true,
-      }),
-    );
-    anim.start();
-    return () => anim.stop();
-  }, []);
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -963,11 +948,11 @@ const ProductDetailScreen = () => {
                     return (
                       <TouchableOpacity
                         key={size}
-                        onPress={() => sizeInStock && setSelectedSize(size)}
-                        disabled={!sizeInStock}
+                        onPress={() => setSelectedSize(size)}
                         style={[
                           styles.sizeBox,
                           isActive && [styles.sizeBoxSelected, { borderColor: colors.text }],
+                          !sizeInStock && { opacity: 0.4 },
                         ]}
                         activeOpacity={0.8}
                       >
@@ -976,11 +961,13 @@ const ProductDetailScreen = () => {
                             styles.sizeBoxText,
                             { color: colors.textSecondary },
                             isActive && { color: colors.text, fontFamily: "Inter_700Bold" },
-                            !sizeInStock && { color: colors.textTertiary, fontStyle: "italic" as const },
                           ]}
                         >
                           {size}
                         </Text>
+                        {!sizeInStock && (
+                          <View style={[styles.sizeBoxStrike, { backgroundColor: colors.textTertiary }]} />
+                        )}
                       </TouchableOpacity>
                     );
                   })}
@@ -1077,26 +1064,6 @@ const ProductDetailScreen = () => {
               </View>
             )}
 
-            {/* RETURNS row */}
-            <TouchableOpacity
-              style={styles.accordionRow}
-              onPress={() => setReturnsExpanded(!returnsExpanded)}
-              activeOpacity={0.7}
-            >
-              <Text style={[styles.accordionLabel, { color: colors.text }]}>RETURNS</Text>
-              <Ionicons
-                name={returnsExpanded ? "chevron-up" : "chevron-down"}
-                size={18}
-                color={colors.textSecondary}
-              />
-            </TouchableOpacity>
-            {returnsExpanded && (
-              <View style={[styles.accordionContent, { backgroundColor: colors.surfaceRaised, borderBottomColor: colors.borderLight }]}>
-                <Text style={[styles.accordionBodyText, { color: colors.textSecondary }]}>
-                  Free returns within 30 days of delivery. Items must be unworn with original tags attached. Refunds processed within 5–7 business days.
-                </Text>
-              </View>
-            )}
           </View>
 
           {/* Similar products */}
@@ -1115,7 +1082,7 @@ const ProductDetailScreen = () => {
                   const img = item.images?.[0] || item.mainImage;
                   return (
                     <TouchableOpacity
-                      style={[styles.similarCard, { backgroundColor: colors.surfaceRaised }]}
+                      style={styles.similarCard}
                       onPress={() => router.push(`/products/${item.id}` as any)}
                       activeOpacity={0.85}
                     >
@@ -1161,28 +1128,6 @@ const ProductDetailScreen = () => {
             <ProductQA productId={product.id} brandId={product.brand?.id} />
           </View>
 
-          {/* Marquee strip */}
-          <View style={[styles.marqueeContainer, { backgroundColor: colors.primary }]}>
-            <Animated.View
-              style={[
-                styles.marqueeTrack,
-                {
-                  transform: [
-                    {
-                      translateX: marqueeAnim.interpolate({
-                        inputRange: [-1, 0],
-                        outputRange: [-W * 2, 0],
-                      }),
-                    },
-                  ],
-                },
-              ]}
-            >
-              <Text style={[styles.marqueeText, { color: colors.primaryForeground }]}>
-                {MARQUEE_TEXT.repeat(6)}
-              </Text>
-            </Animated.View>
-          </View>
 
           {/* Admin Controls */}
           {isOwnerOrAdmin && (
@@ -1215,7 +1160,7 @@ const ProductDetailScreen = () => {
             { paddingBottom: insets.bottom + 12, borderTopColor: colors.border, backgroundColor: colors.surface },
           ]}
         >
-          {allOutOfStock ? (
+          {allOutOfStock || (!!selectedSize && !inStock) ? (
             <TouchableOpacity
               style={[
                 styles.addToBagBtn,
@@ -1747,6 +1692,8 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     height: 48,
     alignItems: "center",
     justifyContent: "center",
+    position: "relative",
+    overflow: "hidden",
   },
   sizeBoxSelected: {
     borderWidth: 1,
@@ -1764,6 +1711,13 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   sizeBoxTextOos: {
     color: colors.textTertiary,
     fontStyle: "italic",
+  },
+  sizeBoxStrike: {
+    position: "absolute",
+    height: 1,
+    left: 0,
+    right: 0,
+    top: "50%",
   },
 
   // ── Accordion Sections ──────────────────────────
@@ -1812,23 +1766,6 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     // letterSpacing: 0.5,
   },
 
-  // ── Marquee ───────────────────────────────────────
-  marqueeContainer: {
-    backgroundColor: colors.primary,
-    paddingVertical: 12,
-    marginTop: 40,
-    overflow: "hidden",
-  },
-  marqueeTrack: {
-    flexDirection: "row",
-  },
-  marqueeText: {
-    fontSize: 10,
-    fontFamily: undefined,
-    color: colors.primaryForeground,
-    // letterSpacing: 2,
-    textTransform: "uppercase",
-  },
 
   // ── Admin Controls ────────────────────────────────
   adminSection: {

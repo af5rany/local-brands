@@ -50,11 +50,35 @@ const QuickAddSheet: React.FC<QuickAddSheetProps> = ({ visible, onClose, product
 
   const displayPrice = product.salePrice ?? product.price;
   const hasDiscount = product.salePrice != null && product.salePrice < product.price;
-  const availableVariants = product.variants.filter((v) => v.isAvailable && v.stock > 0);
+
+  const selectedVariant = product.variants.find((v) => v.id === selectedVariantId);
+  const selectedVariantOos = selectedVariant ? (!selectedVariant.isAvailable || selectedVariant.stock === 0) : false;
 
   const handleAdd = async () => {
     if (!selectedVariantId) {
       showToast("Please select a size", "error");
+      return;
+    }
+    if (selectedVariantOos) {
+      // Notify me for OOS selected size
+      setLoading(true);
+      try {
+        const res = await fetch(`${getApiUrl()}/notifications/notify-me/${product.id}`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        });
+        if (res.ok) {
+          showToast("You'll be notified when back in stock", "success");
+          setSelectedVariantId(null);
+          onClose();
+        } else {
+          showToast("Could not subscribe", "error");
+        }
+      } catch {
+        showToast("Could not subscribe", "error");
+      } finally {
+        setLoading(false);
+      }
       return;
     }
     setLoading(true);
@@ -131,8 +155,7 @@ const QuickAddSheet: React.FC<QuickAddSheetProps> = ({ visible, onClose, product
                   { borderColor: isSelected ? colors.text : colors.border, backgroundColor: isSelected ? colors.text : colors.background },
                   outOfStock && styles.sizeChipOos,
                 ]}
-                onPress={() => !outOfStock && setSelectedVariantId(v.id)}
-                disabled={outOfStock}
+                onPress={() => setSelectedVariantId(v.id)}
                 activeOpacity={0.7}
               >
                 <Text style={[styles.sizeLabel, { color: isSelected ? colors.background : outOfStock ? colors.textTertiary : colors.text }]}>
@@ -163,7 +186,7 @@ const QuickAddSheet: React.FC<QuickAddSheetProps> = ({ visible, onClose, product
             <ActivityIndicator color={colors.background} size="small" />
           ) : (
             <Text style={[styles.addBtnText, { color: selectedVariantId ? colors.background : colors.textTertiary }]}>
-              {selectedVariantId ? "ADD TO BAG" : "SELECT A SIZE"}
+              {!selectedVariantId ? "SELECT A SIZE" : selectedVariantOos ? "NOTIFY ME" : "ADD TO BAG"}
             </Text>
           )}
         </TouchableOpacity>

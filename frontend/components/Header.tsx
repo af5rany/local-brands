@@ -9,7 +9,9 @@ import {
   Modal,
   TouchableOpacity,
   TouchableWithoutFeedback,
+  ScrollView,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import ReAnimated, {
   useSharedValue,
   useAnimatedStyle,
@@ -57,6 +59,7 @@ interface AnimatedMenuItemProps {
   colors: any;
   onPress: () => void;
   styles: ReturnType<typeof createStyles>;
+  small?: boolean;
 }
 
 const AnimatedMenuItem: React.FC<AnimatedMenuItemProps> = ({
@@ -66,7 +69,8 @@ const AnimatedMenuItem: React.FC<AnimatedMenuItemProps> = ({
   active,
   colors,
   onPress,
-  styles
+  styles,
+  small,
 }) => {
   const translateX = useSharedValue(-60);
   const opacity = useSharedValue(0);
@@ -90,34 +94,19 @@ const AnimatedMenuItem: React.FC<AnimatedMenuItemProps> = ({
   return (
     <ReAnimated.View style={animStyle}>
       <TouchableOpacity
-        style={[
-          styles.menuItem,
-          active && { backgroundColor: colors.surfaceRaised },
-        ]}
+        style={[styles.menuItem, small && styles.menuItemSmall]}
         onPress={onPress}
         activeOpacity={0.6}
       >
-        <View style={styles.menuItemIconWrap}>
-          <Ionicons
-            name={item.icon}
-            size={20}
-            color={active ? colors.text : colors.textTertiary}
-          />
-        </View>
         <Text
           style={[
-            styles.menuItemLabel,
-            { color: active ? colors.text : colors.textSecondary },
-            active && { fontWeight: "700" },
+            small ? styles.menuItemLabelSmall : styles.menuItemLabel,
+            { color: active ? colors.text : colors.textTertiary },
+            active && !small && { fontWeight: "800" },
           ]}
         >
           {item.label}
         </Text>
-        <Ionicons
-          name="chevron-forward"
-          size={18}
-          color={active ? colors.text : colors.textTertiary}
-        />
       </TouchableOpacity>
     </ReAnimated.View>
   );
@@ -164,6 +153,7 @@ interface HeaderProps {
 const Header: React.FC<HeaderProps> = ({ notificationCount = 0, showBack = false, dark = false, imperativeRef }) => {
   const colors = useThemeColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
+  const insets = useSafeAreaInsets();
   const iconColor = dark ? colors.textInverse : colors.text;
   const bgColor = dark ? colors.primary : colors.surface;
   const logoColor = dark ? colors.textInverse : colors.text;
@@ -216,8 +206,8 @@ const Header: React.FC<HeaderProps> = ({ notificationCount = 0, showBack = false
     <View style={[styles.headerWrapper, { backgroundColor: bgColor }]}>
       {/* Top Row: Left | Center Logo | Right */}
       <View style={[styles.topRow, { paddingHorizontal: isTablet ? 28 : 16 }]}>
-        {/* LEFT — Menu or Back + Search */}
-        <View style={styles.sideActions}>
+        {/* LEFT — fixed 80px so logo stays centered */}
+        <View style={styles.sideActionsLeft}>
           {showBack ? (
             <Pressable style={styles.iconBtn} onPress={() => router.back()}>
               <Ionicons name="arrow-back" size={20} color={iconColor} />
@@ -241,8 +231,8 @@ const Header: React.FC<HeaderProps> = ({ notificationCount = 0, showBack = false
           </Text>
         </Pressable>
 
-        {/* RIGHT — Profile + Cart */}
-        <View style={styles.sideActions}>
+        {/* RIGHT — fixed 80px matching left */}
+        <View style={styles.sideActionsRight}>
           <Pressable style={styles.iconBtn} onPress={() => router.push("/(tabs)/profile" as any)}>
             <Ionicons name="person-outline" size={20} color={iconColor} />
           </Pressable>
@@ -275,6 +265,7 @@ const Header: React.FC<HeaderProps> = ({ notificationCount = 0, showBack = false
                   styles.menuDrawer,
                   {
                     backgroundColor: colors.surface,
+                    paddingTop: insets.top + 12,
                     transform: [{ translateX: slideAnim }],
                   },
                 ]}
@@ -286,70 +277,57 @@ const Header: React.FC<HeaderProps> = ({ notificationCount = 0, showBack = false
                       Menu
                     </Text>
                     <Pressable
-                      style={[
-                        styles.menuCloseBtn,
-                        { backgroundColor: colors.surfaceRaised },
-                      ]}
+                      style={styles.menuCloseBtn}
                       onPress={closeMenu}
                     >
                       <Ionicons name="close" size={20} color={colors.text} />
                     </Pressable>
                   </View>
-
-                  {/* Divider */}
-                  <View
-                    style={[
-                      styles.menuDivider,
-                      { backgroundColor: colors.border },
-                    ]}
-                  />
                 </AnimatedSection>
 
-                {/* Menu Items */}
-                <View style={styles.menuItems}>
-                  {MENU_ITEMS.map((item, index) => (
-                    <AnimatedMenuItem
-                      key={index}
-                      index={index}
-                      menuOpen={menuVisible}
-                      item={item}
-                      active={isActiveRoute(item.route)}
-                      colors={colors}
-                      onPress={() => handleMenuItemPress(item.route)}
-                      styles={styles}
-                    />
-                  ))}
-                </View>
+                {/* Scrollable nav items */}
+                <ScrollView
+                  style={styles.menuScroll}
+                  showsVerticalScrollIndicator={false}
+                  contentContainerStyle={styles.menuScrollContent}
+                >
+                  {/* Primary nav */}
+                  <View style={styles.menuItems}>
+                    {MENU_ITEMS.map((item, index) => (
+                      <AnimatedMenuItem
+                        key={index}
+                        index={index}
+                        menuOpen={menuVisible}
+                        item={item}
+                        active={isActiveRoute(item.route)}
+                        colors={colors}
+                        onPress={() => handleMenuItemPress(item.route)}
+                        styles={styles}
+                      />
+                    ))}
+                  </View>
 
-                {/* Info Section */}
-                <AnimatedSection menuOpen={menuVisible} delay={150 + MENU_ITEMS.length * STAGGER_DELAY}>
-                  <View style={[styles.menuDivider, { backgroundColor: colors.border, marginVertical: 8 }]} />
-                  <Text style={[styles.menuSectionLabel, { color: colors.textTertiary }]}>INFO</Text>
-                </AnimatedSection>
-                <View style={styles.menuItems}>
-                  {INFO_ITEMS.map((item, index) => (
-                    <AnimatedMenuItem
-                      key={`info-${index}`}
-                      index={MENU_ITEMS.length + index}
-                      menuOpen={menuVisible}
-                      item={item}
-                      active={isActiveRoute(item.route)}
-                      colors={colors}
-                      onPress={() => handleMenuItemPress(item.route)}
-                      styles={styles}
-                    />
-                  ))}
-                </View>
+                  {/* Info items — demoted style */}
+                  <View style={[styles.menuItems, { marginTop: 24 }]}>
+                    {INFO_ITEMS.map((item, index) => (
+                      <AnimatedMenuItem
+                        key={`info-${index}`}
+                        index={MENU_ITEMS.length + index}
+                        menuOpen={menuVisible}
+                        item={item}
+                        active={isActiveRoute(item.route)}
+                        colors={colors}
+                        onPress={() => handleMenuItemPress(item.route)}
+                        styles={styles}
+                        small
+                      />
+                    ))}
+                  </View>
+                </ScrollView>
 
-                {/* Menu Footer */}
-                <AnimatedSection menuOpen={menuVisible} delay={150 + MENU_ITEMS.length * STAGGER_DELAY + 100} style={{ marginTop: "auto" }}>
-                  <View style={styles.menuFooter}>
-                    <View
-                      style={[
-                        styles.menuDivider,
-                        { backgroundColor: colors.border },
-                      ]}
-                    />
+                {/* Footer — pinned at bottom */}
+                <AnimatedSection menuOpen={menuVisible} delay={150 + MENU_ITEMS.length * STAGGER_DELAY + 100}>
+                  <View style={[styles.menuFooter, { paddingBottom: insets.bottom + 24 }]}>
                     <TouchableOpacity
                       style={[
                         styles.menuLogoutBtn,
@@ -384,14 +362,6 @@ const Header: React.FC<HeaderProps> = ({ notificationCount = 0, showBack = false
                         {token ? "Log Out" : "Log In"}
                       </Text>
                     </TouchableOpacity>
-                    <Text
-                      style={[
-                        styles.menuFooterText,
-                        { color: colors.textTertiary, fontFamily: undefined },
-                      ]}
-                    >
-                      MONOLITH
-                    </Text>
                   </View>
                 </AnimatedSection>
               </Animated.View>
@@ -434,6 +404,18 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 0,
+  },
+  sideActionsLeft: {
+    width: 80,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "flex-start",
+  },
+  sideActionsRight: {
+    width: 80,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "flex-end",
   },
   iconBtn: {
     width: 40,
@@ -501,87 +483,67 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   menuDrawer: {
     width: 300,
     height: "100%",
-    paddingTop: 60,
+    flexDirection: "column",
   },
   menuHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: 24,
-    paddingBottom: 16,
+    paddingBottom: 20,
   },
   menuTitle: {
     fontSize: 24,
     fontWeight: "800",
-    // letterSpacing: -0.3,
   },
   menuCloseBtn: {
     width: 36,
     height: 36,
-    borderRadius: 0,
     justifyContent: "center",
     alignItems: "center",
   },
-  menuDivider: {
-    height: 1,
-    marginHorizontal: 24,
+  menuScroll: {
+    flex: 1,
+  },
+  menuScrollContent: {
+    paddingBottom: 12,
   },
   menuItems: {
-    paddingTop: 12,
-    paddingHorizontal: 16,
-  },
-  menuSectionLabel: {
-    fontSize: 11,
-    fontWeight: "700",
-    // letterSpacing: 1.2,
     paddingHorizontal: 24,
-    paddingBottom: 4,
   },
   menuItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 14,
-    paddingHorizontal: 8,
-    borderRadius: 0,
+    paddingVertical: 12,
   },
-  menuItemIconWrap: {
-    width: 40,
-    height: 40,
-    borderRadius: 0,
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 14,
+  menuItemSmall: {
+    paddingVertical: 8,
   },
   menuItemLabel: {
-    flex: 1,
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: "600",
-    // letterSpacing: 0.1,
+  },
+  menuItemLabelSmall: {
+    fontSize: 12,
+    fontWeight: "500",
+    letterSpacing: 0.3,
+    textTransform: "uppercase",
   },
   menuFooter: {
-    paddingBottom: 40,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    paddingTop: 16,
+    paddingHorizontal: 24,
   },
   menuLogoutBtn: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-    marginHorizontal: 24,
-    marginTop: 16,
     paddingVertical: 12,
-    borderRadius: 0,
     borderWidth: 1,
   },
   menuLogoutText: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: "600",
-  },
-  menuFooterText: {
-    textAlign: "center",
-    fontSize: 12,
-    fontWeight: "500",
-    marginTop: 16,
-    // letterSpacing: 0.5,
   },
 });
 

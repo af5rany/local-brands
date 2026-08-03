@@ -70,8 +70,6 @@ export default function SearchModal({ visible, onClose }: SearchModalProps) {
       return;
     }
 
-    setTimeout(() => inputRef.current?.focus(), 300);
-
     if (cachedProducts.current.length > 0) {
       setProducts(cachedProducts.current);
       return;

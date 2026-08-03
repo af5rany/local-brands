@@ -36,8 +36,7 @@ import { useScrollToTop } from "@/context/ScrollToTopContext";
 // const { width: SCREEN_W } = Dimensions.get("window");
 
 // ── Static content ───────────────────────────────────────────────────────────
-const HERO_IMAGE =
-  "https://assets.cntraveller.in/photos/60ba23f2bfe773a828a46f7f/16:9/w_960,c_limit/monolith-utah-romania-netherlands1.jpg";
+const HERO_IMAGE = require("@/assets/images/monolith-hero.png");
 
 const FALLBACK_SPOTLIGHTS = [
   {
@@ -432,7 +431,7 @@ const HomeScreen = () => {
   if (loading) {
     return (
       <View style={styles.loadingWrap}>
-          <DropBar />
+        <DropBar />
         {/* <View style={[styles.blackTopArea, { paddingTop: insets.top }]}>
           <Header dark imperativeRef={headerRef} />
         </View> */}
@@ -493,7 +492,7 @@ const HomeScreen = () => {
         {/* ── 1. Hero ── */}
         <View style={styles.hero}>
           <Image
-            source={{ uri: HERO_IMAGE }}
+            source={HERO_IMAGE}
             style={styles.heroImage}
             resizeMode="cover"
           />

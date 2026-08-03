@@ -4,7 +4,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DataSource, In } from 'typeorm';
+import { Repository, DataSource, In, EntityManager } from 'typeorm';
 import { Brand } from './brand.entity';
 import { BrandUser } from './brand-user.entity';
 import { BrandFollow } from './brand-follow.entity';
@@ -451,10 +451,20 @@ export class BrandsService {
   }
 
   async remove(id: number): Promise<void> {
-    const result = await this.brandsRepository.softDelete(id);
-    if (result.affected === 0) {
-      throw new NotFoundException(`Brand with id ${id} not found`);
-    }
+    await this.dataSource.transaction(async (em: EntityManager) => {
+      const brand = await em.findOne(Brand, { where: { id } });
+      if (!brand) throw new NotFoundException(`Brand with id ${id} not found`);
+
+      // Cascade soft-delete all products of this brand
+      await em.getRepository(Product).softDelete({ brandId: id });
+
+      // Remove junction rows (no soft-delete needed)
+      await em.getRepository(BrandUser).delete({ brandId: id });
+      await em.getRepository(BrandFollow).delete({ brandId: id });
+
+      // Soft-delete the brand itself
+      await em.softDelete(Brand, id);
+    });
   }
 
   // ── Brand Follow ──

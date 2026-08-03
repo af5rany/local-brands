@@ -3,11 +3,11 @@ import { useRouter } from "expo-router";
 import { useAuth } from "@/context/AuthContext";
 
 export const useGuestGuard = () => {
-  const { isGuest } = useAuth();
+  const { isGuest, token } = useAuth();
   const router = useRouter();
 
   const requireAuth = (): boolean => {
-    if (!isGuest) return false;
+    if (token && !isGuest) return false;
     Alert.alert(
       "Guest Account",
       "Create an account to like posts, save items, and leave comments.",

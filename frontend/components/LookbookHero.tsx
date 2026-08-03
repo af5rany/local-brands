@@ -35,19 +35,14 @@ const { width: SCREEN_W } = Dimensions.get("window");
 const GAP = 8;
 
 // ─── image sources ────────────────────────────────────────────────────────────
-// Replace these URIs with your own local require() or remote URLs
 const IMAGES = {
-  heroLarge:
-    "/compas.png",
-  heroSmall:
-    "https://images.unsplash.com/photo-1618247072881-40689e1318b5?q=80&w=774&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-  mid1: "https://images.unsplash.com/photo-1605710988787-a2920d747d16?q=80&w=1740&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-  mid2: "https://images.unsplash.com/photo-1561989266-9b05d090cf9b?w=900&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Nzl8fGIlMjZ3JTIwZmFzaGlvbnxlbnwwfHwwfHx8MA%3D%3D",
-  wide: "https://plus.unsplash.com/premium_photo-1745928774656-f42b54c76b70?q=80&w=774&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+  // mid1: "https://images.unsplash.com/photo-1605710988787-a2920d747d16?q=80&w=1740&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+  // mid2: "https://images.unsplash.com/photo-1561989266-9b05d090cf9b?w=900&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Nzl8fGIlMjZ3JTIwZmFzaGlvbnxlbnwwfHwwfHx8MA%3D%3D",
+  wide: "https://images.unsplash.com/photo-1743764180148-b712e5293800?q=80&w=1740&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
   footerSmall:
-    "https://images.unsplash.com/photo-1756655148941-8cb96b6da087?w=900&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8OHx8YiUyNnclMjBmYXNoaW9uJTIwZ2lybHxlbnwwfHwwfHx8MA%3D%3D",
-  footerLarge:
     "https://images.unsplash.com/photo-1746477847401-2466595fab19?q=80&w=774&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+  footerLarge:
+    "https://images.unsplash.com/photo-1485518882345-15568b007407?q=80&w=884&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
 };
 
 // ─── dimensions ──────────────────────────────────────────────────────────────
@@ -141,13 +136,13 @@ export default function LookbookHero() {
       {/* ── Row 1: large portrait + small square — headline overlaid inside ── */}
       <View style={styles.row}>
         <Image
-          source={require("@/assets/images/compas.png")}
+          source={require("@/assets/images/fekh.jpg")}
           style={[styles.heroLarge]}
           resizeMode="cover"
         />
         <View style={{ gap: GAP }}>
           <Image
-            source={{ uri: IMAGES.heroSmall }}
+            source={require("@/assets/images/compas.png")}
             style={styles.heroSmall}
             resizeMode="cover"
           />
@@ -156,11 +151,11 @@ export default function LookbookHero() {
         </View>
         {/* Headline is a child of the image row so mixBlendMode blends
                     against the image pixels in the same stacking context */}
-                    <SplitInvertTitle wrapperStyle={styles.titleOverlay} />
+        <SplitInvertTitle wrapperStyle={styles.titleOverlay} />
       </View>
 
       {/* ── Row 2: offset — left empty 1/3, right 2 images ── */}
-      <View style={[styles.row, { marginTop: 16 }]}>
+      {/* <View style={[styles.row, { marginTop: 16 }]}>
         <View style={{ width: SMALL_COL }} />
         <View style={[styles.row, { flex: 1, gap: GAP }]}>
           <Image
@@ -174,7 +169,7 @@ export default function LookbookHero() {
             resizeMode="cover"
           />
         </View>
-      </View>
+      </View> */}
 
       {/* ── Row 3: cinematic full-width ── */}
       <Image
@@ -245,7 +240,7 @@ const createStyles = (colors: ThemeColors) =>
       // The flex gap between image columns is transparent; the row's
       // backgroundColor fills it. Using colors.text (black ↔ white) makes the
       // gap the inverse of the page background, extending the split-invert look.
-    //   backgroundColor: colors.text,
+      //   backgroundColor: colors.text,
     },
 
     // ── images ──

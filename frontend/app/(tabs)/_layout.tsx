@@ -1,13 +1,22 @@
-import { Tabs, usePathname } from "expo-router";
-import React, { useEffect } from "react";
+import { Tabs, usePathname, useRouter } from "expo-router";
+import React, { useEffect, useRef } from "react";
 import { Platform, StatusBar as RNStatusBar, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, { useAnimatedStyle } from "react-native-reanimated";
+import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { HapticTab } from "@/components/HapticTab";
 import Header from "@/components/Header";
 import { useThemeColors } from "@/hooks/useThemeColor";
 import { HeaderVisibilityProvider, useHeaderVisibility } from "@/context/HeaderVisibilityContext";
 import { ScrollToTopProvider, useScrollToTop } from "@/context/ScrollToTopContext";
+
+const TAB_ROUTES = [
+  "/(tabs)",
+  "/(tabs)/shop",
+  "/(tabs)/feed",
+  "/(tabs)/wishlist",
+  "/(tabs)/brands",
+] as const;
 
 const TAB_BAR_CONTENT_HEIGHT = 50;
 
@@ -19,6 +28,18 @@ export default function TabLayout() {
       </ScrollToTopProvider>
     </HeaderVisibilityProvider>
   );
+}
+
+const SWIPE_VELOCITY_THRESHOLD = 500;
+const SWIPE_DISTANCE_THRESHOLD = 80;
+
+function getCurrentTabIndex(pathname: string): number {
+  if (pathname === "/" || pathname === "/(tabs)" || pathname === "/index") return 0;
+  if (pathname.includes("/shop")) return 1;
+  if (pathname.includes("/feed")) return 2;
+  if (pathname.includes("/wishlist")) return 3;
+  if (pathname.includes("/brands")) return 4;
+  return -1;
 }
 
 function TabLayoutInner() {
@@ -36,9 +57,9 @@ function TabLayoutInner() {
   const tintColor = colors.tabActive;
   const inactiveColor = colors.tabInactive;
   const pathname = usePathname();
+  const router = useRouter();
   const { headerTranslateY, setHeaderHeight, resetHeader } = useHeaderVisibility();
   const { trigger: triggerScrollToTop } = useScrollToTop();
-
   useEffect(() => {
     resetHeader();
   }, [pathname]);
@@ -48,7 +69,23 @@ function TabLayoutInner() {
     marginBottom: headerTranslateY.value,
   }));
 
+  const swipeGesture = Gesture.Pan()
+    .runOnJS(true)
+    .activeOffsetX([-12, 12])
+    .failOffsetY([-20, 20])
+    .onEnd((e) => {
+      const isSwipeLeft = e.velocityX < -SWIPE_VELOCITY_THRESHOLD || e.translationX < -SWIPE_DISTANCE_THRESHOLD;
+      const isSwipeRight = e.velocityX > SWIPE_VELOCITY_THRESHOLD || e.translationX > SWIPE_DISTANCE_THRESHOLD;
+      if (!isSwipeLeft && !isSwipeRight) return;
+      const currentIndex = getCurrentTabIndex(pathname);
+      if (currentIndex === -1) return;
+      const nextIndex = isSwipeLeft ? currentIndex + 1 : currentIndex - 1;
+      if (nextIndex < 0 || nextIndex >= TAB_ROUTES.length) return;
+      router.navigate(TAB_ROUTES[nextIndex] as any);
+    });
+
   return (
+    <GestureDetector gesture={swipeGesture}>
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       <Animated.View style={[{ zIndex: 100 }, headerAnimStyle]}>
         <View
@@ -110,5 +147,6 @@ function TabLayoutInner() {
         <Tabs.Screen name="profile" options={{ href: null }} />
       </Tabs>
     </View>
+    </GestureDetector>
   );
 }

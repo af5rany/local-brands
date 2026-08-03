@@ -195,9 +195,9 @@ const BrandDetailScreen = () => {
               });
               if (!response.ok) {
                 const errorData = await response.json().catch(() => ({}));
-                throw new Error(errorData.message || "Failed to delete brand");
+                console.warn("Brand delete failed:", response.status, errorData);
+                throw new Error(errorData.message || `Delete failed (${response.status})`);
               }
-              Alert.alert("Success", "Brand deleted successfully");
               router.replace("/(tabs)/brands");
             } catch (err: any) {
               Alert.alert("Error", err.message);

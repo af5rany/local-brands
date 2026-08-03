@@ -60,6 +60,7 @@ const MonolithProductCard = React.memo(
     onPress,
     onWishlistPress,
     onAddToCart,
+    onBuyNow,
     onNotifyMe,
     isInWishlist,
     isNotifySubscribed,
@@ -69,6 +70,7 @@ const MonolithProductCard = React.memo(
     onPress: () => void;
     onWishlistPress: () => void;
     onAddToCart: () => void;
+    onBuyNow: () => void;
     onNotifyMe: () => void;
     isInWishlist: boolean;
     isNotifySubscribed: boolean;
@@ -91,108 +93,116 @@ const MonolithProductCard = React.memo(
       : (item as any).stock === 0;
 
     return (
-      <View style={cardStyles.wrapper}>
-        {/* Image — swipeable; tap-to-navigate via transparent overlay */}
-        <View
-          style={cardStyles.imageWrap}
-          onLayout={(e) => setImgWidth(e.nativeEvent.layout.width)}
-        >
-          {images.length > 1 && imgWidth > 0 ? (
-            <FlatList
-              data={images}
-              horizontal
-              pagingEnabled
-              showsHorizontalScrollIndicator={false}
-              keyExtractor={(_, i) => i.toString()}
-              getItemLayout={(_, i) => ({ length: imgWidth, offset: imgWidth * i, index: i })}
-              onMomentumScrollEnd={(e) => {
-                const idx = Math.round(e.nativeEvent.contentOffset.x / imgWidth);
-                setActiveIndex(idx);
-              }}
-              renderItem={({ item: uri }) => (
-                <Pressable onPress={onPress} style={{ width: imgWidth, height: "100%" as any }}>
-                  <Image
-                    key={uri}
-                    source={{ uri }}
-                    style={{ width: imgWidth, height: "100%" as any }}
-                    resizeMode="cover"
-                  />
-                </Pressable>
-              )}
-            />
-          ) : images[0] ? (
-            <Pressable style={StyleSheet.absoluteFill} onPress={onPress}>
-              <Image key={images[0]} source={{ uri: images[0] }} style={cardStyles.image} resizeMode="cover" />
-            </Pressable>
-          ) : (
-            <View style={cardStyles.imagePlaceholder} />
-          )}
-
-          {/* Image dots */}
-          {images.length > 1 && (
-            <View style={cardStyles.dotsRow}>
-              {images.map((_, i) => (
-                <View
-                  key={i}
-                  style={[cardStyles.dot, i === activeIndex && cardStyles.dotActive]}
-                />
-              ))}
-            </View>
-          )}
-
-          {/* SOLD OUT overlay */}
-          {isSoldOut && (
-            <View style={cardStyles.soldOutOverlay} pointerEvents="none">
-              <Text style={cardStyles.soldOutText}>SOLD OUT</Text>
-            </View>
-          )}
-
-          {/* SALE badge */}
-          {hasDiscount && !isSoldOut && (
-            <View style={cardStyles.limitedBadge}>
-              <Text style={cardStyles.limitedBadgeText}>SALE</Text>
-            </View>
-          )}
-
-          {/* Heart */}
-          <TouchableOpacity
-            style={cardStyles.heartBtn}
-            onPress={onWishlistPress}
-            activeOpacity={0.7}
+      <View style={[cardStyles.wrapper, index % 2 === 0 && cardStyles.wrapperLeft]}>
+        {/* Scrollable content pushes button to bottom */}
+        <View style={cardStyles.cardTop}>
+          {/* Image — swipeable; tap-to-navigate via transparent overlay */}
+          <View
+            style={cardStyles.imageWrap}
+            onLayout={(e) => setImgWidth(e.nativeEvent.layout.width)}
           >
-            <Ionicons
-              name={isInWishlist ? "heart" : "heart-outline"}
-              size={16}
-              color={isInWishlist ? colors.accentRed : colors.text}
-            />
+            {images.length > 1 && imgWidth > 0 ? (
+              <FlatList
+                data={images}
+                horizontal
+                pagingEnabled
+                showsHorizontalScrollIndicator={false}
+                keyExtractor={(_, i) => i.toString()}
+                getItemLayout={(_, i) => ({ length: imgWidth, offset: imgWidth * i, index: i })}
+                onMomentumScrollEnd={(e) => {
+                  const idx = Math.round(e.nativeEvent.contentOffset.x / imgWidth);
+                  setActiveIndex(idx);
+                }}
+                renderItem={({ item: uri }) => (
+                  <Pressable onPress={onPress} style={{ width: imgWidth, height: "100%" as any }}>
+                    <Image
+                      key={uri}
+                      source={{ uri }}
+                      style={{ width: imgWidth, height: "100%" as any }}
+                      resizeMode="cover"
+                    />
+                  </Pressable>
+                )}
+              />
+            ) : images[0] ? (
+              <Pressable style={StyleSheet.absoluteFill} onPress={onPress}>
+                <Image key={images[0]} source={{ uri: images[0] }} style={cardStyles.image} resizeMode="cover" />
+              </Pressable>
+            ) : (
+              <View style={cardStyles.imagePlaceholder} />
+            )}
+
+            {/* Image dots */}
+            {images.length > 1 && (
+              <View style={cardStyles.dotsRow}>
+                {images.map((_, i) => (
+                  <View
+                    key={i}
+                    style={[cardStyles.dot, i === activeIndex && cardStyles.dotActive]}
+                  />
+                ))}
+              </View>
+            )}
+
+            {/* SOLD OUT overlay */}
+            {isSoldOut && (
+              <View style={cardStyles.soldOutOverlay} pointerEvents="none">
+                <Text style={cardStyles.soldOutText}>SOLD OUT</Text>
+              </View>
+            )}
+
+            {/* SALE badge */}
+            {hasDiscount && !isSoldOut && (
+              <View style={cardStyles.limitedBadge}>
+                <Text style={cardStyles.limitedBadgeText}>SALE</Text>
+              </View>
+            )}
+
+            {/* Heart */}
+            <TouchableOpacity
+              style={cardStyles.heartBtn}
+              onPress={onWishlistPress}
+              activeOpacity={0.7}
+            >
+              <Ionicons
+                name={isInWishlist ? "heart" : "heart-outline"}
+                size={16}
+                color={isInWishlist ? colors.accentRed : colors.text}
+              />
+            </TouchableOpacity>
+          </View>
+
+          {/* Meta — tap to navigate */}
+          <TouchableOpacity style={cardStyles.meta} onPress={onPress} activeOpacity={0.7}>
+            <Text style={cardStyles.brandLabel} numberOfLines={1}>
+              {(item.brand?.name || item.brandName || "MONOLITH").toUpperCase()}
+            </Text>
+            <Text style={cardStyles.productName} numberOfLines={2}>
+              {item.name.toUpperCase()}
+            </Text>
+            <View style={cardStyles.priceRow}>
+              <Text style={cardStyles.price}>
+                {formatPrice(hasDiscount ? item.salePrice! : item.price)}
+              </Text>
+              {hasDiscount && (
+                <Text style={cardStyles.originalPrice}>
+                  {formatPrice(item.price)}
+                </Text>
+              )}
+            </View>
           </TouchableOpacity>
         </View>
 
-        {/* Meta — tap to navigate */}
-        <TouchableOpacity style={cardStyles.meta} onPress={onPress} activeOpacity={0.7}>
-          <Text style={cardStyles.brandLabel} numberOfLines={1}>
-            {(item.brand?.name || item.brandName || "MONOLITH").toUpperCase()}
-          </Text>
-          <Text style={cardStyles.productName} numberOfLines={2}>
-            {item.name.toUpperCase()}
-          </Text>
-          <View style={cardStyles.priceRow}>
-            <Text style={cardStyles.price}>
-              {formatPrice(hasDiscount ? item.salePrice! : item.price)}
-            </Text>
-            {hasDiscount && (
-              <Text style={cardStyles.originalPrice}>
-                {formatPrice(item.price)}
-              </Text>
-            )}
-          </View>
-        </TouchableOpacity>
-
-        {/* ADD TO CART bar */}
+        {/* ADD TO CART + BUY NOW row — always at bottom */}
         {!isSoldOut && (
-          <TouchableOpacity style={cardStyles.addToCart} onPress={onAddToCart} activeOpacity={0.8}>
-            <Text style={cardStyles.addToCartText}>ADD TO CART</Text>
-          </TouchableOpacity>
+          <View style={cardStyles.actionRow}>
+            <TouchableOpacity style={[cardStyles.addToCart, { flex: 1 }]} onPress={onAddToCart} activeOpacity={0.8}>
+              <Text style={cardStyles.addToCartText}>CART</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[cardStyles.buyNow, { flex: 1 }]} onPress={onBuyNow} activeOpacity={0.8}>
+              <Text style={cardStyles.buyNowText}>BUY NOW</Text>
+            </TouchableOpacity>
+          </View>
         )}
 
         {/* NOTIFY ME bar */}
@@ -220,7 +230,7 @@ const ShopScreen = () => {
     category?: string;
     gender?: string;
   }>();
-  const { token, loading } = useAuth();
+  const { token, user, loading } = useAuth();
   const { refresh: refreshCart } = useCart();
   const { requireAuth } = useGuestGuard();
   const { showToast } = useToast();
@@ -462,8 +472,10 @@ const ShopScreen = () => {
 
   const toggleWishlist = useCallback(
     async (productId: number) => {
-      if (!token) return;
-      if (requireAuth()) return;
+      if (!token || user?.isGuest) {
+        requireAuth();
+        return;
+      }
       const wasInWishlist = wishlistRef.current.includes(productId);
       const next = wasInWishlist
         ? wishlistRef.current.filter((id) => id !== productId)
@@ -620,6 +632,33 @@ const ShopScreen = () => {
       .catch(() => showToast("Could not add to bag", "error"));
   }, [token, router, refreshCart, showToast]);
 
+  const handleBuyNow = useCallback((item: Product) => {
+    if (!token) { router.push("/auth/login" as any); return; }
+    const variants: any[] = (item as any).variants || [];
+    if (variants.length > 0) {
+      setQuickAddProduct({
+        id: item.id,
+        name: item.name,
+        price: item.price,
+        salePrice: item.salePrice,
+        mainImage: item.mainImage,
+        variants,
+      });
+      setQuickAddVisible(true);
+      return;
+    }
+    fetch(`${getApiUrl()}/cart/add`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ productId: item.id, quantity: 1 }),
+    })
+      .then((res) => {
+        if (res.ok) { refreshCart(); router.push("/checkout" as any); }
+        else router.push(`/products/${item.id}` as any);
+      })
+      .catch(() => showToast("Could not process", "error"));
+  }, [token, router, refreshCart, showToast]);
+
   // ── Render helpers ────────────────────────────────
   const renderProductCard = useCallback(
     ({ item, index }: { item: Product; index: number }) => (
@@ -627,17 +666,15 @@ const ShopScreen = () => {
         item={item}
         index={index}
         onPress={() => router.push(`/products/${item.id}` as any)}
-        onWishlistPress={() => {
-          if (!token) router.push("/auth/login" as any);
-          else toggleWishlist(item.id);
-        }}
+        onWishlistPress={() => toggleWishlist(item.id)}
         onAddToCart={() => handleAddToCart(item)}
+        onBuyNow={() => handleBuyNow(item)}
         onNotifyMe={() => handleNotifyMe(item)}
-        isInWishlist={!!(token && wishlistProductIds.includes(item.id))}
+        isInWishlist={!!(token && !user?.isGuest && wishlistProductIds.includes(item.id))}
         isNotifySubscribed={subscribedProductIds.has(item.id)}
       />
     ),
-    [token, wishlistProductIds, subscribedProductIds, toggleWishlist, handleAddToCart, handleNotifyMe, router],
+    [token, user, wishlistProductIds, subscribedProductIds, toggleWishlist, handleAddToCart, handleBuyNow, handleNotifyMe, router],
   );
 
   const renderListHeader = () => (
@@ -947,6 +984,7 @@ const ShopScreen = () => {
         keyExtractor={(item) => item.id.toString()}
         renderItem={renderProductCard}
         numColumns={2}
+        columnWrapperStyle={styles.cardRow}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
         onScroll={(e) => {
@@ -1011,6 +1049,15 @@ const ShopScreen = () => {
 // ── Card Styles ──────────────────────────────────────
 const createCardStyles = (colors: ThemeColors) => StyleSheet.create({
   wrapper: {
+    flex: 1,
+    flexDirection: "column",
+    borderBottomWidth: 1,
+    borderColor: colors.text,
+  },
+  wrapperLeft: {
+    borderRightWidth: 1,
+  },
+  cardTop: {
     flex: 1,
   },
   imageWrap: {
@@ -1082,8 +1129,8 @@ const createCardStyles = (colors: ThemeColors) => StyleSheet.create({
   },
   meta: {
     paddingHorizontal: 10,
-    paddingTop: 10,
-    paddingBottom: 0,
+    paddingTop: 8,
+    paddingBottom: 10,
     gap: 3,
   },
   brandLabel: {
@@ -1117,30 +1164,47 @@ const createCardStyles = (colors: ThemeColors) => StyleSheet.create({
     color: colors.textTertiary,
     textDecorationLine: "line-through",
   },
+  actionRow: {
+    flexDirection: "row",
+  },
   addToCart: {
-    height: 30,
+    height: 36,
     backgroundColor: "transparent",
-    borderWidth: 1,
+    borderTopWidth: 1,
+    borderRightWidth: 1,
     borderColor: colors.text,
     alignItems: "center",
     justifyContent: "center",
-    marginTop: 10,
   },
   addToCartText: {
-    fontSize: 9,
+    fontSize: 8,
     fontWeight: "600",
     color: colors.text,
-    letterSpacing: 2,
+    letterSpacing: 1,
+    textTransform: "uppercase",
+  },
+  buyNow: {
+    height: 36,
+    backgroundColor: colors.text,
+    borderTopWidth: 1,
+    borderColor: colors.text,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  buyNowText: {
+    fontSize: 8,
+    fontWeight: "600",
+    color: colors.background,
+    letterSpacing: 1,
     textTransform: "uppercase",
   },
   notifyBtn: {
     height: 30,
     backgroundColor: "transparent",
-    borderWidth: 1,
-    borderColor: colors.border,
+    borderTopWidth: 1,
+    borderColor: colors.text,
     alignItems: "center",
     justifyContent: "center",
-    marginTop: 10,
   },
   notifyBtnSubscribed: {
     borderColor: colors.border,
@@ -1397,10 +1461,15 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   },
 
   // ── Grid ──────────────────────────────────────────
+  cardRow: {
+    alignItems: "stretch",
+  },
   listContent: {
     paddingHorizontal: 0,
     paddingTop: 0,
     paddingBottom: 40,
+    borderTopWidth: 1,
+    borderColor: colors.text,
   },
 
   // ── Footer ───────────────────────────────────────
