@@ -315,69 +315,71 @@ const HomeScreen = () => {
   // Data fetch
   const fetchData = async () => {
     if (!hasLoadedOnce.current) setLoading(true);
-    const apiUrl = getApiUrl();
-    const headers: Record<string, string> = token
-      ? { Authorization: `Bearer ${token}` }
-      : {};
+    try {
+      const apiUrl = getApiUrl();
+      const headers: Record<string, string> = token
+        ? { Authorization: `Bearer ${token}` }
+        : {};
 
-    const [brandsResult, productsResult, feedResult, picksResult] =
-      await Promise.allSettled([
-        fetch(`${apiUrl}/brands?limit=10`, { headers }),
-        fetch(`${apiUrl}/products?limit=1`, { headers }),
-        fetch(`${apiUrl}/feed?limit=3`, { headers }),
-        fetch(`${apiUrl}/products/bestsellers?limit=3`, { headers }),
-      ]);
+      const [brandsResult, productsResult, feedResult, picksResult] =
+        await Promise.allSettled([
+          fetch(`${apiUrl}/brands?limit=10`, { headers }),
+          fetch(`${apiUrl}/products?limit=1`, { headers }),
+          fetch(`${apiUrl}/feed?limit=3`, { headers }),
+          fetch(`${apiUrl}/products/bestsellers?limit=3`, { headers }),
+        ]);
 
-    if (brandsResult.status === "fulfilled" && brandsResult.value.ok) {
-      const data = await brandsResult.value.json();
-      const list: Brand[] = Array.isArray(data) ? data : data.items || [];
-      setBrands(list.length > 0 ? list : FALLBACK_BRANDS);
-      if (data.total) setStats((s) => ({ ...s, brands: data.total }));
-    } else {
-      setBrands(FALLBACK_BRANDS);
+      if (brandsResult.status === "fulfilled" && brandsResult.value.ok) {
+        const data = await brandsResult.value.json();
+        const list: Brand[] = Array.isArray(data) ? data : data.items || [];
+        setBrands(list.length > 0 ? list : FALLBACK_BRANDS);
+        if (data.total) setStats((s) => ({ ...s, brands: data.total }));
+      } else {
+        setBrands(FALLBACK_BRANDS);
+      }
+
+      if (productsResult.status === "fulfilled" && productsResult.value.ok) {
+        const data = await productsResult.value.json();
+        if (data.total) setStats((s) => ({ ...s, products: data.total }));
+      }
+
+      if (feedResult.status === "fulfilled" && feedResult.value.ok) {
+        const data = await feedResult.value.json();
+        const items: any[] = Array.isArray(data) ? data : data.items || [];
+        setFeedPosts(
+          items.slice(0, 3).map((p: any, i: number) => ({
+            id: String(p.id || i),
+            realId: p.id as number | null,
+            brand: (p.brand?.name || "—").toUpperCase(),
+            caption: p.caption || "",
+            ago: p.createdAt ? timeAgo(p.createdAt) : "—",
+            likes: String(p.likeCount ?? 0),
+            comments: String(p.commentCount ?? 0),
+            image: p.images?.[0] || "",
+          }))
+        );
+      }
+
+      if (picksResult.status === "fulfilled" && picksResult.value.ok) {
+        const data = await picksResult.value.json();
+        const items: any[] = Array.isArray(data) ? data : data.items || [];
+        setPicks(
+          items.slice(0, 3).map((p: any, i: number) => ({
+            id: p.id as number | undefined,
+            num: `${i + 1}/3`,
+            brand: (p.brand?.name || "—").toUpperCase(),
+            name: (p.name || "").toUpperCase(),
+            price: `$${Number(p.price || 0).toFixed(0)}`,
+            image: p.mainImage || p.images?.[0] || "",
+            quote: p.quote as string,
+          }))
+        );
+      }
+    } finally {
+      hasLoadedOnce.current = true;
+      setLoading(false);
+      setRefreshing(false);
     }
-
-    if (productsResult.status === "fulfilled" && productsResult.value.ok) {
-      const data = await productsResult.value.json();
-      if (data.total) setStats((s) => ({ ...s, products: data.total }));
-    }
-
-    if (feedResult.status === "fulfilled" && feedResult.value.ok) {
-      const data = await feedResult.value.json();
-      const items: any[] = Array.isArray(data) ? data : data.items || [];
-      setFeedPosts(
-        items.slice(0, 3).map((p: any, i: number) => ({
-          id: String(p.id || i),
-          realId: p.id as number | null,
-          brand: (p.brand?.name || "—").toUpperCase(),
-          caption: p.caption || "",
-          ago: p.createdAt ? timeAgo(p.createdAt) : "—",
-          likes: String(p.likeCount ?? 0),
-          comments: String(p.commentCount ?? 0),
-          image: p.images?.[0] || "",
-        }))
-      );
-    }
-
-    if (picksResult.status === "fulfilled" && picksResult.value.ok) {
-      const data = await picksResult.value.json();
-      const items: any[] = Array.isArray(data) ? data : data.items || [];
-      setPicks(
-        items.slice(0, 3).map((p: any, i: number) => ({
-          id: p.id as number | undefined,
-          num: `${i + 1}/3`,
-          brand: (p.brand?.name || "—").toUpperCase(),
-          name: (p.name || "").toUpperCase(),
-          price: `$${Number(p.price || 0).toFixed(0)}`,
-          image: p.mainImage || p.images?.[0] || "",
-          quote: p.quote as string,
-        }))
-      );
-    }
-
-    hasLoadedOnce.current = true;
-    setLoading(false);
-    setRefreshing(false);
   };
 
   useEffect(() => {

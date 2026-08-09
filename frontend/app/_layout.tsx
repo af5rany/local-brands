@@ -22,9 +22,14 @@ import {
   Inter_600SemiBold,
 } from "@expo-google-fonts/inter";
 import * as SplashScreen from "expo-splash-screen";
-import * as Notifications from "expo-notifications";
+import type { EventSubscription } from "expo-notifications";
 import * as Device from "expo-device";
+import Constants from "expo-constants";
 import getApiUrl from "@/helpers/getApiUrl";
+
+const isExpoGo = Constants.executionEnvironment === "storeClient";
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const Notifications = isExpoGo ? null : (require("expo-notifications") as typeof import("expo-notifications"));
 
 function AppStatusBar() {
   const { scheme } = useThemePreference();
@@ -37,7 +42,7 @@ function AppStatusBar() {
   );
 }
 
-Notifications.setNotificationHandler({
+Notifications?.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowAlert: true,
     shouldPlaySound: true,
@@ -72,7 +77,7 @@ const REGISTERED_ONLY_SEGMENTS = [
 ];
 
 async function registerForPushNotifications(token: string) {
-  if (!Device.isDevice) return;
+  if (!Notifications || !Device.isDevice) return;
   const { status: existingStatus } = await Notifications.getPermissionsAsync();
   let finalStatus = existingStatus;
   if (existingStatus !== "granted") {
@@ -90,15 +95,15 @@ async function registerForPushNotifications(token: string) {
       headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
       body: JSON.stringify({ token: expoPushToken, platform }),
     });
-  } catch {}
+  } catch { }
 }
 
 function RootLayoutNav() {
   const { token, loading, isGuest } = useAuth();
   const router = useRouter();
   const segments = useSegments();
-  const notificationListener = useRef<Notifications.Subscription | null>(null);
-  const responseListener = useRef<Notifications.Subscription | null>(null);
+  const notificationListener = useRef<EventSubscription | null>(null);
+  const responseListener = useRef<EventSubscription | null>(null);
 
   useEffect(() => {
     if (loading) return;
@@ -116,15 +121,14 @@ function RootLayoutNav() {
   // Register push token when user logs in
   useEffect(() => {
     if (token && !loading) {
-      registerForPushNotifications(token).catch(() => {});
+      registerForPushNotifications(token).catch(() => { });
     }
   }, [token, loading]);
 
-  // Notification listeners
+  // Notification listeners (no-op in Expo Go — push removed in SDK 53)
   useEffect(() => {
-    notificationListener.current = Notifications.addNotificationReceivedListener(() => {
-      // notification received in foreground — handled by handler above
-    });
+    if (!Notifications) return;
+    notificationListener.current = Notifications.addNotificationReceivedListener(() => { });
     responseListener.current = Notifications.addNotificationResponseReceivedListener((response) => {
       const data = response.notification.request.content.data;
       if (data?.orderId) router.push(`/orders/${data.orderId}` as any);
@@ -400,7 +404,8 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <SafeAreaProvider statusBarTranslucent>
+      {/* statusBarTranslucent needed for Android translucent status bar — types lag behind native impl */}
+      <SafeAreaProvider {...({ statusBarTranslucent: true } as object)}>
         <GlobalErrorBoundary>
           <ThemeProvider>
             <AppStatusBar />
