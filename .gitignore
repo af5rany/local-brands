@@ -6,6 +6,8 @@
 **/node_modules/
 **/.env*
 
+cred.txt
+
 # Logs
 logs
 *.log
