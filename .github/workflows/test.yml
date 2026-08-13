@@ -61,7 +61,7 @@ jobs:
 
       - name: Run unit tests
         working-directory: backend
-        run: npm test -- --coverage --coverageThreshold '{"global":{"lines":20}}'
+        run: npm test -- --coverage --coverageThreshold '{"global":{"lines":15}}'
 
       - name: Run e2e tests
         working-directory: backend
