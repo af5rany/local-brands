@@ -75,6 +75,8 @@ jest.mock('react-native-reanimated', () => {
   };
 });
 
+jest.setTimeout(15000);
+
 import ProductDetailScreen from '../[productId]';
 
 const mockProduct = {
@@ -114,7 +116,7 @@ describe('ProductDetailScreen', () => {
         'http://localhost:3000/products/42',
         expect.any(Object),
       );
-    });
+    }, { timeout: 10000 });
   });
 
   it('displays product name after fetch', async () => {

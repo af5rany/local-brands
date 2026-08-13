@@ -6,8 +6,8 @@
       "@/*": [
         "./*"
       ]
-    }
-    // "types": ["expo-router/types"]
+    },
+    "types": ["jest"]
   },
   "include": [
     "**/*.ts",
