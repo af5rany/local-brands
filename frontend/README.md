@@ -48,3 +48,39 @@ Join our community of developers creating universal apps.
 
 - [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
 - [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+
+## Testing
+
+### Unit tests
+
+```bash
+npm test           # watch mode
+npm run test:ci    # single run + coverage (≥50% line threshold enforced)
+```
+
+94 tests across 21 suites covering screens, hooks, and contexts. Uses `@testing-library/react-native` with `global.fetch` mocks per-test.
+
+### Maestro E2E (device / simulator)
+
+Install Maestro CLI (macOS/Linux):
+
+```bash
+curl -Ls "https://get.maestro.mobile.dev" | bash
+```
+
+Boot a simulator, start the Expo dev server, then run all flows:
+
+```bash
+# iOS
+xcrun simctl boot "iPhone 15"
+npm run ios
+
+# Android
+emulator -avd <your-avd-name>
+npm run android
+
+# In a separate terminal — runs all 10 .yaml flows in .maestro/
+npm run test:e2e
+```
+
+Flows cover: login, add-to-cart, checkout, guest-checkout, wishlist, brand-owner publish product, and social sign-in (Apple, Facebook, Google, guest).

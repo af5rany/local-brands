@@ -1,0 +1,61 @@
+appId: com.fakharanii.localbrands
+---
+# Google Sign-In Flow
+# Launch app → tap Sign In → tap "GOOGLE" social button →
+# assert the Google sign-in sheet/webview is triggered →
+# go back → verify still on sign-in screen
+#
+# NOTE: Maestro cannot complete OAuth flows. This test only validates
+# that the Google sign-in button is reachable and triggers the
+# system-level Google auth sheet or an appropriate fallback alert.
+
+- launchApp:
+    clearState: true
+
+# Assert login screen
+- assertVisible:
+    text: "LOCAL BRANDS"
+    timeout: 8000
+
+# Assert the "GOOGLE" social button is visible
+- assertVisible:
+    text: "GOOGLE"
+
+# Tap the GOOGLE button
+- tapOn:
+    text: "GOOGLE"
+
+# On a real development build, the Google sign-in sheet appears.
+# On a simulator/Expo Go, an alert is shown: "Social sign-in requires a development build."
+# Assert either the system sheet appears or the fallback alert is shown.
+- assertVisible:
+    text: "Not Available"
+    timeout: 6000
+    optional: true
+
+- assertVisible:
+    text: "Social sign-in requires a development build"
+    timeout: 6000
+    optional: true
+
+# On a dev build, Google's native account picker sheet appears.
+# We just wait briefly and then dismiss/go back.
+- waitForAnimationToEnd
+
+# Dismiss any alert that appeared
+- tapOn:
+    text: "OK"
+    optional: true
+
+- tapOn:
+    text: "Cancel"
+    optional: true
+
+# Go back to the sign-in screen
+- back
+    optional: true
+
+# Assert still on sign-in screen
+- assertVisible:
+    text: "LOCAL BRANDS"
+    timeout: 6000

@@ -22,9 +22,8 @@ import { UserRole } from '../common/enums/user.enum';
 
 @ApiTags('email-campaigns')
 @Controller('brands/:id/email-campaigns')
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, RolesGuard, BrandAccessGuard)
 @Roles(UserRole.ADMIN, UserRole.BRAND_OWNER)
-@UseGuards(BrandAccessGuard)
 export class EmailCampaignsController {
   constructor(private service: EmailCampaignsService) {}
 

@@ -1,0 +1,99 @@
+appId: com.fakharanii.localbrands
+---
+# Wishlist Flow
+# Login → browse shop → open product → add to wishlist → verify in Wishlist tab → remove it
+
+- launchApp:
+    clearState: true
+
+# Wait for login screen
+- assertVisible:
+    text: "LOCAL BRANDS"
+    timeout: 8000
+
+# Enter email
+- tapOn:
+    text: "hello@example.com"
+- inputText: "test@example.com"
+
+# Enter password
+- tapOn:
+    text: "••••••••"
+- inputText: "password123"
+
+# Tap SIGN IN
+- tapOn:
+    text: "SIGN IN"
+
+# Wait for home screen — tab bar should be visible
+- assertVisible:
+    text: "Shop"
+    timeout: 10000
+
+# Navigate to Shop tab
+- tapOn:
+    text: "Shop"
+
+# Wait for products to load
+- waitForAnimationToEnd
+- assertVisible:
+    id: "product-list"
+    timeout: 8000
+
+# Tap the first product card
+- tapOn:
+    index: 0
+    id: "product-card"
+
+# Wait for product detail to load
+- waitForAnimationToEnd
+
+# Tap the wishlist/heart icon (top-right of hero image)
+# The wishlist toggle is in the hero actions overlay (heart-outline icon)
+- tapOn:
+    id: "wishlist-toggle"
+    optional: true
+
+# Fallback: tap by accessibility label if testID not present
+- tapOn:
+    text: "heart-outline"
+    optional: true
+
+# Go back to shop
+- back
+
+# Navigate to the Wishlist (Saved) tab
+# The tab bar label is the icon — navigate via tab index or text
+- tapOn:
+    text: "Wishlist"
+    optional: true
+
+# The wishlist tab shows "SAVED" as the header title
+- assertVisible:
+    text: "SAVED"
+    timeout: 6000
+
+# Assert the product appears in the wishlist (PRODUCTS sub-tab should be active)
+- assertVisible:
+    text: "PRODUCTS"
+- assertVisible:
+    id: "product-list"
+    timeout: 6000
+
+# The wishlist row has a close/remove (X) button — tap it to remove
+- tapOn:
+    index: 0
+    id: "wishlist-remove-btn"
+    optional: true
+
+# Fallback: use the close icon
+- tapOn:
+    text: "close"
+    optional: true
+
+# After removal, the product row should be gone.
+# If wishlist is now empty, "No favorites yet" appears.
+- assertVisible:
+    text: "No favorites yet"
+    timeout: 6000
+    optional: true

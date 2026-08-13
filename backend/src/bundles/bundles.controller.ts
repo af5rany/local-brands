@@ -29,6 +29,7 @@ export class BundlesController {
 
   // Customer: check if cart qualifies for a bundle discount
   @Post('bundles/check')
+  @Public()
   @ApiOperation({ summary: 'Check bundle discount for cart product IDs' })
   async check(@Body() body: { productIds: number[]; brandId: number }) {
     return this.bundlesService.checkBundleDiscount(body.productIds, body.brandId);

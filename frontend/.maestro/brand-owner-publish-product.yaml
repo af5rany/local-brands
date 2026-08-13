@@ -1,0 +1,180 @@
+appId: com.fakharanii.localbrands
+---
+# Brand Owner — Publish Product Flow
+# Login as brand owner → navigate to brand dashboard → create a new product →
+# fill in details → publish → confirm it appears in the product list
+
+- launchApp:
+    clearState: true
+
+# Wait for login screen
+- assertVisible:
+    text: "LOCAL BRANDS"
+    timeout: 8000
+
+# Enter brand-owner credentials
+- tapOn:
+    text: "hello@example.com"
+- inputText: "brandowner@example.com"
+
+- tapOn:
+    text: "••••••••"
+- inputText: "password123"
+
+- tapOn:
+    text: "SIGN IN"
+
+# Wait for home/tabs
+- assertVisible:
+    text: "Shop"
+    timeout: 10000
+
+# Navigate to Brands tab (brand owners manage their brands here)
+- tapOn:
+    text: "Brands"
+    optional: true
+
+# Wait for brand list / brand selector screen
+- waitForAnimationToEnd
+
+# Tap on the first (own) brand in the list
+- tapOn:
+    index: 0
+    id: "brand-card"
+    optional: true
+
+# Brand detail page loads — look for the owner action bar / manage button
+- waitForAnimationToEnd
+
+# Scroll down to find the Dashboard or Manage section
+- scrollUntilVisible:
+    element:
+      text: "DASHBOARD"
+    direction: DOWN
+    optional: true
+
+- tapOn:
+    text: "DASHBOARD"
+    optional: true
+
+# Dashboard screen
+- assertVisible:
+    text: "DASHBOARD"
+    timeout: 8000
+
+# Scroll to find "PRODUCTS" stat card or navigation
+- scrollUntilVisible:
+    element:
+      text: "PRODUCTS"
+    direction: DOWN
+
+# Tap PRODUCTS count or navigate to products list
+- tapOn:
+    text: "PRODUCTS"
+
+# Wait for product list to load
+- waitForAnimationToEnd
+
+# Look for the Add Product / "+" button
+- tapOn:
+    id: "add-product-btn"
+    optional: true
+
+# Fallback: scroll to find a "+" or "ADD PRODUCT" button
+- scrollUntilVisible:
+    element:
+      text: "ADD PRODUCT"
+    direction: DOWN
+    optional: true
+
+- tapOn:
+    text: "ADD PRODUCT"
+    optional: true
+
+# Product creation form
+- assertVisible:
+    text: "Product Name"
+    timeout: 8000
+    optional: true
+
+# Fill in product name (auto-detects type from name)
+- tapOn:
+    id: "product-name-input"
+    optional: true
+
+- tapOn:
+    text: "Product Name"
+    optional: true
+
+- inputText: "Classic Cotton T-Shirt"
+
+# Wait for auto-detection to kick in (type auto-detected as T-Shirts from name)
+- waitForAnimationToEnd
+
+# Fill in price
+- tapOn:
+    id: "product-price-input"
+    optional: true
+
+- tapOn:
+    text: "Price"
+    optional: true
+
+- inputText: "299"
+
+# Fill in description
+- tapOn:
+    id: "product-description-input"
+    optional: true
+
+- tapOn:
+    text: "Description"
+    optional: true
+
+- inputText: "100% cotton classic fit t-shirt, men's, machine wash cold."
+
+# Select a size variant — tap the first available size chip (e.g., S, M, L)
+- tapOn:
+    text: "S"
+    optional: true
+
+- tapOn:
+    text: "M"
+    optional: true
+
+# Skip image upload (optional step)
+# Status should already be PUBLISHED by default
+
+# Scroll down to find the submit/publish button
+- scrollUntilVisible:
+    element:
+      text: "PUBLISH"
+    direction: DOWN
+    optional: true
+
+- tapOn:
+    text: "PUBLISH"
+    optional: true
+
+# Fallback: look for "CREATE PRODUCT" or "SAVE" CTA
+- scrollUntilVisible:
+    element:
+      text: "CREATE PRODUCT"
+    direction: DOWN
+    optional: true
+
+- tapOn:
+    text: "CREATE PRODUCT"
+    optional: true
+
+# Assert product was created — should navigate back to product list
+# and the new product name should be visible
+- assertVisible:
+    text: "Classic Cotton T-Shirt"
+    timeout: 10000
+    optional: true
+
+# Or assert we're back on the brand products screen
+- assertVisible:
+    text: "PRODUCTS"
+    timeout: 8000

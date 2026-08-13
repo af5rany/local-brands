@@ -1,13 +1,13 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication, ValidationPipe } from '@nestjs/common';
 import * as request from 'supertest';
-import { App } from 'supertest/types';
-import { AppModule } from './../src/app.module';
 import { DataSource } from 'typeorm';
+import { INestApplication } from '@nestjs/common';
+import { App } from 'supertest/types';
 import { UserRole, UserStatus } from './../src/common/enums/user.enum';
 import { BrandStatus } from './../src/common/enums/brand.enum';
 import { ProductStatus } from './../src/common/enums/product.enum';
 import { ProductVariant } from './../src/products/product-variant.entity';
+import { createTestApp } from './helpers/create-test-app';
+import { truncateAll } from './helpers/truncate';
 
 describe('CartModule (e2e)', () => {
   let app: INestApplication<App>;
@@ -17,16 +17,7 @@ describe('CartModule (e2e)', () => {
   let variantId: number;
 
   beforeAll(async () => {
-    const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [AppModule],
-    }).compile();
-
-    app = moduleFixture.createNestApplication();
-    app.useGlobalPipes(
-      new ValidationPipe({ transform: true, whitelist: true }),
-    );
-    await app.init();
-
+    app = await createTestApp();
     dataSource = app.get(DataSource);
   });
 
@@ -35,14 +26,7 @@ describe('CartModule (e2e)', () => {
   });
 
   beforeEach(async () => {
-    // Clean tables
-    const entities = dataSource.entityMetadatas;
-    for (const entity of entities) {
-      const repository = dataSource.getRepository(entity.name);
-      await repository.query(
-        `TRUNCATE "${entity.tableName}" RESTART IDENTITY CASCADE;`,
-      );
-    }
+    await truncateAll(dataSource);
 
     const userRepository = dataSource.getRepository('User');
     const variantRepository = dataSource.getRepository(ProductVariant);
@@ -108,13 +92,12 @@ describe('CartModule (e2e)', () => {
     // 4. Seed ProductVariant
     const variant = variantRepository.create({
       productId: productId,
+      size: 'L',
       stock: 50,
-      attributes: { color: 'Red', size: 'L' },
-      images: ['https://res.cloudinary.com/demo/image/upload/sample.jpg'],
       isAvailable: true,
     });
     const savedVariant = await variantRepository.save(variant);
-    variantId = savedVariant.id;
+    variantId = (savedVariant as any).id;
   });
 
   describe('/cart/add (POST)', () => {

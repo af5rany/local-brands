@@ -1,0 +1,34 @@
+appId: com.fakharanii.localbrands
+---
+- launchApp:
+    clearState: false
+
+# Navigate to Cart
+- tapOn:
+    text: "Cart"
+
+# Verify cart has items
+- assertVisible:
+    timeout: 5000
+    text: "Checkout"
+
+# Tap Checkout
+- tapOn: "Checkout"
+
+# Wait for checkout screen
+- assertVisible:
+    text: "Order Summary"
+    timeout: 5000
+
+# Select address if not pre-selected
+- tapOn:
+    id: "address-selector"
+    optional: true
+
+# Place order
+- tapOn: "Place Order"
+
+# Assert order confirmation
+- assertVisible:
+    text: "Order Confirmed"
+    timeout: 10000

@@ -7,7 +7,11 @@
     "^.+\\.(t|j)s$": "ts-jest"
   },
   "moduleNameMapper": {
+    "^expo-server-sdk$": "<rootDir>/__mocks__/expo-server-sdk.js",
+    "^jwks-rsa$": "<rootDir>/__mocks__/jwks-rsa.js",
+    "^bullmq$": "<rootDir>/__mocks__/bullmq.js",
     "^src/(.*)$": "<rootDir>/../src/$1"
   },
-  "transformIgnorePatterns": ["node_modules/(?!(uuid)/)"]
+  "transformIgnorePatterns": ["node_modules/(?!(uuid)/)"],
+  "setupFiles": ["<rootDir>/setup-e2e.ts"]
 }

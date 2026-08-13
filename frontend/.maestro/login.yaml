@@ -1,0 +1,24 @@
+appId: com.fakharanii.localbrands
+---
+- launchApp:
+    clearState: true
+
+# Wait for login screen
+- assertVisible: "Sign In"
+
+# Enter credentials
+- tapOn:
+    text: "Email"
+- inputText: "test@example.com"
+
+- tapOn:
+    text: "Password"
+- inputText: "password123"
+
+# Submit
+- tapOn: "Sign In"
+
+# Assert successful login — home tab visible
+- assertVisible:
+    text: "Home"
+    timeout: 8000

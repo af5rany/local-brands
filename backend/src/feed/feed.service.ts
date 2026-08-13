@@ -310,6 +310,7 @@ export class FeedService {
       relations: ['post'],
     });
     if (!comment) throw new NotFoundException('Comment not found');
+    if (!comment.post) throw new NotFoundException('Associated post not found');
 
     // Allow: comment owner, brand owner of the post's brand, or admin
     if (userRole !== UserRole.ADMIN && comment.userId !== userId) {

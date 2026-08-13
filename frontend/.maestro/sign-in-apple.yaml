@@ -1,0 +1,49 @@
+appId: com.fakharanii.localbrands
+---
+# Apple Sign-In Flow (iOS only)
+# Launch app → tap "Sign In with Apple" button →
+# assert the Apple sign-in sheet appears →
+# cancel/go back → verify still on login screen
+#
+# NOTE: This flow is iOS-only. The Apple Authentication button is rendered
+# by expo-apple-authentication and appears below the Google/Facebook row.
+# Maestro cannot complete the Apple ID authentication. This test only
+# validates that the button is present and triggers the system sheet.
+
+- launchApp:
+    clearState: true
+
+# Assert login screen
+- assertVisible:
+    text: "LOCAL BRANDS"
+    timeout: 8000
+
+# The Apple button is rendered as a native AppleAuthenticationButton.
+# It appears below the GOOGLE/FACEBOOK social row on iOS.
+# Maestro can identify it by tapping the native element.
+- assertVisible:
+    text: "Sign in with Apple"
+    timeout: 5000
+
+# Tap the Apple Sign-In button
+- tapOn:
+    text: "Sign in with Apple"
+
+# The system Apple ID sheet appears. Wait briefly.
+- waitForAnimationToEnd
+
+# We cannot complete the OAuth. Press back/cancel to dismiss the sheet.
+- back
+    optional: true
+
+- tapOn:
+    text: "Cancel"
+    optional: true
+
+# Assert we are back on the sign-in screen
+- assertVisible:
+    text: "LOCAL BRANDS"
+    timeout: 8000
+
+- assertVisible:
+    text: "SIGN IN"

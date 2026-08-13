@@ -1,0 +1,62 @@
+appId: com.fakharanii.localbrands
+---
+# Facebook Sign-In Flow
+# Launch app → tap "FACEBOOK" social button →
+# assert the Facebook login dialog/webview is triggered →
+# go back → verify still on sign-in screen
+#
+# NOTE: Maestro cannot complete OAuth flows. This test only validates
+# that the Facebook sign-in button is reachable and triggers the
+# system-level Facebook login dialog or an appropriate fallback alert.
+
+- launchApp:
+    clearState: true
+
+# Assert login screen
+- assertVisible:
+    text: "LOCAL BRANDS"
+    timeout: 8000
+
+# Assert the "FACEBOOK" social button is visible
+- assertVisible:
+    text: "FACEBOOK"
+
+# Tap the FACEBOOK button
+- tapOn:
+    text: "FACEBOOK"
+
+# On a real development build, the Facebook login sheet/webview appears.
+# On Expo Go or a simulator without the FBSDK, the fallback alert appears.
+- assertVisible:
+    text: "Not Available"
+    timeout: 6000
+    optional: true
+
+- assertVisible:
+    text: "Social sign-in requires a development build"
+    timeout: 6000
+    optional: true
+
+# Wait for any animation or dialog
+- waitForAnimationToEnd
+
+# Dismiss any alert or modal
+- tapOn:
+    text: "OK"
+    optional: true
+
+- tapOn:
+    text: "Cancel"
+    optional: true
+
+# Go back to login screen if a webview was opened
+- back
+    optional: true
+
+# Assert still on sign-in screen
+- assertVisible:
+    text: "LOCAL BRANDS"
+    timeout: 6000
+
+- assertVisible:
+    text: "FACEBOOK"

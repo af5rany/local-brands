@@ -1,0 +1,37 @@
+appId: com.fakharanii.localbrands
+---
+- launchApp:
+    clearState: false
+
+# Ensure logged in (depends on login.yaml having run first, or use a pre-seeded state)
+- assertVisible: "Home"
+
+# Navigate to Shop tab
+- tapOn:
+    text: "Shop"
+
+# Wait for product list
+- assertVisible:
+    id: "product-list"
+    timeout: 6000
+
+# Tap first product
+- tapOn:
+    index: 0
+    id: "product-card"
+
+# Product detail — wait for name to load
+- waitForAnimationToEnd
+
+# Select first available variant (size)
+- tapOn:
+    index: 0
+    id: "variant-option"
+
+# Add to cart
+- tapOn: "Add to Cart"
+
+# Assert toast or cart indicator
+- assertVisible:
+    text: "Added to cart"
+    timeout: 5000

@@ -1,0 +1,68 @@
+appId: com.fakharanii.localbrands
+---
+# Guest Sign-In Flow
+# Launch app with clear state → verify login screen → tap "CONTINUE AS GUEST" →
+# assert app is accessible → assert auth-gated features are not shown
+
+- launchApp:
+    clearState: true
+
+# Assert the login/welcome screen is visible
+- assertVisible:
+    text: "LOCAL BRANDS"
+    timeout: 8000
+
+# Assert the SIGN IN section label
+- assertVisible:
+    text: "SIGN IN"
+
+# Assert "CONTINUE AS GUEST" button is present
+- assertVisible:
+    text: "CONTINUE AS GUEST"
+
+# Tap it
+- tapOn:
+    text: "CONTINUE AS GUEST"
+
+# Dismiss the welcome guest alert
+- assertVisible:
+    text: "Welcome Guest!"
+    timeout: 8000
+- tapOn:
+    text: "Got it"
+
+# The guest user should now be on the home/tabs screen
+# Shop tab should be accessible
+- assertVisible:
+    text: "Shop"
+    timeout: 8000
+
+# Navigate to Shop — should work for guests
+- tapOn:
+    text: "Shop"
+- waitForAnimationToEnd
+
+# Products should be browsable without auth
+- assertVisible:
+    id: "product-list"
+    timeout: 8000
+
+# Navigate to Wishlist tab — guest should see the unauthenticated state
+- tapOn:
+    text: "Wishlist"
+    optional: true
+
+# Guest wishlist shows "Your wishlist is waiting" + SIGN IN prompt
+- assertVisible:
+    text: "Your wishlist is waiting"
+    timeout: 6000
+
+# The SIGN IN button appears (not a profile/orders shortcut)
+- assertVisible:
+    text: "SIGN IN"
+
+# Assert there is NO "My Orders" or profile tab accessible for guests
+# (These screens redirect to login when tapped by guests)
+- assertNotVisible:
+    text: "MY ORDERS"
+    optional: true

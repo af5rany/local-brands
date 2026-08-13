@@ -11,6 +11,7 @@ import {
   UseGuards,
   UsePipes,
   ValidationPipe,
+  NotFoundException,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { SizeGuidesService } from './size-guides.service';
@@ -36,7 +37,9 @@ export class SizeGuidesController {
     @Param('productId', ParseIntPipe) productId: number,
     @Query('brandId', ParseIntPipe) brandId: number,
   ) {
-    return this.sizeGuidesService.findForProduct(productId, brandId);
+    const guide = await this.sizeGuidesService.findForProduct(productId, brandId);
+    if (!guide) throw new NotFoundException('No size guide found for this product or brand');
+    return guide;
   }
 
   @Get('brands/:id/size-guides')

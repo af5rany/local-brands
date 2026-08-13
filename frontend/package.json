@@ -9,10 +9,23 @@
     "ios": "expo run:ios",
     "web": "expo start --web",
     "test": "jest --watchAll",
+    "test:ci": "jest --watchAll=false --coverage",
+    "test:e2e": "maestro test .maestro/",
     "lint": "expo lint"
   },
   "jest": {
-    "preset": "jest-expo"
+    "preset": "jest-expo",
+    "setupFilesAfterFramework": [
+      "<rootDir>/jest.setup.ts"
+    ],
+    "coverageThreshold": {
+      "global": {
+        "lines": 50
+      }
+    },
+    "transformIgnorePatterns": [
+      "node_modules/(?!(jest-)?react-native|@react-native|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|@react-navigation/.*|@unimodules/.*|unimodules|sentry-expo|native-base|react-clone-referenced-element|@testing-library)"
+    ]
   },
   "dependencies": {
     "@cloudinary/react": "^1.14.3",
@@ -82,6 +95,8 @@
   "devDependencies": {
     "@babel/core": "^7.26.0",
     "@expo/ngrok": "^4.1.3",
+    "@testing-library/jest-native": "^5.4.3",
+    "@testing-library/react-native": "^14.0.1",
     "@types/jest": "^29.5.12",
     "@types/react": "~19.1.10",
     "@types/react-test-renderer": "19.0.0",
@@ -90,6 +105,7 @@
     "jest-expo": "~54.0.17",
     "react-native-svg-transformer": "^1.5.3",
     "react-test-renderer": "19.0.0",
+    "test-renderer": "^1.2.0",
     "typescript": "~5.9.2"
   },
   "private": true

@@ -7,14 +7,18 @@ export class MailService {
   private transporter: nodemailer.Transporter;
 
   constructor(private configService: ConfigService) {
-    this.transporter = nodemailer.createTransport({
-      host: this.configService.get<string>('MAIL_HOST') || 'smtp.mailtrap.io',
-      port: this.configService.get<number>('MAIL_PORT') || 2525,
-      auth: {
-        user: this.configService.get<string>('MAIL_USER'),
-        pass: this.configService.get<string>('MAIL_PASS'),
-      },
-    });
+    if (process.env.NODE_ENV === 'test') {
+      this.transporter = nodemailer.createTransport({ jsonTransport: true });
+    } else {
+      this.transporter = nodemailer.createTransport({
+        host: this.configService.get<string>('MAIL_HOST') || 'smtp.mailtrap.io',
+        port: this.configService.get<number>('MAIL_PORT') || 2525,
+        auth: {
+          user: this.configService.get<string>('MAIL_USER'),
+          pass: this.configService.get<string>('MAIL_PASS'),
+        },
+      });
+    }
   }
 
   async sendPasswordResetEmail(email: string, token: string) {

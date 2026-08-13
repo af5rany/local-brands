@@ -1,4 +1,4 @@
-import { Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
+import { Injectable, InternalServerErrorException, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { InjectQueue } from '@nestjs/bullmq';
@@ -107,7 +107,7 @@ export class TryOnService {
 
     const job = await this.tryOnQueue.getJob(jobId);
     if (!job) {
-      return { status: 'failed', error: 'Job not found' };
+      throw new NotFoundException(`Try-on job ${jobId} not found`);
     }
 
     const state = await job.getState();

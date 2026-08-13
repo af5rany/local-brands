@@ -111,8 +111,9 @@ export class CreateProductDto {
   @IsEnum(ProductStatus)
   status: ProductStatus;
 
+  @IsOptional()
   @IsBoolean()
-  isFeatured: boolean;
+  isFeatured?: boolean = false;
 
   @IsNumber()
   brandId: number;

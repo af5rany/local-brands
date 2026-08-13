@@ -1,5 +1,7 @@
 # Local Brands - Premium E-Commerce Platform
 
+![Tests](https://github.com/af5rany/local-brands/actions/workflows/test.yml/badge.svg)
+
 A cross-platform e-commerce solution built with a focus on local brands, featuring high-performance discovery, advanced brand management, and secure multi-role access. This platform empowers local businesses by providing them with premium digital storefronts and robust inventory tools.
 
 ---

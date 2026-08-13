@@ -46,6 +46,9 @@ export class ReferralsService {
     if (!referral) throw new NotFoundException('Invalid referral code');
     if (referral.referrerId === newUserId) throw new BadRequestException('Cannot use your own referral code');
 
+    const existing = await this.referralRepo.findOne({ where: { referredUserId: newUserId } });
+    if (existing) throw new BadRequestException('You have already used a referral code');
+
     const newReferral = this.referralRepo.create({
       referrer: { id: referral.referrerId } as User,
       referredUser: { id: newUserId } as User,

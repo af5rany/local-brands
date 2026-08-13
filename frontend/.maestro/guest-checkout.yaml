@@ -1,0 +1,145 @@
+appId: com.fakharanii.localbrands
+---
+# Guest Checkout Flow
+# Launches the app fresh, continues as guest, browses shop,
+# adds a product to cart, and proceeds through checkout.
+# Note: Guest users reach checkout but must provide an address inline.
+# The checkout flow will show a "NO ADDRESS FOUND — TAP TO ADD ONE" prompt.
+
+- launchApp:
+    clearState: true
+
+# Wait for the login/welcome screen to appear
+- assertVisible:
+    text: "LOCAL BRANDS"
+    timeout: 8000
+
+# Tap "CONTINUE AS GUEST" — the outline button below SIGN IN
+- tapOn:
+    text: "CONTINUE AS GUEST"
+
+# Wait for the guest welcome alert and dismiss it
+- assertVisible:
+    text: "Welcome Guest!"
+    timeout: 8000
+- tapOn:
+    text: "Got it"
+
+# Now on home screen — navigate to Shop tab
+- tapOn:
+    text: "Shop"
+
+# Wait for the product grid to load
+- waitForAnimationToEnd
+- assertVisible:
+    id: "product-list"
+    timeout: 8000
+
+# Tap the first product card in the grid
+- tapOn:
+    index: 0
+    id: "product-card"
+
+# Wait for product detail screen to load
+- waitForAnimationToEnd
+
+# If the product has size variants, select the first available one
+- tapOn:
+    index: 0
+    id: "variant-option"
+    optional: true
+
+# Tap "ADD TO BAG" (the primary CTA on product detail)
+- tapOn:
+    text: "ADD TO BAG"
+
+# Assert the "ADDED TO BAG" confirmation overlay appears
+- assertVisible:
+    text: "ADDED TO BAG"
+    timeout: 6000
+
+# Tap "VIEW BAG" to go to cart
+- tapOn:
+    text: "VIEW BAG"
+
+# Confirm cart screen is visible
+- assertVisible:
+    text: "Checkout"
+    timeout: 6000
+
+# Tap Checkout button
+- tapOn:
+    text: "Checkout"
+
+# Checkout screen loads — guest users see the address prompt
+- assertVisible:
+    text: "ORDER SUMMARY"
+    timeout: 8000
+
+# Assert that the address section is visible
+- assertVisible:
+    text: "SHIPPING ADDRESS"
+
+# Guest has no saved address — the "TAP TO ADD ONE" prompt appears
+- assertVisible:
+    text: "NO ADDRESS FOUND — TAP TO ADD ONE"
+
+# Tap to add new address
+- tapOn:
+    text: "NO ADDRESS FOUND — TAP TO ADD ONE"
+
+# Wait for the address form to appear
+- waitForAnimationToEnd
+
+# Fill in address details
+- tapOn:
+    id: "address-fullName"
+    optional: true
+- inputText: "Guest User"
+
+- tapOn:
+    id: "address-line1"
+    optional: true
+- inputText: "123 Main Street"
+
+- tapOn:
+    id: "address-city"
+    optional: true
+- inputText: "Cairo"
+
+- tapOn:
+    id: "address-state"
+    optional: true
+- inputText: "Cairo"
+
+- tapOn:
+    id: "address-zip"
+    optional: true
+- inputText: "11511"
+
+- tapOn:
+    id: "address-country"
+    optional: true
+- inputText: "EG"
+
+- tapOn:
+    id: "address-phone"
+    optional: true
+- inputText: "+201001234567"
+
+# Save address
+- tapOn:
+    text: "SAVE"
+    optional: true
+
+# Back on checkout — place order
+- assertVisible:
+    text: "PLACE ORDER"
+    timeout: 8000
+- tapOn:
+    text: "PLACE ORDER"
+
+# Assert order confirmation screen
+- assertVisible:
+    text: "Order"
+    timeout: 12000
