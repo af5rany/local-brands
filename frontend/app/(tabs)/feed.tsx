@@ -104,10 +104,10 @@ const PinCard: React.FC<{
         <View style={styles.pinBottom}>
           <TouchableOpacity
             style={styles.pinBrandRow}
-            onPress={() => onBrandPress(post.brand.id)}
+            onPress={() => post.brand && onBrandPress(post.brand.id)}
             activeOpacity={0.7}
           >
-            {post.brand.logo ? (
+            {post.brand?.logo ? (
               <Image
                 source={{ uri: post.brand.logo }}
                 style={styles.pinBrandAvatar}
@@ -122,7 +122,7 @@ const PinCard: React.FC<{
                 <Text
                   style={[styles.pinBrandInitial, { color: colors.text }]}
                 >
-                  {post.brand.name?.charAt(0) || "B"}
+                  {post.brand?.name?.charAt(0) || "B"}
                 </Text>
               </View>
             )}
@@ -130,7 +130,7 @@ const PinCard: React.FC<{
               style={[styles.pinBrandName, { color: colors.textTertiary }]}
               numberOfLines={1}
             >
-              {post.brand.name}
+              {post.brand?.name}
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
