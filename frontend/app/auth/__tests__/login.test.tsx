@@ -5,6 +5,7 @@ import { render, fireEvent, waitFor, act } from '@testing-library/react-native';
 jest.mock('expo-router', () => ({
   useRouter: () => ({ push: jest.fn(), back: jest.fn(), replace: jest.fn() }),
   useLocalSearchParams: () => ({}),
+  useNavigation: () => ({ setOptions: jest.fn(), navigate: jest.fn(), goBack: jest.fn() }),
 }));
 
 jest.mock('expo-apple-authentication', () => ({

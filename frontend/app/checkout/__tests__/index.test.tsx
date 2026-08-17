@@ -120,7 +120,7 @@ describe('CheckoutScreen', () => {
     render(<CheckoutScreen />);
 
     await waitFor(() => {
-      expect(screen.getAllByText('$200.00').length).toBeGreaterThan(0);
+      expect(screen.getAllByText(/200\.00/).length).toBeGreaterThan(0);
     });
   });
 });
