@@ -37,7 +37,7 @@ const LoginScreen = () => {
   const { handleGoogle, handleFacebook, handleApple, googleLoading, facebookLoading, appleLoading } =
     useSocialAuth((token) => {
       login(token);
-      router.dismissAll();
+      router.replace("/(tabs)");
     });
 
   const handleLogin = async () => {
@@ -60,7 +60,7 @@ const LoginScreen = () => {
       }
       const { token } = await res.json();
       login(token);
-      router.dismissAll();
+      router.replace("/(tabs)");
     } catch (err: any) {
       Alert.alert("Login Error", err.message || "Something went wrong");
     } finally {
@@ -82,7 +82,7 @@ const LoginScreen = () => {
       }
       const { token } = await res.json();
       await login(token);
-      router.dismissAll();
+      router.replace("/(tabs)");
       setTimeout(() => {
         Alert.alert(
           "Welcome Guest!",

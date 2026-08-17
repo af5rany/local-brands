@@ -51,7 +51,7 @@ const RegisterScreen = () => {
   const { handleGoogle, handleFacebook, googleLoading, facebookLoading } =
     useSocialAuth((token) => {
       login(token);
-      router.dismissAll();
+      router.replace("/(tabs)");
     });
 
   const validateForm = () => {
@@ -126,7 +126,7 @@ const RegisterScreen = () => {
 
       if (isGuest) {
         login(data.token);
-        router.dismissAll();
+        router.replace("/(tabs)");
       } else {
         Alert.alert(
           "Success",

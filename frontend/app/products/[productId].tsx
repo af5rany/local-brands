@@ -471,7 +471,7 @@ const ProductDetailScreen = () => {
   const variantColors = getVariantColors();
 
   const hasDiscount =
-    product.salePrice !== undefined && product.salePrice < product.price;
+    product.salePrice != null && product.salePrice < product.price;
   const price = hasDiscount ? product.salePrice : product.price;
   const currencySymbol = "EGP";
   const currentStock = variant ? variant.stock : product.stock;
@@ -1077,7 +1077,7 @@ const ProductDetailScreen = () => {
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.similarList}
                 renderItem={({ item }) => {
-                  const hasSale = item.salePrice !== undefined && item.salePrice < item.price;
+                  const hasSale = item.salePrice != null && item.salePrice < item.price;
                   const displayPrice = hasSale ? item.salePrice : item.price;
                   const img = item.images?.[0] || item.mainImage;
                   return (

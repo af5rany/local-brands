@@ -43,10 +43,7 @@ const RecommendationCard = ({
   const [cartLoading, setCartLoading] = useState(false);
 
   const formatCurrency = (amount: number) =>
-    new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-    }).format(amount);
+    `EGP ${Number(amount).toFixed(2)}`;
 
   const handleWishlistPress = async () => {
     setWishlistLoading(true);

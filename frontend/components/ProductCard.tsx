@@ -37,7 +37,7 @@ const ProductCard: React.FC<ProductCardProps> = React.memo(({
   const colors = useThemeColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
 
-  const hasDiscount = product.salePrice && product.salePrice < product.price;
+  const hasDiscount = product.salePrice != null && product.salePrice < product.price;
   const displayPrice = hasDiscount ? product.salePrice! : product.price;
   const images = product.images?.filter(Boolean).length
     ? product.images!.filter(Boolean)
@@ -141,11 +141,11 @@ const ProductCard: React.FC<ProductCardProps> = React.memo(({
             </Text>
             <View style={styles.priceRow}>
               <Text style={[styles.price, { color: colors.priceCurrent }]}>
-                ${displayPrice}
+                EGP {Number(displayPrice).toFixed(2)}
               </Text>
               {hasDiscount && (
                 <Text style={[styles.originalPrice, { color: colors.priceOriginal }]}>
-                  ${product.price}
+                  EGP {Number(product.price).toFixed(2)}
                 </Text>
               )}
             </View>

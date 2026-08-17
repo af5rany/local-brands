@@ -42,7 +42,7 @@ export class AuthService {
   async validateUser(email: string, pass: string): Promise<User | null> {
     const normalizedEmail = email.trim().toLowerCase();
     const user = await this.usersService.findByEmail(normalizedEmail);
-    if (user && (await bcrypt.compare(pass, user.password))) {
+    if (user && user.password && (await bcrypt.compare(pass, user.password))) {
       user.password = '';
       return user;
     }
