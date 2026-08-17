@@ -20,7 +20,8 @@ import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import getApiUrl from "@/helpers/getApiUrl";
-import { useRouter } from "expo-router";
+import { useRouter, useNavigation } from "expo-router";
+import { CommonActions } from "@react-navigation/native";
 import { useCloudinaryUpload } from "@/hooks/useCloudinaryUpload";
 import { ImageUploadProgress } from "@/components/ImageUploadProgress";
 import { useThemeColors } from "@/hooks/useThemeColor";
@@ -29,8 +30,15 @@ import { useSocialAuth } from "@/hooks/useSocialAuth";
 
 const RegisterScreen = () => {
   const router = useRouter();
+  const navigation = useNavigation();
   const colors = useThemeColors();
   const { login, user, isGuest, token } = useAuth();
+
+  const goHome = () => {
+    navigation.dispatch(
+      CommonActions.reset({ index: 0, routes: [{ name: "(tabs)" }] })
+    );
+  };
   const [formData, setFormData] = useState({
     name: "",
     username: "",
@@ -51,7 +59,7 @@ const RegisterScreen = () => {
   const { handleGoogle, handleFacebook, googleLoading, facebookLoading } =
     useSocialAuth((token) => {
       login(token);
-      router.replace("/(tabs)");
+      goHome();
     });
 
   const validateForm = () => {
@@ -126,7 +134,7 @@ const RegisterScreen = () => {
 
       if (isGuest) {
         login(data.token);
-        router.replace("/(tabs)");
+        goHome();
       } else {
         Alert.alert(
           "Success",

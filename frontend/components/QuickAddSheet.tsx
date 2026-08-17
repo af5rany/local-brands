@@ -16,6 +16,7 @@ import { useCart } from "@/context/CartContext";
 import { useToast } from "@/context/ToastContext";
 import getApiUrl from "@/helpers/getApiUrl";
 import { formatPrice } from "@/utils/formatPrice";
+import { useRouter } from "expo-router";
 
 interface Variant {
   id: number;
@@ -40,6 +41,7 @@ interface QuickAddSheetProps {
 const QuickAddSheet: React.FC<QuickAddSheetProps> = ({ visible, onClose, product }) => {
   const colors = useThemeColors();
   const insets = useSafeAreaInsets();
+  const router = useRouter();
   const { token } = useAuth();
   const { refresh: refreshCart } = useCart();
   const { showToast } = useToast();
@@ -94,8 +96,15 @@ const QuickAddSheet: React.FC<QuickAddSheetProps> = ({ visible, onClose, product
         setSelectedVariantId(null);
         onClose();
       } else {
-        const d = await res.json();
-        showToast(d.message || "Could not add to bag", "error");
+        const d = await res.json().catch(() => null);
+        if (d?.message?.toLowerCase().includes("insufficient stock")) {
+          showToast("Already at max stock — it's in your cart", "error");
+          setSelectedVariantId(null);
+          onClose();
+          router.push("/cart" as any);
+        } else {
+          showToast(d?.message || "Could not add to bag", "error");
+        }
       }
     } catch {
       showToast("Could not add to bag", "error");

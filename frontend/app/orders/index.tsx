@@ -166,7 +166,7 @@ const OrdersScreen = () => {
           <View>
             <Text style={styles.totalLabel}>TOTAL AMOUNT</Text>
             <Text style={styles.totalAmount}>
-              ${Number(item.totalAmount).toFixed(2)}
+              EGP {Number(item.totalAmount).toFixed(2)}
             </Text>
           </View>
           {renderCTA(item)}

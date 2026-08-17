@@ -26,7 +26,7 @@ import OfflinePlaceholder from "@/components/OfflinePlaceholder";
 import GuestBanner from "@/components/GuestBanner";
 
 const MARQUEE_TEXT =
-  "FREE SHIPPING ON ORDERS OVER $150 · COMPLIMENTARY GIFT WRAPPING · FREE SHIPPING ON ORDERS OVER $150 · COMPLIMENTARY GIFT WRAPPING · ";
+  "FREE SHIPPING ON ORDERS OVER EGP 150 · COMPLIMENTARY GIFT WRAPPING · FREE SHIPPING ON ORDERS OVER EGP 150 · COMPLIMENTARY GIFT WRAPPING · ";
 
 const MarqueeStrip = () => {
   const colors = useThemeColors();
@@ -141,11 +141,20 @@ const CartScreen = () => {
         },
         body: JSON.stringify({ quantity }),
       });
-      if (!response.ok) throw new Error("Failed to update quantity");
+      if (!response.ok) {
+        const body = await response.json().catch(() => null);
+        const msg = body?.message || "Failed to update quantity";
+        throw new Error(msg);
+      }
       refreshCart();
     } catch (error: any) {
       setCart(previousCart);
-      Alert.alert("Error", error.message);
+      const msg: string = error.message ?? "";
+      if (msg.toLowerCase().includes("insufficient stock")) {
+        Alert.alert("Max stock reached", "You already have the maximum available quantity in your cart.");
+      } else {
+        Alert.alert("Error", msg);
+      }
     } finally {
       setUpdatingId(null);
     }
@@ -191,6 +200,7 @@ const CartScreen = () => {
     const variant = item.variant;
     const product = item.product;
     const image = product?.images?.[0] || product?.mainImage || "";
+    const maxStock: number = variant?.stock ?? product?.stock ?? Infinity;
 
     const variantParts = [
       variant?.color ? variant.color.toUpperCase() : null,
@@ -210,7 +220,7 @@ const CartScreen = () => {
                 {product.name.toUpperCase()}
               </Text>
               <Text style={styles.itemPrice}>
-                ${Number(item.unitPrice).toFixed(2)}
+                EGP {Number(item.unitPrice).toFixed(2)}
               </Text>
             </View>
             {variantParts.length > 0 && (
@@ -248,10 +258,10 @@ const CartScreen = () => {
 
             <TouchableOpacity
               onPress={() => updateQuantity(item.id, item.quantity + 1)}
-              disabled={updatingId === item.id}
+              disabled={updatingId === item.id || item.quantity >= maxStock}
               style={styles.qtyBtn}
             >
-              <Text style={styles.qtyBtnText}>+</Text>
+              <Text style={[styles.qtyBtnText, item.quantity >= maxStock && styles.qtyBtnDisabled]}>+</Text>
             </TouchableOpacity>
           </View>
 
@@ -340,7 +350,7 @@ const CartScreen = () => {
           <View style={styles.summaryRow}>
             <Text style={styles.summaryLabel}>SUBTOTAL</Text>
             <Text style={styles.summaryValue}>
-              ${Number(cart.totalAmount).toFixed(2)}
+              EGP {Number(cart.totalAmount).toFixed(2)}
             </Text>
           </View>
           <View style={styles.summaryRow}>
@@ -352,7 +362,7 @@ const CartScreen = () => {
           <View style={styles.summaryTotalRow}>
             <Text style={styles.totalLabel}>TOTAL</Text>
             <Text style={styles.totalValue}>
-              ${Number(cart.totalAmount).toFixed(2)}
+              EGP {Number(cart.totalAmount).toFixed(2)}
             </Text>
           </View>
 

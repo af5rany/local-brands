@@ -401,7 +401,7 @@ export default function PostDetailScreen() {
                                   {pp.product?.name}
                                 </Text>
                                 <Text style={{ color: colors.textSecondary, fontSize: 11 }}>
-                                  ${Number(pp.product?.price || 0).toFixed(2)}
+                                  EGP {Number(pp.product?.price || 0).toFixed(2)}
                                 </Text>
                               </View>
                               <Ionicons name="chevron-forward" size={14} color={colors.textTertiary} />
@@ -582,8 +582,7 @@ export default function PostDetailScreen() {
                                   { color: colors.text },
                                 ]}
                               >
-                                $
-                                {Number(pp.product.salePrice).toFixed(2)}
+                                EGP {Number(pp.product.salePrice).toFixed(2)}
                               </Text>
                               <Text
                                 style={[
@@ -591,7 +590,7 @@ export default function PostDetailScreen() {
                                   { color: colors.textTertiary },
                                 ]}
                               >
-                                ${Number(pp.product.price).toFixed(2)}
+                                EGP {Number(pp.product.price).toFixed(2)}
                               </Text>
                             </>
                           ) : (
@@ -601,7 +600,7 @@ export default function PostDetailScreen() {
                                 { color: colors.text },
                               ]}
                             >
-                              ${Number(pp.product.price).toFixed(2)}
+                              EGP {Number(pp.product.price).toFixed(2)}
                             </Text>
                           )}
                         </View>

@@ -1059,7 +1059,7 @@ const ProductDetailScreen = () => {
             {shippingExpanded && (
               <View style={[styles.accordionContent, { backgroundColor: colors.surfaceRaised, borderBottomColor: colors.borderLight }]}>
                 <Text style={[styles.accordionBodyText, { color: colors.textSecondary }]}>
-                  Standard shipping 3–5 business days. Express shipping available at checkout. Free shipping on orders over $100.
+                  Standard shipping 3–5 business days. Express shipping available at checkout. Free shipping on orders over EGP 100.
                 </Text>
               </View>
             )}

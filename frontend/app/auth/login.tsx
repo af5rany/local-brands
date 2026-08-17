@@ -18,14 +18,22 @@ import * as AppleAuthentication from "expo-apple-authentication";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/context/AuthContext";
 import getApiUrl from "@/helpers/getApiUrl";
-import { useRouter } from "expo-router";
+import { useRouter, useNavigation } from "expo-router";
+import { CommonActions } from "@react-navigation/native";
 import { useThemeColors } from "@/hooks/useThemeColor";
 import { useSocialAuth } from "@/hooks/useSocialAuth";
 
 const LoginScreen = () => {
   const router = useRouter();
+  const navigation = useNavigation();
   const colors = useThemeColors();
   const { login } = useAuth();
+
+  const goHome = () => {
+    navigation.dispatch(
+      CommonActions.reset({ index: 0, routes: [{ name: "(tabs)" }] })
+    );
+  };
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -37,7 +45,7 @@ const LoginScreen = () => {
   const { handleGoogle, handleFacebook, handleApple, googleLoading, facebookLoading, appleLoading } =
     useSocialAuth((token) => {
       login(token);
-      router.replace("/(tabs)");
+      goHome();
     });
 
   const handleLogin = async () => {
@@ -60,7 +68,7 @@ const LoginScreen = () => {
       }
       const { token } = await res.json();
       login(token);
-      router.replace("/(tabs)");
+      goHome();
     } catch (err: any) {
       Alert.alert("Login Error", err.message || "Something went wrong");
     } finally {
@@ -82,7 +90,7 @@ const LoginScreen = () => {
       }
       const { token } = await res.json();
       await login(token);
-      router.replace("/(tabs)");
+      goHome();
       setTimeout(() => {
         Alert.alert(
           "Welcome Guest!",

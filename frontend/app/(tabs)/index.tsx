@@ -369,7 +369,7 @@ const HomeScreen = () => {
             num: `${i + 1}/3`,
             brand: (p.brand?.name || "—").toUpperCase(),
             name: (p.name || "").toUpperCase(),
-            price: `$${Number(p.price || 0).toFixed(0)}`,
+            price: `EGP ${Number(p.price || 0).toFixed(0)}`,
             image: p.mainImage || p.images?.[0] || "",
             quote: p.quote as string,
           }))
@@ -715,7 +715,7 @@ const HomeScreen = () => {
                     resizeMode="cover"
                   />
                   <Text style={styles.recentlyPrice}>
-                    ${Number(product.salePrice ?? product.price).toFixed(0)}
+                    EGP {Number(product.salePrice ?? product.price).toFixed(0)}
                   </Text>
                 </TouchableOpacity>
               ))}
@@ -1012,10 +1012,12 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     width: "100%",
     height: 580,
     position: "relative",
+    backgroundColor: "#0a0a0a",
   },
   heroImage: {
     width: "100%",
     height: "100%",
+    backgroundColor: "#0a0a0a",
   },
   heroGradient: {
     position: "absolute",

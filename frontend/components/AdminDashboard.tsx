@@ -208,14 +208,14 @@ const AdminDashboard = ({
           <View style={styles.analyticsRow}>
             <View style={[styles.analyticsCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
               <Text style={[styles.analyticsLabel, { color: colors.textSecondary }]}>TOTAL REVENUE</Text>
-              <Text style={[styles.analyticsValue, { color: colors.text }]}>${stats.totalRevenue?.toFixed(2)}</Text>
+              <Text style={[styles.analyticsValue, { color: colors.text }]}>EGP {stats.totalRevenue?.toFixed(2)}</Text>
             </View>
             <View style={[styles.analyticsCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
               <Text style={[styles.analyticsLabel, { color: colors.textSecondary }]}>THIS MONTH</Text>
-              <Text style={[styles.analyticsValue, { color: colors.text }]}>${stats.revenueThisMonth?.toFixed(2)}</Text>
+              <Text style={[styles.analyticsValue, { color: colors.text }]}>EGP {stats.revenueThisMonth?.toFixed(2)}</Text>
               {(stats.revenueLastMonth ?? 0) > 0 && (
                 <Text style={[styles.analyticsSub, { color: (stats.revenueThisMonth ?? 0) >= (stats.revenueLastMonth ?? 0) ? colors.success : colors.danger }]}>
-                  vs ${stats.revenueLastMonth?.toFixed(2)} last month
+                  vs EGP {stats.revenueLastMonth?.toFixed(2)} last month
                 </Text>
               )}
             </View>
@@ -261,7 +261,7 @@ const AdminDashboard = ({
                 <View key={b.brandId} style={styles.topBrandRow}>
                   <Text style={[styles.topBrandRank, { color: colors.textTertiary }]}>{i + 1}</Text>
                   <Text style={[styles.topBrandName, { color: colors.text }]}>{b.brandName}</Text>
-                  <Text style={[styles.topBrandRevenue, { color: colors.textSecondary }]}>${b.revenue.toFixed(2)}</Text>
+                  <Text style={[styles.topBrandRevenue, { color: colors.textSecondary }]}>EGP {b.revenue.toFixed(2)}</Text>
                 </View>
               ))}
             </View>

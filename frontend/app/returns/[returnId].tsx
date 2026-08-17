@@ -116,7 +116,7 @@ const ReturnDetailScreen = () => {
           </Text>
           {returnRequest.refundAmount && (
             <Text style={[styles.refundAmount, { color: colors.text }]}>
-              REFUND: ${Number(returnRequest.refundAmount).toFixed(2)}
+              REFUND: EGP {Number(returnRequest.refundAmount).toFixed(2)}
             </Text>
           )}
         </View>

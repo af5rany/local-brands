@@ -155,8 +155,8 @@ const OrderDetailScreen = () => {
         <tr>
           <td style="padding:8px 4px;border-bottom:1px solid #eee;">${item.productName}${item.productColor ? ` <span style="color:#888;font-size:11px;">${item.productColor}</span>` : ""}${item.productSize ? ` <span style="color:#888;font-size:11px;">${item.productSize}</span>` : ""}</td>
           <td style="padding:8px 4px;border-bottom:1px solid #eee;text-align:center;">${item.quantity}</td>
-          <td style="padding:8px 4px;border-bottom:1px solid #eee;text-align:right;">$${Number(item.unitPrice ?? item.totalPrice / item.quantity).toFixed(2)}</td>
-          <td style="padding:8px 4px;border-bottom:1px solid #eee;text-align:right;font-weight:600;">$${Number(item.totalPrice).toFixed(2)}</td>
+          <td style="padding:8px 4px;border-bottom:1px solid #eee;text-align:right;">EGP ${Number(item.unitPrice ?? item.totalPrice / item.quantity).toFixed(2)}</td>
+          <td style="padding:8px 4px;border-bottom:1px solid #eee;text-align:right;font-weight:600;">EGP ${Number(item.totalPrice).toFixed(2)}</td>
         </tr>`
       )
       .join("");
@@ -219,11 +219,11 @@ const OrderDetailScreen = () => {
   </table>
 
   <div class="totals">
-    <div class="totals-row"><span>Subtotal</span><span>$${Number(order.subtotal).toFixed(2)}</span></div>
-    <div class="totals-row"><span>Shipping</span><span>$${Number(order.shippingCost || 0).toFixed(2)}</span></div>
-    <div class="totals-row"><span>Tax</span><span>$${Number(order.taxAmount || 0).toFixed(2)}</span></div>
-    ${Number(order.discountAmount) > 0 ? `<div class="totals-row"><span>Discount</span><span>-$${Number(order.discountAmount).toFixed(2)}</span></div>` : ""}
-    <div class="total-final"><span>Total</span><span>$${Number(order.totalAmount).toFixed(2)}</span></div>
+    <div class="totals-row"><span>Subtotal</span><span>EGP ${Number(order.subtotal).toFixed(2)}</span></div>
+    <div class="totals-row"><span>Shipping</span><span>EGP ${Number(order.shippingCost || 0).toFixed(2)}</span></div>
+    <div class="totals-row"><span>Tax</span><span>EGP ${Number(order.taxAmount || 0).toFixed(2)}</span></div>
+    ${Number(order.discountAmount) > 0 ? `<div class="totals-row"><span>Discount</span><span>-EGP ${Number(order.discountAmount).toFixed(2)}</span></div>` : ""}
+    <div class="total-final"><span>Total</span><span>EGP ${Number(order.totalAmount).toFixed(2)}</span></div>
   </div>
 
   <p class="footer">Thank you for shopping with Local Brands.</p>
@@ -372,10 +372,10 @@ const OrderDetailScreen = () => {
               </View>
               <View style={styles.itemPriceCol}>
                 <Text style={styles.itemQtyPrice}>
-                  {item.quantity} × ${Number(item.unitPrice ?? item.totalPrice / item.quantity).toFixed(2)}
+                  {item.quantity} × EGP {Number(item.unitPrice ?? item.totalPrice / item.quantity).toFixed(2)}
                 </Text>
                 <Text style={styles.itemTotal}>
-                  ${Number(item.totalPrice).toFixed(2)}
+                  EGP {Number(item.totalPrice).toFixed(2)}
                 </Text>
               </View>
             </View>
@@ -449,33 +449,33 @@ const OrderDetailScreen = () => {
             <View style={styles.financialRow}>
               <Text style={styles.financialKey}>SUBTOTAL</Text>
               <Text style={styles.financialVal}>
-                ${Number(order.subtotal).toFixed(2)}
+                EGP {Number(order.subtotal).toFixed(2)}
               </Text>
             </View>
             <View style={styles.financialRow}>
               <Text style={styles.financialKey}>SHIPPING</Text>
               <Text style={styles.financialVal}>
-                ${Number(order.shippingCost || 0).toFixed(2)}
+                EGP {Number(order.shippingCost || 0).toFixed(2)}
               </Text>
             </View>
             <View style={styles.financialRow}>
               <Text style={styles.financialKey}>TAX</Text>
               <Text style={styles.financialVal}>
-                ${Number(order.taxAmount || 0).toFixed(2)}
+                EGP {Number(order.taxAmount || 0).toFixed(2)}
               </Text>
             </View>
             {Number(order.discountAmount) > 0 && (
               <View style={styles.financialRow}>
                 <Text style={styles.financialKey}>DISCOUNT</Text>
                 <Text style={styles.financialVal}>
-                  −${Number(order.discountAmount).toFixed(2)}
+                  −EGP {Number(order.discountAmount).toFixed(2)}
                 </Text>
               </View>
             )}
             <View style={styles.grandTotalRow}>
               <Text style={styles.grandTotalLabel}>GRAND TOTAL</Text>
               <Text style={styles.grandTotalValue}>
-                ${Number(order.totalAmount).toFixed(2)}
+                EGP {Number(order.totalAmount).toFixed(2)}
               </Text>
             </View>
 

@@ -17,6 +17,100 @@ import { useThemeColors } from "@/hooks/useThemeColor";
 import type { ThemeColors } from "@/constants/Colors";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { useHeaderVisibility } from "@/context/HeaderVisibilityContext";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+
+const SIGNED_IN_FEATURES: { icon: keyof typeof Ionicons.glyphMap; label: string; desc: string }[] = [
+  { icon: "bag-check-outline", label: "Order Tracking", desc: "Real-time updates on every order" },
+  { icon: "heart-outline", label: "Wishlist", desc: "Save products across sessions" },
+  { icon: "location-outline", label: "Saved Addresses", desc: "Faster checkout every time" },
+  { icon: "gift-outline", label: "Referral Rewards", desc: "Earn credit by inviting friends" },
+];
+
+const GUEST_FEATURES: { icon: keyof typeof Ionicons.glyphMap; label: string; desc: string }[] = [
+  { icon: "bag-check-outline", label: "Persistent Cart", desc: "Your cart won't disappear" },
+  { icon: "heart-outline", label: "Wishlist", desc: "Save products you love" },
+  { icon: "receipt-outline", label: "Order History", desc: "Track all past purchases" },
+  { icon: "person-outline", label: "Profile & Settings", desc: "Personalise your experience" },
+];
+
+type UnauthScreenProps = {
+  colors: ReturnType<typeof useThemeColors>;
+  styles: ReturnType<typeof createStyles>;
+  top: number;
+  bottom: number;
+  tabBarHeight: number;
+  eyebrow: string;
+  title: string;
+  subtitle: string;
+  primaryLabel: string;
+  primaryRoute: string;
+  secondaryLabel: string;
+  secondaryRoute: string;
+  features: typeof SIGNED_IN_FEATURES;
+  router: ReturnType<typeof useRouter>;
+};
+
+const UnauthScreen = ({
+  colors, styles, top, bottom, tabBarHeight,
+  eyebrow, title, subtitle,
+  primaryLabel, primaryRoute,
+  secondaryLabel, secondaryRoute,
+  features, router,
+}: UnauthScreenProps) => (
+  <ScrollView
+    style={{ flex: 1, backgroundColor: colors.background }}
+    contentContainerStyle={{ paddingTop: top + 16, paddingBottom: tabBarHeight + bottom + 32 }}
+    showsVerticalScrollIndicator={false}
+  >
+    {/* ── Hero ── */}
+    <View style={styles.unauthHero}>
+      <Text style={styles.unauthEyebrow}>{eyebrow}</Text>
+      <Text style={styles.unauthTitle}>{title}</Text>
+      <Text style={styles.unauthSubtitle}>{subtitle}</Text>
+    </View>
+
+    {/* ── Feature list ── */}
+    <View style={styles.featureList}>
+      {features.map((f, i) => (
+        <View
+          key={f.label}
+          style={[
+            styles.featureRow,
+            i === features.length - 1 && { borderBottomWidth: 0 },
+          ]}
+        >
+          <View style={[styles.featureIconWrap, { backgroundColor: colors.surfaceRaised, borderColor: colors.border }]}>
+            <Ionicons name={f.icon} size={18} color={colors.text} />
+          </View>
+          <View style={styles.featureText}>
+            <Text style={[styles.featureLabel, { color: colors.text }]}>{f.label}</Text>
+            <Text style={[styles.featureDesc, { color: colors.textSecondary }]}>{f.desc}</Text>
+          </View>
+          <Ionicons name="lock-closed-outline" size={14} color={colors.textTertiary} />
+        </View>
+      ))}
+    </View>
+
+    {/* ── CTAs ── */}
+    <View style={styles.unauthCtas}>
+      <TouchableOpacity
+        style={[styles.signInBtn, { backgroundColor: colors.primary }]}
+        onPress={() => router.push(primaryRoute as any)}
+        activeOpacity={0.85}
+      >
+        <Text style={[styles.signInBtnText, { color: colors.primaryForeground }]}>{primaryLabel}</Text>
+        <Ionicons name="arrow-forward" size={14} color={colors.primaryForeground} />
+      </TouchableOpacity>
+      <TouchableOpacity
+        style={[styles.registerBtn, { borderColor: colors.border }]}
+        onPress={() => router.push(secondaryRoute as any)}
+        activeOpacity={0.85}
+      >
+        <Text style={[styles.registerBtnText, { color: colors.text }]}>{secondaryLabel}</Text>
+      </TouchableOpacity>
+    </View>
+  </ScrollView>
+);
 
 const ProfileTab = () => {
   const router = useRouter();
@@ -28,6 +122,7 @@ const ProfileTab = () => {
   const { setIsManagementMode } = useBrand();
   const [refreshing, setRefreshing] = useState(false);
 
+  const { top, bottom } = useSafeAreaInsets();
   const userRole = user?.role || user?.userRole;
   const isAdminOrOwner = userRole === "admin" || userRole === "brandOwner";
 
@@ -54,60 +149,44 @@ const ProfileTab = () => {
   // Not signed in
   if (!token) {
     return (
-      <View style={styles.container}>
-        <View style={styles.guestWrap}>
-          <View style={styles.guestAvatar}>
-            <Ionicons name="person-outline" size={40} color={colors.textTertiary} />
-          </View>
-          <Text style={styles.guestEyebrow}>NOT SIGNED IN</Text>
-          <Text style={styles.guestTitle}>YOUR PROFILE</Text>
-          <Text style={styles.guestSubtitle}>
-            Sign in to track orders, save favourites, and manage your account.
-          </Text>
-          <TouchableOpacity
-            style={styles.signInBtn}
-            onPress={() => router.push("/auth/login")}
-          >
-            <Text style={styles.signInBtnText}>SIGN IN →</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.registerBtn}
-            onPress={() => router.push("/auth/register")}
-          >
-            <Text style={styles.registerBtnText}>CREATE ACCOUNT</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
+      <UnauthScreen
+        colors={colors}
+        styles={styles}
+        top={top}
+        bottom={bottom}
+        tabBarHeight={tabBarHeight}
+        eyebrow="NOT SIGNED IN"
+        title={"YOUR\nPROFILE"}
+        subtitle="Sign in to unlock your full shopping experience."
+        primaryLabel="SIGN IN"
+        primaryRoute="/auth/login"
+        secondaryLabel="CREATE ACCOUNT"
+        secondaryRoute="/auth/register"
+        features={SIGNED_IN_FEATURES}
+        router={router}
+      />
     );
   }
 
   // Guest session — promote account creation
   if (isGuest) {
     return (
-      <View style={styles.container}>
-        <View style={styles.guestWrap}>
-          <View style={styles.guestAvatar}>
-            <Ionicons name="person-outline" size={40} color={colors.textTertiary} />
-          </View>
-          <Text style={styles.guestEyebrow}>GUEST SESSION</Text>
-          <Text style={styles.guestTitle}>YOUR PROFILE</Text>
-          <Text style={styles.guestSubtitle}>
-            Create an account to save your cart, track orders, and access your wishlist.
-          </Text>
-          <TouchableOpacity
-            style={styles.signInBtn}
-            onPress={() => router.push("/auth/register")}
-          >
-            <Text style={styles.signInBtnText}>CREATE ACCOUNT →</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.registerBtn}
-            onPress={() => router.push("/auth/login")}
-          >
-            <Text style={styles.registerBtnText}>SIGN IN</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
+      <UnauthScreen
+        colors={colors}
+        styles={styles}
+        top={top}
+        bottom={bottom}
+        tabBarHeight={tabBarHeight}
+        eyebrow="GUEST SESSION"
+        title={"SAVE YOUR\nPROGRESS"}
+        subtitle="Your guest session is temporary. Create an account to keep everything."
+        primaryLabel="CREATE ACCOUNT"
+        primaryRoute="/auth/register"
+        secondaryLabel="SIGN IN"
+        secondaryRoute="/auth/login"
+        features={GUEST_FEATURES}
+        router={router}
+      />
     );
   }
 
@@ -286,73 +365,94 @@ const createStyles = (colors: ThemeColors) =>
       // paddingBottom injected inline with tabBarHeight
     },
 
-    // ── Guest ──────────────────────────────────────────────────────────────────
-    guestWrap: {
-      flex: 1,
-      paddingHorizontal: 28,
-      paddingTop: 56,
-      paddingBottom: 60,
-      alignItems: "center",
+    // ── Unauth screens ─────────────────────────────────────────────────────────
+    unauthHero: {
+      paddingHorizontal: 24,
+      paddingBottom: 32,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
     },
-    guestAvatar: {
-      width: 160,
-      height: 160,
-      backgroundColor: colors.surfaceRaised,
-      alignItems: "center",
-      justifyContent: "center",
-      marginBottom: 28,
-      borderWidth: 1,
-      borderColor: colors.border,
-    },
-    guestEyebrow: {
+    unauthEyebrow: {
       fontSize: 9,
       color: colors.textTertiary,
       letterSpacing: 2,
       textTransform: "uppercase",
-      marginBottom: 10,
+      marginBottom: 12,
     },
-    guestTitle: {
-      fontSize: 30,
-      fontWeight: "800",
+    unauthTitle: {
+      fontSize: 40,
+      fontWeight: "900",
       color: colors.text,
-      letterSpacing: -0.5,
+      letterSpacing: -1,
       textTransform: "uppercase",
-      marginBottom: 14,
-      textAlign: "center",
+      lineHeight: 42,
+      marginBottom: 16,
     },
-    guestSubtitle: {
+    unauthSubtitle: {
       fontSize: 14,
       color: colors.textSecondary,
-      textAlign: "center",
       lineHeight: 22,
-      marginBottom: 36,
-      paddingHorizontal: 8,
+    },
+    featureList: {
+      paddingHorizontal: 24,
+      paddingTop: 8,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    featureRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingVertical: 16,
+      gap: 14,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    featureIconWrap: {
+      width: 40,
+      height: 40,
+      borderWidth: 1,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    featureText: {
+      flex: 1,
+      gap: 2,
+    },
+    featureLabel: {
+      fontSize: 13,
+      fontWeight: "700",
+      letterSpacing: 0.3,
+    },
+    featureDesc: {
+      fontSize: 12,
+      lineHeight: 16,
+    },
+    unauthCtas: {
+      paddingHorizontal: 24,
+      paddingTop: 28,
+      gap: 10,
     },
     signInBtn: {
-      backgroundColor: colors.primary,
       paddingVertical: 18,
-      marginBottom: 10,
-      width: "100%",
       alignItems: "center",
+      flexDirection: "row",
+      justifyContent: "center",
+      gap: 8,
     },
     signInBtnText: {
       fontSize: 11,
       fontWeight: "700",
-      color: colors.primaryForeground,
       letterSpacing: 2,
       textTransform: "uppercase",
     },
     registerBtn: {
       borderWidth: 1,
-      borderColor: colors.border,
       paddingVertical: 16,
-      width: "100%",
       alignItems: "center",
     },
     registerBtnText: {
       fontSize: 11,
       fontWeight: "700",
-      color: colors.text,
       letterSpacing: 2,
       textTransform: "uppercase",
     },

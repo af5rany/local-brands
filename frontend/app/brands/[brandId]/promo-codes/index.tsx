@@ -137,8 +137,8 @@ const PromoCodesScreen = () => {
                   <View>
                     <Text style={[styles.code, { color: colors.text }]}>{promo.code}</Text>
                     <Text style={[styles.desc, { color: colors.textTertiary }]}>
-                      {promo.type === "percentage" ? `${promo.value}% OFF` : `$${promo.value} OFF`}
-                      {promo.minOrderAmount ? ` · MIN $${promo.minOrderAmount}` : ""}
+                      {promo.type === "percentage" ? `${promo.value}% OFF` : `EGP ${promo.value} OFF`}
+                      {promo.minOrderAmount ? ` · MIN EGP ${promo.minOrderAmount}` : ""}
                     </Text>
                   </View>
                   <Text style={[styles.statusBadge, { color: status.color }]}>{status.label}</Text>

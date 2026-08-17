@@ -93,6 +93,8 @@ export class WishlistService {
         'product',
         'product.deletedAt IS NULL',
       )
+      .leftJoinAndSelect('product.productVariants', 'productVariants')
+      .leftJoinAndSelect('product.brand', 'brand')
       .where('wishlist.userId = :userId', { userId })
       .orderBy('wishlist.createdAt', 'DESC')
       .getMany();

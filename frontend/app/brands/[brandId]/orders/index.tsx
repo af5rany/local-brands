@@ -257,7 +257,7 @@ const BrandOrdersScreen = () => {
             })}
           </Text>
           <Text style={styles.orderTotal}>
-            ${Number(item.totalAmount).toFixed(2)}
+            EGP {Number(item.totalAmount).toFixed(2)}
           </Text>
         </View>
 

@@ -103,7 +103,7 @@ const PromoCodeDetailScreen = () => {
             </View>
             <View style={styles.statItem}>
               <Text style={[styles.statValue, { color: colors.text }]}>
-                ${Number(stats.totalDiscountGiven || 0).toFixed(2)}
+                EGP {Number(stats.totalDiscountGiven || 0).toFixed(2)}
               </Text>
               <Text style={[styles.statLabel, { color: colors.textTertiary }]}>DISCOUNT GIVEN</Text>
             </View>
@@ -170,7 +170,7 @@ const PromoCodeDetailScreen = () => {
                   {new Date(u.createdAt).toLocaleDateString()}
                 </Text>
                 <Text style={[styles.usageDiscount, { color: colors.text }]}>
-                  -${Number(u.discountApplied).toFixed(2)}
+                  -EGP {Number(u.discountApplied).toFixed(2)}
                 </Text>
               </View>
             ))}

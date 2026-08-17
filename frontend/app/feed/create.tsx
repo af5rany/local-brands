@@ -450,7 +450,7 @@ export default function CreatePostScreen() {
                       </Text>
                       {p.price != null && (
                         <Text style={[styles.productCardPrice, { color: colors.textTertiary }]}>
-                          ${Number(p.price).toFixed(2)}
+                          EGP {Number(p.price).toFixed(2)}
                         </Text>
                       )}
                       {selected && images.length > 0 && (

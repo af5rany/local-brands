@@ -167,7 +167,7 @@ const ShippingZonesScreen = () => {
                         </View>
                         <View style={styles.rateRight}>
                           <Text style={[styles.ratePrice, { color: colors.text }]}>
-                            {Number(rate.price) === 0 ? "FREE" : `$${Number(rate.price).toFixed(2)}`}
+                            {Number(rate.price) === 0 ? "FREE" : `EGP ${Number(rate.price).toFixed(2)}`}
                           </Text>
                           <TouchableOpacity onPress={() => handleDeleteRate(zone.id, rate.id)}>
                             <Ionicons name="trash-outline" size={16} color={colors.danger} />

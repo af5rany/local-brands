@@ -324,7 +324,7 @@ const CheckoutScreen = () => {
               <Text style={styles.collapsedCartCount}>
                 {cartItems.length} ITEM{cartItems.length !== 1 ? "S" : ""}
               </Text>
-              <Text style={styles.collapsedCartTotal}>${subtotal.toFixed(2)}</Text>
+              <Text style={styles.collapsedCartTotal}>EGP {subtotal.toFixed(2)}</Text>
             </TouchableOpacity>
           ) : (
             <View style={styles.expandedCart}>
@@ -486,7 +486,7 @@ const CheckoutScreen = () => {
                     {rate.methodName.toUpperCase()} — {rate.estimatedDays} DAYS
                   </Text>
                   <Text style={styles.shippingPrice}>
-                    {Number(rate.price) === 0 ? "FREE" : `$${Number(rate.price).toFixed(2)}`}
+                    {Number(rate.price) === 0 ? "FREE" : `EGP ${Number(rate.price).toFixed(2)}`}
                   </Text>
                 </View>
               </TouchableOpacity>
@@ -500,22 +500,22 @@ const CheckoutScreen = () => {
 
           <View style={styles.summaryRow}>
             <Text style={styles.summaryLabel}>SUBTOTAL</Text>
-            <Text style={styles.summaryValue}>${subtotal.toFixed(2)}</Text>
+            <Text style={styles.summaryValue}>EGP {subtotal.toFixed(2)}</Text>
           </View>
           <View style={styles.summaryRow}>
             <Text style={styles.summaryLabel}>SHIPPING</Text>
             <Text style={styles.summaryValue}>
-              {shippingCost === 0 ? "FREE" : `$${shippingCost.toFixed(2)}`}
+              {shippingCost === 0 ? "FREE" : `EGP ${shippingCost.toFixed(2)}`}
             </Text>
           </View>
           <View style={styles.summaryRow}>
             <Text style={styles.summaryLabel}>ESTIMATED TAX</Text>
-            <Text style={styles.summaryValue}>${tax.toFixed(2)}</Text>
+            <Text style={styles.summaryValue}>EGP {tax.toFixed(2)}</Text>
           </View>
 
           <View style={[styles.summaryRow, { marginTop: 24 }]}>
             <Text style={styles.summaryTotalLabel}>TOTAL</Text>
-            <Text style={styles.summaryTotalValue}>${total.toFixed(2)}</Text>
+            <Text style={styles.summaryTotalValue}>EGP {total.toFixed(2)}</Text>
           </View>
 
           {/* Promo code */}

@@ -86,7 +86,7 @@ const PinCard: React.FC<{
 
         {hasProduct && (
           <Text style={[styles.pinPrice, { color: colors.text }]}>
-            ${Number(hasProduct.price).toFixed(2)}
+            EGP {Number(hasProduct.price).toFixed(2)}
           </Text>
         )}
 

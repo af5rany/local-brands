@@ -142,7 +142,7 @@ const OrderConfirmationScreen = () => {
               <View style={styles.totalsRow}>
                 <Text style={styles.totalsLabel}>ORDER TOTAL</Text>
                 <Text style={styles.totalsValue}>
-                  ${Number(total).toFixed(2)}
+                  EGP {Number(total).toFixed(2)}
                 </Text>
               </View>
             ) : null}

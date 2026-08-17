@@ -32,23 +32,25 @@ import { Brand } from "@/types/brand";
 import { useThemeColors } from "@/hooks/useThemeColor";
 import type { ThemeColors } from "@/constants/Colors";
 import { ProductGridSkeleton } from "@/components/Skeleton";
+import ProgressiveImage from "@/components/ProgressiveImage";
 import { useNetwork } from "@/context/NetworkContext";
 import OfflinePlaceholder from "@/components/OfflinePlaceholder";
 import { useHeaderVisibility } from "@/context/HeaderVisibilityContext";
 import { useScrollToTop } from "@/context/ScrollToTopContext";
 import QuickAddSheet from "@/components/QuickAddSheet";
 
-const CATEGORIES = [
-  "ALL",
-  "JACKETS",
-  "SHIRTS",
-  "TROUSERS",
-  "SHOES",
-  "KNITWEAR",
-  "ACCESSORIES",
-  "BAGS",
-  "HOODIES",
-];
+const CATEGORY_MAP: Record<string, string> = {
+  JACKETS: "Jackets",
+  SHIRTS: "Shirts",
+  PANTS: "Pants",
+  SHOES: "Shoes",
+  ACCESSORIES: "Accessories",
+  BAGS: "Bags",
+  HOODIES: "Hoodies",
+  HATS: "Hats",
+  "T-SHIRTS": "T-Shirts",
+};
+const CATEGORIES = ["ALL", ...Object.keys(CATEGORY_MAP)];
 
 const GENDERS = ["All", "Men", "Women", "Unisex"];
 
@@ -115,9 +117,9 @@ const MonolithProductCard = React.memo(
                 }}
                 renderItem={({ item: uri }) => (
                   <Pressable onPress={onPress} style={{ width: imgWidth, height: "100%" as any }}>
-                    <Image
+                    <ProgressiveImage
                       key={uri}
-                      source={{ uri }}
+                      uri={uri}
                       style={{ width: imgWidth, height: "100%" as any }}
                       resizeMode="cover"
                     />
@@ -126,7 +128,7 @@ const MonolithProductCard = React.memo(
               />
             ) : images[0] ? (
               <Pressable style={StyleSheet.absoluteFill} onPress={onPress}>
-                <Image key={images[0]} source={{ uri: images[0] }} style={cardStyles.image} resizeMode="cover" />
+                <ProgressiveImage uri={images[0]} style={cardStyles.image} resizeMode="cover" />
               </Pressable>
             ) : (
               <View style={cardStyles.imagePlaceholder} />
@@ -199,6 +201,7 @@ const MonolithProductCard = React.memo(
             <TouchableOpacity style={[cardStyles.addToCart, { flex: 1 }]} onPress={onAddToCart} activeOpacity={0.8}>
               <Text style={cardStyles.addToCartText}>CART</Text>
             </TouchableOpacity>
+            <View style={cardStyles.actionDivider} />
             <TouchableOpacity style={[cardStyles.buyNow, { flex: 1 }]} onPress={onBuyNow} activeOpacity={0.8}>
               <Text style={cardStyles.buyNowText}>BUY NOW</Text>
             </TouchableOpacity>
@@ -349,9 +352,14 @@ const ShopScreen = () => {
       if (selectedGender !== "All")
         params.set("gender", selectedGender.toLowerCase());
 
-      activeFilters.categories.forEach((c) =>
-        params.append("productTypes", c),
+      // skip if all concrete categories selected — equivalent to no filter
+      const allBackendValues = Object.values(CATEGORY_MAP);
+      const allSelected = allBackendValues.every((v) =>
+        activeFilters.categories.includes(v)
       );
+      if (!allSelected) {
+        activeFilters.categories.forEach((c) => params.append("productTypes", c));
+      }
       activeFilters.brandIds.forEach((id) => params.append("brandIds", id));
       params.set("sortBy", activeFilters.sortBy);
       params.set("sortOrder", activeFilters.sortOrder);
@@ -386,9 +394,14 @@ const ShopScreen = () => {
     loadMore,
     refresh,
     reset,
+    resetAndLoad,
   } = useInfiniteScroll<Product>({ fetchFn: fetchProducts });
 
-  // ── Reset on filter/search/gender change ───────────
+  // Stable ref so FlatList ListHeaderComponent never remounts (prevents scroll reset)
+  const renderListHeaderRef = useRef<() => React.ReactElement | null>(null!);
+  const stableRenderListHeader = useCallback(() => renderListHeaderRef.current(), []);
+
+  // ── Reset + load on filter/search/gender change ────
   const isFirstRender = useRef(true);
   useEffect(() => {
     if (isFirstRender.current) {
@@ -396,21 +409,9 @@ const ShopScreen = () => {
       loadMore();
       return;
     }
-    const timeout = setTimeout(() => reset(), searchQuery ? 300 : 0);
+    const timeout = setTimeout(() => resetAndLoad(), searchQuery ? 300 : 0);
     return () => clearTimeout(timeout);
   }, [searchQuery, selectedGender, activeFilters]);
-
-  const prevProductsLength = useRef(products.length);
-  useEffect(() => {
-    if (
-      prevProductsLength.current > 0 &&
-      products.length === 0 &&
-      !productsLoading
-    ) {
-      loadMore();
-    }
-    prevProductsLength.current = products.length;
-  }, [products.length, productsLoading]);
 
   // ── Filter options ─────────────────────────────────
   useEffect(() => {
@@ -580,13 +581,13 @@ const ShopScreen = () => {
       setActiveFilters((prev) => ({ ...prev, categories: [] }));
       return;
     }
-    const normalized =
-      key.charAt(0).toUpperCase() + key.slice(1).toLowerCase();
+    const backendValue = CATEGORY_MAP[key];
+    if (!backendValue) return;
     setActiveFilters((prev) => ({
       ...prev,
-      categories: prev.categories.includes(normalized)
-        ? prev.categories.filter((c) => c !== normalized)
-        : [...prev.categories, normalized],
+      categories: prev.categories.includes(backendValue)
+        ? prev.categories.filter((c) => c !== backendValue)
+        : [...prev.categories, backendValue],
     }));
   };
 
@@ -688,14 +689,9 @@ const ShopScreen = () => {
               key={g}
               style={[styles.genderTab, isActive && styles.genderTabActive]}
               onPress={() => setSelectedGender(g)}
-              activeOpacity={0.8}
+              activeOpacity={0.6}
             >
-              <Text
-                style={[
-                  styles.genderTabText,
-                  isActive && styles.genderTabTextActive,
-                ]}
-              >
+              <Text style={[styles.genderTabText, isActive && styles.genderTabTextActive]}>
                 {g.toUpperCase()}
               </Text>
             </TouchableOpacity>
@@ -714,9 +710,7 @@ const ShopScreen = () => {
           const isAll = cat === "ALL";
           const isActive = isAll
             ? activeFilters.categories.length === 0
-            : activeFilters.categories.includes(
-                cat.charAt(0).toUpperCase() + cat.slice(1).toLowerCase(),
-              );
+            : activeFilters.categories.includes(CATEGORY_MAP[cat] ?? "");
           return (
             <TouchableOpacity
               key={cat}
@@ -847,6 +841,8 @@ const ShopScreen = () => {
       )}
     </View>
   );
+
+  renderListHeaderRef.current = renderListHeader;
 
   const renderListFooter = () => {
     if (productsLoading && products.length > 0) {
@@ -992,7 +988,7 @@ const ShopScreen = () => {
           reportScroll(contentOffset.y, contentSize.height, layoutMeasurement.height);
         }}
         scrollEventThrottle={16}
-        ListHeaderComponent={inImageSearchMode ? null : renderListHeader}
+        ListHeaderComponent={inImageSearchMode ? null : stableRenderListHeader}
         ListFooterComponent={inImageSearchMode ? null : renderListFooter}
         ListEmptyComponent={
           inImageSearchMode
@@ -1166,15 +1162,18 @@ const createCardStyles = (colors: ThemeColors) => StyleSheet.create({
   },
   actionRow: {
     flexDirection: "row",
+    borderTopWidth: 1,
+    borderTopColor: colors.text,
   },
   addToCart: {
     height: 36,
     backgroundColor: "transparent",
-    borderTopWidth: 1,
-    borderRightWidth: 1,
-    borderColor: colors.text,
     alignItems: "center",
     justifyContent: "center",
+  },
+  actionDivider: {
+    width: 1,
+    backgroundColor: colors.text,
   },
   addToCartText: {
     fontSize: 8,
@@ -1186,8 +1185,6 @@ const createCardStyles = (colors: ThemeColors) => StyleSheet.create({
   buyNow: {
     height: 36,
     backgroundColor: colors.text,
-    borderTopWidth: 1,
-    borderColor: colors.text,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -1199,7 +1196,7 @@ const createCardStyles = (colors: ThemeColors) => StyleSheet.create({
     textTransform: "uppercase",
   },
   notifyBtn: {
-    height: 30,
+    height: 36,
     backgroundColor: "transparent",
     borderTopWidth: 1,
     borderColor: colors.text,
@@ -1338,126 +1335,128 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   // ── Gender tabs ───────────────────────────────────
   genderRow: {
     flexDirection: "row",
-    borderBottomWidth: 2,
-    borderBottomColor: colors.text,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
   },
   genderTab: {
     flex: 1,
-    paddingVertical: 14,
+    paddingVertical: 12,
     alignItems: "center",
-    borderRightWidth: 1,
-    borderRightColor: colors.surfaceContainer,
+    borderBottomWidth: 2,
+    borderBottomColor: "transparent",
+    marginBottom: -1,
   },
   genderTabActive: {
-    backgroundColor: colors.primary,
+    borderBottomColor: colors.text,
   },
   genderTabText: {
     fontFamily: undefined,
-    fontSize: 11,
-    color: colors.text,
-    letterSpacing: 3,
+    fontSize: 10,
+    color: colors.textTertiary,
+    letterSpacing: 2,
     textTransform: "uppercase",
+    fontWeight: "600",
   },
   genderTabTextActive: {
-    color: colors.textInverse,
+    color: colors.text,
+    fontWeight: "800",
   },
 
-  // ── Category chips ────────────────────────────────
+  // ── Category chips — TEXT ONLY ────────────────────
   categoryScrollWrap: {
     borderBottomWidth: 1,
-    borderBottomColor: colors.surfaceContainer,
+    borderBottomColor: colors.border,
   },
   categoryScroll: {
     paddingHorizontal: 24,
-    paddingVertical: 12,
-    gap: 8,
+    paddingVertical: 10,
+    gap: 20,
   },
   categoryChip: {
-    paddingHorizontal: 16,
-    paddingVertical: 6,
-    borderWidth: 1,
-    borderColor: colors.outlineVariant,
+    paddingVertical: 4,
   },
   categoryChipActive: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
+    borderBottomWidth: 2,
+    borderBottomColor: colors.text,
   },
   categoryChipText: {
     fontFamily: undefined,
     fontSize: 10,
-    color: colors.text,
+    color: colors.textTertiary,
     letterSpacing: 2,
     textTransform: "uppercase",
+    fontWeight: "500",
   },
   categoryChipTextActive: {
-    color: colors.textInverse,
+    color: colors.text,
+    fontWeight: "800",
   },
 
-  // ── Filter bar ────────────────────────────────────
+  // ── Filter bar — TEXT ONLY ────────────────────────
   filterBar: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: 16,
     paddingHorizontal: 24,
-    paddingTop: 12,
-    paddingBottom: 20,
+    paddingTop: 10,
+    paddingBottom: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
   },
   filterBtn: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderWidth: 1,
-    borderColor: colors.primary,
+    gap: 5,
+    paddingVertical: 4,
   },
-  filterBtnActive: {
-    backgroundColor: colors.primary,
-  },
+  filterBtnActive: {},
   filterBtnText: {
     fontFamily: undefined,
     fontSize: 10,
-    color: colors.text,
+    color: colors.textTertiary,
     letterSpacing: 1,
+    fontWeight: "500",
   },
   filterBtnTextActive: {
-    color: colors.textInverse,
+    color: colors.text,
+    fontWeight: "800",
   },
   filterBtnBadge: {
     fontFamily: undefined,
     fontSize: 10,
-    color: colors.textInverse,
+    color: colors.text,
+    fontWeight: "800",
     letterSpacing: 0,
   },
   resultsCount: {
     fontFamily: undefined,
     fontSize: 9,
-    color: colors.textSecondary,
+    color: colors.textTertiary,
     letterSpacing: 2,
     marginLeft: "auto",
   },
 
-  // ── Active chips ──────────────────────────────────
+  // ── Active chips — TEXT ONLY ──────────────────────
   activeChipsScroll: {
     paddingHorizontal: 24,
-    paddingTop: 8,
+    paddingTop: 6,
     paddingBottom: 8,
-    gap: 8,
+    gap: 16,
   },
   activeChip: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderWidth: 1,
-    borderColor: colors.primary,
+    gap: 5,
+    paddingVertical: 4,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.text,
   },
   activeChipText: {
     fontFamily: undefined,
     fontSize: 9,
     color: colors.text,
     letterSpacing: 2,
+    fontWeight: "700",
   },
 
   // ── Grid ──────────────────────────────────────────

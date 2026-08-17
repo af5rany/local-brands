@@ -22,6 +22,8 @@ import { useNetwork } from "@/context/NetworkContext";
 import OfflinePlaceholder from "@/components/OfflinePlaceholder";
 import { useHeaderVisibility } from "@/context/HeaderVisibilityContext";
 import { useScrollToTop } from "@/context/ScrollToTopContext";
+import QuickAddSheet from "@/components/QuickAddSheet";
+import ProgressiveImage from "@/components/ProgressiveImage";
 
 type Tab = "products" | "brands";
 
@@ -51,6 +53,11 @@ const WishlistTab = () => {
   const [unfollowingId, setUnfollowingId] = useState<number | null>(null);
   const [subscribedIds, setSubscribedIds] = useState<Set<number>>(new Set());
   const [addingToCartId, setAddingToCartId] = useState<number | null>(null);
+  const [quickAddProduct, setQuickAddProduct] = useState<{
+    id: number; name: string; price: number; salePrice?: number | null;
+    mainImage?: string; variants: { id: number; size: string | null; stock: number; isAvailable: boolean }[];
+  } | null>(null);
+  const [quickAddVisible, setQuickAddVisible] = useState(false);
 
 const { register, unregister } = useScrollToTop();
   const productsRef = useRef<FlatList>(null);
@@ -180,7 +187,23 @@ const { register, unregister } = useScrollToTop();
     }
 
     const hasVariants = product.productVariants?.length > 0;
-    if (hasVariants) { router.push(`/products/${product.id}` as any); return; }
+    if (hasVariants) {
+      setQuickAddProduct({
+        id: product.id,
+        name: product.name,
+        price: product.price,
+        salePrice: product.salePrice,
+        mainImage: product.mainImage,
+        variants: product.productVariants.map((v: any) => ({
+          id: v.id,
+          size: v.size ?? null,
+          stock: v.stock ?? 0,
+          isAvailable: v.isAvailable ?? true,
+        })),
+      });
+      setQuickAddVisible(true);
+      return;
+    }
 
     if (addingToCartId === product.id) return;
     setAddingToCartId(product.id);
@@ -190,8 +213,40 @@ const { register, unregister } = useScrollToTop();
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
         body: JSON.stringify({ productId: product.id, quantity: 1 }),
       });
-      if (res.ok) { refreshCart(); showToast("Added to bag", "success"); }
-      else { router.push(`/products/${product.id}` as any); }
+      if (res.ok) {
+        refreshCart();
+        showToast("Added to bag", "success");
+      } else {
+        const errBody = await res.json().catch(() => null);
+        if (errBody?.message === "Please select a product variant") {
+          // variants not in wishlist response — fetch full product then show picker
+          const productRes = await fetch(`${getApiUrl()}/products/${product.id}`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          if (productRes.ok) {
+            const full = await productRes.json();
+            const variants: any[] = full.variants ?? full.productVariants ?? [];
+            if (variants.length > 0) {
+              setQuickAddProduct({
+                id: full.id,
+                name: full.name,
+                price: full.price,
+                salePrice: full.salePrice,
+                mainImage: full.mainImage,
+                variants: variants.map((v: any) => ({
+                  id: v.id,
+                  size: v.size ?? null,
+                  stock: v.stock ?? 0,
+                  isAvailable: v.isAvailable ?? true,
+                })),
+              });
+              setQuickAddVisible(true);
+              return;
+            }
+          }
+        }
+        showToast("Could not add to bag", "error");
+      }
     } catch {
       showToast("Could not add to bag", "error");
     } finally {
@@ -213,29 +268,28 @@ const { register, unregister } = useScrollToTop();
 
     return (
       <View style={[styles.productRow, { borderBottomColor: colors.border }]}>
-        <TouchableOpacity
-          onPress={() => router.push(`/products/${product.id}`)}
-          activeOpacity={0.7}
-        >
-          <Image
-            source={{ uri: image || "" }}
-            style={[styles.productImage, { backgroundColor: colors.surfaceRaised }]}
+        <TouchableOpacity onPress={() => router.push(`/products/${product.id}` as any)} activeOpacity={0.7}>
+          <ProgressiveImage
+            uri={image || ""}
+            style={styles.productImage}
             resizeMode="cover"
           />
         </TouchableOpacity>
         <View style={styles.productInfo}>
-          <Text style={[styles.brandLabel, { color: colors.textTertiary }]} numberOfLines={1}>
-            {(product.brand?.name || "BRAND").toUpperCase()}
-          </Text>
-          <Text style={[styles.productName, { color: colors.text }]} numberOfLines={2}>
-            {product.name.toUpperCase()}
-          </Text>
-          <Text style={[styles.productPrice, { color: colors.text }]}>
-            {formatPrice(product.salePrice ?? product.price)}
-          </Text>
-          <Text style={[styles.stockLabel, { color: inStock ? colors.text : colors.accentRed }]}>
-            {inStock ? "IN STOCK" : "OUT OF STOCK"}
-          </Text>
+          <TouchableOpacity onPress={() => router.push(`/products/${product.id}` as any)} activeOpacity={0.7}>
+            <Text style={[styles.brandLabel, { color: colors.textTertiary }]} numberOfLines={1}>
+              {(product.brand?.name || "BRAND").toUpperCase()}
+            </Text>
+            <Text style={[styles.productName, { color: colors.text }]} numberOfLines={2}>
+              {product.name.toUpperCase()}
+            </Text>
+            <Text style={[styles.productPrice, { color: colors.text }]}>
+              {formatPrice(product.salePrice ?? product.price)}
+            </Text>
+            <Text style={[styles.stockLabel, { color: inStock ? colors.text : colors.accentRed }]}>
+              {inStock ? "IN STOCK" : "OUT OF STOCK"}
+            </Text>
+          </TouchableOpacity>
           <TouchableOpacity
             style={[styles.cartBtn, { backgroundColor: inStock ? colors.text : colors.background, borderColor: colors.text, opacity: isSubscribed || isAddingThisItem ? 0.5 : 1 }]}
             onPress={() => handleCartOrNotify(product)}
@@ -412,6 +466,12 @@ const { register, unregister } = useScrollToTop();
           )}
         </>
       )}
+
+      <QuickAddSheet
+        visible={quickAddVisible}
+        onClose={() => { setQuickAddVisible(false); setQuickAddProduct(null); }}
+        product={quickAddProduct}
+      />
 
       {/* Brands Tab */}
       {activeTab === "brands" && (

@@ -111,7 +111,7 @@ const BrandDashboard = () => {
   };
 
   const formatCurrency = (amount: number) =>
-    `$${amount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    `EGP ${amount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
   const formatNumber = (n: number) =>
     n >= 1000 ? `${(n / 1000).toFixed(1)}k` : n.toString();

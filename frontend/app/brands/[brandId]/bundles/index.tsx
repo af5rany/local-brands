@@ -95,7 +95,7 @@ export default function BundlesScreen() {
                   <Text style={[styles.cardDiscount, { color: colors.textSecondary }]}>
                     {b.discountType === "percentage"
                       ? `${b.discountValue}% off`
-                      : `$${Number(b.discountValue).toFixed(2)} off`}
+                      : `EGP ${Number(b.discountValue).toFixed(2)} off`}
                     {" — buy "}
                     {b.minQuantity}+
                   </Text>
