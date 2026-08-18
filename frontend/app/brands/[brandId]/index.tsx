@@ -435,6 +435,17 @@ const BrandDetailScreen = () => {
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        onScroll={(e) => {
+          const { layoutMeasurement, contentOffset, contentSize } = e.nativeEvent;
+          if (
+            contentSize.height - layoutMeasurement.height - contentOffset.y < 400 &&
+            hasNext &&
+            !productsLoading
+          ) {
+            loadMoreProducts();
+          }
+        }}
+        scrollEventThrottle={200}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -913,28 +924,12 @@ const BrandDetailScreen = () => {
                 </View>
               )}
             />
-            {hasNext && (
-              <TouchableOpacity
-                style={[
-                  styles.loadMoreBtn,
-                  {
-                    backgroundColor: colors.surface,
-                    borderColor: colors.border,
-                  },
-                ]}
-                onPress={loadMoreProducts}
-                disabled={productsLoading}
-              >
-                {productsLoading ? (
-                  <ActivityIndicator size="small" color={colors.primary} />
-                ) : (
-                  <Text
-                    style={[styles.loadMoreText, { color: colors.primary }]}
-                  >
-                    Load More ({pagination.total - products.length} remaining)
-                  </Text>
-                )}
-              </TouchableOpacity>
+            {hasNext && productsLoading && (
+              <ActivityIndicator
+                size="small"
+                color={colors.primary}
+                style={{ paddingVertical: 20 }}
+              />
             )}
           </View>
         ) : (
@@ -971,8 +966,8 @@ const BrandDetailScreen = () => {
           </>
         )}
 
-        {/* ── Danger Zone (Owner/Admin) ───────────── */}
-        {isOwnerOrAdmin && (
+        {/* ── Danger Zone (Admin only) ───────────── */}
+        {isAdmin && (
           <View style={styles.dangerZone}>
             <View
               style={[

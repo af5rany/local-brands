@@ -53,6 +53,7 @@ const WishlistTab = () => {
   const [unfollowingId, setUnfollowingId] = useState<number | null>(null);
   const [subscribedIds, setSubscribedIds] = useState<Set<number>>(new Set());
   const [addingToCartId, setAddingToCartId] = useState<number | null>(null);
+  const [buyingNowId, setBuyingNowId] = useState<number | null>(null);
   const [quickAddProduct, setQuickAddProduct] = useState<{
     id: number; name: string; price: number; salePrice?: number | null;
     mainImage?: string; variants: { id: number; size: string | null; stock: number; isAvailable: boolean }[];
@@ -254,6 +255,51 @@ const { register, unregister } = useScrollToTop();
     }
   }, [token, router, subscribedIds, addingToCartId, refreshCart, showToast]);
 
+  const handleBuyNow = useCallback(async (product: any) => {
+    if (!token) { router.push("/auth/login" as any); return; }
+    const inStock = (product.stock ?? 0) > 0 || product.productVariants?.some((v: any) => v.stock > 0);
+    if (!inStock) return;
+
+    const hasVariants = product.productVariants?.length > 0;
+    if (hasVariants) {
+      setQuickAddProduct({
+        id: product.id,
+        name: product.name,
+        price: product.price,
+        salePrice: product.salePrice,
+        mainImage: product.mainImage,
+        variants: product.productVariants.map((v: any) => ({
+          id: v.id,
+          size: v.size ?? null,
+          stock: v.stock ?? 0,
+          isAvailable: v.isAvailable ?? true,
+        })),
+      });
+      setQuickAddVisible(true);
+      return;
+    }
+
+    if (buyingNowId === product.id) return;
+    setBuyingNowId(product.id);
+    try {
+      const res = await fetch(`${getApiUrl()}/cart/add`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ productId: product.id, quantity: 1 }),
+      });
+      if (res.ok) {
+        refreshCart();
+        router.push("/checkout" as any);
+      } else {
+        showToast("Could not proceed to checkout", "error");
+      }
+    } catch {
+      showToast("Could not proceed to checkout", "error");
+    } finally {
+      setBuyingNowId(null);
+    }
+  }, [token, router, buyingNowId, refreshCart, showToast]);
+
   const renderProductItem = ({ item }: { item: any }) => {
     const product = item.product;
     if (!product) return null;
@@ -265,6 +311,7 @@ const { register, unregister } = useScrollToTop();
     let btnLabel = inStock ? "ADD TO CART" : "NOTIFY ME";
     if (isSubscribed) btnLabel = "SUBSCRIBED";
     if (isAddingThisItem) btnLabel = "ADDING...";
+    const isBuyingNow = buyingNowId === product.id;
 
     return (
       <View style={[styles.productRow, { borderBottomColor: colors.border }]}>
@@ -290,16 +337,30 @@ const { register, unregister } = useScrollToTop();
               {inStock ? "IN STOCK" : "OUT OF STOCK"}
             </Text>
           </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.cartBtn, { backgroundColor: inStock ? colors.text : colors.background, borderColor: colors.text, opacity: isSubscribed || isAddingThisItem ? 0.5 : 1 }]}
-            onPress={() => handleCartOrNotify(product)}
-            disabled={isSubscribed || isAddingThisItem}
-            activeOpacity={0.8}
-          >
-            <Text style={[styles.cartBtnText, { color: inStock ? colors.background : colors.text }]}>
-              {btnLabel}
-            </Text>
-          </TouchableOpacity>
+          <View style={styles.cartBtnRow}>
+            <TouchableOpacity
+              style={[styles.cartBtn, { flex: 1, backgroundColor: inStock ? colors.text : colors.background, borderColor: colors.text, opacity: isSubscribed || isAddingThisItem ? 0.5 : 1 }]}
+              onPress={() => handleCartOrNotify(product)}
+              disabled={isSubscribed || isAddingThisItem}
+              activeOpacity={0.8}
+            >
+              <Text style={[styles.cartBtnText, { color: inStock ? colors.background : colors.text }]}>
+                {btnLabel}
+              </Text>
+            </TouchableOpacity>
+            {inStock && (
+              <TouchableOpacity
+                style={[styles.cartBtn, { flex: 1, backgroundColor: colors.background, borderColor: colors.text, opacity: isBuyingNow ? 0.5 : 1 }]}
+                onPress={() => handleBuyNow(product)}
+                disabled={isBuyingNow}
+                activeOpacity={0.8}
+              >
+                <Text style={[styles.cartBtnText, { color: colors.text }]}>
+                  {isBuyingNow ? "..." : "BUY NOW"}
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
         </View>
         <TouchableOpacity
           style={styles.removeBtn}
@@ -613,11 +674,15 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
     marginTop: 4,
   },
+  cartBtnRow: {
+    flexDirection: "row",
+    gap: 6,
+    marginTop: 8,
+  },
   cartBtn: {
     height: 34,
     alignItems: "center",
     justifyContent: "center",
-    marginTop: 8,
     borderWidth: 1,
   },
   cartBtnText: {

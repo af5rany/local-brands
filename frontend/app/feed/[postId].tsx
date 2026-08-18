@@ -338,13 +338,6 @@ export default function PostDetailScreen() {
                   </Text>
                 </View>
               </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => Share.share({ title: post.brand.name, message: `${post.caption || post.brand.name}`.trim() })}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                style={{ marginRight: 8 }}
-              >
-                <Ionicons name="share-outline" size={20} color={colors.textSecondary} />
-              </TouchableOpacity>
               {canDeletePost && (
                 <TouchableOpacity onPress={handleDeletePost} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
                   <Ionicons name="trash-outline" size={20} color={colors.danger} />
@@ -496,6 +489,12 @@ export default function PostDetailScreen() {
                     {post.commentCount}
                   </Text>
                 )}
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.actionBtn}
+                onPress={() => Share.share({ title: post.brand.name, message: `${post.caption || post.brand.name}`.trim() })}
+              >
+                <Ionicons name="arrow-redo-outline" size={22} color={colors.text} />
               </TouchableOpacity>
             </View>
 
@@ -780,9 +779,10 @@ const styles = StyleSheet.create({
   brandAvatar: {
     width: 36,
     height: 36,
-    borderRadius: 0,
+    borderRadius: 18,
     justifyContent: "center",
     alignItems: "center",
+    overflow: "hidden",
   },
   brandInitial: { fontSize: 14, fontWeight: "800" },
   headerInfo: { marginLeft: 10, flex: 1 },

@@ -4,7 +4,9 @@
 node_modules/
 
 .env
-ios
+ios/Pods
+ios/build
+ios/DerivedData
 # Expo
 .expo/
 dist/

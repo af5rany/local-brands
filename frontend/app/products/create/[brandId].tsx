@@ -158,17 +158,12 @@ const CreateProductScreen = () => {
   const [dynamicCategories, setDynamicCategories] = useState<
     { label: string; value: string }[]
   >([]);
+  const [isNewProductType, setIsNewProductType] = useState(false);
 
   // Product Details
   const [material, setMaterial] = useState("");
   const [careInstructions, setCareInstructions] = useState("");
   const [origin, setOrigin] = useState("");
-
-  // Dimensions and Weight
-  const [weight, setWeight] = useState("");
-  const [length, setLength] = useState("");
-  const [width, setWidth] = useState("");
-  const [height, setHeight] = useState("");
 
   // Status
   const [status, setStatus] = useState<ProductStatus>(ProductStatus.PUBLISHED);
@@ -398,10 +393,6 @@ const CreateProductScreen = () => {
         material,
         careInstructions,
         origin,
-        weight: weight ? parseFloat(weight) : undefined,
-        length: length ? parseFloat(length) : undefined,
-        width: width ? parseFloat(width) : undefined,
-        height: height ? parseFloat(height) : undefined,
         status,
         isFeatured,
         brandId: parseInt(brandId as string),
@@ -540,27 +531,51 @@ const CreateProductScreen = () => {
           </View>
 
           <View style={styles.inputContainer}>
-            <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 8 }}>
-              <Text style={styles.label}>
-                Product Type <Text style={styles.required}>*</Text>
-              </Text>
-              {autoDetectedType && productType ? (
-                <View style={styles.autoDetectBadge}>
-                  <Text style={styles.autoDetectText}>Auto-detected</Text>
-                </View>
-              ) : null}
+            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+              <View style={{ flexDirection: "row", alignItems: "center" }}>
+                <Text style={styles.label}>
+                  Product Type <Text style={styles.required}>*</Text>
+                </Text>
+                {autoDetectedType && productType && !isNewProductType ? (
+                  <View style={[styles.autoDetectBadge, { marginLeft: 8 }]}>
+                    <Text style={styles.autoDetectText}>Auto-detected</Text>
+                  </View>
+                ) : null}
+              </View>
+              <TouchableOpacity
+                onPress={() => {
+                  setIsNewProductType(!isNewProductType);
+                  setProductType("");
+                  setAutoDetectedType(false);
+                  setSizeVariants([]);
+                }}
+              >
+                <Text style={{ color: colors.primary, fontSize: 14, fontWeight: "600" }}>
+                  {isNewProductType ? "Select Existing" : "Type New"}
+                </Text>
+              </TouchableOpacity>
             </View>
-            <Dropdown
-              labelField="label"
-              valueField="value"
-              data={dynamicProductTypes}
-              value={productType}
-              onChange={(item) => handleProductTypeChange(item.value)}
-              placeholder="Select Product Type"
-              placeholderStyle={styles.dropdownPlaceholder}
-              selectedTextStyle={styles.dropdownText}
-              style={styles.dropdown}
-            />
+            {isNewProductType ? (
+              <TextInput
+                style={styles.input}
+                placeholder="Enter new product type (e.g. Shorts, Swimwear)"
+                placeholderTextColor={colors.textSecondary}
+                value={productType}
+                onChangeText={(val) => { setProductType(val); setAutoDetectedType(false); setSizeVariants([]); }}
+              />
+            ) : (
+              <Dropdown
+                labelField="label"
+                valueField="value"
+                data={dynamicProductTypes}
+                value={productType}
+                onChange={(item) => handleProductTypeChange(item.value)}
+                placeholder="Select Product Type"
+                placeholderStyle={styles.dropdownPlaceholder}
+                selectedTextStyle={styles.dropdownText}
+                style={styles.dropdown}
+              />
+            )}
           </View>
 
           <View style={styles.rowContainer}>
@@ -883,57 +898,6 @@ const CreateProductScreen = () => {
               placeholderTextColor={colors.textSecondary}
               value={origin}
               onChangeText={setOrigin}
-            />
-          </View>
-        </View>
-
-        {/* Dimensions & Weight */}
-        <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Shipping Information</Text>
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Weight (kg)</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="0.0"
-              placeholderTextColor={colors.textSecondary}
-              value={weight}
-              onChangeText={setWeight}
-              keyboardType="numeric"
-            />
-          </View>
-          <View style={styles.rowContainer}>
-            <View style={[styles.inputContainer, styles.halfWidth]}>
-              <Text style={styles.label}>Length (cm)</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="0.0"
-                placeholderTextColor={colors.textSecondary}
-                value={length}
-                onChangeText={setLength}
-                keyboardType="numeric"
-              />
-            </View>
-            <View style={[styles.inputContainer, styles.halfWidth]}>
-              <Text style={styles.label}>Width (cm)</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="0.0"
-                placeholderTextColor={colors.textSecondary}
-                value={width}
-                onChangeText={setWidth}
-                keyboardType="numeric"
-              />
-            </View>
-          </View>
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Height (cm)</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="0.0"
-              placeholderTextColor={colors.textSecondary}
-              value={height}
-              onChangeText={setHeight}
-              keyboardType="numeric"
             />
           </View>
         </View>

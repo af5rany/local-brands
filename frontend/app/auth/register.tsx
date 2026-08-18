@@ -18,7 +18,6 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
-import DateTimePicker from "@react-native-community/datetimepicker";
 import getApiUrl from "@/helpers/getApiUrl";
 import { useRouter, useNavigation } from "expo-router";
 import { CommonActions } from "@react-navigation/native";
@@ -52,7 +51,9 @@ const RegisterScreen = () => {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<any>({});
   const { uploads, uploadImage } = useCloudinaryUpload();
-  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [dobDay, setDobDay] = useState("");
+  const [dobMonth, setDobMonth] = useState("");
+  const [dobYear, setDobYear] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
 
@@ -109,7 +110,7 @@ const RegisterScreen = () => {
         email: formData.email.trim().toLowerCase(),
         password: formData.password,
         phoneNumber: formData.phoneNumber || null,
-        dateOfBirth: formData.dateOfBirth || null,
+        dateOfBirth: buildDateOfBirth(),
         avatar,
         role: "customer",
       };
@@ -179,10 +180,15 @@ const RegisterScreen = () => {
     }
   };
 
-  const formatDate = (iso: string) => {
-    if (!iso) return "";
-    const d = new Date(iso);
-    return d.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+  const buildDateOfBirth = (): string | null => {
+    const d = parseInt(dobDay);
+    const m = parseInt(dobMonth);
+    const y = parseInt(dobYear);
+    if (!dobDay && !dobMonth && !dobYear) return null;
+    if (isNaN(d) || isNaN(m) || isNaN(y)) return null;
+    if (d < 1 || d > 31 || m < 1 || m > 12 || y < 1900 || y > new Date().getFullYear()) return null;
+    const iso = new Date(y, m - 1, d).toISOString();
+    return iso;
   };
 
   const renderField = (
@@ -304,28 +310,45 @@ const RegisterScreen = () => {
 
           {/* Date of Birth */}
           <View style={styles.fieldGroup}>
-            <Text style={[styles.fieldLabel, { color: colors.textTertiary }]}>BIRTHDAY</Text>
-            <Pressable
-              style={[styles.underlineField, { borderBottomColor: colors.text }]}
-              onPress={() => setShowDatePicker(true)}
-            >
-              <Text style={[styles.input, { color: formData.dateOfBirth ? colors.text : colors.textTertiary, flex: 1 }]}>
-                {formData.dateOfBirth ? formatDate(formData.dateOfBirth) : "Select date"}
-              </Text>
-            </Pressable>
+            <Text style={[styles.fieldLabel, { color: colors.textTertiary }]}>BIRTHDAY <Text style={[styles.fieldLabel, { color: colors.textTertiary, fontWeight: "400" }]}>(OPTIONAL)</Text></Text>
+            <View style={styles.dobRow}>
+              <View style={[styles.dobField, { borderBottomColor: colors.text }]}>
+                <TextInput
+                  style={[styles.input, { color: colors.text, textAlign: "center" }]}
+                  placeholder="DD"
+                  placeholderTextColor={colors.textTertiary}
+                  value={dobDay}
+                  onChangeText={(v) => setDobDay(v.replace(/[^0-9]/g, "").slice(0, 2))}
+                  keyboardType="number-pad"
+                  maxLength={2}
+                />
+              </View>
+              <Text style={[styles.dobSep, { color: colors.textTertiary }]}>/</Text>
+              <View style={[styles.dobField, { borderBottomColor: colors.text }]}>
+                <TextInput
+                  style={[styles.input, { color: colors.text, textAlign: "center" }]}
+                  placeholder="MM"
+                  placeholderTextColor={colors.textTertiary}
+                  value={dobMonth}
+                  onChangeText={(v) => setDobMonth(v.replace(/[^0-9]/g, "").slice(0, 2))}
+                  keyboardType="number-pad"
+                  maxLength={2}
+                />
+              </View>
+              <Text style={[styles.dobSep, { color: colors.textTertiary }]}>/</Text>
+              <View style={[styles.dobFieldWide, { borderBottomColor: colors.text }]}>
+                <TextInput
+                  style={[styles.input, { color: colors.text, textAlign: "center" }]}
+                  placeholder="YYYY"
+                  placeholderTextColor={colors.textTertiary}
+                  value={dobYear}
+                  onChangeText={(v) => setDobYear(v.replace(/[^0-9]/g, "").slice(0, 4))}
+                  keyboardType="number-pad"
+                  maxLength={4}
+                />
+              </View>
+            </View>
           </View>
-
-          {showDatePicker && (
-            <DateTimePicker
-              mode="date"
-              value={formData.dateOfBirth ? new Date(formData.dateOfBirth) : new Date()}
-              maximumDate={new Date()}
-              onChange={(event, date) => {
-                setShowDatePicker(false);
-                if (date) handleChange("dateOfBirth", date.toISOString());
-              }}
-            />
-          )}
 
           {renderField("Email", "email", "hello@example.com", { keyboardType: "email-address" })}
           {renderField("Password", "password", "••••••••", {
@@ -500,6 +523,28 @@ const styles = StyleSheet.create({
   eyeBtn: { paddingLeft: 8 },
   showHide: { fontSize: 9, fontWeight: "500", letterSpacing: 2, textTransform: "uppercase" },
   errorText: { fontSize: 9, fontWeight: "500", letterSpacing: 1, marginTop: 6, textTransform: "uppercase" },
+
+  // ── DOB row ───────────────────────────────
+  dobRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  dobField: {
+    flex: 1,
+    borderBottomWidth: 1,
+    paddingVertical: 8,
+  },
+  dobFieldWide: {
+    flex: 2,
+    borderBottomWidth: 1,
+    paddingVertical: 8,
+  },
+  dobSep: {
+    fontSize: 18,
+    fontWeight: "300",
+    paddingBottom: 4,
+  },
 
   // ── Brand Owner CTA ───────────────────────
   brandOwnerRow: {

@@ -689,12 +689,12 @@ const ProductDetailScreen = () => {
                 activeOpacity={0.7}
               >
                 {wishlistLoading ? (
-                  <ActivityIndicator size="small" color={colors.text} />
+                  <ActivityIndicator size="small" color="#E53935" />
                 ) : (
                   <Ionicons
                     name={isInWishlist ? "heart" : "heart-outline"}
                     size={20}
-                    color={colors.text}
+                    color="#E53935"
                   />
                 )}
               </TouchableOpacity>
