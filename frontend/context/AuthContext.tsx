@@ -95,13 +95,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             const userData = await fetchUserById(userId, savedToken);
             setUser(userData);
           } catch (err: any) {
-            if (err.message?.includes('401')) {
-              console.log("Token rejected by server");
+            if (err.message?.includes('401') || err.message?.includes('403')) {
+              console.log("Token rejected by server, clearing session");
               await clearExpiredToken();
               setLoading(false);
               return;
             }
-            throw err;
+            // Network error — keep token, user loads as unauthenticated shell
+            // Token is still valid; data will reload on next successful connection
+            console.warn("Network error during user fetch, keeping token:", err.message);
           }
         }
       } catch (error) {

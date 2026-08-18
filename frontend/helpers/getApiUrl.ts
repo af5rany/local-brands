@@ -10,12 +10,12 @@ const getApiUrl = () => {
     return envApiUrl;
   }
 
-  // Fallback based on platform
+  // Fallback for local development only — never reached in production builds
   if (Platform.OS === "android") {
     return "http://10.0.2.2:5000";
   }
 
-  return "http://192.168.1.11:5000";
+  return "http://localhost:5000";
 };
 
 // --- DEBUG: log every fetch call (URL + payload) ---

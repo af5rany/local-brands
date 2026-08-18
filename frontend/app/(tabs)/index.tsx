@@ -17,7 +17,6 @@ import {
 import { LinearGradient } from "expo-linear-gradient";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/context/AuthContext";
 import getApiUrl from "@/helpers/getApiUrl";
 import LookbookHero from "@/components/LookbookHero";
@@ -38,93 +37,6 @@ import { useScrollToTop } from "@/context/ScrollToTopContext";
 // ── Static content ───────────────────────────────────────────────────────────
 const HERO_IMAGE = require("@/assets/images/monolith-hero.png");
 
-const FALLBACK_SPOTLIGHTS = [
-  {
-    id: "f-s1",
-    name: "ATELIER\nNORTH 11",
-    location: "LISBON · PORTUGAL",
-    description: "A two-person studio working out of a converted warehouse in Lisbon. Cut-and-sew menswear assembled in runs of 30. Hand-finished, numbered, unrepeated.",
-    image: "https://i.pinimg.com/736x/c8/da/e2/c8dae2186a790ed8f438ece352e3e834.jpg",
-  },
-  {
-    id: "f-s2",
-    name: "RAEY\nSTUDIO",
-    location: "TOKYO · JAPAN",
-    description: "Minimalist tailoring from Tokyo. Each season explores a single archetype. Their linen works are collected internationally and produced in runs of 20.",
-    image: "https://images.unsplash.com/photo-1523381210434-271e8be1f52b?q=80&w=800&auto=format&fit=crop",
-  },
-  {
-    id: "f-s3",
-    name: "ARCHIVE\nDEPT.",
-    location: "BERLIN · GERMANY",
-    description: "A Berlin-based collective focused on deadstock fabrics and archive reconstruction. Zero-waste by design, each piece carries provenance documentation.",
-    image: "https://i.pinimg.com/736x/aa/2f/74/aa2f743ce0738af34cd23c5fa3d4171c.jpg?q=80&w=800&auto=format&fit=crop",
-  },
-];
-
-const FALLBACK_PICKS = [
-  {
-    id: undefined as number | undefined,
-    num: "1/3",
-    brand: "ATELIER N11",
-    name: "THE OVERSIZED COAT",
-    quote: '"A coat that ages well. Lisbon studio, 47 hours each."',
-    price: "$480",
-    image: "https://i.pinimg.com/736x/a1/4e/a9/a14ea993742d1291f7ec263bebf6197a.jpg",
-  },
-  {
-    id: undefined as number | undefined,
-    num: "2/3",
-    brand: "RAEY",
-    name: "WIDE-LEG TROUSER",
-    quote: '"Best linen cut of the season. Sized down."',
-    price: "$220",
-    image: "https://i.pinimg.com/736x/4a/bb/54/4abb549a09daafc520aa7c0101a5db95.jpg",
-  },
-  {
-    id: undefined as number | undefined,
-    num: "3/3",
-    brand: "ARCHIVE DEPT.",
-    name: "BOXY CREW TEE",
-    quote: '"The kind of basic you keep restocking."',
-    price: "$95",
-    image: "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?q=80&w=400&auto=format&fit=crop",
-  },
-];
-
-const FALLBACK_FEED = [
-  {
-    id: "1",
-    realId: null as number | null,
-    brand: "ATELIER N11",
-    caption: "Behind the seam: 47 hours per coat.",
-    ago: "2H",
-    likes: "1.2K",
-    comments: "47",
-    image: "https://i1-c.pinimg.com/736x/02/54/67/025467f10e70f5e1c373218f93fe772f.jpg",
-  },
-  {
-    id: "2",
-    realId: null as number | null,
-    brand: "RAEY",
-    caption: "Off-white linen drop. Sized down.",
-    ago: "5H",
-    likes: "892",
-    comments: "23",
-    image: "https://images.unsplash.com/photo-1523381210434-271e8be1f52b?q=80&w=500&auto=format&fit=crop",
-  },
-  {
-    id: "3",
-    realId: null as number | null,
-    brand: "ARCHIVE DEPT.",
-    caption: "Deadstock wool — final pieces.",
-    ago: "1D",
-    likes: "2.1K",
-    comments: "61",
-    image: "https://i.pinimg.com/736x/aa/2f/74/aa2f743ce0738af34cd23c5fa3d4171c.jpg?q=80&w=500&auto=format&fit=crop",
-  },
-];
-
 const timeAgo = (dateStr: string): string => {
   const diff = Date.now() - new Date(dateStr).getTime();
   const mins = Math.floor(diff / 60000);
@@ -137,21 +49,34 @@ const timeAgo = (dateStr: string): string => {
 const MARQUEE_TEXT =
   "GLOBAL SHIPPING  —  ARCHIVE RESTOCK LIVE  —  CARE & ORIGIN ON EVERY PIECE  —  ";
 
-const FALLBACK_BRANDS: Brand[] = [
-  { id: "f-1", name: "MONOLITH" },
-  { id: "f-2", name: "CELINE" },
-  { id: "f-3", name: "DOVER ST." },
-  { id: "f-4", name: "ATELIER N11" },
-  { id: "f-5", name: "ARCHIVE" },
-  { id: "f-6", name: "RAEY" },
-  { id: "f-7", name: "PHOEBE" },
-  { id: "f-8", name: "STÜSSY" },
-];
-
 interface Brand {
-  id: string;
+  id: string | number;
   name: string;
   logo?: string;
+  coverPhoto?: string;
+  location?: string;
+  description?: string;
+}
+
+interface FeedPost {
+  id: string;
+  realId: number | null;
+  brand: string;
+  caption: string;
+  ago: string;
+  likes: string;
+  comments: string;
+  image: string;
+}
+
+interface EditorsPick {
+  id: number | undefined;
+  num: string;
+  brand: string;
+  name: string;
+  quote: string | undefined;
+  price: string;
+  image: string;
 }
 
 // ── Marquee ──────────────────────────────────────────────────────────────────
@@ -272,10 +197,12 @@ const HomeScreen = () => {
     register("index", () => scrollViewRef.current?.scrollTo({ y: 0, animated: true }));
     return () => unregister("index");
   }, []);
-  const [brands, setBrands] = useState<Brand[]>(FALLBACK_BRANDS);
+  const [brands, setBrands] = useState<Brand[]>([]);
   const [stats, setStats] = useState({ brands: 0, products: 0 });
-  const [feedPosts, setFeedPosts] = useState<typeof FALLBACK_FEED>([]);
-  const [picks, setPicks] = useState<typeof FALLBACK_PICKS>([]);
+  const [feedPosts, setFeedPosts] = useState<FeedPost[]>([]);
+  const [todayPostCount, setTodayPostCount] = useState<number | null>(null);
+  const [picks, setPicks] = useState<EditorsPick[]>([]);
+  const [wishlistCount, setWishlistCount] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [spotlightIdx, setSpotlightIdx] = useState(0);
@@ -321,21 +248,29 @@ const HomeScreen = () => {
         ? { Authorization: `Bearer ${token}` }
         : {};
 
-      const [brandsResult, productsResult, feedResult, picksResult] =
-        await Promise.allSettled([
-          fetch(`${apiUrl}/brands?limit=10`, { headers }),
-          fetch(`${apiUrl}/products?limit=1`, { headers }),
-          fetch(`${apiUrl}/feed?limit=3`, { headers }),
-          fetch(`${apiUrl}/products/bestsellers?limit=3`, { headers }),
-        ]);
+      const requests: Promise<Response>[] = [
+        fetch(`${apiUrl}/brands?limit=10`, { headers }),
+        fetch(`${apiUrl}/products?limit=1`, { headers }),
+        fetch(`${apiUrl}/feed?limit=3`, { headers }),
+        fetch(`${apiUrl}/products/bestsellers?limit=3`, { headers }),
+      ];
+      if (token) requests.push(fetch(`${apiUrl}/wishlist`, { headers }));
+
+      const results = await Promise.allSettled(requests);
+      const [brandsResult, productsResult, feedResult, picksResult] = results;
+      const wishlistResult = results[4];
 
       if (brandsResult.status === "fulfilled" && brandsResult.value.ok) {
         const data = await brandsResult.value.json();
         const list: Brand[] = Array.isArray(data) ? data : data.items || [];
-        setBrands(list.length > 0 ? list : FALLBACK_BRANDS);
+        setBrands(list);
         if (data.total) setStats((s) => ({ ...s, brands: data.total }));
-      } else {
-        setBrands(FALLBACK_BRANDS);
+      }
+
+      if (wishlistResult && wishlistResult.status === "fulfilled" && wishlistResult.value.ok) {
+        const data = await wishlistResult.value.json();
+        const items: any[] = Array.isArray(data) ? data : data.items || [];
+        setWishlistCount(items.length);
       }
 
       if (productsResult.status === "fulfilled" && productsResult.value.ok) {
@@ -346,6 +281,9 @@ const HomeScreen = () => {
       if (feedResult.status === "fulfilled" && feedResult.value.ok) {
         const data = await feedResult.value.json();
         const items: any[] = Array.isArray(data) ? data : data.items || [];
+        const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
+        const todayCount = items.filter((p: any) => p.createdAt && new Date(p.createdAt) >= todayStart).length;
+        setTodayPostCount(data.total ?? (todayCount > 0 ? todayCount : null));
         setFeedPosts(
           items.slice(0, 3).map((p: any, i: number) => ({
             id: String(p.id || i),
@@ -456,12 +394,9 @@ const HomeScreen = () => {
     );
   }
 
-  const spotlightList = brands.filter((b) => !String(b.id).startsWith("f-")).slice(0, 3);
-  const spotlightSource = spotlightList.length > 0 ? spotlightList : FALLBACK_SPOTLIGHTS;
+  const spotlightSource = brands.slice(0, 3);
   spotlightSourceLenRef.current = spotlightSource.length;
   const screenW = Dimensions.get("window").width;
-  const displayPicks = picks.length > 0 ? picks : FALLBACK_PICKS;
-  const displayFeed = feedPosts.length > 0 ? feedPosts : FALLBACK_FEED;
   const barBrands = brands.slice(0, 8);
 
   return (
@@ -473,6 +408,8 @@ const HomeScreen = () => {
         contentContainerStyle={{ paddingBottom: tabBarHeight }}
         showsVerticalScrollIndicator={false}
         scrollEventThrottle={16}
+        bounces={false}
+        overScrollMode="never"
         onScroll={Animated.event(
           [{ nativeEvent: { contentOffset: { y: scrollY } } }],
           { useNativeDriver: false, listener: (e: any) => reportScroll(e.nativeEvent.contentOffset.y) }
@@ -526,24 +463,26 @@ const HomeScreen = () => {
         {/* ── 3. Marquee ── */}
         <Marquee />
 
-        {/* ── 4. Back-In-Stock Alert ── */}
-        <TouchableOpacity
-          style={styles.backInStock}
-          onPress={() => router.push("/(tabs)/wishlist" as any)}
-          activeOpacity={0.8}
-        >
-          <View style={styles.bisThumb}>
-            <View style={styles.bisNewPill}>
-              <Text style={styles.bisNewPillText}>NEW</Text>
+        {/* ── 4. Wishlist Prompt (auth only) ── */}
+        {token && wishlistCount != null && wishlistCount > 0 && (
+          <TouchableOpacity
+            style={styles.backInStock}
+            onPress={() => router.push("/(tabs)/wishlist" as any)}
+            activeOpacity={0.8}
+          >
+            <View style={styles.bisThumb}>
+              <View style={styles.bisNewPill}>
+                <Text style={styles.bisNewPillText}>SAVED</Text>
+              </View>
             </View>
-          </View>
-          <View style={styles.bisText}>
-            <Text style={styles.bisAlert}>● BACK IN STOCK · 2 ITEMS</Text>
-            <Text style={styles.bisTitle}>Linen overshirt + boxy crew tee</Text>
-            <Text style={styles.bisSubtitle}>FROM YOUR SAVED ITEMS</Text>
-          </View>
-          <Text style={styles.bisArrow}>›</Text>
-        </TouchableOpacity>
+            <View style={styles.bisText}>
+              <Text style={styles.bisAlert}>● {wishlistCount} SAVED {wishlistCount === 1 ? "ITEM" : "ITEMS"}</Text>
+              <Text style={styles.bisTitle}>Your wishlist is waiting</Text>
+              <Text style={styles.bisSubtitle}>VIEW YOUR SAVED ITEMS</Text>
+            </View>
+            <Text style={styles.bisArrow}>›</Text>
+          </TouchableOpacity>
+        )}
 
         {/* ── 5. Monolith Index ── */}
         <View style={styles.indexSection}>
@@ -566,101 +505,104 @@ const HomeScreen = () => {
         </View>
 
         {/* ── 6. Brand Spotlight ── */}
-        <View>
-          <ScrollView
-            ref={spotlightScrollRef}
-            horizontal
-            pagingEnabled
-            showsHorizontalScrollIndicator={false}
-            onMomentumScrollEnd={onSpotlightSwipe}
-            scrollEventThrottle={16}
-          >
-            {spotlightSource.map((item: any, i: number) => (
-              <View key={item.id || i} style={[styles.spotlight, { width: screenW }]}>
-                <Text style={styles.spotlightEyebrow}>
-                  {`BRAND SPOTLIGHT — ${String(i + 1).padStart(2, "0")} / ${String(spotlightSource.length).padStart(2, "0")}`}
-                </Text>
-                <Text style={styles.spotlightName}>{(item.name || "").toUpperCase()}</Text>
-                <Text style={styles.spotlightLocation}>{item.location || "—"}</Text>
-                <Image
-                  source={{ uri: item.logo || item.image || "" }}
-                  style={styles.spotlightImage}
-                  resizeMode="cover"
-                />
-                <Text style={styles.spotlightBio}>{item.description || item.bio || ""}</Text>
-                <View style={styles.spotlightFooter}>
-                  <TouchableOpacity
-                    style={styles.spotlightCta}
-                    onPress={() =>
-                      !String(item.id).startsWith("f-")
-                        ? router.push(`/brands/${item.id}` as any)
-                        : router.push("/(tabs)/brands" as any)
-                    }
-                  >
-                    <Text style={styles.spotlightCtaText}>EXPLORE BRAND</Text>
-                  </TouchableOpacity>
+        {spotlightSource.length > 0 && (
+          <View>
+            <ScrollView
+              ref={spotlightScrollRef}
+              horizontal
+              pagingEnabled
+              showsHorizontalScrollIndicator={false}
+              onMomentumScrollEnd={onSpotlightSwipe}
+              scrollEventThrottle={16}
+            >
+              {spotlightSource.map((item, i) => (
+                <View key={item.id || i} style={[styles.spotlight, { width: screenW }]}>
+                  <Text style={styles.spotlightEyebrow}>
+                    {`BRAND SPOTLIGHT — ${String(i + 1).padStart(2, "0")} / ${String(spotlightSource.length).padStart(2, "0")}`}
+                  </Text>
+                  <Text style={styles.spotlightName}>{(item.name || "").toUpperCase()}</Text>
+                  {item.location ? (
+                    <Text style={styles.spotlightLocation}>{item.location}</Text>
+                  ) : null}
+                  <Image
+                    source={{ uri: item.logo || item.coverPhoto || "" }}
+                    style={styles.spotlightImage}
+                    resizeMode="cover"
+                  />
+                  {item.description ? (
+                    <Text style={styles.spotlightBio}>{item.description}</Text>
+                  ) : null}
+                  <View style={styles.spotlightFooter}>
+                    <TouchableOpacity
+                      style={styles.spotlightCta}
+                      onPress={() => router.push(`/brands/${item.id}` as any)}
+                    >
+                      <Text style={styles.spotlightCtaText}>EXPLORE BRAND</Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
-              </View>
-            ))}
-          </ScrollView>
-          {/* Dot indicators */}
-          <View style={styles.spotlightDots}>
-            {spotlightSource.map((_, i) => (
-              <TouchableOpacity
-                key={i}
-                onPress={() => {
-                  setSpotlightIdx(i);
-                  spotlightScrollRef.current?.scrollTo({ x: i * screenW, animated: true });
-                  startSpotlightTimer();
-                }}
-                style={[
-                  styles.spotlightDot,
-                  i === spotlightIdx % spotlightSource.length && styles.spotlightDotActive,
-                ]}
-              />
-            ))}
+              ))}
+            </ScrollView>
+            <View style={styles.spotlightDots}>
+              {spotlightSource.map((_, i) => (
+                <TouchableOpacity
+                  key={i}
+                  onPress={() => {
+                    setSpotlightIdx(i);
+                    spotlightScrollRef.current?.scrollTo({ x: i * screenW, animated: true });
+                    startSpotlightTimer();
+                  }}
+                  style={[
+                    styles.spotlightDot,
+                    i === spotlightIdx % spotlightSource.length && styles.spotlightDotActive,
+                  ]}
+                />
+              ))}
+            </View>
           </View>
-        </View>
+        )}
 
         {/* ── 7. Editor's Picks ── */}
-        <View style={styles.editorsPicks}>
-          <Text style={styles.editorsEyebrow}>EDITOR'S PICKS · ISSUE 04</Text>
-          <Text style={styles.editorsTitle}>
-            {"THREE PIECES\nWORTH THE WAIT"}
-          </Text>
-          {displayPicks.map((pick) => (
-            <TouchableOpacity
-              key={pick.num}
-              style={styles.pickRow}
-              activeOpacity={0.8}
-              onPress={() =>
-                pick.id
-                  ? router.push(`/products/${pick.id}` as any)
-                  : router.push("/(tabs)/shop" as any)
-              }
-            >
-              <View style={styles.pickImageWrap}>
-                <Image
-                  source={{ uri: pick.image }}
-                  style={styles.pickImage}
-                  resizeMode="cover"
-                />
-                <View style={styles.pickNumPill}>
-                  <Text style={styles.pickNumText}>{pick.num}</Text>
+        {picks.length > 0 && (
+          <View style={styles.editorsPicks}>
+            <Text style={styles.editorsEyebrow}>EDITOR'S PICKS</Text>
+            <Text style={styles.editorsTitle}>
+              {`${picks.length > 1 ? `${picks.length} PIECES` : "ONE PIECE"}\nWORTH THE WAIT`}
+            </Text>
+            {picks.map((pick) => (
+              <TouchableOpacity
+                key={pick.num}
+                style={styles.pickRow}
+                activeOpacity={0.8}
+                onPress={() =>
+                  pick.id
+                    ? router.push(`/products/${pick.id}` as any)
+                    : router.push("/(tabs)/shop" as any)
+                }
+              >
+                <View style={styles.pickImageWrap}>
+                  <Image
+                    source={{ uri: pick.image }}
+                    style={styles.pickImage}
+                    resizeMode="cover"
+                  />
+                  <View style={styles.pickNumPill}>
+                    <Text style={styles.pickNumText}>{pick.num}</Text>
+                  </View>
                 </View>
-              </View>
-              <View style={styles.pickMeta}>
-                <Text style={styles.pickBrand}>{pick.brand}</Text>
-                <Text style={styles.pickName}>{pick.name}</Text>
-                <Text style={styles.pickQuote}>{pick.quote}</Text>
-                <View style={styles.pickBottom}>
-                  <Text style={styles.pickPrice}>{pick.price}</Text>
-                  <Text style={styles.pickView}>VIEW →</Text>
+                <View style={styles.pickMeta}>
+                  <Text style={styles.pickBrand}>{pick.brand}</Text>
+                  <Text style={styles.pickName}>{pick.name}</Text>
+                  {pick.quote ? <Text style={styles.pickQuote}>{pick.quote}</Text> : null}
+                  <View style={styles.pickBottom}>
+                    <Text style={styles.pickPrice}>{pick.price}</Text>
+                    <Text style={styles.pickView}>VIEW →</Text>
+                  </View>
                 </View>
-              </View>
-            </TouchableOpacity>
-          ))}
-        </View>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
 
         {/* ── 8. AW '25 Lookbook ── */}
         <LookbookHero />
@@ -724,6 +666,7 @@ const HomeScreen = () => {
         )}
 
         {/* ── 11. Editorial Partners ── */}
+        {barBrands.length > 0 && (
         <View style={styles.editorialPartners}>
           <Text style={styles.editorialPartnersLabel}>EDITORIAL PARTNERS</Text>
           <ScrollView
@@ -734,11 +677,7 @@ const HomeScreen = () => {
             {barBrands.map((b) => (
               <TouchableOpacity
                 key={b.id}
-                onPress={() =>
-                  b.id.startsWith("f-")
-                    ? router.push("/(tabs)/brands" as any)
-                    : router.push(`/brands/${b.id}` as any)
-                }
+                onPress={() => router.push(`/brands/${b.id}` as any)}
               >
                 <Text style={styles.editorialPartnerName}>
                   {b.name.toUpperCase()}
@@ -747,55 +686,63 @@ const HomeScreen = () => {
             ))}
           </ScrollView>
         </View>
+        )}
 
         {/* ── 12. From the Feed ── */}
         <View style={styles.feed}>
           <View style={styles.feedHeader}>
             <View>
               <Text style={styles.feedTitle}>FROM THE FEED</Text>
-              <Text style={styles.feedSubtitle}>4 NEW POSTS TODAY</Text>
+              <Text style={styles.feedSubtitle}>
+                {todayPostCount != null ? `${todayPostCount} NEW POSTS TODAY` : "NEW POSTS TODAY"}
+              </Text>
             </View>
-            <TouchableOpacity
-              onPress={() => router.push("/(tabs)/feed" as any)}
-            >
+            <TouchableOpacity onPress={() => router.push("/(tabs)/feed" as any)}>
               <Text style={styles.feedSeeAll}>SEE ALL →</Text>
             </TouchableOpacity>
           </View>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.feedScroll}
-          >
-            {displayFeed.map((post) => (
-              <TouchableOpacity
-                key={post.id}
-                style={styles.feedCard}
-                onPress={() =>
-                  post.realId
-                    ? router.push(`/feed/${post.realId}` as any)
-                    : router.push("/(tabs)/feed" as any)
-                }
-              >
-                <View style={styles.feedImageWrap}>
-                  <Image
-                    source={{ uri: post.image }}
-                    style={styles.feedImage}
-                    resizeMode="cover"
-                  />
-                  <View style={styles.feedAgo}>
-                    <Text style={styles.feedAgoText}>{post.ago}</Text>
+
+          {feedPosts.length > 0 ? (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.feedScroll}
+            >
+              {feedPosts.map((post) => (
+                <TouchableOpacity
+                  key={post.id}
+                  style={styles.feedCard}
+                  onPress={() => router.push(`/feed/${post.realId}` as any)}
+                >
+                  <View style={styles.feedImageWrap}>
+                    <Image
+                      source={{ uri: post.image }}
+                      style={styles.feedImage}
+                      resizeMode="cover"
+                    />
+                    <View style={styles.feedAgo}>
+                      <Text style={styles.feedAgoText}>{post.ago}</Text>
+                    </View>
                   </View>
-                </View>
-                <Text style={styles.feedBrand}>{post.brand}</Text>
-                <Text style={styles.feedCaption} numberOfLines={2}>
-                  {post.caption}
-                </Text>
-                <Text style={styles.feedEngagement}>
-                  ♡ {post.likes} · ◯ {post.comments}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
+                  <Text style={styles.feedBrand}>{post.brand}</Text>
+                  <Text style={styles.feedCaption} numberOfLines={2}>
+                    {post.caption}
+                  </Text>
+                  <Text style={styles.feedEngagement}>
+                    ♡ {post.likes} · ◯ {post.comments}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          ) : (
+            <TouchableOpacity
+              style={styles.feedEmpty}
+              onPress={() => router.push("/(tabs)/feed" as any)}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.feedEmptyText}>BROWSE THE FEED →</Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* ── 13. Care & Origin ── */}
@@ -1664,6 +1611,22 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     fontSize: 9,
     color: colors.textSecondary,
     letterSpacing: 0.5,
+  },
+  feedEmpty: {
+    marginRight: 16,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingVertical: 24,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  feedEmptyText: {
+    fontFamily: undefined,
+    fontSize: 10,
+    fontWeight: "700",
+    color: colors.textSecondary,
+    letterSpacing: 2,
+    textTransform: "uppercase",
   },
 
   // ── Care & Origin ───────────────────────────────────────────────────────────
