@@ -42,6 +42,8 @@ import { useThemeColors } from "@/hooks/useThemeColor";
 import type { ThemeColors } from "@/constants/Colors";
 import { useRecentlyViewed } from "@/hooks/useRecentlyViewed";
 import { useNetwork } from "@/context/NetworkContext";
+import { getCloudinaryVariant } from "@/hooks/useCloudinaryUpload";
+import ImageZoomModal from "@/components/ImageZoomModal";
 import OfflinePlaceholder from "@/components/OfflinePlaceholder";
 
 const { width: W } = Dimensions.get("window");
@@ -85,6 +87,7 @@ const ProductDetailScreen = () => {
   const [sizeGuide, setSizeGuide] = useState<any>(null);
   const [showSizeGuide, setShowSizeGuide] = useState(false);
   const [similarProducts, setSimilarProducts] = useState<Product[]>([]);
+  const [zoomVisible, setZoomVisible] = useState(false);
 
   const imageCarouselRef = useRef<FlatList>(null);
   const scrollY = useRef(new Animated.Value(0)).current;
@@ -525,6 +528,13 @@ const ProductDetailScreen = () => {
         />
       )}
 
+      <ImageZoomModal
+        visible={zoomVisible}
+        images={displayImages}
+        initialIndex={selectedImage}
+        onClose={() => setZoomVisible(false)}
+      />
+
       {/* Size Guide Modal */}
       <Modal
         visible={showSizeGuide}
@@ -562,6 +572,13 @@ const ProductDetailScreen = () => {
                 </View>
               ))}
               <Text style={{ fontSize: 11, color: colors.textSecondary, marginTop: 12 }}>Measurements in {sizeGuide?.unit || "in"}</Text>
+              {sizeGuide?.imageUrl ? (
+                <Image
+                  source={{ uri: sizeGuide.imageUrl }}
+                  style={{ width: "100%", height: 200, marginTop: 16 }}
+                  resizeMode="contain"
+                />
+              ) : null}
             </ScrollView>
           </View>
         </View>
@@ -661,19 +678,23 @@ const ProductDetailScreen = () => {
                   index,
                 })}
                 renderItem={({ item: uri }) => (
-                  <Image
-                    source={{ uri }}
-                    style={{ width: W, height: "100%" }}
-                    resizeMode="cover"
-                  />
+                  <TouchableOpacity activeOpacity={0.95} onPress={() => setZoomVisible(true)}>
+                    <Image
+                      source={{ uri: getCloudinaryVariant(uri, "c_fill,g_auto,ar_3:4,w_1200") }}
+                      style={{ width: W, height: "100%" }}
+                      resizeMode="cover"
+                    />
+                  </TouchableOpacity>
                 )}
               />
             ) : heroImage ? (
-              <Image
-                source={{ uri: heroImage }}
-                style={styles.heroImage}
-                resizeMode="cover"
-              />
+              <TouchableOpacity activeOpacity={0.95} onPress={() => setZoomVisible(true)}>
+                <Image
+                  source={{ uri: getCloudinaryVariant(heroImage, "c_fill,g_auto,ar_3:4,w_1200") }}
+                  style={styles.heroImage}
+                  resizeMode="cover"
+                />
+              </TouchableOpacity>
             ) : (
               <View style={styles.heroPlaceholder}>
                 <Ionicons name="image-outline" size={48} color={colors.textTertiary} />
@@ -689,12 +710,12 @@ const ProductDetailScreen = () => {
                 activeOpacity={0.7}
               >
                 {wishlistLoading ? (
-                  <ActivityIndicator size="small" color="#E53935" />
+                  <ActivityIndicator size="small" color={colors.accentRed} />
                 ) : (
                   <Ionicons
                     name={isInWishlist ? "heart" : "heart-outline"}
                     size={20}
-                    color="#E53935"
+                    color={colors.accentRed}
                   />
                 )}
               </TouchableOpacity>

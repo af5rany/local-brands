@@ -87,9 +87,21 @@ export class PushNotificationService {
     title: string,
     body: string,
     data?: Record<string, any>,
+    prefKey?: string,
   ): Promise<void> {
+    const users = await this.userRepository.find({ where: { id: In(userIds) } });
+    const pushEnabledIds = users
+      .filter((u) => {
+        const prefs = (u as any).notificationPreferences;
+        if (prefs?.push === false) return false;
+        if (prefKey && prefs?.[prefKey] === false) return false;
+        return true;
+      })
+      .map((u) => u.id);
+    if (pushEnabledIds.length === 0) return;
+
     const tokens = await this.pushTokenRepository.find({
-      where: { userId: In(userIds), isActive: true },
+      where: { userId: In(pushEnabledIds), isActive: true },
     });
 
     const messages: ExpoPushMessage[] = tokens

@@ -15,6 +15,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/context/AuthContext";
 import { useThemeColors } from "@/hooks/useThemeColor";
 import getApiUrl from "@/helpers/getApiUrl";
+import { UserRole } from "@/types/enums";
 
 const PREFS_CONFIG = [
   { key: "push", label: "PUSH NOTIFICATIONS", sub: "Receive alerts on your device" },
@@ -23,16 +24,29 @@ const PREFS_CONFIG = [
   { key: "promotions", label: "PROMOTIONS & OFFERS", sub: "Promo codes and special deals" },
 ];
 
+const BRAND_OWNER_PREFS = [
+  { key: "pushOnOrder", label: "NEW ORDERS", sub: "Alert when a customer places an order" },
+  { key: "pushOnLike", label: "POST LIKES", sub: "Alert when someone likes your post" },
+  { key: "pushOnComment", label: "POST COMMENTS", sub: "Alert when someone comments on your post" },
+  { key: "pushOnFollower", label: "NEW FOLLOWERS", sub: "Alert when someone follows your brand" },
+];
+
 const NotificationSettingsScreen = () => {
   const router = useRouter();
   const { token, user } = useAuth();
   const colors = useThemeColors();
+
+  const isBrandOwner = (user as any)?.role === UserRole.BRAND_OWNER || (user as any)?.role === "admin";
 
   const [prefs, setPrefs] = useState<Record<string, boolean>>({
     push: true,
     email: true,
     orderUpdates: true,
     promotions: true,
+    pushOnOrder: true,
+    pushOnLike: true,
+    pushOnComment: true,
+    pushOnFollower: true,
   });
   const [loading, setLoading] = useState(false);
 
@@ -93,6 +107,27 @@ const NotificationSettingsScreen = () => {
           </View>
         ))}
 
+        {isBrandOwner && (
+          <>
+            <Text style={[styles.section, { color: colors.textTertiary }]}>BRAND OWNER</Text>
+            {BRAND_OWNER_PREFS.map((item) => (
+              <View
+                key={item.key}
+                style={[styles.row, { borderBottomColor: colors.borderLight }]}
+              >
+                <View style={styles.rowInfo}>
+                  <Text style={[styles.rowLabel, { color: colors.text }]}>{item.label}</Text>
+                  <Text style={[styles.rowSub, { color: colors.textTertiary }]}>{item.sub}</Text>
+                </View>
+                <Switch
+                  value={prefs[item.key] ?? true}
+                  onValueChange={(v) => handleToggle(item.key, v)}
+                />
+              </View>
+            ))}
+          </>
+        )}
+
         <TouchableOpacity
           style={[styles.saveBtn, { backgroundColor: colors.text }, loading && { opacity: 0.5 }]}
           onPress={handleSave}
@@ -131,6 +166,7 @@ const styles = StyleSheet.create({
   rowInfo: { flex: 1, marginRight: 16 },
   rowLabel: { fontSize: 13, fontWeight: "700", marginBottom: 4 },
   rowSub: { fontSize: 11 },
+  section: { fontSize: 11, fontWeight: "700", letterSpacing: 1.5, marginTop: 24, marginBottom: 4 },
   saveBtn: { paddingVertical: 18, alignItems: "center", marginTop: 32 },
   saveBtnText: { fontSize: 13, fontWeight: "800" },
 });

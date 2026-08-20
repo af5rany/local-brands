@@ -30,6 +30,21 @@ export class SizeGuidesService {
     return brandGuide;
   }
 
+  async upsertForProduct(productId: number, dto: CreateSizeGuideDto): Promise<SizeGuide> {
+    const existing = await this.repo.findOne({ where: { productId } });
+    if (existing) {
+      Object.assign(existing, dto, { productId });
+      return this.repo.save(existing);
+    }
+    const guide = this.repo.create({ ...dto, productId });
+    return this.repo.save(guide);
+  }
+
+  async removeForProduct(productId: number): Promise<void> {
+    const guide = await this.repo.findOne({ where: { productId } });
+    if (guide) await this.repo.remove(guide);
+  }
+
   async create(dto: CreateSizeGuideDto): Promise<SizeGuide> {
     const guide = this.repo.create(dto);
     return this.repo.save(guide);

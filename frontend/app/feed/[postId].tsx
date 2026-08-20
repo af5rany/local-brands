@@ -26,6 +26,7 @@ import { useGuestGuard } from "@/hooks/useGuestGuard";
 import getApiUrl from "@/helpers/getApiUrl";
 import { useThemeColors } from "@/hooks/useThemeColor";
 import Header from "@/components/Header";
+import PostMedia from "@/components/PostMedia";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -345,8 +346,19 @@ export default function PostDetailScreen() {
               )}
             </View>
 
-            {/* Images with double-tap to like + pinch-to-zoom */}
-            <GestureDetector gesture={composedGesture}>
+            {/* Video (if present) */}
+            {post.videoUrl && (
+              <PostMedia
+                videoUrl={post.videoUrl}
+                images={[]}
+                width={SCREEN_WIDTH}
+                height={SCREEN_WIDTH}
+                resizeMode="contain"
+              />
+            )}
+
+            {/* Images with double-tap to like (only when no video) */}
+            {!post.videoUrl && <GestureDetector gesture={composedGesture}>
               <Animated.View style={{ overflow: "hidden" }}>
                 {post.images.length === 1 ? (
                   <View style={styles.imageContainer}>
@@ -454,7 +466,7 @@ export default function PostDetailScreen() {
                   </View>
                 )}
               </Animated.View>
-            </GestureDetector>
+            </GestureDetector>}
 
             {/* Actions */}
             <View style={styles.actions}>
@@ -465,14 +477,16 @@ export default function PostDetailScreen() {
                   color={post.isLiked ? colors.danger : colors.text}
                 />
                 {post.likeCount > 0 && (
-                  <Text
-                    style={[
-                      styles.actionCount,
-                      { color: post.isLiked ? "#C41E3A" : colors.text },
-                    ]}
-                  >
-                    {post.likeCount}
-                  </Text>
+                  <TouchableOpacity onPress={() => router.push({ pathname: "/feed/post-likes", params: { postId } } as any)}>
+                    <Text
+                      style={[
+                        styles.actionCount,
+                        { color: post.isLiked ? colors.accentRed : colors.text },
+                      ]}
+                    >
+                      {post.likeCount}
+                    </Text>
+                  </TouchableOpacity>
                 )}
               </TouchableOpacity>
               <TouchableOpacity
@@ -631,21 +645,39 @@ export default function PostDetailScreen() {
         }
         renderItem={({ item }) => (
           <View style={styles.commentRow}>
-            {item.user?.avatar ? (
-              <Image
-                source={{ uri: item.user.avatar }}
-                style={styles.commentAvatar}
-              />
-            ) : (
-              <View
-                style={[
-                  styles.commentAvatar,
-                  { backgroundColor: colors.surfaceRaised },
-                ]}
-              >
-                <Ionicons name="person" size={14} color={colors.textTertiary} />
-              </View>
-            )}
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={async () => {
+                if (!item.user?.id) return;
+                try {
+                  const res = await fetch(`${getApiUrl()}/users/${item.user.id}/public-profile`);
+                  if (res.ok) {
+                    const profile = await res.json();
+                    if (profile.brandId) {
+                      router.push(`/brands/${profile.brandId}` as any);
+                    } else {
+                      router.push(`/users/${item.user.id}` as any);
+                    }
+                  }
+                } catch {}
+              }}
+            >
+              {item.user?.avatar ? (
+                <Image
+                  source={{ uri: item.user.avatar }}
+                  style={styles.commentAvatar}
+                />
+              ) : (
+                <View
+                  style={[
+                    styles.commentAvatar,
+                    { backgroundColor: colors.surfaceRaised },
+                  ]}
+                >
+                  <Ionicons name="person" size={14} color={colors.textTertiary} />
+                </View>
+              )}
+            </TouchableOpacity>
             <View style={styles.commentBody}>
               <Text style={[styles.commentUser, { color: colors.text }]}>
                 {item.user?.name || "User"}

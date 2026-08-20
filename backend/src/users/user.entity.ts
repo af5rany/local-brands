@@ -92,6 +92,10 @@ export class User {
     sms: boolean;
     orderUpdates: boolean;
     promotions: boolean;
+    pushOnOrder: boolean;
+    pushOnLike: boolean;
+    pushOnComment: boolean;
+    pushOnFollower: boolean;
   };
 
   // ✅ Security

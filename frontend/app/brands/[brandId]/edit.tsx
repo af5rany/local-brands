@@ -604,6 +604,7 @@ const EditBrandScreen = () => {
           <Dropdown
             ref={dropdownRef}
             mode="default"
+            dropdownPosition="top"
             labelField="label"
             valueField="value"
             data={filteredUsers}
@@ -704,15 +705,18 @@ const EditBrandScreen = () => {
               <View style={styles.roleChips}>
                 {Object.values(BrandRole).map((r) => {
                   const isSelected = selectedRole === r;
+                  const isEnabled = r === BrandRole.OWNER;
                   return (
                     <TouchableOpacity
                       key={r}
-                      onPress={() => setSelectedRole(r)}
+                      onPress={() => isEnabled && setSelectedRole(r)}
+                      disabled={!isEnabled}
                       style={[
                         styles.chip,
                         {
                           backgroundColor: isSelected ? text : "transparent",
                           borderColor: isSelected ? text : border,
+                          opacity: isEnabled ? 1 : 0.35,
                         },
                       ]}
                     >
@@ -964,10 +968,9 @@ const styles = StyleSheet.create({
   dropdownContainer: {
     borderRadius: 0,
     borderWidth: 1,
-    borderTopWidth: 0,
-    marginTop: 0,
+    borderBottomWidth: 0,
+    marginBottom: 0,
     maxHeight: 300,
-    overflow: "hidden",
   },
   dropdownItem: {
     flexDirection: "row",

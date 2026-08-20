@@ -131,8 +131,11 @@ function RootLayoutNav() {
     notificationListener.current = Notifications.addNotificationReceivedListener(() => { });
     responseListener.current = Notifications.addNotificationResponseReceivedListener((response) => {
       const data = response.notification.request.content.data;
-      if (data?.orderId) router.push(`/orders/${data.orderId}` as any);
+      if (data?.postId) router.push(`/feed/${data.postId}` as any);
+      else if (data?.orderId) router.push(`/orders/${data.orderId}` as any);
       else if (data?.returnId) router.push(`/returns/${data.returnId}` as any);
+      else if (data?.brandId) router.push(`/brands/${data.brandId}` as any);
+      else if (data?.productId) router.push(`/products/${data.productId}` as any);
     });
     return () => {
       notificationListener.current?.remove();

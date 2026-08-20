@@ -55,9 +55,10 @@ export class FeedController {
   async getForYouFeed(
     @Query('page') page = 1,
     @Query('limit') limit = 20,
+    @Query('seed') seed: string | undefined,
     @Request() req,
   ) {
-    return this.feedService.getForYouFeed(req.user?.id, +page, +limit);
+    return this.feedService.getForYouFeed(req.user?.id, +page, +limit, seed ? +seed : undefined);
   }
 
   @Get('brand/:brandId')
@@ -116,6 +117,16 @@ export class FeedController {
   @ApiOperation({ summary: 'Check if current user liked a post' })
   async isLiked(@Param('id', ParseIntPipe) id: number, @Request() req) {
     return this.feedService.isLiked(id, req.user.id);
+  }
+
+  @Get('posts/:id/likes')
+  @ApiOperation({ summary: 'Get list of users who liked a post (public)' })
+  async getLikers(
+    @Param('id', ParseIntPipe) id: number,
+    @Query('page') page = 1,
+    @Query('limit') limit = 20,
+  ) {
+    return this.feedService.getLikers(id, +page, +limit);
   }
 
   // ── Comments ──

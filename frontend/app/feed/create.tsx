@@ -27,7 +27,7 @@ export default function CreatePostScreen() {
   const router = useRouter();
   const colors = useThemeColors();
   const { token } = useAuth();
-  const { uploadImage } = useCloudinaryUpload();
+  const { uploadImage, uploadVideo: uploadVideoFn } = useCloudinaryUpload();
 
   const [myBrands, setMyBrands] = useState<any[]>([]);
   const [chosenBrand, setChosenBrand] = useState<any>(null);
@@ -128,16 +128,9 @@ export default function CreatePostScreen() {
     const asset = result.assets[0];
     setUploadingVideo(true);
     try {
-      const CLOUD_VIDEO_URL = "https://api.cloudinary.com/v1_1/dg4l2eelg/video/upload";
-      const formData = new FormData();
-      const filename = asset.uri.split("/").pop() || "video.mp4";
-      formData.append("file", { uri: asset.uri, name: filename, type: "video/mp4" } as any);
-      formData.append("upload_preset", "UnsignedPreset");
-      const res = await fetch(CLOUD_VIDEO_URL, { method: "POST", body: formData });
-      if (!res.ok) throw new Error("Video upload failed");
-      const data = await res.json();
-      if (data.secure_url) setVideoUrl(data.secure_url);
-      else throw new Error("No URL returned");
+      const url = await uploadVideoFn(asset.uri);
+      if (url) setVideoUrl(url);
+      else throw new Error("Upload failed");
     } catch (e: any) {
       Alert.alert("Video Upload Error", e.message);
     } finally {
@@ -184,7 +177,7 @@ export default function CreatePostScreen() {
     try {
       const body: any = {
         brandId: chosenBrand.id,
-        images: images.length ? images : ["placeholder"],
+        images: images.length ? images : [],
         caption: caption.trim() || undefined,
       };
       if (videoUrl) body.videoUrl = videoUrl;

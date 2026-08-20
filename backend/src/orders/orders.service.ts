@@ -1,5 +1,5 @@
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DataSource, EntityManager } from 'typeorm';
+import { Repository, DataSource, EntityManager, In } from 'typeorm';
 import { Order } from './order.entity';
 import { OrderItem } from './order-item.entity';
 import { Product } from '../products/product.entity';
@@ -25,6 +25,7 @@ import {
 import { MailService } from '../common/mail/mail.service';
 import { User } from '../users/user.entity';
 import { NotificationsService } from '../notifications/notifications.service';
+import { PushNotificationService } from '../notifications/push-notification.service';
 import { NotificationType } from '../notifications/notification.entity';
 import { PromoCodesService } from '../promo-codes/promo-codes.service';
 import { BrandUser } from '../brands/brand-user.entity';
@@ -35,6 +36,7 @@ export class OrdersService {
     private dataSource: DataSource,
     private readonly mailService: MailService,
     private readonly notificationsService: NotificationsService,
+    private readonly pushService: PushNotificationService,
     private readonly promoCodesService: PromoCodesService,
     @InjectRepository(Order)
     private orderRepository: Repository<Order>,
@@ -98,6 +100,7 @@ export class OrdersService {
       let subtotal = 0;
       let totalItemsCount = 0;
       const orderItemsToCreate: Partial<OrderItem>[] = [];
+      const orderBrandIds = new Set<number>();
 
       for (const item of createOrderDto.items) {
         // Lock the product row to prevent concurrent stock reads
@@ -150,6 +153,7 @@ export class OrdersService {
         subtotal += itemTotal;
         totalItemsCount += item.quantity;
 
+        if (product.brandId) orderBrandIds.add(product.brandId);
         orderItemsToCreate.push({
           productId: product.id,
           variantId: variant?.id,
@@ -253,6 +257,11 @@ export class OrdersService {
       const user = await manager.findOne(User, { where: { id: userId } });
       if (user?.email) {
         this.fireOrderConfirmationEmail(user.email, savedOrder.orderNumber, Number(savedOrder.totalAmount), savedOrder.totalItems);
+      }
+
+      // Notify brand owners of new order (non-blocking)
+      if (orderBrandIds.size > 0) {
+        this.notifyBrandOwnersOfOrder([...orderBrandIds], savedOrder.id).catch(() => {});
       }
 
       return savedOrder;
@@ -656,6 +665,20 @@ export class OrdersService {
       notes,
     });
     await manager.save(OrderStatusHistory, history);
+  }
+
+  private async notifyBrandOwnersOfOrder(brandIds: number[], orderId: number): Promise<void> {
+    const brandUsers = await this.brandUserRepository.find({ where: { brandId: In(brandIds) } });
+    const ownerIds = [...new Set(brandUsers.map((bu) => bu.userId))];
+    if (ownerIds.length === 0) return;
+    await this.notificationsService.createBulk(
+      ownerIds,
+      NotificationType.NEW_ORDER,
+      'New order received',
+      'You have received a new order.',
+      { orderId },
+    );
+    this.pushService.sendPushToMany(ownerIds, 'New order', 'You have received a new order.', { orderId }, 'pushOnOrder').catch(() => {});
   }
 
   private fireOrderConfirmationEmail(email: string, orderNumber: string, totalAmount: number, totalItems: number): void {

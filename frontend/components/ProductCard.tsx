@@ -15,6 +15,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { Product } from "@/types/product";
 import { useThemeColors } from "@/hooks/useThemeColor";
 import type { ThemeColors } from "@/constants/Colors";
+import { getCloudinaryVariant } from "@/hooks/useCloudinaryUpload";
 
 interface ProductCardProps {
   product: Product;
@@ -74,7 +75,7 @@ const ProductCard: React.FC<ProductCardProps> = React.memo(({
                   }}
                   renderItem={({ item: uri }) => (
                     <Pressable onPress={() => router.push(`/products/${product.id}`)} style={{ width: imgWidth, height: "100%" as any }}>
-                      <Image source={{ uri }} style={{ width: imgWidth, height: "100%" as any }} resizeMode="cover" />
+                      <Image source={{ uri: getCloudinaryVariant(uri, "c_fill,g_auto,ar_1:1,w_800") }} style={{ width: imgWidth, height: "100%" as any }} resizeMode="cover" />
                     </Pressable>
                   )}
                 />
@@ -85,7 +86,7 @@ const ProductCard: React.FC<ProductCardProps> = React.memo(({
                 </View>
               </>
             ) : images[0] ? (
-              <Image source={{ uri: images[0] }} style={styles.image} resizeMode="cover" />
+              <Image source={{ uri: getCloudinaryVariant(images[0], "c_fill,g_auto,ar_1:1,w_800") }} style={styles.image} resizeMode="cover" />
             ) : (
               <View style={styles.image} />
             )}
@@ -111,7 +112,7 @@ const ProductCard: React.FC<ProductCardProps> = React.memo(({
                 <Ionicons
                   name={isWishlisted ? "heart" : "heart-outline"}
                   size={16}
-                  color={isWishlisted ? colors.accentRed : "#000000"}
+                  color={colors.accentRed}
                 />
               </TouchableOpacity>
             )}

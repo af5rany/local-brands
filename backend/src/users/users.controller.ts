@@ -21,11 +21,18 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
 import { UserRole } from 'src/common/enums/user.enum';
+import { Public } from '../auth/public.decorator';
 
 @Controller('users')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class UsersController {
   constructor(private usersService: UsersService) {}
+
+  @Public()
+  @Get(':id/public-profile')
+  async getPublicProfile(@Param('id', ParseIntPipe) id: number) {
+    return this.usersService.getPublicProfile(id);
+  }
 
   @Roles(UserRole.ADMIN, UserRole.BRAND_OWNER)
   @Get()

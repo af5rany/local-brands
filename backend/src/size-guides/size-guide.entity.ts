@@ -34,6 +34,9 @@ export class SizeGuide {
   @Column({ default: 'in' })
   unit: string;
 
+  @Column({ type: 'varchar', nullable: true })
+  imageUrl: string | null;
+
   @CreateDateColumn()
   createdAt: Date;
 

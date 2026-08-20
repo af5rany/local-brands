@@ -42,6 +42,24 @@ export class SizeGuidesController {
     return guide;
   }
 
+  @Post('products/:productId/size-guide')
+  @Roles(UserRole.ADMIN, UserRole.BRAND_OWNER)
+  @UsePipes(new ValidationPipe({ whitelist: true }))
+  @ApiOperation({ summary: 'Upsert size guide for a product' })
+  async upsertForProduct(
+    @Param('productId', ParseIntPipe) productId: number,
+    @Body() dto: CreateSizeGuideDto,
+  ) {
+    return this.sizeGuidesService.upsertForProduct(productId, dto);
+  }
+
+  @Delete('products/:productId/size-guide')
+  @Roles(UserRole.ADMIN, UserRole.BRAND_OWNER)
+  @ApiOperation({ summary: 'Delete size guide for a product' })
+  async removeForProduct(@Param('productId', ParseIntPipe) productId: number) {
+    return this.sizeGuidesService.removeForProduct(productId);
+  }
+
   @Get('brands/:id/size-guides')
   @Roles(UserRole.ADMIN, UserRole.BRAND_OWNER)
   @UseGuards(BrandAccessGuard)

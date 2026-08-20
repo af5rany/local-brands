@@ -77,6 +77,22 @@ export class UsersService {
     return user;
   }
 
+  async getPublicProfile(id: number): Promise<{ id: number; name: string; avatar: string | null; role: string; brandId: number | null }> {
+    const user = await this.usersRepository.findOne({
+      where: { id },
+      relations: ['brandUsers'],
+    });
+    if (!user) throw new NotFoundException(`User with id ${id} not found`);
+    const ownerEntry = user.brandUsers?.find((bu: any) => bu.role === 'owner');
+    return {
+      id: user.id,
+      name: user.name,
+      avatar: user.avatar ?? null,
+      role: user.role,
+      brandId: ownerEntry?.brandId ?? null,
+    };
+  }
+
   findByEmail(email: string): Promise<User | null> {
     return this.usersRepository.findOne({ where: { email } });
   }

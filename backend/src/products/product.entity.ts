@@ -16,7 +16,6 @@ import { ProductReview } from '../reviews/review.entity';
 import { ProductVariant } from './product-variant.entity';
 import { Brand } from '../brands/brand.entity';
 import {
-  ProductType,
   Season,
   ProductStatus,
 } from 'src/common/enums/product.enum';
@@ -58,12 +57,8 @@ export class Product {
   @Column('decimal', { precision: 5, scale: 2, nullable: true })
   discountPercentage: number;
 
-  @Column({
-    type: 'enum',
-    enum: ProductType,
-    nullable: true,
-  })
-  productType: ProductType;
+  @Column({ type: 'varchar', nullable: true })
+  productType: string | null;
 
   @Column({ nullable: true })
   @Index()

@@ -565,42 +565,42 @@ const HomeScreen = () => {
         {/* ── 7. Editor's Picks ── */}
         {picks.length > 0 && (
           <View style={styles.editorsPicks}>
-            <Text style={styles.editorsEyebrow}>EDITOR'S PICKS</Text>
-            <Text style={styles.editorsTitle}>
-              {`${picks.length > 1 ? `${picks.length} PIECES` : "ONE PIECE"}\nWORTH THE WAIT`}
-            </Text>
-            {picks.map((pick) => (
-              <TouchableOpacity
-                key={pick.num}
-                style={styles.pickRow}
-                activeOpacity={0.8}
-                onPress={() =>
-                  pick.id
-                    ? router.push(`/products/${pick.id}` as any)
-                    : router.push("/(tabs)/shop" as any)
-                }
-              >
-                <View style={styles.pickImageWrap}>
-                  <Image
-                    source={{ uri: pick.image }}
-                    style={styles.pickImage}
-                    resizeMode="cover"
-                  />
-                  <View style={styles.pickNumPill}>
-                    <Text style={styles.pickNumText}>{pick.num}</Text>
+            <View style={styles.editorsHeader}>
+              <Text style={styles.editorsEyebrow}>EDITOR'S PICKS</Text>
+              <Text style={styles.editorsCount}>{picks.length} PIECES</Text>
+            </View>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.picksScroll}
+            >
+              {picks.map((pick) => (
+                <TouchableOpacity
+                  key={pick.num}
+                  style={styles.pickCard}
+                  activeOpacity={0.8}
+                  onPress={() =>
+                    pick.id
+                      ? router.push(`/products/${pick.id}` as any)
+                      : router.push("/(tabs)/shop" as any)
+                  }
+                >
+                  <View style={styles.pickImageWrap}>
+                    <Image
+                      source={{ uri: pick.image }}
+                      style={styles.pickImage}
+                      resizeMode="cover"
+                    />
+                    <View style={styles.pickNumPill}>
+                      <Text style={styles.pickNumText}>{pick.num}</Text>
+                    </View>
                   </View>
-                </View>
-                <View style={styles.pickMeta}>
-                  <Text style={styles.pickBrand}>{pick.brand}</Text>
-                  <Text style={styles.pickName}>{pick.name}</Text>
-                  {pick.quote ? <Text style={styles.pickQuote}>{pick.quote}</Text> : null}
-                  <View style={styles.pickBottom}>
-                    <Text style={styles.pickPrice}>{pick.price}</Text>
-                    <Text style={styles.pickView}>VIEW →</Text>
-                  </View>
-                </View>
-              </TouchableOpacity>
-            ))}
+                  <Text style={styles.pickBrand} numberOfLines={1}>{pick.brand}</Text>
+                  <Text style={styles.pickName} numberOfLines={2}>{pick.name}</Text>
+                  <Text style={styles.pickPrice}>{pick.price}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
           </View>
         )}
 
@@ -667,25 +667,25 @@ const HomeScreen = () => {
 
         {/* ── 11. Editorial Partners ── */}
         {barBrands.length > 0 && (
-        <View style={styles.editorialPartners}>
-          <Text style={styles.editorialPartnersLabel}>EDITORIAL PARTNERS</Text>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.editorialPartnersScroll}
-          >
-            {barBrands.map((b) => (
-              <TouchableOpacity
-                key={b.id}
-                onPress={() => router.push(`/brands/${b.id}` as any)}
-              >
-                <Text style={styles.editorialPartnerName}>
-                  {b.name.toUpperCase()}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </View>
+          <View style={styles.editorialPartners}>
+            <Text style={styles.editorialPartnersLabel}>EDITORIAL PARTNERS</Text>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.editorialPartnersScroll}
+            >
+              {barBrands.map((b) => (
+                <TouchableOpacity
+                  key={b.id}
+                  onPress={() => router.push(`/brands/${b.id}` as any)}
+                >
+                  <Text style={styles.editorialPartnerName}>
+                    {b.name.toUpperCase()}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
         )}
 
         {/* ── 12. From the Feed ── */}
@@ -766,7 +766,7 @@ const HomeScreen = () => {
         {/* ── 14. Editorial Closer ── */}
         <View style={styles.editorialCloser}>
           <Image
-            source={{ uri: "https://images.unsplash.com/photo-1490481651871-ab68de25d43d?q=80&w=900&auto=format&fit=crop" }}
+            source={{ uri: "https://images.unsplash.com/photo-1529720317453-c8da503f2051?q=80&w=1770&auto=format&fit=crop" }}
             style={StyleSheet.absoluteFillObject}
             resizeMode="cover"
           />
@@ -779,9 +779,9 @@ const HomeScreen = () => {
               }
             </Text>
             <View style={styles.closerAuthor}>
-              <View style={styles.closerAvatar} />
+              {/* <View style={styles.closerAvatar} /> */}
               <View>
-                <Text style={styles.closerAuthorName}>S. KOWALSKI</Text>
+                {/* <Text style={styles.closerAuthorName}>S. KOWALSKI</Text> */}
                 <Text style={styles.closerAuthorRole}>CHIEF</Text>
               </View>
             </View>
@@ -1177,7 +1177,7 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   // ── Brand Spotlight ─────────────────────────────────────────────────────────
   spotlight: {
     paddingTop: 52,
-    paddingBottom: 40,
+    paddingBottom: 16,
     paddingHorizontal: 20,
     backgroundColor: colors.background,
   },
@@ -1224,7 +1224,7 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 16,
-    marginBottom: 20,
+    marginBottom: 0,
   },
   spotlightCta: {
     backgroundColor: colors.primary,
@@ -1251,7 +1251,7 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     flexDirection: "row",
     gap: 8,
     justifyContent: "center",
-    paddingBottom: 32,
+    paddingVertical: 12,
     backgroundColor: colors.background,
   },
   spotlightDot: {
@@ -1265,102 +1265,77 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
 
   // ── Editor's Picks ──────────────────────────────────────────────────────────
   editorsPicks: {
-    backgroundColor: colors.primaryMuted,
-    paddingTop: 48,
-    paddingBottom: 48,
-    paddingHorizontal: 20,
+    marginBottom: 16,
   },
-  editorsEyebrow: {
-    fontFamily: undefined,
-    fontSize: 9,
-    color: "rgba(255,255,255,0.65)",
-    letterSpacing: 1.5,
-    textTransform: "uppercase",
+  editorsHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
     marginBottom: 12,
   },
-  editorsTitle: {
-    fontFamily: undefined,
-    fontSize: 26,
-    fontWeight: "800",
-    color: colors.primaryForeground,
-    lineHeight: 28,
+  editorsEyebrow: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: colors.text,
+    letterSpacing: 1.5,
     textTransform: "uppercase",
-    marginBottom: 32,
   },
-  pickRow: {
-    flexDirection: "row",
-    gap: 16,
-    marginBottom: 28,
-    alignItems: "flex-start",
+  editorsCount: {
+    fontSize: 9,
+    color: colors.textTertiary,
+    letterSpacing: 1.5,
+    textTransform: "uppercase",
+  },
+  picksScroll: {
+    paddingHorizontal: 16,
+    gap: 12,
+  },
+  pickCard: {
+    width: 130,
   },
   pickImageWrap: {
     position: "relative",
+    marginBottom: 8,
   },
   pickImage: {
     width: 130,
-    height: 170,
-    backgroundColor: colors.primaryMuted,
+    height: 160,
+    backgroundColor: colors.surfaceRaised,
   },
   pickNumPill: {
     position: "absolute",
-    top: 8,
-    left: 8,
+    top: 6,
+    left: 6,
     backgroundColor: colors.background,
-    paddingHorizontal: 6,
-    paddingVertical: 3,
+    paddingHorizontal: 5,
+    paddingVertical: 2,
   },
   pickNumText: {
-    fontFamily: undefined,
     fontSize: 9,
     fontWeight: "700",
     color: colors.text,
     letterSpacing: 0.5,
   },
-  pickMeta: {
-    flex: 1,
-    gap: 4,
-    paddingTop: 4,
-  },
   pickBrand: {
-    fontFamily: undefined,
     fontSize: 9,
     color: colors.textTertiary,
     letterSpacing: 1.5,
     textTransform: "uppercase",
+    marginBottom: 2,
   },
   pickName: {
-    fontFamily: undefined,
-    fontSize: 14,
+    fontSize: 11,
     fontWeight: "700",
-    color: colors.primaryForeground,
+    color: colors.text,
     textTransform: "uppercase",
-    lineHeight: 18,
-  },
-  pickQuote: {
-    fontFamily: undefined,
-    fontSize: 12,
-    fontStyle: "italic",
-    color: colors.textTertiary,
-    lineHeight: 17,
-    marginTop: 4,
-  },
-  pickBottom: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginTop: 8,
+    lineHeight: 14,
+    marginBottom: 4,
   },
   pickPrice: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 13,
-    color: colors.primaryForeground,
-  },
-  pickView: {
-    fontFamily: undefined,
-    fontSize: 9,
-    color: colors.textTertiary,
-    letterSpacing: 1,
-    textTransform: "uppercase",
+    fontSize: 11,
+    fontWeight: "600",
+    color: colors.text,
   },
 
   // ── AI Try-On ───────────────────────────────────────────────────────────────

@@ -13,7 +13,6 @@ import { GetProductsDto } from './dto/get-products.dto';
 import { CreateProductDto } from './dto/create-product.dto';
 import { PaginatedResult } from '../common/types/pagination.type';
 import {
-  ProductType,
   SortBy,
   SortOrder,
   ProductStatus,
@@ -231,19 +230,24 @@ export class ProductsService {
   }
 
   async getFilterOptions() {
-    const productTypes = Object.values(ProductType);
-    const categoriesQuery = await this.productsRepository
-      .createQueryBuilder('product')
-      .select('DISTINCT(product.subcategory)', 'category')
-      .where('product.deletedAt IS NULL')
-      .andWhere("product.subcategory IS NOT NULL AND product.subcategory != ''")
-      .getRawMany();
-
-    const categories = categoriesQuery.map((item) => item.category);
+    const [categoriesQuery, typesQuery] = await Promise.all([
+      this.productsRepository
+        .createQueryBuilder('product')
+        .select('DISTINCT(product.subcategory)', 'category')
+        .where('product.deletedAt IS NULL')
+        .andWhere("product.subcategory IS NOT NULL AND product.subcategory != ''")
+        .getRawMany(),
+      this.productsRepository
+        .createQueryBuilder('product')
+        .select('DISTINCT(product.productType)', 'productType')
+        .where('product.deletedAt IS NULL')
+        .andWhere("product.productType IS NOT NULL AND product.productType != ''")
+        .getRawMany(),
+    ]);
 
     return {
-      categories,
-      productTypes,
+      categories: categoriesQuery.map((item) => item.category),
+      productTypes: typesQuery.map((item) => item.productType).sort(),
     };
   }
 

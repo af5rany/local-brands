@@ -30,6 +30,7 @@ import { useCloudinaryUpload } from "@/hooks/useCloudinaryUpload";
 import { ImageUploadProgress } from "@/components/ImageUploadProgress";
 import { ProductStatus } from "@/types/enums";
 import { COLOR_PALETTE, getSizesForProductType } from "@/constants/SizeChart";
+import SizeChartEditor, { SizeChartData } from "@/components/SizeChartEditor";
 
 const genderOptions = [
   { label: "Men", value: "men" },
@@ -181,6 +182,7 @@ const CreateProductScreen = () => {
   // Size variants: { size: string, stock: number }[]
   const [sizeVariants, setSizeVariants] = useState<{ size: string; stock: number }[]>([]);
 
+  const [sizeChart, setSizeChart] = useState<SizeChartData | null>(null);
   const [loading, setLoading] = useState(false);
   const [autoDetectedType, setAutoDetectedType] = useState(false);
   const [customSizeInput, setCustomSizeInput] = useState("");
@@ -275,7 +277,8 @@ const CreateProductScreen = () => {
   };
 
   const handleProductImagePick = async () => {
-    if (productImages.length >= 5) {
+    const remaining = 5 - productImages.length;
+    if (remaining <= 0) {
       Alert.alert("Limit reached", "Maximum 5 images per product.");
       return;
     }
@@ -288,11 +291,12 @@ const CreateProductScreen = () => {
       }
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ["images"],
+        allowsMultipleSelection: false,
         allowsEditing: true,
         aspect: [3, 4],
         quality: 1,
       });
-      if (result.canceled || !result.assets?.[0]) return;
+      if (result.canceled || !result.assets?.length) return;
 
       const uri = result.assets[0].uri;
       setProductImages((prev) => [...prev, uri]);
@@ -433,6 +437,16 @@ const CreateProductScreen = () => {
 
       if (response.status === 201) {
         incrementProductListVersion();
+        if (sizeChart && responseData?.id) {
+          await fetch(`${getApiUrl()}/products/${responseData.id}/size-guide`, {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(sizeChart),
+          }).catch(() => {});
+        }
         Alert.alert("Success", "Product created successfully!");
         router.replace(`/brands/${brandId}`);
       } else {
@@ -932,6 +946,12 @@ const CreateProductScreen = () => {
               thumbColor={isFeatured ? "#ffffff" : "#f4f3f4"}
             />
           </View>
+        </View>
+
+        {/* Size Chart */}
+        <View style={styles.card}>
+          <Text style={styles.sectionTitle}>Size Chart</Text>
+          <SizeChartEditor value={sizeChart} onChange={setSizeChart} />
         </View>
 
       </ScrollView>

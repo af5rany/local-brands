@@ -1,16 +1,16 @@
 import {
   IsString,
   IsNumber,
-  IsEnum,
   IsBoolean,
   IsArray,
   IsOptional,
+  IsEnum,
   ValidateNested,
   Min,
+  MaxLength,
 } from 'class-validator';
 import { Type, Transform } from 'class-transformer';
 import {
-  ProductType,
   Season,
   ProductStatus,
 } from 'src/common/enums/product.enum';
@@ -43,8 +43,9 @@ export class CreateProductDto {
   salePrice?: number;
 
   @IsOptional()
-  @IsEnum(ProductType)
-  productType?: ProductType;
+  @IsString()
+  @MaxLength(60)
+  productType?: string;
 
   @IsOptional()
   @IsString()

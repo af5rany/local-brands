@@ -23,6 +23,7 @@ import OfflinePlaceholder from "@/components/OfflinePlaceholder";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { useHeaderVisibility } from "@/context/HeaderVisibilityContext";
 import { useScrollToTop } from "@/context/ScrollToTopContext";
+import PostMedia from "@/components/PostMedia";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const COLUMN_GAP = 8;
@@ -36,6 +37,7 @@ type ActiveTab = "forYou" | "following";
 interface PostData {
   id: number;
   images: string[];
+  videoUrl?: string | null;
   caption?: string;
   likeCount: number;
   commentCount: number;
@@ -74,9 +76,11 @@ const PinCard: React.FC<{
           { height: imageHeight, backgroundColor: colors.borderLight },
         ]}
       >
-        <Image
-          source={{ uri: post.images[0] }}
-          style={[styles.pinImage, { height: imageHeight }]}
+        <PostMedia
+          videoUrl={post.videoUrl}
+          images={post.images}
+          width={COLUMN_WIDTH}
+          height={imageHeight}
           resizeMode="cover"
         />
       </View>
@@ -216,8 +220,10 @@ const MasonryGrid: React.FC<{
   );
 };
 
-// ── Tab Switcher — Following first, For You second ──
-const TAB_ORDER: ActiveTab[] = ["following", "forYou"];
+const FOR_YOU_SEED = Math.floor(Math.random() * 1000000);
+
+// ── Tab Switcher — For You first, Following second ──
+const TAB_ORDER: ActiveTab[] = ["forYou", "following"];
 const TAB_LABELS: Record<ActiveTab, string> = {
   following: "FOLLOWING",
   forYou: "FOR YOU",
@@ -281,7 +287,7 @@ export default function FeedScreen() {
   const forYouRef = useRef<ScrollView>(null);
   const pagerRef = useRef<ScrollView>(null);
 
-  const [activeTab, setActiveTab] = useState<ActiveTab>("following");
+  const [activeTab, setActiveTab] = useState<ActiveTab>("forYou");
 
   const handleTabChange = useCallback((tab: ActiveTab) => {
     setActiveTab(tab);
@@ -368,7 +374,7 @@ export default function FeedScreen() {
         const headers: any = {};
         if (token) headers.Authorization = `Bearer ${token}`;
         const res = await fetch(
-          `${getApiUrl()}/feed/for-you?page=${pageNum}&limit=20`,
+          `${getApiUrl()}/feed/for-you?page=${pageNum}&limit=20&seed=${FOR_YOU_SEED}`,
           { headers },
         );
         if (!res.ok) throw new Error("Failed to fetch for-you feed");

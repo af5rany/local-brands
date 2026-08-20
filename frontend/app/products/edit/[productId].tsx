@@ -29,6 +29,7 @@ import { ImageUploadProgress } from "@/components/ImageUploadProgress";
 import { ProductStatus } from "@/types/enums";
 import { COLOR_PALETTE, getSizesForProductType } from "@/constants/SizeChart";
 import type { ThemeColors } from "@/constants/Colors";
+import SizeChartEditor, { SizeChartData } from "@/components/SizeChartEditor";
 
 const genderOptions = [
   { label: "Men", value: "men" },
@@ -112,6 +113,8 @@ const EditProductScreen = () => {
   const [stock, setStock] = useState(0);
   const [brandId, setBrandId] = useState<number | null>(null);
 
+  const [sizeChart, setSizeChart] = useState<SizeChartData | null>(null);
+  const [isNewProductType, setIsNewProductType] = useState(false);
   const [autoDetectedType, setAutoDetectedType] = useState(false);
   const [customSizeInput, setCustomSizeInput] = useState("");
 
@@ -169,6 +172,21 @@ const EditProductScreen = () => {
       }
       setStock(data.stock || 0);
       setBrandId(data.brandId);
+
+      // Load existing size guide
+      const guideRes = await fetch(
+        `${getApiUrl()}/size-guides/product/${productId}?brandId=${data.brandId}`,
+      ).catch(() => null);
+      if (guideRes?.ok) {
+        const guide = await guideRes.json();
+        setSizeChart({
+          title: guide.title || "Size Guide",
+          unit: guide.unit || "in",
+          headers: guide.headers || ["Size", "Length", "Width"],
+          rows: guide.rows || [],
+          imageUrl: guide.imageUrl ?? undefined,
+        });
+      }
     } catch (error) {
       console.error("Error fetching product:", error);
       Alert.alert("Error", "Failed to fetch product details.");
@@ -324,6 +342,16 @@ const EditProductScreen = () => {
       if (response.ok) {
         invalidateProduct(Number(productId));
         incrementProductListVersion();
+        if (sizeChart) {
+          await fetch(`${getApiUrl()}/products/${productId}/size-guide`, {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(sizeChart),
+          }).catch(() => {});
+        }
         Alert.alert("Success", "Product updated successfully!", [
           { text: "OK", onPress: () => router.back() },
         ]);
@@ -367,6 +395,10 @@ const EditProductScreen = () => {
     );
   };
 
+  const removeProductImage = (index: number) => {
+    setProductImages((prev) => prev.filter((_, i) => i !== index));
+  };
+
   const renderDraggableImage = useCallback(
     ({ item: uri, getIndex, drag, isActive }: RenderItemParams<string>) => {
       const imgIndex = getIndex() ?? 0;
@@ -405,7 +437,8 @@ const EditProductScreen = () => {
   );
 
   const handleProductImagePick = async () => {
-    if (productImages.length >= 5) {
+    const remaining = 5 - productImages.length;
+    if (remaining <= 0) {
       Alert.alert("Limit reached", "Maximum 5 images per product.");
       return;
     }
@@ -418,11 +451,12 @@ const EditProductScreen = () => {
       }
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ["images"],
+        allowsMultipleSelection: false,
         allowsEditing: true,
         aspect: [3, 4],
         quality: 1,
       });
-      if (result.canceled || !result.assets?.[0]) return;
+      if (result.canceled || !result.assets?.length) return;
 
       const uri = result.assets[0].uri;
       setProductImages((prev) => [...prev, uri]);
@@ -434,10 +468,6 @@ const EditProductScreen = () => {
     } catch (error) {
       console.error("Error picking images:", error);
     }
-  };
-
-  const removeProductImage = (index: number) => {
-    setProductImages((prev) => prev.filter((_, i) => i !== index));
   };
 
   if (loading) {
@@ -549,26 +579,43 @@ const EditProductScreen = () => {
             </View>
 
             <View style={styles.inputContainer}>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-                <Text style={[styles.label, { color: textColor, marginBottom: 0 }]}>
-                  Product Type <Text style={styles.required}>*</Text>
-                </Text>
-                {autoDetectedType && (
-                  <View style={{ backgroundColor: "#000000", paddingHorizontal: 8, paddingVertical: 2, borderRadius: 0 }}>
-                    <Text style={{ color: "#fff", fontSize: 11, fontWeight: "600" }}>Auto-detected</Text>
-                  </View>
-                )}
+              <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                  <Text style={[styles.label, { color: textColor, marginBottom: 0 }]}>
+                    Product Type <Text style={styles.required}>*</Text>
+                  </Text>
+                  {autoDetectedType && !isNewProductType && (
+                    <View style={{ backgroundColor: "#000000", paddingHorizontal: 8, paddingVertical: 2 }}>
+                      <Text style={{ color: "#fff", fontSize: 11, fontWeight: "600" }}>Auto-detected</Text>
+                    </View>
+                  )}
+                </View>
+                <TouchableOpacity onPress={() => setIsNewProductType((p) => !p)} hitSlop={8}>
+                  <Text style={{ fontSize: 12, fontWeight: "600", color: primaryColor }}>
+                    {isNewProductType ? "Select Existing" : "Type New"}
+                  </Text>
+                </TouchableOpacity>
               </View>
-              <Dropdown
-                data={dynamicProductTypes}
-                labelField="label"
-                valueField="value"
-                value={productType}
-                onChange={(item) => handleProductTypeChange(item.value)}
-                style={[styles.dropdown, { borderColor, marginTop: 8 }]}
-                placeholderStyle={{ color: placeholderColor }}
-                selectedTextStyle={{ color: textColor }}
-              />
+              {isNewProductType ? (
+                <TextInput
+                  style={[styles.input, { color: textColor, borderColor, marginTop: 8 }]}
+                  placeholder="Enter new product type (e.g. Shorts)"
+                  placeholderTextColor={placeholderColor}
+                  value={productType}
+                  onChangeText={(val) => { setProductType(val); setAutoDetectedType(false); setSizeVariants([]); }}
+                />
+              ) : (
+                <Dropdown
+                  data={dynamicProductTypes}
+                  labelField="label"
+                  valueField="value"
+                  value={productType}
+                  onChange={(item) => handleProductTypeChange(item.value)}
+                  style={[styles.dropdown, { borderColor, marginTop: 8 }]}
+                  placeholderStyle={{ color: placeholderColor }}
+                  selectedTextStyle={{ color: textColor }}
+                />
+              )}
             </View>
 
             <View style={styles.rowContainer}>
@@ -835,6 +882,12 @@ const EditProductScreen = () => {
                 trackColor={{ true: primaryColor }}
               />
             </View>
+          </View>
+
+          {/* Size Chart */}
+          <View style={styles.card}>
+            <Text style={[styles.sectionTitle, { color: textColor }]}>Size Chart</Text>
+            <SizeChartEditor value={sizeChart} onChange={setSizeChart} />
           </View>
 
         </ScrollView>

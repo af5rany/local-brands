@@ -461,25 +461,21 @@ const BrandsScreen = () => {
             </Text>
           </View>
 
-          {/* Follow pill or admin arrow */}
-          {!isAdmin ? (
-            <TouchableOpacity
-              style={[styles.followPill, isFollowed && styles.followPillActive]}
-              onPress={() => toggleFollow(item.id)}
-              disabled={togglingId === item.id}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            >
-              {togglingId === item.id ? (
-                <ActivityIndicator size="small" color={isFollowed ? colors.background : colors.text} />
-              ) : (
-                <Text style={[styles.followPillText, isFollowed && styles.followPillTextActive]}>
-                  {isFollowed ? "FOLLOWING" : "FOLLOW"}
-                </Text>
-              )}
-            </TouchableOpacity>
-          ) : (
-            <Text style={styles.arrowText}>→</Text>
-          )}
+          {/* Follow button */}
+          <TouchableOpacity
+            style={[styles.followPill, isFollowed && styles.followPillActive]}
+            onPress={(e) => { e.stopPropagation?.(); toggleFollow(item.id); }}
+            disabled={togglingId === item.id}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            {togglingId === item.id ? (
+              <ActivityIndicator size="small" color={isFollowed ? colors.background : colors.text} />
+            ) : (
+              <Text style={[styles.followPillText, isFollowed && styles.followPillTextActive]}>
+                {isFollowed ? "FOLLOWING" : "FOLLOW"}
+              </Text>
+            )}
+          </TouchableOpacity>
         </View>
       </TouchableOpacity>
     );
@@ -1000,17 +996,18 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     backgroundColor: colors.background,
   },
   followPillActive: {
-    backgroundColor: colors.background,
+    backgroundColor: colors.text,
+    borderColor: colors.text,
   },
   followPillText: {
     fontSize: 9,
-    fontWeight: "600",
+    fontWeight: "700",
     color: colors.text,
     letterSpacing: 2,
     textTransform: "uppercase",
   },
   followPillTextActive: {
-    color: colors.text,
+    color: colors.background,
   },
   followButton: {
     width: 36,

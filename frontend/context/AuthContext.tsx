@@ -169,6 +169,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const logout = async () => {
+    if (token) {
+      fetch(`${getApiUrl()}/notifications/push-token`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      }).catch(() => {});
+    }
     setToken(null);
     setUser(null);
     await AsyncStorage.removeItem("token");

@@ -7,7 +7,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource, In, EntityManager } from 'typeorm';
 import { Brand } from './brand.entity';
 import { BrandUser } from './brand-user.entity';
-import { BrandFollow } from './brand-follow.entity';
+import { BrandFollow } from '../feed/entities/brand-follow.entity';
 import { User } from '../users/user.entity';
 import { Product } from '../products/product.entity';
 import { Order } from '../orders/order.entity';
@@ -334,7 +334,19 @@ export class BrandsService {
       });
     }
 
-    return this.brandUsersRepository.save(brandUser);
+    await this.brandUsersRepository.save(brandUser);
+
+    if (role === BrandUserRole.OWNER || role === BrandUserRole.MANAGER) {
+      const user = await this.usersRepository.findOne({ where: { id: userId } });
+      if (user && user.role === UserRole.CUSTOMER) {
+        user.role = UserRole.BRAND_OWNER;
+        await this.usersRepository.save(user);
+      }
+    }
+
+    const result = await this.brandUsersRepository.findOne({ where: { brandId, userId } });
+    if (!result) throw new NotFoundException('BrandUser not found after assignment');
+    return result;
   }
 
   async removeUserFromBrand(brandId: number, userId: number): Promise<void> {
@@ -485,6 +497,20 @@ export class BrandsService {
 
     const follow = this.brandFollowRepository.create({ userId, brandId });
     await this.brandFollowRepository.save(follow);
+
+    const brandOwners = await this.brandUsersRepository.find({ where: { brandId } });
+    const ownerIds = brandOwners.map((bu) => bu.userId).filter((id) => id !== userId);
+    if (ownerIds.length > 0) {
+      this.notificationsService.createBulk(
+        ownerIds,
+        NotificationType.NEW_FOLLOWER,
+        'New follower',
+        `Someone started following ${brand.name}.`,
+        { brandId, followerId: userId },
+      ).catch(() => {});
+      this.pushService.sendPushToMany(ownerIds, 'New follower', `Someone started following ${brand.name}.`, { brandId }, 'pushOnFollower').catch(() => {});
+    }
+
     return { followed: true };
   }
 

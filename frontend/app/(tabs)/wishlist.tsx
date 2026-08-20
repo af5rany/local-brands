@@ -4,10 +4,12 @@ import {
   Text,
   StyleSheet,
   FlatList,
+  ScrollView,
   Image,
   TouchableOpacity,
   ActivityIndicator,
   Alert,
+  Dimensions,
 } from "react-native";
 import { useFocusEffect, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -60,9 +62,16 @@ const WishlistTab = () => {
   } | null>(null);
   const [quickAddVisible, setQuickAddVisible] = useState(false);
 
-const { register, unregister } = useScrollToTop();
+  const { register, unregister } = useScrollToTop();
   const productsRef = useRef<FlatList>(null);
   const brandsRef = useRef<FlatList>(null);
+  const pagerRef = useRef<ScrollView>(null);
+  const SCREEN_WIDTH = Dimensions.get("window").width;
+
+  const switchTab = useCallback((tab: Tab) => {
+    setActiveTab(tab);
+    pagerRef.current?.scrollTo({ x: tab === "products" ? 0 : SCREEN_WIDTH, animated: true });
+  }, [SCREEN_WIDTH]);
 
   useEffect(() => {
     register("wishlist", () => {
@@ -70,6 +79,7 @@ const { register, unregister } = useScrollToTop();
       else brandsRef.current?.scrollToOffset({ offset: 0, animated: true });
     });
     return () => unregister("wishlist");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab]);
 
   const fetchWishlist = useCallback(async () => {
@@ -446,10 +456,6 @@ const { register, unregister } = useScrollToTop();
     <View
       style={[styles.container, { backgroundColor: colors.background }]}
     >
-      <View style={styles.header}>
-        <Text style={[styles.title, { color: colors.text }]}>SAVED</Text>
-      </View>
-
       {/* Sub-tabs */}
       <View style={[styles.tabRow, { borderBottomColor: colors.textTertiary + "20" }]}>
         <TouchableOpacity
@@ -457,7 +463,7 @@ const { register, unregister } = useScrollToTop();
             styles.tab,
             activeTab === "products" && [styles.tabActive, { borderBottomColor: colors.text }],
           ]}
-          onPress={() => setActiveTab("products")}
+          onPress={() => switchTab("products")}
         >
           <Text
             style={[
@@ -473,7 +479,7 @@ const { register, unregister } = useScrollToTop();
             styles.tab,
             activeTab === "brands" && [styles.tabActive, { borderBottomColor: colors.text }],
           ]}
-          onPress={() => setActiveTab("brands")}
+          onPress={() => switchTab("brands")}
         >
           <Text
             style={[
@@ -486,24 +492,28 @@ const { register, unregister } = useScrollToTop();
         </TouchableOpacity>
       </View>
 
-      {/* Products Tab */}
-      {activeTab === "products" && (
-        <>
+      {/* Pager */}
+      <ScrollView
+        ref={pagerRef}
+        horizontal
+        pagingEnabled
+        showsHorizontalScrollIndicator={false}
+        scrollEventThrottle={16}
+        onMomentumScrollEnd={(e) => {
+          const page = Math.round(e.nativeEvent.contentOffset.x / SCREEN_WIDTH);
+          setActiveTab(page === 0 ? "products" : "brands");
+        }}
+        style={{ flex: 1 }}
+      >
+        {/* Products page */}
+        <View style={{ width: SCREEN_WIDTH, flex: 1 }}>
           {loading ? (
             <ProductGridSkeleton count={4} />
           ) : wishlist.length === 0 ? (
             <View style={styles.centeredContent}>
-              <Ionicons
-                name="heart-dislike-outline"
-                size={64}
-                color={colors.textTertiary}
-              />
-              <Text style={[styles.emptyTitle, { color: colors.text }]}>
-                No favorites yet
-              </Text>
-              <Text
-                style={[styles.emptySubtitle, { color: colors.textSecondary }]}
-              >
+              <Ionicons name="heart-dislike-outline" size={64} color={colors.textTertiary} />
+              <Text style={[styles.emptyTitle, { color: colors.text }]}>No favorites yet</Text>
+              <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
                 Tap the heart on any product to save it for later.
               </Text>
               <TouchableOpacity
@@ -519,41 +529,26 @@ const { register, unregister } = useScrollToTop();
               data={wishlist}
               renderItem={renderProductItem}
               keyExtractor={(item) => item.id.toString()}
+              style={{ flex: 1 }}
               contentContainerStyle={styles.listContent}
               showsVerticalScrollIndicator={false}
               onScroll={(e) => reportScroll(e.nativeEvent.contentOffset.y)}
               scrollEventThrottle={16}
             />
           )}
-        </>
-      )}
+        </View>
 
-      <QuickAddSheet
-        visible={quickAddVisible}
-        onClose={() => { setQuickAddVisible(false); setQuickAddProduct(null); }}
-        product={quickAddProduct}
-      />
-
-      {/* Brands Tab */}
-      {activeTab === "brands" && (
-        <>
+        {/* Brands page */}
+        <View style={{ width: SCREEN_WIDTH, flex: 1 }}>
           {brandsLoading ? (
             <View style={styles.center}>
               <ActivityIndicator size="large" color={colors.primary} />
             </View>
           ) : followedBrands.length === 0 ? (
             <View style={styles.centeredContent}>
-              <Ionicons
-                name="storefront-outline"
-                size={64}
-                color={colors.textTertiary}
-              />
-              <Text style={[styles.emptyTitle, { color: colors.text }]}>
-                No brands followed
-              </Text>
-              <Text
-                style={[styles.emptySubtitle, { color: colors.textSecondary }]}
-              >
+              <Ionicons name="storefront-outline" size={64} color={colors.textTertiary} />
+              <Text style={[styles.emptyTitle, { color: colors.text }]}>No brands followed</Text>
+              <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
                 Follow brands to stay updated on new releases and drops.
               </Text>
               <TouchableOpacity
@@ -569,14 +564,21 @@ const { register, unregister } = useScrollToTop();
               data={followedBrands}
               renderItem={renderBrandItem}
               keyExtractor={(item) => item.id.toString()}
+              style={{ flex: 1 }}
               contentContainerStyle={styles.brandsListContent}
               showsVerticalScrollIndicator={false}
               onScroll={(e) => reportScroll(e.nativeEvent.contentOffset.y)}
               scrollEventThrottle={16}
             />
           )}
-        </>
-      )}
+        </View>
+      </ScrollView>
+
+      <QuickAddSheet
+        visible={quickAddVisible}
+        onClose={() => { setQuickAddVisible(false); setQuickAddProduct(null); }}
+        product={quickAddProduct}
+      />
     </View>
   );
 };
@@ -628,10 +630,10 @@ const styles = StyleSheet.create({
     letterSpacing: 1.5,
   },
   listContent: {
-    paddingBottom: 40,
+    paddingBottom: 120,
   },
   brandsListContent: {
-    paddingBottom: 40,
+    paddingBottom: 120,
   },
   // ── Product row (list view) ──────────────────────────────────
   productRow: {

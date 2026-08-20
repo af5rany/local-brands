@@ -12,7 +12,6 @@ import {
 } from 'class-validator';
 import { Type, Transform } from 'class-transformer';
 import {
-  ProductType,
   Season,
   ProductStatus,
 } from 'src/common/enums/product.enum';
@@ -37,8 +36,8 @@ export class UpdateProductDto {
   salePrice?: number;
 
   @IsOptional()
-  @IsEnum(ProductType)
-  productType?: ProductType;
+  @IsString()
+  productType?: string;
 
   @IsOptional()
   @IsString()

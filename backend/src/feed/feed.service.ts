@@ -17,6 +17,7 @@ import { BrandUser } from '../brands/brand-user.entity';
 import { PostStatus } from '../common/enums/feed.enum';
 import { UserRole } from '../common/enums/user.enum';
 import { NotificationsService } from '../notifications/notifications.service';
+import { PushNotificationService } from '../notifications/push-notification.service';
 import { NotificationType } from '../notifications/notification.entity';
 import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
@@ -43,6 +44,7 @@ export class FeedService {
     @InjectRepository(Product)
     private productRepo: Repository<Product>,
     private notificationsService: NotificationsService,
+    private pushService: PushNotificationService,
   ) {}
 
   // ── Posts ──
@@ -243,6 +245,27 @@ export class FeedService {
       );
       await this.postRepo.increment({ id: postId }, 'likeCount', 1);
       const updated = await this.postRepo.findOne({ where: { id: postId } });
+
+      if (post.brandId && userId !== post.authorId) {
+        const brandOwners = await this.brandUserRepo.find({
+          where: { brandId: post.brandId },
+          relations: ['user'],
+        });
+        const ownerIds = brandOwners
+          .filter((bu) => bu.user)
+          .map((bu) => bu.userId);
+        if (ownerIds.length > 0) {
+          await this.notificationsService.createBulk(
+            ownerIds,
+            NotificationType.POST_LIKE,
+            'New like on your post',
+            'Someone liked one of your posts.',
+            { postId, likerId: userId },
+          );
+          this.pushService.sendPushToMany(ownerIds, 'New like', 'Someone liked one of your posts.', { postId }, 'pushOnLike').catch(() => {});
+        }
+      }
+
       return { liked: true, likeCount: updated?.likeCount ?? 0 };
     }
   }
@@ -250,6 +273,23 @@ export class FeedService {
   async isLiked(postId: number, userId: number): Promise<{ liked: boolean }> {
     const count = await this.likeRepo.count({ where: { postId, userId } });
     return { liked: count > 0 };
+  }
+
+  async getLikers(postId: number, page = 1, limit = 20) {
+    const [data, total] = await this.likeRepo.findAndCount({
+      where: { postId },
+      relations: ['user'],
+      order: { createdAt: 'DESC' },
+      skip: (page - 1) * limit,
+      take: limit,
+    });
+    return {
+      data: data.map((l) => ({
+        user: l.user ? { id: l.user.id, name: l.user.name, avatar: l.user.avatar } : null,
+        createdAt: l.createdAt,
+      })),
+      pagination: { total, page, limit, totalPages: Math.ceil(total / limit) },
+    };
   }
 
   // ── Comments ──
@@ -294,6 +334,21 @@ export class FeedService {
     });
     const saved = await this.commentRepo.save(comment);
     await this.postRepo.increment({ id: postId }, 'commentCount', 1);
+
+    if (post.brandId && userId !== post.authorId) {
+      const brandOwners = await this.brandUserRepo.find({ where: { brandId: post.brandId } });
+      const ownerIds = brandOwners.map((bu) => bu.userId);
+      if (ownerIds.length > 0) {
+        await this.notificationsService.createBulk(
+          ownerIds,
+          NotificationType.POST_COMMENT,
+          'New comment on your post',
+          'Someone commented on one of your posts.',
+          { postId, commenterId: userId },
+        );
+        this.pushService.sendPushToMany(ownerIds, 'New comment', 'Someone commented on one of your posts.', { postId }, 'pushOnComment').catch(() => {});
+      }
+    }
 
     return (await this.commentRepo.findOne({
       where: { id: saved.id },
@@ -390,6 +445,7 @@ export class FeedService {
     userId: number | undefined,
     page = 1,
     limit = 20,
+    seed?: number,
   ): Promise<{ data: Post[]; pagination: any }> {
     let personalizedBrandIds: number[] = [];
     let followedBrandIds: number[] = [];
@@ -437,6 +493,10 @@ export class FeedService {
     const hasPriority =
       personalizedBrandIds.length > 0 || followedBrandIds.length > 0;
 
+    // Seed postgres random() for stable pagination within a session
+    const normalizedSeed = seed !== undefined ? ((seed % 1000000) / 1000000) : Math.random();
+    await em.query(`SELECT setseed($1)`, [normalizedSeed]);
+
     if (hasPriority) {
       const [countRows, idRows] = await Promise.all([
         em.query<{ count: string }[]>(
@@ -452,8 +512,8 @@ export class FeedService {
                WHEN "brandId" = ANY($2::int[]) AND "brandId" = ANY($3::int[]) THEN 1
                WHEN NOT ("brandId" = ANY($3::int[])) THEN 2
                ELSE 3
-             END,
-             "createdAt" DESC
+             END ASC,
+             random()
            LIMIT $4 OFFSET $5`,
           [
             PostStatus.ACTIVE,
@@ -475,7 +535,7 @@ export class FeedService {
         em.query<{ id: number }[]>(
           `SELECT id FROM post
            WHERE status = $1 AND "deletedAt" IS NULL
-           ORDER BY "createdAt" DESC
+           ORDER BY random()
            LIMIT $2 OFFSET $3`,
           [PostStatus.ACTIVE, limit, offset],
         ),

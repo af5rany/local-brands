@@ -14,6 +14,11 @@ export class UpdatePostDto {
   @MaxLength(2000)
   caption?: string;
 
+  @ApiPropertyOptional({ description: 'Updated video URL' })
+  @IsOptional()
+  @IsString()
+  videoUrl?: string;
+
   @ApiPropertyOptional({ description: 'Updated product IDs to tag' })
   @IsOptional()
   @IsArray()

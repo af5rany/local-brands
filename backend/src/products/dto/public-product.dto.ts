@@ -1,5 +1,4 @@
 import {
-  ProductType,
   ProductStatus,
 } from 'src/common/enums/product.enum';
 
@@ -32,7 +31,7 @@ export class PublicProductDto {
   color: string | null;
   brand: PublicBrandDto;
   category: string; // Mapping from subcategory
-  productType: ProductType;
+  productType: string | null;
   isAvailable: boolean;
   inStock: boolean;
   isLowStock: boolean;

@@ -17,6 +17,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useGuestGuard } from "@/hooks/useGuestGuard";
 import { useThemeColors } from "@/hooks/useThemeColor";
 import getApiUrl from "@/helpers/getApiUrl";
+import PostMedia from "@/components/PostMedia";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const COLUMN_GAP = 8;
@@ -28,6 +29,7 @@ const COLUMN_WIDTH =
 interface PostData {
   id: number;
   images: string[];
+  videoUrl?: string | null;
   caption?: string;
   likeCount: number;
   commentCount: number;
@@ -60,9 +62,11 @@ const PinCard: React.FC<{
       activeOpacity={0.85}
     >
       <View style={[styles.pinImageWrap, { height: imageHeight, backgroundColor: colors.borderLight }]}>
-        <Image
-          source={{ uri: post.images[0] }}
-          style={[styles.pinImage, { height: imageHeight }]}
+        <PostMedia
+          videoUrl={post.videoUrl}
+          images={post.images}
+          width={COLUMN_WIDTH}
+          height={imageHeight}
           resizeMode="cover"
         />
       </View>

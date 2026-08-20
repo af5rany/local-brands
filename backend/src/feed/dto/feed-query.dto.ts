@@ -28,4 +28,10 @@ export class FeedQueryDto {
   @Transform(({ value }) => value === 'true' || value === true)
   @IsBoolean()
   followedOnly?: boolean;
+
+  @ApiPropertyOptional({ description: 'Random seed for stable For-You pagination within a session' })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  seed?: number;
 }

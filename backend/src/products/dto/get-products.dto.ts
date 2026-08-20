@@ -8,7 +8,6 @@ import {
 } from 'class-validator';
 import { Type, Transform } from 'class-transformer';
 import {
-  ProductType,
   Season,
   SortBy,
   SortOrder,
@@ -42,8 +41,8 @@ export class GetProductsDto {
     return Array.isArray(value) ? value : [value];
   })
   @IsArray()
-  @IsEnum(ProductType, { each: true })
-  productTypes?: ProductType[];
+  @IsString({ each: true })
+  productTypes?: string[];
 
   @IsOptional()
   @IsEnum(Gender)

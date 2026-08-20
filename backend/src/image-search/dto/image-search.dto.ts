@@ -1,7 +1,6 @@
-import { IsOptional, IsEnum, Min, Max, IsArray } from 'class-validator';
+import { IsOptional, IsEnum, IsString, Min, Max, IsArray } from 'class-validator';
 import { Type, Transform } from 'class-transformer';
 import { Gender } from 'src/common/enums/user.enum';
-import { ProductType } from 'src/common/enums/product.enum';
 
 export class ImageSearchDto {
   @IsOptional()
@@ -27,9 +26,9 @@ export class ImageSearchDto {
 
   @IsOptional()
   @IsArray()
-  @IsEnum(ProductType, { each: true })
+  @IsString({ each: true })
   @Transform(({ value }) =>
     typeof value === 'string' ? value.split(',') : value,
   )
-  productTypes?: ProductType[];
+  productTypes?: string[];
 }

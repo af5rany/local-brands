@@ -18,7 +18,21 @@ import Header from "@/components/Header";
 
 interface Notification {
   id: string;
-  type: "order_update" | "discount" | "referral" | "stock_alert" | "general";
+  type:
+    | "order_update"
+    | "discount"
+    | "referral"
+    | "stock_alert"
+    | "general"
+    | "new_product"
+    | "new_brand"
+    | "price_drop"
+    | "new_post"
+    | "return_update"
+    | "post_like"
+    | "post_comment"
+    | "new_follower"
+    | "new_order";
   title: string;
   message: string;
   read: boolean;
@@ -31,10 +45,19 @@ const NOTIFICATION_ICONS: Record<
   { name: string; colorKey: "primary" | "danger" | "success" | "warning" | "info" }
 > = {
   order_update: { name: "receipt-outline", colorKey: "primary" },
+  new_order: { name: "bag-check-outline", colorKey: "primary" },
   discount: { name: "pricetag-outline", colorKey: "danger" },
   referral: { name: "gift-outline", colorKey: "success" },
   stock_alert: { name: "notifications-outline", colorKey: "warning" },
   general: { name: "information-circle-outline", colorKey: "info" },
+  new_product: { name: "cube-outline", colorKey: "success" },
+  new_brand: { name: "storefront-outline", colorKey: "info" },
+  price_drop: { name: "trending-down-outline", colorKey: "danger" },
+  new_post: { name: "image-outline", colorKey: "info" },
+  return_update: { name: "return-down-back-outline", colorKey: "warning" },
+  post_like: { name: "heart-outline", colorKey: "danger" },
+  post_comment: { name: "chatbubble-outline", colorKey: "info" },
+  new_follower: { name: "person-add-outline", colorKey: "success" },
 };
 
 function timeAgo(date: string): string {
@@ -118,12 +141,16 @@ const NotificationsScreen = () => {
 
     // Navigate based on notification data
     if (notification.data) {
-      if (notification.data.orderId) {
+      if (notification.data.postId) {
+        router.push(`/feed/${notification.data.postId}` as any);
+      } else if (notification.data.orderId) {
         router.push(`/orders/${notification.data.orderId}` as any);
       } else if (notification.data.productId) {
         router.push(`/products/${notification.data.productId}` as any);
       } else if (notification.data.brandId) {
         router.push(`/brands/${notification.data.brandId}` as any);
+      } else if (notification.type === "return_update" && notification.data.returnId) {
+        router.push(`/returns/${notification.data.returnId}` as any);
       } else if (notification.type === "referral") {
         router.push("/referral" as any);
       }

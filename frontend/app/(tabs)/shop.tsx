@@ -199,7 +199,7 @@ const MonolithProductCard = React.memo(
         {!isSoldOut && (
           <View style={cardStyles.actionRow}>
             <TouchableOpacity style={[cardStyles.addToCart, { flex: 1 }]} onPress={onAddToCart} activeOpacity={0.8}>
-              <Text style={cardStyles.addToCartText}>CART</Text>
+              <Text style={cardStyles.addToCartText}>ADD TO CART</Text>
             </TouchableOpacity>
             <View style={cardStyles.actionDivider} />
             <TouchableOpacity style={[cardStyles.buyNow, { flex: 1 }]} onPress={onBuyNow} activeOpacity={0.8}>
@@ -210,16 +210,18 @@ const MonolithProductCard = React.memo(
 
         {/* NOTIFY ME bar */}
         {isSoldOut && (
-          <TouchableOpacity
-            style={[cardStyles.notifyBtn, isNotifySubscribed && cardStyles.notifyBtnSubscribed]}
-            onPress={onNotifyMe}
-            disabled={isNotifySubscribed}
-            activeOpacity={0.8}
-          >
-            <Text style={[cardStyles.notifyBtnText, isNotifySubscribed && cardStyles.notifyBtnTextSubscribed]}>
-              {isNotifySubscribed ? "SUBSCRIBED" : "NOTIFY ME"}
-            </Text>
-          </TouchableOpacity>
+          <View style={[cardStyles.actionRow, { borderTopColor: colors.border }]}>
+            <TouchableOpacity
+              style={cardStyles.notifyBtn}
+              onPress={onNotifyMe}
+              disabled={isNotifySubscribed}
+              activeOpacity={0.8}
+            >
+              <Text style={[cardStyles.notifyBtnText, isNotifySubscribed && cardStyles.notifyBtnTextSubscribed]}>
+                {isNotifySubscribed ? "SUBSCRIBED" : "NOTIFY ME"}
+              </Text>
+            </TouchableOpacity>
+          </View>
         )}
       </View>
     );
@@ -1196,10 +1198,9 @@ const createCardStyles = (colors: ThemeColors) => StyleSheet.create({
     textTransform: "uppercase",
   },
   notifyBtn: {
+    flex: 1,
     height: 36,
     backgroundColor: "transparent",
-    borderTopWidth: 1,
-    borderColor: colors.text,
     alignItems: "center",
     justifyContent: "center",
   },

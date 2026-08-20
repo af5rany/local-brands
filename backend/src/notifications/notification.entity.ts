@@ -12,6 +12,10 @@ export enum NotificationType {
   PRICE_DROP = 'price_drop',
   NEW_POST = 'new_post',
   RETURN_UPDATE = 'return_update',
+  POST_LIKE = 'post_like',
+  POST_COMMENT = 'post_comment',
+  NEW_FOLLOWER = 'new_follower',
+  NEW_ORDER = 'new_order',
 }
 
 @Entity()

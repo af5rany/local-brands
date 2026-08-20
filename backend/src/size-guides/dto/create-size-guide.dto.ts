@@ -35,4 +35,9 @@ export class CreateSizeGuideDto {
   @IsString()
   @IsIn(['in', 'cm'])
   unit?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  imageUrl?: string;
 }
